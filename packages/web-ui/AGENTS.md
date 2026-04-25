@@ -13,11 +13,11 @@ src/
   textarea.tsx    ← Textarea + textareaClassName
 ```
 
-# Import boundary (enforced by `open-core-guards.test.ts`)
+# Import boundary
 
-- MUST NOT import from `@lastspace/*` (zero workspace dependencies — pure leaf package)
-- MUST NOT use `@/` path aliases (relative imports only)
-- MUST NOT import from any `apps/`, `features/`, or `pages/`
+- MUST NOT import from `@lastspace/*` (zero workspace dependencies — pure leaf package). **Enforced** by the `OPEN_CORE_GRAPH` rule in `packages/web-ui-core/src/__tests__/open-core-guards.test.ts`.
+- MUST NOT use `@/` path aliases (relative imports only). Convention; not currently guarded for this package — guard coverage tracked under #92's follow-ups.
+- MUST NOT import from any `apps/`, `features/`, or `pages/`. Convention; same status as above.
 
 # What goes here
 
@@ -42,4 +42,4 @@ Consumers must define these tokens in their app's CSS (see `apps/web/src/index.c
 
 # Bundle-size budget
 
-`@lastspace/web-ui` ≤30 KB gz (enforced by `open-core-guards.test.ts` once the test is wired post-extraction). Adding heavier components (Dialog, Popover, table primitives) is fine if they stay zero-coupled, but watch the budget.
+`@lastspace/web-ui` ≤30 KB gz — **target, not yet enforced**. The `size-limit` infrastructure scaffolds in a follow-up PR on #92. Until then, manually check the build output. Adding heavier components (Dialog, Popover, table primitives) is fine if they stay zero-coupled, but watch the budget.
