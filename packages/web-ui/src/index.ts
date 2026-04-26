@@ -1,0 +1,170 @@
+// --- Components ---
+export { Sidebar } from "./components/sidebar.tsx";
+export { ToolPanel } from "./components/tool-panel.tsx";
+export { ToolPanelLayout } from "./components/tool-panel-layout.tsx";
+export { MarkdownText, markdownComponents } from "./components/markdown-text.tsx";
+export { ClientToolExecutor } from "./components/client-tool-executor.tsx";
+export { AGUIRuntimeProvider, useAGUIAdapter } from "./components/ag-ui-runtime-provider.tsx";
+export { ChatContent } from "./components/assistant-chat.tsx";
+export { ChatBubble } from "./components/chat-bubble.tsx";
+export { ChatHeader } from "./components/chat-header.tsx";
+export {
+  ComposerAttachment,
+  UserMessageAttachment,
+  userAttachmentComponents,
+  composerAttachmentComponents,
+} from "./components/chat-attachments.tsx";
+export { ShowDocumentToolUI } from "./components/show-document-tool-ui.tsx";
+export { ToolCallCard } from "./components/tool-call-card.tsx";
+export type { ToolCallStatus } from "./components/tool-call-card.tsx";
+export { ToolFallback } from "./components/tool-fallback.tsx";
+export { ConfirmationCard } from "./components/confirmation-card.tsx";
+export { TooltipIconButton } from "./components/tooltip-icon-button.tsx";
+export { ComposerContextBadges, SentContextBadges } from "./components/context-badges.tsx";
+export { ContextPins } from "./components/context-bar.tsx";
+export { SelectionPopover } from "./components/selection-popover.tsx";
+export { GlobalSelectionPopover } from "./components/global-selection-popover.tsx";
+export { LoadingIndicator } from "./components/loading-indicator.tsx";
+export { ThemeToggle } from "./components/theme-toggle.tsx";
+export { AppBrand } from "./components/app-brand.tsx";
+export { CollectionToolbar } from "./components/collection-toolbar.tsx";
+export { CollectionSearchInput } from "./components/collection-search-input.tsx";
+export {
+  CollectionFilterBar,
+  type CollectionFilterDefinition,
+  type CollectionFilterOption,
+  type CollectionFilterValue,
+} from "./components/collection-filter-bar.tsx";
+export {
+  CollectionSortMenu,
+  type CollectionSortOption,
+} from "./components/collection-sort-menu.tsx";
+export {
+  CollectionViewToggle,
+  type CollectionViewMode,
+} from "./components/collection-view-toggle.tsx";
+export { CollectionEmptyState } from "./components/collection-empty-state.tsx";
+export { CollectionSkeleton } from "./components/collection-skeleton.tsx";
+export { InfiniteScrollSentinel } from "./components/infinite-scroll-sentinel.tsx";
+export { CollectionSurface } from "./components/collection-surface.tsx";
+export {
+  ThemeRuntimeProvider,
+  ThemeScope,
+  ThemeDocumentMetadata,
+  useThemeRuntime,
+} from "./components/theme-runtime-provider.tsx";
+export { JsonViewer } from "./components/json-viewer.tsx";
+export { UserMenu } from "./components/user-menu.tsx";
+export { FormDialog } from "./components/form-dialog.tsx";
+export { ConfirmDialog } from "./components/confirm-dialog.tsx";
+export { NameDialog } from "./components/name-dialog.tsx";
+export { SurfaceCard, surfaceCardVariants } from "./components/surface-card.tsx";
+
+// --- Composite UI primitives (theme-runtime-coupled — stay here for now) ---
+// Button, Checkbox, Input, Textarea, Field, FieldSet have moved to
+// @lastspace/web-primitives (#94). The primitives below have a runtime
+// coupling to ThemeScope (theme-runtime-provider.tsx) — they need a
+// theme-system refactor before they can move to the leaf primitives
+// package. Tracked for a follow-up under #95/#96.
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "./ui/tooltip.tsx";
+export {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "./ui/collapsible.tsx";
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "./ui/dropdown-menu.tsx";
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogTrigger,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog.tsx";
+export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent } from "./ui/popover.tsx";
+export { Select, selectClassName } from "./ui/select.tsx";
+
+// --- Stores ---
+export { useAppStore } from "./lib/app-store.ts";
+export { useNavStore, type NavFooterAction } from "./lib/nav-store.ts";
+export { useToolPanelStore } from "./lib/tool-panel-store.ts";
+export type {
+  ToolPanelContent,
+  PdfHighlightRef,
+  PanelRendererEntry,
+} from "./lib/tool-panel-store.ts";
+export { useSidebarStore, SIDEBAR_WIDTH, RAIL_WIDTH } from "./lib/sidebar-store.ts";
+export { useChatBubbleStore } from "./lib/chat-bubble-store.ts";
+export { useThemeStore } from "./lib/theme-store.ts";
+export type { ThemeMode } from "./lib/theme-store.ts";
+export {
+  mergeThemeDefinitions,
+  resolveThemeRuntime,
+  getEffectiveThemeMode,
+  getThemePreset,
+} from "./lib/theme-runtime.ts";
+export type {
+  ThemeDefinition,
+  ThemeLayer,
+  ResolvedThemeRuntime,
+  ThemeColorSlots,
+  ThemeSidebarSlots,
+  ThemeStatusSlots,
+  ThemeChartSlots,
+  ThemeTypographySlots,
+  ThemeRadiusSlots,
+  ThemeAppSlots,
+  ThemeBranding,
+} from "./lib/theme-runtime.ts";
+// Stores moved to @lastspace/agent (#95): authStore, citationStore,
+// streamingStatusStore, clientToolRegistry. Consumers import directly from
+// `@lastspace/agent` / `@lastspace/agent/msal` — no re-exports here per
+// the no-shim rule.
+export { useDevStore } from "./lib/dev-store.ts";
+
+// --- Nav types ---
+export { DEFAULT_NAV_CONFIG, findNavItem } from "./lib/nav-config.ts";
+export type {
+  NavItem,
+  NavItemAction,
+  NavItemDnd,
+  NavGroup,
+  NavGroupCreateAction,
+  NavMatch,
+  CollapsedRailItem,
+  CollapsedRailContext,
+} from "./lib/nav-config.ts";
+
+// --- Hooks ---
+export { usePageTools } from "./lib/use-page-tools.ts";
+export { useNewConversation } from "./lib/use-new-conversation.ts";
+
+// --- Adapters ---
+export { AGUIAdapterSDK } from "./lib/ag-ui-adapter.ts";
+export { FileAttachmentAdapter } from "./lib/attachment-adapter.ts";
+
+// --- Auth ---
+// `AuthProvider` is the React MSAL bootstrap (uses `@azure/msal-react`).
+// Token store, config, fetch wrapper all live in `@lastspace/agent/msal`.
+export { AuthProvider } from "./lib/auth-provider.tsx";
+
+// --- Utils ---
+// `cn` is sourced from @lastspace/web-primitives (the leaf primitives package).
+// Re-exporting here would create two canonical sources for the same
+// utility — banned per the "no shims" pre-1.0 rule (#90).
