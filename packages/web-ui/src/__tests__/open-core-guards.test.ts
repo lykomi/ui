@@ -74,10 +74,20 @@ const AGENT_BANNED_IMPORTS = [
   { specifier: "@azure/msal-browser", scope: "non-msal" as const },
 ];
 
-/** File-count ceilings on host-shell directories post-extraction. */
+/** File-count ceilings on host-shell directories post-extraction.
+ *
+ *  `apps/web/src` is at 90 in warning mode for #98 (post-extraction the
+ *  features/spaces tree + 28 Spaces pages still live in the customer app
+ *  until #99). Tightens to 30 + hardFail: true once #99 migrates the
+ *  Spaces pages into the private `@lastspace/spaces-web-ui` package.
+ *
+ *  `packages/web-shell/src` is hard-capped at 15 — the shell is a thin
+ *  composition layer; growth indicates leakage.
+ */
 const FILE_COUNT_CEILINGS = [
-  { path: "apps/web/src", ceiling: 30, hardFail: false },
+  { path: "apps/web/src", ceiling: 90, hardFail: false },
   { path: "apps/web-api/src", ceiling: 20, hardFail: false },
+  { path: "packages/web-shell/src", ceiling: 15, hardFail: true },
 ];
 
 /**
