@@ -1,0 +1,55 @@
+import { type FC } from "react";
+import { LogOut, User } from "lucide-react";
+import { cn } from "@lastspace/web-primitives";
+import { useAuthStore } from "../lib/auth-store.ts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu.tsx";
+import { Button } from "@lastspace/web-primitives";
+
+export const UserMenu: FC = () => {
+  const { user, signOut } = useAuthStore();
+
+  if (!user) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="gap-2 rounded-full px-2">
+          {user.avatar ? (
+            <img src={user.avatar} alt={user.name} className="size-6 rounded-full" />
+          ) : (
+            <div
+              className={cn(
+                "size-6 rounded-full",
+                "bg-primary/10 text-primary",
+                "flex items-center justify-center",
+              )}
+            >
+              <User className="size-3.5" />
+            </div>
+          )}
+          <span className="text-xs text-muted-foreground hidden sm:inline">{user.name}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm font-medium">{user.name}</p>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
+          <LogOut className="size-4 mr-2" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};

@@ -1,45 +1,52 @@
-Stateless UI primitives for the LastSpace agent UI. Published as `@lastspace/web-ui`.
+React UI core for the AG-UI protocol starter — hooks, stores, extension-point registries, AG-UI adapter, ChatPanel, sidebar, layout components. Published as `@lastspace/web-ui`. Depends on `@lastspace/web-primitives` for leaf primitives (Button, Input, Field, Checkbox, Textarea, `cn`).
 
 # Architecture
 
+Relative imports only (no `@/` alias). Cross-package consumers use `@lastspace/web-ui`.
+
 ```
 src/
-  index.ts        ← barrel export (all public API)
-  utils.ts        ← cn() — clsx + tailwind-merge
-  button.tsx      ← Button + buttonVariants
-  checkbox.tsx    ← Checkbox (Radix UI)
-  field.tsx       ← Field, FieldSet (form-row composition)
-  input.tsx       ← Input + inputClassName
-  textarea.tsx    ← Textarea + textareaClassName
+  components/   ← UI components (sidebar, chat, tool-panel, markdown, etc.)
+  lib/          ← Zustand stores, adapters, hooks, utilities
+  ui/           ← shadcn/radix primitives (button, tooltip, collapsible, dropdown)
+  index.ts      ← barrel export (all public API)
 ```
 
-# Import boundary
+# Import Boundary (enforced by guard test)
 
-- MUST NOT import from `@lastspace/*` (zero workspace dependencies — pure leaf package). **Enforced** by the `OPEN_CORE_GRAPH` rule in `packages/web-ui-core/src/__tests__/open-core-guards.test.ts`.
-- MUST NOT use `@/` path aliases (relative imports only). Convention; not currently guarded for this package — guard coverage tracked under #92's follow-ups.
-- MUST NOT import from any `apps/`, `features/`, or `pages/`. Convention; same status as above.
+- MUST NOT import from `@lastspace/spaces`
+- MUST NOT use `@/` path aliases (relative imports only)
+- MUST NOT import from `features/` or `pages/` (those are app-level)
 
-# What goes here
+# Extension Points
 
-Stateless, generic UI building blocks. Specifically:
+SPACES and other feature modules plug in via these registries:
 
-- shadcn-style primitives wrapping Radix UI roots
-- Layout/composition helpers (`Field` rows for forms)
-- Pure styling utilities (`cn`, variant helpers)
+- **NavItem.dnd** (`nav-config.ts`): drag-and-drop behavior on sidebar items
+- **NavItem.dimmed / NavItem.badge** (`nav-config.ts`): visual modifiers on sidebar items (greyed-out state, small text badge)
+- **NavGroupCreateAction** (`nav-config.ts`): "+ New" actions on nav group headers (label, icon, handler)
+- **NavFooterAction** (`nav-store.ts`): action buttons in the sidebar footer area
+- **Panel renderer registry** (`tool-panel-store.ts`): custom content renderers for the side panel (PDF, entity pages)
+- **Citation handler** (`citation-store.ts`): handles `[n]` citation clicks in markdown
+- **Tool UI** (via `useAssistantToolUI` in runtime provider): custom rendering for agent tools
 
-# What does NOT go here
+# Adding Extension Points
 
-- Any component that touches a Zustand store, agent runtime, or theme runtime
-- Any component that renders into a portal AND needs theming (Dialog, Popover, DropdownMenu — those stay in `@lastspace/web-ui-core` until the theme-runtime coupling is refactored)
-- Any component with backend / API knowledge
+1. Define interface in the relevant store (e.g., `PanelRendererEntry`)
+2. Add registry array + register function to the store
+3. Component reads from registry and delegates rendering
+4. Feature module calls `registerX()` at init time
 
-# Theming
+# AG-UI Adapter
 
-Components use Tailwind utility classes referencing CSS variables (shadcn convention):
-- `bg-background`, `text-foreground`, `border-border`, `bg-primary`, `text-primary-foreground`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-accent-foreground`, `border-input`, `ring-ring`, `bg-destructive`, `text-destructive-foreground`, `bg-secondary`, `text-secondary-foreground`
+- No official `@assistant-ui/ag-ui` adapter exists. This package ships a custom adapter (`src/lib/ag-ui-adapter.ts`) that uses raw fetch + SSE and accepts a `fetchFn` option for explicit service clients.
+- `@assistant-ui/react` must stay on **0.12.x or newer** — 0.11.x has a `_getInitializePromise` runtime regression.
 
-Consumers must define these tokens in their app's CSS (see `apps/web/src/index.css` for the canonical definitions).
+# Client-Side Tools (AG-UI protocol)
 
-# Bundle-size budget
+Schemas are sent to the backend, the LLM calls them as declaration-only, the adapter intercepts at `TOOL_CALL_END`, executes locally, and sends a follow-up turn with the results.
 
-`@lastspace/web-ui` ≤30 KB gz — **target, not yet enforced**. The `size-limit` infrastructure scaffolds in a follow-up PR on #92. Until then, manually check the build output. Adding heavier components (Dialog, Popover, table primitives) is fine if they stay zero-coupled, but watch the budget.
+- **`ui_*`** — global tools (always available): `ui_navigate`, `ui_set_theme`, `ui_open_panel`, `ui_select_item`, `ui_update_content`, `ui_highlight`, `ui_get_context`, `ui_confirm`.
+- **`page_*`** — page-specific tools registered via the `usePageTools()` hook (mounted on enter, removed on leave).
+
+Register page tools with `usePageTools([{ name, description, parameters, execute }])`. Custom tool UIs go through `useAssistantToolUI`. Generic rendering falls back to the tool-fallback component.
