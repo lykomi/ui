@@ -1,0 +1,72 @@
+# Release workflow for `@iloveagents/foundry-*` npm packages.
+#
+# Behaviour:
+#   - On push to main, runs the Changesets action.
+#   - If pending changesets exist: opens / updates a "chore: version packages" PR
+#     that bumps versions + writes CHANGELOG entries.
+#   - When that PR merges: this workflow runs again, sees no pending changesets,
+#     and (once `publish` step is enabled) runs `pnpm changeset publish` which
+#     publishes via npm Trusted Publishing OIDC (no NPM_TOKEN needed).
+#
+# CURRENT STATE:
+#   - The publish step is intentionally NOT enabled yet.
+#   - Trusted Publisher trust must be configured on npmjs.com:
+#     Account → Trusted Publishers → add iLoveAgents/foundry-ui +
+#     this workflow file (release-npm.yml).
+#
+# To enable publishing once Trusted Publishing is wired:
+#   1. Configure Trusted Publisher trust per above.
+#   2. Uncomment the `publish:` line below.
+#   3. Verify on a low-stakes package first (e.g. publish foundry-web-primitives
+#      at 0.1.0 alone, not the whole set).
+
+name: Release npm
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-npm
+  cancel-in-progress: false
+
+permissions:
+  contents: write       # changesets action commits version bumps
+  pull-requests: write  # changesets action opens Version Packages PR
+  id-token: write       # required for npm Trusted Publishing OIDC
+
+jobs:
+  release:
+    name: Version + (later) Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          # Configures registry auth for npm Trusted Publishing.
+          registry-url: https://registry.npmjs.org
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Create Version PR or publish
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset:version
+          # Uncomment once npm Trusted Publishing OIDC trust is configured
+          # for iLoveAgents/foundry-ui + this workflow file.
+          # publish: pnpm changeset:publish
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # NPM_TOKEN intentionally omitted — Trusted Publishing uses the
+          # OIDC token from `id-token: write` above; no static secret.
