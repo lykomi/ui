@@ -11,10 +11,10 @@ vi.stubGlobal(
   }),
 );
 
-const { useClientToolRegistry } = await import("../client-tool-registry");
+const { clientToolRegistry } = await import("@lastspace/agent");
 await import("../client-tools"); // triggers registerGlobalTools()
 
-const registry = () => useClientToolRegistry.getState();
+const registry = () => clientToolRegistry.getState();
 
 describe("Global tool registration", () => {
   it("registers all global tools with ui_ prefix", () => {

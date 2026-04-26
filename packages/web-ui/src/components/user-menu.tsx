@@ -1,7 +1,9 @@
 import { type FC } from "react";
 import { LogOut, User } from "lucide-react";
+import { useStore } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { cn } from "@lastspace/web-primitives";
-import { useAuthStore } from "../lib/auth-store.ts";
+import { authStore } from "@lastspace/agent/msal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +15,10 @@ import {
 import { Button } from "@lastspace/web-primitives";
 
 export const UserMenu: FC = () => {
-  const { user, signOut } = useAuthStore();
+  const { user, signOut } = useStore(
+    authStore,
+    useShallow((s) => ({ user: s.user, signOut: s.signOut })),
+  );
 
   if (!user) return null;
 

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useAuthStore } from "../auth-store";
+import { authStore } from "../msal/auth-store.ts";
 
-const store = () => useAuthStore.getState();
+const store = () => authStore.getState();
 
-describe("auth-store", () => {
+describe("authStore", () => {
   beforeEach(() => {
-    useAuthStore.setState({ user: null, isAuthenticated: false });
+    authStore.setState({ user: null, isAuthenticated: false });
   });
 
   it("starts unauthenticated", () => {

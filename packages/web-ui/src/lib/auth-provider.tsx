@@ -15,13 +15,13 @@ import {
   useEffect,
   useState,
 } from "react";
-import { useAuthStore } from "./auth-store.ts";
 import {
-  type MsalAuthConfig,
-  type MsalClientApplication,
+  authStore,
   initializeMsal,
   getMsalInstance,
-} from "./auth-config.ts";
+  type MsalAuthConfig,
+  type MsalClientApplication,
+} from "@lastspace/agent/msal";
 
 interface AuthProviderProps {
   config: MsalAuthConfig;
@@ -120,7 +120,7 @@ const AuthGuard: FC<PropsWithChildren<{ useMsalHook: MsalHook }>> = ({
 
     if (accounts.length > 0) {
       const account = accounts[0];
-      useAuthStore.getState().signIn({
+      authStore.getState().signIn({
         name: account.name ?? account.username,
         email: account.username,
         oid: account.localAccountId,

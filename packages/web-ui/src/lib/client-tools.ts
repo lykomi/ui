@@ -11,7 +11,7 @@
 import { useThemeStore, type ThemeMode } from "./theme-store.ts";
 import { useToolPanelStore } from "./tool-panel-store.ts";
 import { useAppStore } from "./app-store.ts";
-import { useClientToolRegistry, type ClientToolEntry } from "./client-tool-registry.ts";
+import { clientToolRegistry, type ClientToolEntry } from "@lastspace/agent";
 
 // ---------------------------------------------------------------------------
 // Navigate function injection (needs React Router context)
@@ -283,7 +283,7 @@ const GLOBAL_TOOLS: ClientToolEntry[] = [
 // ---------------------------------------------------------------------------
 
 export function registerGlobalTools() {
-  const registry = useClientToolRegistry.getState();
+  const registry = clientToolRegistry.getState();
   for (const tool of GLOBAL_TOOLS) {
     registry.registerGlobal(tool);
   }

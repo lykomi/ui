@@ -2,15 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getAccessToken = vi.fn();
 
-vi.mock("../auth-store", () => ({
-  useAuthStore: {
+vi.mock("../msal/auth-store.ts", () => ({
+  authStore: {
     getState: () => ({
       getAccessToken,
     }),
   },
 }));
 
-import { tokenFetch } from "../token-fetch";
+import { tokenFetch } from "../msal/token-fetch.ts";
 
 describe("tokenFetch", () => {
   beforeEach(() => {
@@ -48,5 +48,18 @@ describe("tokenFetch", () => {
     expect(headers.get("X-Request-Only")).toBe("request");
     expect(headers.get("X-Init-Only")).toBe("init");
     expect(headers.get("X-Override")).toBe("init");
+  });
+
+  it("falls through to native fetch when no token is available", async () => {
+    getAccessToken.mockResolvedValue(null);
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+
+    await tokenFetch("https://example.com/api/items");
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    expect(init).toBeUndefined();
   });
 });

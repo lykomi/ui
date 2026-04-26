@@ -10,7 +10,8 @@ import type { Highlighter } from "shiki/bundle/web";
 import { Children, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@lastspace/web-primitives";
-import { useCitationStore, type CitationResult } from "../lib/citation-store.ts";
+import { useStore } from "zustand";
+import { citationStore, type CitationResult } from "@lastspace/agent";
 
 /* ---------- Shiki syntax highlighter (lazy-loaded singleton) ---------- */
 
@@ -317,14 +318,14 @@ const CITE_RE = /(\[\d+\])/;
 
 /** Open a citation via the registered handler (provided by feature modules). */
 function openCitation(result: CitationResult) {
-  const handler = useCitationStore.getState().handler;
+  const handler = citationStore.getState().handler;
   if (handler) handler.openCitation(result);
 }
 
 /** Clickable superscript citation: [1] → opens via registered handler. */
 const CitationRef: FC<{ index: number }> = ({ index }) => {
-  const result = useCitationStore((s) => s.results[index - 1]);
-  const hasHandler = useCitationStore((s) => !!s.handler);
+  const result = useStore(citationStore, (s) => s.results[index - 1]);
+  const hasHandler = useStore(citationStore, (s) => !!s.handler);
   if (!result) return <span className="text-muted-foreground">[{index}]</span>;
   if (!hasHandler) return <span className="text-muted-foreground">[{index}]</span>;
 

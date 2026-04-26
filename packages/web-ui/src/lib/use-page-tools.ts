@@ -25,13 +25,13 @@
  */
 
 import { useEffect } from "react";
-import { useClientToolRegistry, type ClientToolEntry } from "./client-tool-registry.ts";
+import { clientToolRegistry, type ClientToolEntry } from "@lastspace/agent";
 
 export function usePageTools(tools: ClientToolEntry[]) {
   useEffect(() => {
-    useClientToolRegistry.getState().registerPageTools(tools);
+    clientToolRegistry.getState().registerPageTools(tools);
     return () => {
-      useClientToolRegistry.getState().clearPageTools();
+      clientToolRegistry.getState().clearPageTools();
     };
     // Registers once on mount, clears on unmount.
     // Tools array should be stable (defined outside the component or memoized).

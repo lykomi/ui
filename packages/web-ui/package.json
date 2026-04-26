@@ -15,14 +15,15 @@
     "test:unit": "vitest run"
   },
   "peerDependencies": {
+    "@lastspace/agent": "workspace:*",
     "@lastspace/web-primitives": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router": "^7.0.0",
     "@assistant-ui/react": "^0.12.25",
     "@assistant-ui/react-markdown": "^0.12.9",
-    "@ag-ui/client": "^0.0.41",
-    "@ag-ui/core": "^0.0.41",
+    "@ag-ui/client": "^0.0.52",
+    "@ag-ui/core": "^0.0.52",
     "zustand": "^5.0.0",
     "lucide-react": ">=0.400.0",
     "@azure/msal-browser": "^5.0.0",

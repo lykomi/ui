@@ -1,18 +1,19 @@
-/**
- * Dynamic Client Tool Registry — Zustand store for client-side AG-UI tools.
- *
- * Tools are split into two categories:
- * - **Global tools**: always available (navigate, set_theme, open_panel, etc.)
- * - **Page tools**: registered by the active page via usePageTools(), removed on unmount
- *
- * The adapter reads from this store on every request to get the current
- * tool schemas and executors. Pages declare their capabilities by calling
- * usePageTools() — no need to edit core files.
- */
-
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import type { Tool as AGUITool } from "@ag-ui/core";
 
+/**
+ * Dynamic Client Tool Registry — vanilla zustand store for client-side AG-UI
+ * tools.
+ *
+ * Tools are split into two categories:
+ * - **Global tools**: always available (navigate, set_theme, open_panel, ...)
+ * - **Page tools**: registered by the active page via the host shell, removed
+ *   on unmount.
+ *
+ * The runner reads from this store on every request to get the current tool
+ * schemas and executors. Pages declare their capabilities by calling
+ * `registerPageTools()` — no need to edit core files.
+ */
 export interface ClientToolEntry {
   /** Tool name (must be unique across global + page tools) */
   name: string;
@@ -20,7 +21,7 @@ export interface ClientToolEntry {
   description: string;
   /** JSON Schema for tool parameters */
   parameters: Record<string, unknown>;
-  /** Execution function — called by the adapter at TOOL_CALL_END */
+  /** Execution function — called by the runner at TOOL_CALL_END */
   execute: (argsJson: string) => Promise<string>;
 }
 
@@ -31,13 +32,13 @@ interface ClientToolRegistryState {
   /** Register a global tool (called once at app init) */
   registerGlobal: (tool: ClientToolEntry) => void;
 
-  /** Register page-scoped tools (called by usePageTools on mount) */
+  /** Register page-scoped tools (called by the host on mount) */
   registerPageTools: (tools: ClientToolEntry[]) => void;
 
-  /** Remove page-scoped tools (called by usePageTools on unmount) */
+  /** Remove page-scoped tools (called by the host on unmount) */
   clearPageTools: () => void;
 
-  /** Get all active tool schemas for the adapter */
+  /** Get all active tool schemas for the runner */
   getActiveSchemas: () => AGUITool[];
 
   /** Check if a tool name is registered */
@@ -47,7 +48,7 @@ interface ClientToolRegistryState {
   executeTool: (name: string, argsJson: string) => Promise<string>;
 }
 
-export const useClientToolRegistry = create<ClientToolRegistryState>((set, get) => ({
+export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get) => ({
   globalTools: new Map(),
   pageTools: new Map(),
 
@@ -102,3 +103,10 @@ export const useClientToolRegistry = create<ClientToolRegistryState>((set, get) 
     return tool.execute(argsJson);
   },
 }));
+
+/** Read-only registry view — what the runner consumes. */
+export interface ToolRegistry {
+  isRegistered: (name: string) => boolean;
+  executeTool: (name: string, argsJson: string) => Promise<string>;
+  getActiveSchemas: () => AGUITool[];
+}

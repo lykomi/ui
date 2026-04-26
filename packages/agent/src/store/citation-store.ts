@@ -1,13 +1,4 @@
-/**
- * Citation store — caches search results so [n] markers in chat
- * messages can resolve to clickable deep links.
- *
- * Results are stored when search tools complete. The markdown renderer
- * looks up citations by index to render clickable [n] buttons.
- * A CitationHandler (registered by feature modules) handles the click action.
- */
-
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 
 /** Citation result shape — matches the search result format. */
 export interface CitationResult {
@@ -39,7 +30,13 @@ interface CitationState {
   clear: () => void;
 }
 
-export const useCitationStore = create<CitationState>((set) => ({
+/**
+ * Vanilla store for the citation cache so `[n]` markers in chat messages
+ * resolve to clickable deep links. Search tool calls populate results; the
+ * markdown renderer looks them up by index. A `CitationHandler` (registered
+ * by feature modules) handles the click action.
+ */
+export const citationStore = createStore<CitationState>((set) => ({
   results: [],
   handler: null,
   setResults: (results) => set({ results }),

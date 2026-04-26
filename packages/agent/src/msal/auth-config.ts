@@ -1,8 +1,11 @@
 /**
  * MSAL configuration types and PublicClientApplication singleton.
  *
- * initializeMsal() creates and caches the singleton PublicClientApplication.
- * getMsalInstance() returns null until initialization has completed.
+ * `initializeMsal()` creates and caches the singleton PublicClientApplication.
+ * `getMsalInstance()` returns null until initialization has completed.
+ *
+ * `@azure/msal-browser` is loaded via dynamic import so `@lastspace/agent`
+ * does not pull MSAL into bundles that don't need it.
  */
 
 export interface MsalAuthConfig {
@@ -45,7 +48,7 @@ let msalConfig: MsalAuthConfig | null = null;
 
 /**
  * Initialize the MSAL singleton. Must be called once before rendering.
- * Dynamically imports @azure/msal-browser so the dependency stays optional.
+ * Dynamically imports `@azure/msal-browser` so the dependency stays optional.
  */
 export async function initializeMsal(
   config: MsalAuthConfig,

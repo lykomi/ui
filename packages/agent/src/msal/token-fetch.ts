@@ -6,16 +6,16 @@
  * acts as a gateway and exchanges tokens server-side via OBO when calling
  * downstream services (e.g., Spaces).
  *
- * When MSAL is not configured, behaves identically to native fetch().
+ * When MSAL is not configured, behaves identically to native `fetch()`.
  */
 
-import { useAuthStore } from "./auth-store.ts";
+import { authStore } from "./auth-store.ts";
 
 export async function tokenFetch(
   input: string | URL | Request,
   init?: RequestInit,
 ): Promise<Response> {
-  const token = await useAuthStore.getState().getAccessToken("api");
+  const token = await authStore.getState().getAccessToken("api");
 
   if (!token) {
     return fetch(input, init);

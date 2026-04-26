@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, useLocation } from "react-router";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import { useAppStore } from "./app-store.ts";
-import { useCitationStore } from "./citation-store.ts";
+import { citationStore } from "@lastspace/agent";
 import { useSidebarStore } from "./sidebar-store.ts";
 import { useToolPanelStore } from "./tool-panel-store.ts";
 import { useNewConversation } from "./use-new-conversation.ts";
@@ -12,7 +12,7 @@ const switchToNewThread = vi.fn();
 const resetThread = vi.fn();
 
 vi.mock("@assistant-ui/react", () => ({
-  useAssistantApi: () => ({
+  useAui: () => ({
     threads: () => ({
       switchToNewThread,
     }),
@@ -51,7 +51,7 @@ describe("useNewConversation", () => {
     resetThread.mockReset();
     useToolPanelStore.setState({ isOpen: true });
     useSidebarStore.setState({ isMobileOpen: true });
-    useCitationStore.setState({
+    citationStore.setState({
       results: [
         {
           chunk_id: "chunk-1",
@@ -118,7 +118,7 @@ describe("useNewConversation", () => {
     expect(resetThread).toHaveBeenCalledTimes(1);
     expect(useToolPanelStore.getState().isOpen).toBe(false);
     expect(useSidebarStore.getState().isMobileOpen).toBe(false);
-    expect(useCitationStore.getState().results).toEqual([]);
-    expect(useCitationStore.getState().handler).toBeNull();
+    expect(citationStore.getState().results).toEqual([]);
+    expect(citationStore.getState().handler).toBeNull();
   });
 });

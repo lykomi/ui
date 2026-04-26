@@ -132,12 +132,10 @@ export type {
   ThemeAppSlots,
   ThemeBranding,
 } from "./lib/theme-runtime.ts";
-export { useAuthStore } from "./lib/auth-store.ts";
-export type { AuthUser } from "./lib/auth-store.ts";
-export { useStreamingStatusStore } from "./lib/streaming-status-store.ts";
-export { useCitationStore } from "./lib/citation-store.ts";
-export type { CitationResult, CitationHandler } from "./lib/citation-store.ts";
-export { useClientToolRegistry, type ClientToolEntry } from "./lib/client-tool-registry.ts";
+// Stores moved to @lastspace/agent (#95): authStore, citationStore,
+// streamingStatusStore, clientToolRegistry. Consumers import directly from
+// `@lastspace/agent` / `@lastspace/agent/msal` — no re-exports here per
+// the no-shim rule.
 export { useDevStore } from "./lib/dev-store.ts";
 
 // --- Nav types ---
@@ -153,10 +151,9 @@ export { AGUIAdapterSDK } from "./lib/ag-ui-adapter.ts";
 export { FileAttachmentAdapter } from "./lib/attachment-adapter.ts";
 
 // --- Auth ---
+// `AuthProvider` is the React MSAL bootstrap (uses `@azure/msal-react`).
+// Token store, config, fetch wrapper all live in `@lastspace/agent/msal`.
 export { AuthProvider } from "./lib/auth-provider.tsx";
-export type { MsalAuthConfig } from "./lib/auth-config.ts";
-export { initializeMsal, getMsalInstance, getMsalConfig } from "./lib/auth-config.ts";
-export { tokenFetch } from "./lib/token-fetch.ts";
 
 // --- Utils ---
 // `cn` is sourced from @lastspace/web-primitives (the leaf primitives package).

@@ -1,4 +1,5 @@
-import { useStreamingStatusStore } from "../lib/streaming-status-store.ts";
+import { useStore } from "zustand";
+import { streamingStatusStore } from "@lastspace/agent";
 
 function formatToolName(name: string): string {
   return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -15,7 +16,7 @@ export function LoadingBar() {
 
 /** Inline status text shown in the message area while the agent is running. */
 export function LoadingIndicator() {
-  const streaming = useStreamingStatusStore((s) => s.streamingStatus);
+  const streaming = useStore(streamingStatusStore, (s) => s.streamingStatus);
 
   let label = "Thinking";
   if (streaming.status === "calling" && streaming.toolName) {

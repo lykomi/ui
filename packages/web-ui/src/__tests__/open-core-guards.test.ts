@@ -4,8 +4,9 @@
  * Four data-driven guards that scaffold the rules from issue #92:
  *
  *  1. Customer-isolation — core paths must not import from `solutions/`.
- *  2. Open-core import-direction graph — `agent-core` cannot import other
- *     `@lastspace/*` packages; `agent-react` only `agent-core`; etc.
+ *  2. Open-core import-direction graph — `@lastspace/agent` cannot import
+ *     other `@lastspace/*` packages; `web-ui` may import `web-primitives`
+ *     and `agent`; etc.
  *     Activates per-package as packages are created (graceful no-op when a
  *     target package doesn't exist yet).
  *  3. File-count ceiling on `apps/web/src/` and `apps/web-api/src/`.
@@ -41,15 +42,37 @@ const CUSTOMER_ISOLATED_PY = ["apps/web-api", "apps/spaces"];
  * #99 `@lastspace/spaces-web-ui`).
  */
 const OPEN_CORE_GRAPH: Record<string, string[]> = {
+  "@lastspace/agent": [],
   "@lastspace/web-primitives": [],
-  "@lastspace/web-ui": ["@lastspace/web-primitives"],
-  "@lastspace/web-shell": ["@lastspace/web-primitives", "@lastspace/web-ui"],
+  "@lastspace/web-ui": ["@lastspace/web-primitives", "@lastspace/agent"],
+  "@lastspace/web-shell": ["@lastspace/web-primitives", "@lastspace/web-ui", "@lastspace/agent"],
   "@lastspace/spaces-web-ui": [
     "@lastspace/web-primitives",
     "@lastspace/web-ui",
     "@lastspace/web-shell",
+    "@lastspace/agent",
   ],
 };
+
+/**
+ * Banned bare-package imports inside `packages/agent/src/`.
+ *
+ * `@lastspace/agent` is the cross-runtime transport — pure TS, zero React,
+ * zero `@assistant-ui/*`. The MSAL subpath (`packages/agent/src/msal/`) may
+ * pull in `@azure/msal-browser` (dynamic import keeps it optional). Bare
+ * `"zustand"` is banned everywhere — must use `"zustand/vanilla"`.
+ */
+const AGENT_BANNED_IMPORTS = [
+  { specifier: "react", scope: "all" as const },
+  { specifier: "react-dom", scope: "all" as const },
+  { specifier: "react/jsx-runtime", scope: "all" as const },
+  { specifierPrefix: "@assistant-ui/", scope: "all" as const },
+  { specifier: "@azure/msal-react", scope: "all" as const },
+  // bare "zustand" is the React entry — agent must use "zustand/vanilla".
+  { specifierExact: "zustand", scope: "all" as const },
+  // msal-browser is allowed only under src/msal/.
+  { specifier: "@azure/msal-browser", scope: "non-msal" as const },
+];
 
 /** File-count ceilings on host-shell directories post-extraction. */
 const FILE_COUNT_CEILINGS = [
@@ -169,7 +192,57 @@ describe("open-core guards", () => {
     }
   });
 
-  // 2. Open-core import graph
+  // 2a. Agent package: no React / no assistant-ui / no bare zustand
+  describe("@lastspace/agent banned-import guard", () => {
+    const agentRoot = findPackageDir("@lastspace/agent");
+
+    if (!agentRoot) {
+      it.skip("agent package not yet extracted", () => undefined);
+    } else {
+      const files = findFiles(
+        join(agentRoot, "src"),
+        [".ts", ".tsx"],
+        new Set(["node_modules", "dist", "__tests__"]),
+      );
+
+      function isUnderMsal(filePath: string): boolean {
+        const rel = relative(agentRoot!, filePath);
+        return rel.startsWith(`src/msal/`) || rel.startsWith(`src${"/"}msal${"/"}`);
+      }
+
+      for (const rule of AGENT_BANNED_IMPORTS) {
+        const label =
+          (rule as { specifier?: string }).specifier ??
+          (rule as { specifierPrefix?: string }).specifierPrefix ??
+          (rule as { specifierExact?: string }).specifierExact!;
+
+        it(`no source file imports "${label}" (scope: ${rule.scope})`, () => {
+          const violations: string[] = [];
+          for (const file of files) {
+            if (rule.scope === "non-msal" && isUnderMsal(file)) continue;
+            const content = readFileSync(file, "utf-8");
+            for (const imp of importsOf(content)) {
+              const matches =
+                ("specifierExact" in rule && imp === rule.specifierExact) ||
+                ("specifier" in rule && imp === rule.specifier) ||
+                ("specifierPrefix" in rule &&
+                  rule.specifierPrefix !== undefined &&
+                  imp.startsWith(rule.specifierPrefix));
+              if (matches) violations.push(`${relative(ROOT, file)} -> ${imp}`);
+            }
+          }
+          expect(
+            violations,
+            `${label} import leaked into packages/agent/src/${
+              rule.scope === "non-msal" ? " (outside msal/)" : ""
+            }`,
+          ).toEqual([]);
+        });
+      }
+    }
+  });
+
+  // 2b. Open-core import graph
   describe("open-core package import graph", () => {
     for (const [pkg, allowed] of Object.entries(OPEN_CORE_GRAPH)) {
       it(`${pkg} only imports from [${allowed.join(", ") || "none"}]`, () => {

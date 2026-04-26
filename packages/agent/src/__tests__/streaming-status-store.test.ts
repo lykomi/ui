@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useStreamingStatusStore } from "../streaming-status-store";
+import { streamingStatusStore } from "../store/streaming-status-store.ts";
 
-const store = () => useStreamingStatusStore.getState();
+const store = () => streamingStatusStore.getState();
 
-describe("streaming-status-store", () => {
+describe("streamingStatusStore", () => {
   beforeEach(() => {
-    useStreamingStatusStore.setState({ streamingStatus: { status: "idle" } });
+    streamingStatusStore.setState({ streamingStatus: { status: "idle" } });
   });
 
   it("starts with idle status", () => {

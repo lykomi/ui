@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
 import { getMsalInstance, getMsalConfig } from "./auth-config.ts";
 
 export interface AuthUser {
@@ -25,7 +25,7 @@ interface AuthState {
   getAccessToken: (audience?: "api" | "spaces") => Promise<string | null>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const authStore = createStore<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
 
