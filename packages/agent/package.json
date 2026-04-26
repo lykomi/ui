@@ -1,6 +1,6 @@
 {
   "name": "@iloveagents/foundry-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "types": "./src/index.ts",
@@ -22,7 +22,9 @@
     "@azure/msal-browser": "^5.0.0"
   },
   "peerDependenciesMeta": {
-    "@azure/msal-browser": { "optional": true }
+    "@azure/msal-browser": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "~5.9.3",
