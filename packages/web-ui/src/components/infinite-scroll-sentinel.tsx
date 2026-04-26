@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 
 export function InfiniteScrollSentinel({
   enabled,

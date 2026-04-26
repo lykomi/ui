@@ -1,6 +1,6 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { type ComponentPropsWithRef, forwardRef } from "react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 
 export const DropdownMenu = DropdownMenuPrimitive.Root;
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;

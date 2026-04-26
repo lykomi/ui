@@ -1,22 +1,19 @@
 /**
- * Open-core packaging guards (epic #90).
+ * Open-core packaging guards.
  *
- * Four data-driven guards that scaffold the rules from issue #92:
+ * Three data-driven guards (the customer-isolation + Python guards from the
+ * lastspace-origin version were dropped — foundry-ui is TS-only, no
+ * customer-specific code lives here):
  *
- *  1. Customer-isolation — core paths must not import from `solutions/`.
- *  2. Open-core import-direction graph — `@lastspace/agent` cannot import
- *     other `@lastspace/*` packages; `web-ui` may import `web-primitives`
- *     and `agent`; etc.
- *     Activates per-package as packages are created (graceful no-op when a
- *     target package doesn't exist yet).
- *  3. File-count ceiling on `apps/web/src/` and `apps/web-api/src/`.
- *     Warning mode pre-extraction (logs counter, doesn't fail). Flip
- *     `hardFail: true` once #98 lands.
+ *  1. Banned imports inside `packages/agent/src/` — no React, no DOM, no
+ *     `@assistant-ui/*`, no bare `"zustand"`. The MSAL subpath is the
+ *     single exception that may import `@azure/msal-browser`.
+ *  2. Open-core import-direction graph — each `@iloveagents/foundry-*`
+ *     package may only import from a declared subset of siblings.
+ *  3. File-count ceiling on `packages/web-shell/src` — the shell stays
+ *     thin (composition layer, not application surface).
  *  4. Version-pin parity — shared deps in `pnpm-workspace.yaml` overrides
  *     stay in sync across workspace `package.json` files.
- *
- * Add new packages/rules to the config blocks at the top of this file as
- * the open-core extraction progresses (#94/#95/#96/#98/#99).
  */
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -25,39 +22,35 @@ import { join, relative } from "node:path";
 const ROOT = join(import.meta.dirname!, "../../../..");
 
 // ----------------------------------------------------------------------------
-// Configs — edit these as the extraction progresses.
+// Configs
 // ----------------------------------------------------------------------------
 
-/** Paths that must not import customer-specific code from `solutions/`. */
-const CUSTOMER_ISOLATED_TS = ["apps/web/src", "packages"];
-const CUSTOMER_ISOLATED_PY = ["apps/web-api", "apps/spaces"];
-
 /**
- * Open-core package import graph. For each package, list which `@lastspace/*`
+ * Open-core package import graph. For each package, list which `@iloveagents/*`
  * packages it MAY import. Empty array = none.
  *
  * Packages that do not yet exist on disk are skipped at runtime by
- * `findPackageDir`, so future packages can be wired in here ahead of their
- * extraction PR (#95 `@lastspace/agent`, #98 `@lastspace/web-shell`,
- * #99 `@lastspace/spaces-web-ui`).
+ * `findPackageDir` so future packages can be wired in here ahead of their
+ * extraction.
  */
 const OPEN_CORE_GRAPH: Record<string, string[]> = {
-  "@lastspace/agent": [],
-  "@lastspace/web-primitives": [],
-  "@lastspace/web-ui": ["@lastspace/web-primitives", "@lastspace/agent"],
-  "@lastspace/web-shell": ["@lastspace/web-primitives", "@lastspace/web-ui", "@lastspace/agent"],
-  "@lastspace/spaces-web-ui": [
-    "@lastspace/web-primitives",
-    "@lastspace/web-ui",
-    "@lastspace/web-shell",
-    "@lastspace/agent",
+  "@iloveagents/foundry-agent": [],
+  "@iloveagents/foundry-web-primitives": [],
+  "@iloveagents/foundry-web-ui": [
+    "@iloveagents/foundry-web-primitives",
+    "@iloveagents/foundry-agent",
+  ],
+  "@iloveagents/foundry-web-shell": [
+    "@iloveagents/foundry-web-primitives",
+    "@iloveagents/foundry-web-ui",
+    "@iloveagents/foundry-agent",
   ],
 };
 
 /**
  * Banned bare-package imports inside `packages/agent/src/`.
  *
- * `@lastspace/agent` is the cross-runtime transport — pure TS, zero React,
+ * `@iloveagents/foundry-agent` is the cross-runtime transport — pure TS, zero React,
  * zero `@assistant-ui/*`. The MSAL subpath (`packages/agent/src/msal/`) may
  * pull in `@azure/msal-browser` (dynamic import keeps it optional). Bare
  * `"zustand"` is banned everywhere — must use `"zustand/vanilla"`.
@@ -74,19 +67,11 @@ const AGENT_BANNED_IMPORTS = [
   { specifier: "@azure/msal-browser", scope: "non-msal" as const },
 ];
 
-/** File-count ceilings on host-shell directories.
- *
- *  `apps/web/src` is hard-capped at 30 — the customer-app surface is
- *  the bootstrap, customer pages, customer Jobs UI, and CSS. The
- *  Spaces UI lives in `@lastspace/spaces-web-ui`. Growth past 30
- *  indicates leakage from the Spaces module back into the customer app.
- *
- *  `packages/web-shell/src` is hard-capped at 15 — the shell is a thin
- *  composition layer; growth indicates leakage.
+/** File-count ceiling: `packages/web-shell/src` is hard-capped at 15 — the
+ *  shell is a thin composition layer (bootstrapShell + ChatModule wiring +
+ *  auth provider seam), not application surface. Growth indicates leakage.
  */
 const FILE_COUNT_CEILINGS = [
-  { path: "apps/web/src", ceiling: 30, hardFail: true },
-  { path: "apps/web-api/src", ceiling: 20, hardFail: false },
   { path: "packages/web-shell/src", ceiling: 15, hardFail: true },
 ];
 
@@ -152,59 +137,9 @@ function importsOf(content: string): string[] {
 // ----------------------------------------------------------------------------
 
 describe("open-core guards", () => {
-  // 1. Customer-isolation
-  describe("customer isolation: core paths cannot import from solutions/", () => {
-    for (const tsPath of CUSTOMER_ISOLATED_TS) {
-      it(`TS in ${tsPath} has no solutions/* imports`, () => {
-        const dir = join(ROOT, tsPath);
-        if (!existsSync(dir)) return; // path doesn't exist — skip
-        const files = findFiles(
-          dir,
-          [".ts", ".tsx"],
-          new Set(["node_modules", "dist", "__tests__", "tests"]),
-        );
-        const violations: string[] = [];
-        for (const file of files) {
-          const content = readFileSync(file, "utf-8");
-          for (const imp of importsOf(content)) {
-            if (
-              imp.startsWith("solutions/") ||
-              imp.includes("/solutions/") ||
-              imp.startsWith("@lastspace/solutions") // reserved future namespace
-            ) {
-              violations.push(`${relative(ROOT, file)} -> ${imp}`);
-              break;
-            }
-          }
-        }
-        expect(violations, `Customer-specific imports leaked into ${tsPath}`).toEqual([]);
-      });
-    }
-
-    for (const pyPath of CUSTOMER_ISOLATED_PY) {
-      it(`Python in ${pyPath} has no solutions imports`, () => {
-        const dir = join(ROOT, pyPath);
-        if (!existsSync(dir)) return;
-        const files = findFiles(
-          dir,
-          [".py"],
-          new Set(["node_modules", ".venv", "__pycache__", "tests"]),
-        );
-        const violations: string[] = [];
-        // Match `import solutions.foo` or `from solutions.foo import x`.
-        const re = /^\s*(?:from\s+solutions(?:\.|\s)|import\s+solutions(?:\.|\s|$))/m;
-        for (const file of files) {
-          const content = readFileSync(file, "utf-8");
-          if (re.test(content)) violations.push(relative(ROOT, file));
-        }
-        expect(violations, `Customer-specific imports leaked into ${pyPath}`).toEqual([]);
-      });
-    }
-  });
-
-  // 2a. Agent package: no React / no assistant-ui / no bare zustand
-  describe("@lastspace/agent banned-import guard", () => {
-    const agentRoot = findPackageDir("@lastspace/agent");
+  // 1. Agent package: no React / no assistant-ui / no bare zustand
+  describe("@iloveagents/foundry-agent banned-import guard", () => {
+    const agentRoot = findPackageDir("@iloveagents/foundry-agent");
 
     if (!agentRoot) {
       it.skip("agent package not yet extracted", () => undefined);
@@ -252,7 +187,7 @@ describe("open-core guards", () => {
     }
   });
 
-  // 2b. Open-core import graph
+  // 2. Open-core import graph
   describe("open-core package import graph", () => {
     for (const [pkg, allowed] of Object.entries(OPEN_CORE_GRAPH)) {
       it(`${pkg} only imports from [${allowed.join(", ") || "none"}]`, () => {
@@ -267,7 +202,13 @@ describe("open-core guards", () => {
         for (const file of files) {
           const content = readFileSync(file, "utf-8");
           for (const imp of importsOf(content)) {
-            if (!imp.startsWith("@lastspace/")) continue;
+            // Foundry-ui packages must never import from @lastspace/* (commercial
+            // downstream); allow-listing is enforced for sibling @iloveagents/* deps.
+            if (imp.startsWith("@lastspace/")) {
+              violations.push(`${relative(ROOT, file)} -> ${imp} (lastspace import forbidden)`);
+              continue;
+            }
+            if (!imp.startsWith("@iloveagents/")) continue;
             // Self-imports allowed (subpath exports etc).
             if (imp === pkg || imp.startsWith(`${pkg}/`)) continue;
             // Strip subpath off the imported package.
@@ -277,10 +218,7 @@ describe("open-core guards", () => {
             }
           }
         }
-        expect(
-          violations,
-          `${pkg} imported a forbidden @lastspace/* package`,
-        ).toEqual([]);
+        expect(violations, `${pkg} imported a forbidden package`).toEqual([]);
       });
     }
   });
@@ -320,7 +258,7 @@ describe("open-core guards", () => {
   describe("shared deps stay in sync across workspace package.jsons", () => {
     function workspacePackageJsons(): { dir: string; json: Record<string, unknown> }[] {
       const out: { dir: string; json: Record<string, unknown> }[] = [];
-      for (const base of ["packages", "apps"]) {
+      for (const base of ["packages"]) {
         const baseDir = join(ROOT, base);
         if (!existsSync(baseDir)) continue;
         for (const entry of readdirSync(baseDir)) {

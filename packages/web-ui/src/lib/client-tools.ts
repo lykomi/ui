@@ -11,7 +11,7 @@
 import { useThemeStore, type ThemeMode } from "./theme-store.ts";
 import { useToolPanelStore } from "./tool-panel-store.ts";
 import { useAppStore } from "./app-store.ts";
-import { clientToolRegistry, type ClientToolEntry } from "@lastspace/agent";
+import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-agent";
 
 // ---------------------------------------------------------------------------
 // Navigate function injection (needs React Router context)

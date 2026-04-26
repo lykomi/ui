@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 
 export function CollectionSurface({
   toolbar,

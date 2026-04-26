@@ -2,8 +2,8 @@ import { type FC } from "react";
 import { LogOut, User } from "lucide-react";
 import { useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import { cn } from "@lastspace/web-primitives";
-import { authStore } from "@lastspace/agent/msal";
+import { cn } from "@iloveagents/foundry-web-primitives";
+import { authStore } from "@iloveagents/foundry-agent/msal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu.tsx";
-import { Button } from "@lastspace/web-primitives";
+import { Button } from "@iloveagents/foundry-web-primitives";
 
 export const UserMenu: FC = () => {
   const { user, signOut } = useStore(

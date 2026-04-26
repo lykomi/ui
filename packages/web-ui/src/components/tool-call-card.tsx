@@ -1,5 +1,5 @@
 import { Loader2, CheckCircle2, XCircle, AlertCircle, ChevronDown } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   Collapsible,
   CollapsibleContent,

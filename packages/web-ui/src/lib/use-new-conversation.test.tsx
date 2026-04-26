@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, useLocation } from "react-router";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import { useAppStore } from "./app-store.ts";
-import { citationStore } from "@lastspace/agent";
+import { citationStore } from "@iloveagents/foundry-agent";
 import { useSidebarStore } from "./sidebar-store.ts";
 import { useToolPanelStore } from "./tool-panel-store.ts";
 import { useNewConversation } from "./use-new-conversation.ts";

@@ -14,7 +14,7 @@ import { defineChatModule, type ChatModule, type ShellPage } from "../types.ts";
 // module — its top-level zustand stores call window.matchMedia at import
 // time, which jsdom doesn't provide. We only need the symbols ShellApp
 // + ShellLayout import directly.
-vi.mock("@lastspace/web-ui", () => ({
+vi.mock("@iloveagents/foundry-web-ui", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   AGUIRuntimeProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   Sidebar: () => <div data-testid="sidebar" />,
@@ -44,15 +44,15 @@ vi.mock("@lastspace/web-ui", () => ({
   useThemeStore: (selector: (s: any) => unknown) => selector({ mode: "system" }),
 }));
 
-vi.mock("@lastspace/web-primitives", () => ({
+vi.mock("@iloveagents/foundry-web-primitives", () => ({
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
 }));
 
-vi.mock("@lastspace/agent", () => ({
+vi.mock("@iloveagents/foundry-agent", () => ({
   createServiceFetch: () => fetch,
 }));
 
-vi.mock("@lastspace/agent/msal", () => ({
+vi.mock("@iloveagents/foundry-agent/msal", () => ({
   authStore: { getState: () => ({ getAccessToken: () => Promise.resolve("") }) },
 }));
 

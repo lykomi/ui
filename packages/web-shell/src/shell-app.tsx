@@ -1,7 +1,7 @@
 import { type ReactNode, Suspense, useMemo } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
-import { AGUIRuntimeProvider } from "@lastspace/web-ui";
-import type { ThemeLayer } from "@lastspace/web-ui";
+import { AGUIRuntimeProvider } from "@iloveagents/foundry-web-ui";
+import type { ThemeLayer } from "@iloveagents/foundry-web-ui";
 import type { ChatModule, AuthAdapter, ShellPage } from "./types.ts";
 import { ShellAuth } from "./auth-default.tsx";
 import { ShellLayout } from "./shell-layout.tsx";

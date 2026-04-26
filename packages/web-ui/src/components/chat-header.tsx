@@ -1,7 +1,7 @@
 import { type FC } from "react";
 import { Link } from "react-router";
 import { SquarePen, Menu } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { AppBrand } from "./app-brand.tsx";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { ThemeToggle } from "./theme-toggle.tsx";

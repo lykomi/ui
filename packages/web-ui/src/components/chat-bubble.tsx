@@ -16,8 +16,8 @@ import {
   Check,
   Paperclip,
 } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
-import { Button } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@iloveagents/foundry-web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { ContextPins } from "./context-bar.tsx";
 import { ComposerContextBadges } from "./context-badges.tsx";

@@ -2,7 +2,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { ThemeScope } from "../components/theme-runtime-provider.tsx";
 
 const Dialog = DialogPrimitive.Root;

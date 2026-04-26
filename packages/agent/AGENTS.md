@@ -1,4 +1,4 @@
-Pure-TS agent transport for the LastSpace open-core stack. Published as `@lastspace/agent`. Zero DOM, zero React, zero `@assistant-ui/*`. Cross-runtime — consumed by `@lastspace/web-ui` today, future Outlook / Teams / native shells tomorrow.
+Pure-TS agent transport for the LastSpace open-core stack. Published as `@iloveagents/foundry-agent`. Zero DOM, zero React, zero `@assistant-ui/*`. Cross-runtime — consumed by `@iloveagents/foundry-web-ui` today, future Outlook / Teams / native shells tomorrow.
 
 # Architecture
 
@@ -13,7 +13,7 @@ src/
     citation-store.ts          ← vanilla zustand store
   tools/
     registry.ts       ← clientToolRegistry (vanilla zustand store).
-  msal/               ← subpath export: @lastspace/agent/msal
+  msal/               ← subpath export: @iloveagents/foundry-agent/msal
     auth-store.ts     ← authStore (vanilla zustand store)
     auth-config.ts    ← MsalAuthConfig + initializeMsal singleton.
     token-fetch.ts    ← Bearer-token-attaching fetch.
@@ -31,13 +31,13 @@ Files under `packages/agent/src/` (excluding `msal/`) MUST NOT import:
 - `@azure/msal-*` (anywhere — including under `msal/` for `msal-react`; only `@azure/msal-browser` is allowed under `msal/`)
 - bare `"zustand"` — use `"zustand/vanilla"` (`zustand/middleware` is allowed)
 
-Files under `packages/agent/src/msal/` MAY import `@azure/msal-browser` (dynamic import only — keeps the dep optional). They MUST NOT import `@azure/msal-react` (which is React-bound and lives in `@lastspace/web-ui`).
+Files under `packages/agent/src/msal/` MAY import `@azure/msal-browser` (dynamic import only — keeps the dep optional). They MUST NOT import `@azure/msal-react` (which is React-bound and lives in `@iloveagents/foundry-web-ui`).
 
 `packages/agent/` MUST NOT import from any other `@lastspace/*` package — agent is the leaf of the open-core graph.
 
 # Why `zustand/vanilla`
 
-`import { create } from "zustand"` resolves to the React build (`useSyncExternalStore`). Importing it in a "zero React" package would silently take a React dependency and defeat the cross-runtime goal. Every store in this package uses `import { createStore } from "zustand/vanilla"`. React consumers (in `@lastspace/web-ui` / `apps/web/`) bind via `useStore(store, selector)` from the React entry of zustand.
+`import { create } from "zustand"` resolves to the React build (`useSyncExternalStore`). Importing it in a "zero React" package would silently take a React dependency and defeat the cross-runtime goal. Every store in this package uses `import { createStore } from "zustand/vanilla"`. React consumers (in `@iloveagents/foundry-web-ui` / `apps/web/`) bind via `useStore(store, selector)` from the React entry of zustand.
 
 # What goes here
 
@@ -48,14 +48,14 @@ Files under `packages/agent/src/msal/` MAY import `@azure/msal-browser` (dynamic
 
 # What does NOT go here
 
-- Anything implementing `@assistant-ui/*` interfaces (`ChatModelAdapter`, `AttachmentAdapter`, etc.) — those are React UI surface and live in `@lastspace/web-ui`.
+- Anything implementing `@assistant-ui/*` interfaces (`ChatModelAdapter`, `AttachmentAdapter`, etc.) — those are React UI surface and live in `@iloveagents/foundry-web-ui`.
 - React components, hooks, contexts, providers.
 - UI-layout state (panel widths, modal modes, theme).
-- The `MsalProvider` React component — that lives in `@lastspace/web-ui`.
+- The `MsalProvider` React component — that lives in `@iloveagents/foundry-web-ui`.
 
 # Public surface
 
-Root `@lastspace/agent`:
+Root `@iloveagents/foundry-agent`:
 
 ```ts
 import {
@@ -69,10 +69,10 @@ import {
   citationStore,
   type CitationResult,
   type CitationHandler,
-} from "@lastspace/agent";
+} from "@iloveagents/foundry-agent";
 ```
 
-Subpath `@lastspace/agent/msal`:
+Subpath `@iloveagents/foundry-agent/msal`:
 
 ```ts
 import {
@@ -83,9 +83,9 @@ import {
   getMsalInstance,
   getMsalConfig,
   tokenFetch,
-} from "@lastspace/agent/msal";
+} from "@iloveagents/foundry-agent/msal";
 ```
 
 # Bundle-size budget
 
-Target ≤25 KB gz on the root entry (`@lastspace/agent`, excluding the `/msal` subpath). Measured manually pre-1.0 via `gzip -c dist/index.js | wc -c`; `size-limit` enforcement scaffolds in #92's follow-up.
+Target ≤25 KB gz on the root entry (`@iloveagents/foundry-agent`, excluding the `/msal` subpath). Measured manually pre-1.0 via `gzip -c dist/index.js | wc -c`; `size-limit` enforcement scaffolds in #92's follow-up.

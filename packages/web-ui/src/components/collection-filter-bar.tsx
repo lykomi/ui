@@ -1,9 +1,9 @@
 import { Check, Filter, X } from "lucide-react";
 
-import { Button } from "@lastspace/web-primitives";
-import { Checkbox } from "@lastspace/web-primitives";
+import { Button } from "@iloveagents/foundry-web-primitives";
+import { Checkbox } from "@iloveagents/foundry-web-primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover.tsx";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 
 export type CollectionFilterValue = string | string[] | boolean | undefined;
 

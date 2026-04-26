@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog.tsx";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 
 export function FormDialog({
   open,

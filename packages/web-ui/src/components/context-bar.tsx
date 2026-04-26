@@ -17,7 +17,7 @@ import {
   StickyNote,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { useAppStore, type ContextItem, type ContextItemType } from "../lib/app-store.ts";
 

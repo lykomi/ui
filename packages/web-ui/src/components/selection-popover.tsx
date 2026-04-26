@@ -7,7 +7,7 @@
 
 import { type RefObject, useState, useEffect, useCallback, useRef } from "react";
 import { TextSelect } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { useAppStore } from "../lib/app-store.ts";
 import { useToolPanelStore } from "../lib/tool-panel-store.ts";
 

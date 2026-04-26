@@ -1,4 +1,4 @@
-Stateless UI primitives for the LastSpace agent UI. Published as `@lastspace/web-primitives`.
+Stateless UI primitives for the LastSpace agent UI. Published as `@iloveagents/foundry-web-primitives`.
 
 # Architecture
 
@@ -30,7 +30,7 @@ Stateless, generic UI building blocks. Specifically:
 # What does NOT go here
 
 - Any component that touches a Zustand store, agent runtime, or theme runtime
-- Any component that renders into a portal AND needs theming (Dialog, Popover, DropdownMenu — those stay in `@lastspace/web-ui` until the theme-runtime coupling is refactored)
+- Any component that renders into a portal AND needs theming (Dialog, Popover, DropdownMenu — those stay in `@iloveagents/foundry-web-ui` until the theme-runtime coupling is refactored)
 - Any component with backend / API knowledge
 
 # Theming
@@ -42,4 +42,4 @@ Consumers must define these tokens in their app's CSS (see `apps/web/src/index.c
 
 # Bundle-size budget
 
-`@lastspace/web-primitives` ≤30 KB gz — **target, not yet enforced**. The `size-limit` infrastructure scaffolds in a follow-up PR on #92. Until then, manually check the build output. Adding heavier components (Dialog, Popover, table primitives) is fine if they stay zero-coupled, but watch the budget.
+`@iloveagents/foundry-web-primitives` ≤30 KB gz — **target, not yet enforced**. The `size-limit` infrastructure scaffolds in a follow-up PR on #92. Until then, manually check the build output. Adding heavier components (Dialog, Popover, table primitives) is fine if they stay zero-coupled, but watch the budget.

@@ -25,7 +25,7 @@
  */
 
 import { useEffect } from "react";
-import { clientToolRegistry, type ClientToolEntry } from "@lastspace/agent";
+import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-agent";
 
 export function usePageTools(tools: ClientToolEntry[]) {
   useEffect(() => {

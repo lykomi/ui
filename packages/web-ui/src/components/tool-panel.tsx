@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { X, Maximize2, Minimize2, Copy, Check, Pin, PinOff, FolderOpen } from "lucide-react";
 import { useNavigate } from "react-router";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { useToolPanelStore, type ToolPanelContent } from "../lib/tool-panel-store.ts";
 import { useAppStore } from "../lib/app-store.ts";
 import ReactMarkdown from "react-markdown";

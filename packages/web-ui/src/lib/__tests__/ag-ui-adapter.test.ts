@@ -2,7 +2,7 @@
  * Adapter shim regression tests.
  *
  * The shim is a generator-driven assistant-ui `ChatModelAdapter` wrapping
- * `@lastspace/agent`'s `AGUIRunner`. The contract under test:
+ * `@iloveagents/foundry-agent`'s `AGUIRunner`. The contract under test:
  *   - Every intermediate yield carries `status: { type: "running" }`.
  *   - The FINAL yield carries `status: { type: "complete", reason: "stop" }`
  *     even after a multi-turn client-tool follow-up — the previous adapter
@@ -13,7 +13,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { RunnerEvent } from "@lastspace/agent";
+import type { RunnerEvent } from "@iloveagents/foundry-agent";
 
 const runMock = vi.fn();
 const runnerMock = vi.fn().mockImplementation(() => ({
@@ -22,7 +22,7 @@ const runnerMock = vi.fn().mockImplementation(() => ({
   run: runMock,
 }));
 
-vi.mock("@lastspace/agent", () => ({
+vi.mock("@iloveagents/foundry-agent", () => ({
   AGUIRunner: function AGUIRunnerCtor(...args: unknown[]) {
     return runnerMock(...args);
   },
@@ -38,7 +38,7 @@ vi.mock("@lastspace/agent", () => ({
   },
 }));
 
-vi.mock("@lastspace/agent/msal", () => ({
+vi.mock("@iloveagents/foundry-agent/msal", () => ({
   tokenFetch: globalThis.fetch,
 }));
 

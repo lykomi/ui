@@ -18,8 +18,8 @@ import {
   useChatBubbleStore,
   useThemeStore,
   type ThemeLayer,
-} from "@lastspace/web-ui";
-import { cn } from "@lastspace/web-primitives";
+} from "@iloveagents/foundry-web-ui";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { X } from "lucide-react";
 import type { ChatModule } from "./types.ts";
 

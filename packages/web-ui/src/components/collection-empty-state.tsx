@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { SearchX } from "lucide-react";
 
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 
 export function CollectionEmptyState({
   icon: Icon = SearchX,

@@ -31,7 +31,7 @@ export function bootstrapShell(opts: BootstrapShellOptions = {}): void {
   const root = rootElement ?? document.getElementById("root");
   if (!root) {
     throw new Error(
-      "[@lastspace/web-shell] No mount target — pass `rootElement` or ensure a #root element exists.",
+      "[@iloveagents/foundry-web-shell] No mount target — pass `rootElement` or ensure a #root element exists.",
     );
   }
 

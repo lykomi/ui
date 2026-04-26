@@ -1,4 +1,4 @@
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 
 import type { CollectionViewMode } from "./collection-view-toggle.tsx";
 

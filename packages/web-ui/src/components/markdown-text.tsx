@@ -9,9 +9,9 @@ import type { Components } from "react-markdown";
 import type { Highlighter } from "shiki/bundle/web";
 import { Children, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { useStore } from "zustand";
-import { citationStore, type CitationResult } from "@lastspace/agent";
+import { citationStore, type CitationResult } from "@iloveagents/foundry-agent";
 
 /* ---------- Shiki syntax highlighter (lazy-loaded singleton) ---------- */
 

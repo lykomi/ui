@@ -10,7 +10,7 @@
 
 import { type FC, createElement } from "react";
 import { Pin, TextSelect, X, FileText, Link2, StickyNote, type LucideIcon } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip.tsx";
 import { useAppStore, type ContextItem, type ContextItemType } from "../lib/app-store.ts";
 

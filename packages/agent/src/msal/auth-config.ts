@@ -4,7 +4,7 @@
  * `initializeMsal()` creates and caches the singleton PublicClientApplication.
  * `getMsalInstance()` returns null until initialization has completed.
  *
- * `@azure/msal-browser` is loaded via dynamic import so `@lastspace/agent`
+ * `@azure/msal-browser` is loaded via dynamic import so `@iloveagents/foundry-agent`
  * does not pull MSAL into bundles that don't need it.
  */
 

@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useAui } from "@assistant-ui/react";
 import { useStore } from "zustand";
-import { citationStore } from "@lastspace/agent";
+import { citationStore } from "@iloveagents/foundry-agent";
 import { useAGUIAdapter } from "../components/ag-ui-runtime-provider.tsx";
 import { useToolPanelStore } from "./tool-panel-store.ts";
 import { useAppStore } from "./app-store.ts";

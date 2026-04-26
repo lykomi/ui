@@ -21,7 +21,7 @@ import {
   getMsalInstance,
   type MsalAuthConfig,
   type MsalClientApplication,
-} from "@lastspace/agent/msal";
+} from "@iloveagents/foundry-agent/msal";
 
 interface AuthProviderProps {
   config: MsalAuthConfig;

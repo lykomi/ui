@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import type { ThemeLayer } from "@lastspace/web-ui";
+import type { ThemeLayer } from "@iloveagents/foundry-web-ui";
 
 /** Route entry contributed by a module or the host app. */
 export interface ShellPage {

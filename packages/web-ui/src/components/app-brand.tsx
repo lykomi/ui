@@ -1,5 +1,5 @@
 import { Layers3 } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { useThemeRuntime } from "./theme-runtime-provider.tsx";
 
 export function AppBrand({

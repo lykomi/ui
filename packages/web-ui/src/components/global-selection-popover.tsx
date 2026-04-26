@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TextSelect } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import { useAppStore } from "../lib/app-store.ts";
 
 const POPOVER_HEIGHT = 36;

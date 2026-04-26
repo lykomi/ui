@@ -44,7 +44,7 @@ function RouteProbe() {
 // can probe their nesting order. Don't spread the real module — its
 // stores call window.matchMedia at import time and jsdom doesn't have
 // that.
-vi.mock("@lastspace/web-ui", () => ({
+vi.mock("@iloveagents/foundry-web-ui", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => {
     const incoming = useContext(DepthContext);
     seen["auth-provider"] = incoming;
@@ -86,22 +86,22 @@ vi.mock("@lastspace/web-ui", () => ({
   useThemeStore: (selector: (s: any) => unknown) => selector({ mode: "system" }),
 }));
 
-vi.mock("@lastspace/web-primitives", () => ({
+vi.mock("@iloveagents/foundry-web-primitives", () => ({
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
 }));
 
-vi.mock("@lastspace/agent", () => ({
+vi.mock("@iloveagents/foundry-agent", () => ({
   createServiceFetch: () => fetch,
 }));
 
-vi.mock("@lastspace/agent/msal", () => ({
+vi.mock("@iloveagents/foundry-agent/msal", () => ({
   authStore: { getState: () => ({ getAccessToken: () => Promise.resolve("") }) },
 }));
 
 import { ShellApp } from "../shell-app.tsx";
 import type { AuthAdapter } from "../types.ts";
 // Imported AFTER vi.mock so this resolves to the mocked AuthProvider.
-import { AuthProvider as MockedAuthProvider } from "@lastspace/web-ui";
+import { AuthProvider as MockedAuthProvider } from "@iloveagents/foundry-web-ui";
 
 describe("Shell wrapper ordering contract", () => {
   it("nests BrowserRouter > AuthProvider > [module wrappers] > AGUIRuntimeProvider > Routes", async () => {
@@ -126,7 +126,10 @@ describe("Shell wrapper ordering contract", () => {
     // explicit for the test.
     const auth: AuthAdapter = {
       Provider: ({ children }: { children: ReactNode }) => (
-        <MockedAuthProvider>{children}</MockedAuthProvider>
+        // The vi.mock factory above replaces this provider's runtime impl with one
+        // that ignores `config`, but TypeScript only sees the real component's
+        // signature. Cast to satisfy the prop requirement without a real config.
+        <MockedAuthProvider config={{} as never}>{children}</MockedAuthProvider>
       ),
     };
 

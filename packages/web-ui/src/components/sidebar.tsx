@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { Ellipsis, Layers, PanelLeft, PanelLeftOpen, SquarePen, ChevronRight, GripVertical, Plus } from "lucide-react";
-import { cn } from "@lastspace/web-primitives";
+import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   useSidebarStore,
   RAIL_WIDTH,
@@ -15,7 +15,7 @@ import { useAppStore } from "../lib/app-store.ts";
 import type { NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import { getContainerDropZoneLabel, hasAnyDropTarget, hasExternalFilesData } from "../lib/nav-dnd.ts";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
-import { Button } from "@lastspace/web-primitives";
+import { Button } from "@iloveagents/foundry-web-primitives";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu.tsx";
 import { AppBrand } from "./app-brand.tsx";
 

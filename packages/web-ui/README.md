@@ -1,11 +1,11 @@
-# @lastspace/web-ui
+# @iloveagents/foundry-web-ui
 
-React UI core for the AG-UI protocol agent starter. Provides hooks, stores, extension-point registries, the AG-UI adapter, ChatPanel, sidebar, and layout components. Depends on `@lastspace/web-primitives` for leaf primitives (Button, Input, Field, Checkbox, Textarea, `cn`).
+React UI core for the AG-UI protocol agent starter. Provides hooks, stores, extension-point registries, the AG-UI adapter, ChatPanel, sidebar, and layout components. Depends on `@iloveagents/foundry-web-primitives` for leaf primitives (Button, Input, Field, Checkbox, Textarea, `cn`).
 
 ## Install
 
 ```bash
-pnpm add @lastspace/web-ui @lastspace/web-primitives
+pnpm add @iloveagents/foundry-web-ui @iloveagents/foundry-web-primitives
 ```
 
 ## Usage
@@ -18,8 +18,8 @@ import {
   ToolPanel,
   useAppStore,
   usePageTools,
-} from "@lastspace/web-ui";
-import { cn } from "@lastspace/web-primitives";
+} from "@iloveagents/foundry-web-ui";
+import { cn } from "@iloveagents/foundry-web-primitives";
 ```
 
 Consumed as TypeScript source (no build step). Requires Tailwind v4 `@source` directives for both packages:
@@ -31,7 +31,7 @@ Consumed as TypeScript source (no build step). Requires Tailwind v4 `@source` di
 
 ## Extension Points
 
-Feature modules (like SPACES) plug into `@lastspace/web-ui` via registries — no direct imports needed:
+Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via registries — no direct imports needed:
 
 - **NavItem.dnd** — drag-and-drop behavior on sidebar items
 - **Panel renderer registry** — custom content renderers for the side panel

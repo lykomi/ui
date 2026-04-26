@@ -7,7 +7,7 @@
  * 2. Acquires a Bearer token via the supplied `acquireToken` callback and
  *    attaches it as the `Authorization` header.
  *
- * `@lastspace/agent` stays auth-mechanism-agnostic — `acquireToken` is
+ * `@iloveagents/foundry-agent` stays auth-mechanism-agnostic — `acquireToken` is
  * supplied by the host (apps/web wires it to MSAL via the `/msal` subpath;
  * future shells could plug in a different token source).
  */
