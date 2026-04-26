@@ -17,7 +17,7 @@ src/
 
 # Import Boundary (enforced by guard test)
 
-- MUST NOT import from `@lastspace/spaces`
+- MUST NOT import from `@lastspace/spaces-web-ui`
 - MUST NOT use `@/` path aliases (relative imports only)
 - MUST NOT import from `features/` or `pages/` (those are app-level)
 - Cross-runtime transport (AG-UI runner, registry, vanilla stores, MSAL token store) lives in `@lastspace/agent`. Re-exporting it from this package is forbidden by the no-shim rule (#90/#95).
@@ -29,6 +29,7 @@ SPACES and other feature modules plug in via these registries:
 - **NavItem.dnd** (`nav-config.ts`): drag-and-drop behavior on sidebar items
 - **NavItem.dimmed / NavItem.badge** (`nav-config.ts`): visual modifiers on sidebar items
 - **NavGroupCreateAction** (`nav-config.ts`): "+ New" actions on nav group headers
+- **NavGroup.collapsedRail** (`nav-config.ts`): module-supplied renderer for the collapsed sidebar rail. Used when a group's collapsed view isn't a flat icon list — e.g. Spaces' "header link + active workspace's root".
 - **NavFooterAction** (`nav-store.ts`): action buttons in the sidebar footer
 - **Panel renderer registry** (`tool-panel-store.ts`): custom content renderers for the side panel (PDF, entity pages)
 - **Citation handler** (`citationStore` in `@lastspace/agent`): handles `[n]` citation clicks in markdown

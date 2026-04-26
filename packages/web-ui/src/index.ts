@@ -140,7 +140,16 @@ export { useDevStore } from "./lib/dev-store.ts";
 
 // --- Nav types ---
 export { DEFAULT_NAV_CONFIG, findNavItem } from "./lib/nav-config.ts";
-export type { NavItem, NavItemAction, NavItemDnd, NavGroup, NavGroupCreateAction, NavMatch } from "./lib/nav-config.ts";
+export type {
+  NavItem,
+  NavItemAction,
+  NavItemDnd,
+  NavGroup,
+  NavGroupCreateAction,
+  NavMatch,
+  CollapsedRailItem,
+  CollapsedRailContext,
+} from "./lib/nav-config.ts";
 
 // --- Hooks ---
 export { usePageTools } from "./lib/use-page-tools.ts";

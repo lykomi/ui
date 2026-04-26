@@ -908,9 +908,6 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
   }, []);
 
   if (collapsed) {
-    const currentWorkspaceRootId =
-      typeof navContext.meta?.spacesRootId === "string" ? navContext.meta.spacesRootId : null;
-
     return (
       <div className="flex flex-col items-center gap-1 py-3 flex-1">
         <TooltipIconButton tooltip="Expand sidebar" side="right" onClick={toggle}>
@@ -921,51 +918,32 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         </TooltipIconButton>
         <div className="mt-4 flex flex-col items-center gap-1">
           {navConfig.flatMap((group) => {
-            if (group.label !== "Workspaces") {
-              return group.items.map(({ to, label, icon }) => (
+            // Modules with a non-flat collapsed rail (e.g. Spaces' "header + active workspace")
+            // supply `collapsedRail`; the shell stays module-agnostic.
+            if (group.collapsedRail) {
+              const items = group.collapsedRail({
+                currentPage,
+                navContextMeta: navContext.meta ?? {},
+              });
+              return items.map(({ to, label, icon, isActive }) => (
                 <CollapsedNavShortcut
                   key={to}
                   to={to}
                   label={label}
                   icon={icon}
-                  isActive={currentPage === to}
+                  isActive={isActive}
                 />
               ));
             }
-
-            const currentWorkspaceItem =
-              currentWorkspaceRootId
-                ? group.items.find(
-                    (item) => item.meta?.spacesEntityId === currentWorkspaceRootId,
-                  )
-                : null;
-            const shortcuts = [];
-
-            if (group.to) {
-              shortcuts.push(
-                <CollapsedNavShortcut
-                  key={group.to}
-                  to={group.to}
-                  label={group.label}
-                  icon={Layers}
-                  isActive={currentPage === group.to}
-                />,
-              );
-            }
-
-            if (currentWorkspaceItem) {
-              shortcuts.push(
-                <CollapsedNavShortcut
-                  key={currentWorkspaceItem.to}
-                  to={currentWorkspaceItem.to}
-                  label={currentWorkspaceItem.label}
-                  icon={currentWorkspaceItem.icon}
-                  isActive={isInSubtree(currentPage, currentWorkspaceItem)}
-                />,
-              );
-            }
-
-            return shortcuts;
+            return group.items.map(({ to, label, icon }) => (
+              <CollapsedNavShortcut
+                key={to}
+                to={to}
+                label={label}
+                icon={icon}
+                isActive={currentPage === to}
+              />
+            ));
           })}
         </div>
       </div>

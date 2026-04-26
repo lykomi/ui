@@ -58,7 +58,7 @@ Asserted by `src/__tests__/wrapper-order.test.tsx`.
 
 # Import boundary (enforced by guard test)
 
-`@lastspace/web-shell` MAY import: `@lastspace/web-primitives`, `@lastspace/web-ui`, `@lastspace/agent` (+ subpaths). MUST NOT import `@lastspace/spaces` or `@lastspace/spaces-web-ui` — modules are runtime parameters, never compile-time deps. Enforced by `OPEN_CORE_GRAPH` in `packages/web-ui/src/__tests__/open-core-guards.test.ts`.
+`@lastspace/web-shell` MAY import: `@lastspace/web-primitives`, `@lastspace/web-ui`, `@lastspace/agent` (+ subpaths). MUST NOT import `@lastspace/spaces-web-ui` — modules are runtime parameters, never compile-time deps. Enforced by `OPEN_CORE_GRAPH` in `packages/web-ui/src/__tests__/open-core-guards.test.ts`.
 
 `packages/web-shell/src/` MUST stay ≤ 15 files (file-count ceiling, hardFail).
 

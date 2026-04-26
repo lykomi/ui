@@ -76,6 +76,24 @@ export interface NavGroupCreateAction {
   handler: () => void;
 }
 
+/** Item rendered on the collapsed sidebar rail. Returned by `NavGroup.collapsedRail`. */
+export interface CollapsedRailItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  isActive: boolean;
+}
+
+/**
+ * Context passed to `NavGroup.collapsedRail` so the renderer can decide which
+ * shortcuts to surface. Modules read their own keys out of `navContextMeta`
+ * (e.g., Spaces uses `spacesRootId`).
+ */
+export interface CollapsedRailContext {
+  currentPage: string;
+  navContextMeta: Record<string, unknown>;
+}
+
 export interface NavGroup {
   label: string;
   items: NavItem[];
@@ -91,6 +109,14 @@ export interface NavGroup {
   contextInstructions?: string;
   /** Create actions shown as a "+" dropdown in the group header */
   createActions?: NavGroupCreateAction[];
+  /**
+   * Optional override for the collapsed sidebar rail. When present, the
+   * shell calls this instead of mapping `items` to icons one-to-one.
+   *
+   * Useful for groups whose collapsed view is "header link plus the active
+   * item's root", not a flat icon list. Returning `[]` hides the group.
+   */
+  collapsedRail?: (ctx: CollapsedRailContext) => CollapsedRailItem[];
 }
 
 /** Static default config — the template ships with these pages. */
@@ -170,11 +196,6 @@ export const DEFAULT_NAV_CONFIG: NavGroup[] = [
   //     },
   //   ],
   // },
-  {
-    label: "Workspaces",
-    description: "Content management workspaces",
-    items: [],
-  },
 ];
 
 /**
