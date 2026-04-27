@@ -3,7 +3,8 @@ import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import * as p from "@clack/prompts";
-import { copyTemplate } from "./copy-template.js";
+import { applyOverlay, copyTemplate, mergeExtraDependencies } from "./copy-template.js";
+import type { PresetEnvVar } from "./presets.js";
 import { resolvePreset } from "./presets.js";
 
 interface CliArgs {
@@ -69,6 +70,24 @@ Example:
 `);
 }
 
+function reportEnvVars(envVars: PresetEnvVar[] | undefined): void {
+  if (!envVars || envVars.length === 0) return;
+  const required = envVars.filter((v) => v.required);
+  const optional = envVars.filter((v) => !v.required);
+  if (required.length > 0) {
+    p.log.info(
+      "Required env vars (set before running the app):\n" +
+        required.map((v) => `  - ${v.name}: ${v.description}`).join("\n"),
+    );
+  }
+  if (optional.length > 0) {
+    p.log.info(
+      "Optional env vars:\n" +
+        optional.map((v) => `  - ${v.name}: ${v.description}`).join("\n"),
+    );
+  }
+}
+
 async function main(): Promise<number> {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -111,10 +130,23 @@ async function main(): Promise<number> {
   // Project name = basename of the target path, sanitized for npm/JS naming.
   const rawName = basename(targetPath);
   const projectName = rawName.replace(/^[^a-zA-Z]+/, "").replace(/[^a-zA-Z0-9-_]/g, "-") || "my-app";
+
   await copyTemplate({
     sourceDir: preset.templateDir,
     targetDir: targetPath,
     projectName,
+  });
+  if (preset.overlayDir) {
+    await applyOverlay({
+      overlayDir: preset.overlayDir,
+      targetDir: targetPath,
+      projectName,
+    });
+  }
+  await mergeExtraDependencies({
+    targetDir: targetPath,
+    extraDependencies: preset.extraDependencies,
+    extraDevDependencies: preset.extraDevDependencies,
   });
   p.log.success(`Files copied (preset: ${preset.name}).`);
 
@@ -135,6 +167,7 @@ async function main(): Promise<number> {
     p.log.info("Skipped pnpm install (--no-install).");
   }
 
+  reportEnvVars(preset.envVars);
   p.outro(`✓ Done. Next:\n  cd ${targetDir}\n  pnpm dev`);
   return 0;
 }
