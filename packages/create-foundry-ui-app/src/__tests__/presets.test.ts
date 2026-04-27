@@ -16,29 +16,6 @@ describe("resolvePreset", () => {
     await expect(resolvePreset("does-not-exist")).rejects.toThrow(/Unknown preset/);
   });
 
-  describe("lastspace preset (no token)", () => {
-    let originalToken: string | undefined;
-    let originalLocal: string | undefined;
-
-    beforeEach(() => {
-      originalToken = process.env.FOUNDRY_UI_TOKEN;
-      originalLocal = process.env.FOUNDRY_UI_PRESET_LASTSPACE_PATH;
-      delete process.env.FOUNDRY_UI_TOKEN;
-      delete process.env.FOUNDRY_UI_PRESET_LASTSPACE_PATH;
-    });
-
-    afterEach(() => {
-      if (originalToken === undefined) delete process.env.FOUNDRY_UI_TOKEN;
-      else process.env.FOUNDRY_UI_TOKEN = originalToken;
-      if (originalLocal === undefined) delete process.env.FOUNDRY_UI_PRESET_LASTSPACE_PATH;
-      else process.env.FOUNDRY_UI_PRESET_LASTSPACE_PATH = originalLocal;
-    });
-
-    it("throws a clear error mentioning FOUNDRY_UI_TOKEN", async () => {
-      await expect(resolvePreset("lastspace")).rejects.toThrow(/FOUNDRY_UI_TOKEN/);
-    });
-  });
-
   describe("lastspace preset (local override path)", () => {
     let presetRoot: string;
     let originalLocal: string | undefined;

@@ -34,19 +34,21 @@ export interface ResolvedPreset {
   postInstall?: PresetManifest["postInstall"];
 }
 
-const REGISTRY_GITHUB_PACKAGES = "https://npm.pkg.github.com";
+const REGISTRY_NPMJS = "https://registry.npmjs.org";
 
 /**
  * Resolve a preset name to a base template + optional overlay.
  *
  * - `default` (or unspecified) → bundled `template/` next to the CLI's dist.
- * - `lastspace` → fetched from `@lastspace/preset` on GitHub Packages, gated by
- *   `FOUNDRY_UI_TOKEN`. The manifest's `extends: "default"` resolves the base
- *   bundled template; `files/` becomes the overlay.
+ * - `lastspace` → fetched from `@lastspace/preset` on **npmjs (public, no
+ *   auth)**. The manifest's `extends: "default"` resolves the base bundled
+ *   template; `files/` becomes the overlay. The preset itself contains zero
+ *   proprietary code; the actual customer-PAT auth boundary is `pnpm install`
+ *   of `@lastspace/spaces-web-ui` (gated separately).
  *
  * Dev escape hatch: `FOUNDRY_UI_PRESET_LASTSPACE_PATH` (filesystem path) skips
- * the GitHub Packages fetch and uses the local preset directory instead. Used
- * by the lastspace-meta dev workflow + integration tests.
+ * the registry fetch and uses the local preset directory instead. Used by the
+ * lastspace-meta dev workflow + integration tests.
  */
 export async function resolvePreset(name: string): Promise<ResolvedPreset> {
   if (name === "default") {
@@ -57,7 +59,7 @@ export async function resolvePreset(name: string): Promise<ResolvedPreset> {
     if (localOverride) {
       return await loadLocalManifestPreset({ name, presetRoot: resolve(localOverride) });
     }
-    return await fetchGitHubPackagesPreset({
+    return await fetchNpmRegistryPreset({
       name,
       scope: "@lastspace",
       packageName: "preset",
@@ -109,34 +111,23 @@ async function loadLocalManifestPreset(opts: LocalPresetOptions): Promise<Resolv
   return buildResolvedPreset(opts.name, opts.presetRoot, manifest);
 }
 
-interface GitHubPackagesFetchOptions {
+interface NpmRegistryFetchOptions {
   name: string;
   scope: string;
   packageName: string;
 }
 
-async function fetchGitHubPackagesPreset(opts: GitHubPackagesFetchOptions): Promise<ResolvedPreset> {
-  const token = process.env.FOUNDRY_UI_TOKEN;
-  if (!token) {
-    throw new Error(
-      `Preset '${opts.name}' is fetched from GitHub Packages and requires FOUNDRY_UI_TOKEN. ` +
-        "Set FOUNDRY_UI_TOKEN to a fine-grained PAT with read:packages scope on the publishing repo, then re-run.",
-    );
-  }
-
+async function fetchNpmRegistryPreset(opts: NpmRegistryFetchOptions): Promise<ResolvedPreset> {
   const fullName = `${opts.scope}/${opts.packageName}`;
-  const metaUrl = `${REGISTRY_GITHUB_PACKAGES}/${fullName}`;
+  const metaUrl = `${REGISTRY_NPMJS}/${encodeURIComponent(fullName)}`;
 
   const metaRes = await fetch(metaUrl, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.npm.install-v1+json",
-    },
+    headers: { Accept: "application/vnd.npm.install-v1+json" },
   });
   if (!metaRes.ok) {
     throw new Error(
-      `GitHub Packages metadata fetch failed for ${fullName}: ${metaRes.status} ${metaRes.statusText}. ` +
-        "Verify FOUNDRY_UI_TOKEN has read:packages on the publishing repo and that the preset is published.",
+      `npm registry metadata fetch failed for ${fullName}: ${metaRes.status} ${metaRes.statusText}. ` +
+        "Verify the preset is published to npmjs and your network can reach registry.npmjs.org.",
     );
   }
   const meta = (await metaRes.json()) as {
@@ -146,12 +137,10 @@ async function fetchGitHubPackagesPreset(opts: GitHubPackagesFetchOptions): Prom
   const latest = meta["dist-tags"]?.latest;
   const tarballUrl = latest ? meta.versions?.[latest]?.dist?.tarball : undefined;
   if (!latest || !tarballUrl) {
-    throw new Error(
-      `No latest version or tarball URL for ${fullName} on ${REGISTRY_GITHUB_PACKAGES}.`,
-    );
+    throw new Error(`No latest version or tarball URL for ${fullName} on ${REGISTRY_NPMJS}.`);
   }
 
-  const tarballRes = await fetch(tarballUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const tarballRes = await fetch(tarballUrl);
   if (!tarballRes.ok) {
     throw new Error(
       `Failed to download preset tarball ${tarballUrl}: ${tarballRes.status} ${tarballRes.statusText}.`,
