@@ -34,7 +34,7 @@ The scaffolded app boots a React shell (`bootstrapShell` from `@iloveagents/foun
 | Preset | What you get |
 |---|---|
 | `default` | OSS shell with the four `@iloveagents/foundry-*` packages, no commercial modules. |
-| `lastspace` | Default + LastSpace.ai Spaces module (private commercial extension; fetched at scaffold time, requires `FOUNDRY_UI_TOKEN` env var). Ships in lastspace#100-F. |
+| `lastspace` | Default + LastSpace.ai Spaces module (private commercial extension; fetched at scaffold time, requires `LASTSPACE_TOKEN` env var). Ships in lastspace#100-F. |
 
 ## What's bundled
 

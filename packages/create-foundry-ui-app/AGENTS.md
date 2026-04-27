@@ -31,7 +31,7 @@ npx create-foundry-ui-app <target-dir> [--preset <name>] [--no-install] [--force
 ```
 
 - `--preset default` (default) — bundled OSS shell, no modules.
-- `--preset lastspace` — fetched from lastspace repo via `FOUNDRY_UI_TOKEN` env var (private; reserved, ships in lastspace#100-F).
+- `--preset lastspace` — fetched from lastspace repo via `LASTSPACE_TOKEN` env var (private; reserved, ships in lastspace#100-F).
 - `--no-install` — skip `pnpm install`. Used by the test suite + agents that want to inspect the output before installing.
 - `--force` — allow scaffolding into a non-empty target.
 
