@@ -59,7 +59,7 @@ To add the LastSpace Spaces module (private commercial extension — agentic CMS
 npx create-foundry-ui-app my-app --preset lastspace
 ```
 
-Requires `FOUNDRY_UI_TOKEN` env var (per-customer PAT). See [LastSpace customer docs](https://github.com/ltwlf/lastspace).
+Requires `LASTSPACE_TOKEN` env var (per-customer PAT). See [LastSpace customer docs](https://github.com/ltwlf/lastspace).
 
 ## License
 

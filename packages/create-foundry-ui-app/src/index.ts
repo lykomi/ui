@@ -61,7 +61,7 @@ Options:
   --preset <name>    Preset to scaffold from (default: "default" — OSS shell with no modules).
                      Other presets (e.g. "lastspace") are fetched from npmjs without auth.
                      Some presets surface required env vars on completion (e.g. lastspace
-                     surfaces FOUNDRY_UI_TOKEN, used downstream by pnpm install).
+                     surfaces LASTSPACE_TOKEN, used downstream by pnpm install).
   --no-install       Skip running pnpm install in the new directory.
   --force            Allow scaffolding into a non-empty directory.
   -h, --help         Show this message.

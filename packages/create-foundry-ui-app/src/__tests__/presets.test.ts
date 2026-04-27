@@ -34,7 +34,7 @@ describe("resolvePreset", () => {
           extraDependencies: { "@lastspace/spaces-web-ui": "^0.1.0" },
           envVars: [
             {
-              name: "FOUNDRY_UI_TOKEN",
+              name: "LASTSPACE_TOKEN",
               description: "PAT",
               required: true,
               secret: true,
@@ -59,7 +59,7 @@ describe("resolvePreset", () => {
       expect(r.templateDir).toMatch(/template$/);
       expect(r.overlayDir).toMatch(/files$/);
       expect(r.extraDependencies).toEqual({ "@lastspace/spaces-web-ui": "^0.1.0" });
-      expect(r.envVars?.[0].name).toBe("FOUNDRY_UI_TOKEN");
+      expect(r.envVars?.[0].name).toBe("LASTSPACE_TOKEN");
     });
 
     it("rejects manifests that extend something other than 'default'", async () => {
