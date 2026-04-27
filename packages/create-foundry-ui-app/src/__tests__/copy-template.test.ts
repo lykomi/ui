@@ -39,6 +39,21 @@ describe("copyTemplate", () => {
     expect(existsSync(join(targetDir, "_gitignore"))).toBe(false);
   });
 
+  it("preserves Python dunder files like __init__.py", async () => {
+    // Double-underscore prefix is a Python convention for special files
+    // (`__init__.py`, `__main__.py`). The single-underscore-→-dotfile
+    // rule must NOT touch them — otherwise scaffolds with Python sub-dirs
+    // get broken `._init__.py` etc. (Regression observed when adding the
+    // lastspace preset's `apps/web-api/src/__init__.py` overlay.)
+    mkdirSync(join(sourceDir, "py-pkg"));
+    writeFileSync(join(sourceDir, "py-pkg", "__init__.py"), "# package marker\n");
+    writeFileSync(join(sourceDir, "py-pkg", "__main__.py"), "# entry point\n");
+    await copyTemplate({ sourceDir, targetDir, projectName: "my-app" });
+    expect(existsSync(join(targetDir, "py-pkg", "__init__.py"))).toBe(true);
+    expect(existsSync(join(targetDir, "py-pkg", "__main__.py"))).toBe(true);
+    expect(existsSync(join(targetDir, "py-pkg", "._init__.py"))).toBe(false);
+  });
+
   it("rewrites package.json#name via parse-edit-stringify (preserves other fields)", async () => {
     await copyTemplate({ sourceDir, targetDir, projectName: "my-shiny-app" });
     const pkg = JSON.parse(readFileSync(join(targetDir, "package.json"), "utf-8"));
