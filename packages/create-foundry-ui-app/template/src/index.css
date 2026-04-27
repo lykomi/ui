@@ -3,9 +3,9 @@
 /* Tailwind v4 needs explicit @source paths to scan source-shipping packages
  * for utility classes. Without these, the Foundry UI components render
  * without spacing, borders, or theme tokens. */
-@source "../../node_modules/@iloveagents/foundry-web-primitives/src";
-@source "../../node_modules/@iloveagents/foundry-web-ui/src";
-@source "../../node_modules/@iloveagents/foundry-web-shell/src";
+@source "../node_modules/@iloveagents/foundry-web-primitives/src";
+@source "../node_modules/@iloveagents/foundry-web-ui/src";
+@source "../node_modules/@iloveagents/foundry-web-shell/src";
 
 @plugin "tailwindcss-animate";
 
