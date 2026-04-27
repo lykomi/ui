@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -161,6 +161,16 @@ async function fetchGitHubPackagesPreset(opts: GitHubPackagesFetchOptions): Prom
 
   // npm tarballs extract into a top-level `package/` directory.
   const tmpRoot = mkdtempSync(join(tmpdir(), `foundry-preset-${opts.name}-`));
+  // Clean up the tmp dir at process exit. The CLI reads from it during the
+  // copy/overlay step, then exits — so a single exit-time rmSync suffices and
+  // avoids needing the caller to thread a cleanup() callback.
+  process.on("exit", () => {
+    try {
+      rmSync(tmpRoot, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup; OS will reclaim tmpdir eventually.
+    }
+  });
   const tarballPath = join(tmpRoot, "package.tgz");
   writeFileSync(tarballPath, tarballBuf);
 
@@ -170,9 +180,16 @@ async function fetchGitHubPackagesPreset(opts: GitHubPackagesFetchOptions): Prom
   const extract = spawnSync("tar", ["-xzf", tarballPath, "-C", tmpRoot], {
     stdio: ["ignore", "ignore", "pipe"],
   });
+  if (extract.error) {
+    throw new Error(
+      `Failed to spawn 'tar' for preset '${opts.name}': ${extract.error.message}. ` +
+        "On Windows 10+ tar.exe ships in System32; on macOS/Linux it's part of the base system. " +
+        "Verify your PATH includes a working tar binary.",
+    );
+  }
   if (extract.status !== 0) {
     throw new Error(
-      `tar extraction failed for preset '${opts.name}' (exit ${extract.status}): ${extract.stderr?.toString() ?? "unknown error"}.`,
+      `tar extraction failed for preset '${opts.name}' (exit ${extract.status}): ${extract.stderr?.toString().trim() || "no stderr output"}.`,
     );
   }
 
@@ -198,11 +215,17 @@ function buildResolvedPreset(
       `Preset '${name}' extends '${manifest.extends}', but only 'default' is supported.`,
     );
   }
+  // `filesDir` defaults to "files" when omitted from the manifest — matches
+  // the convention `@lastspace/preset` ships with. Whichever name resolves
+  // (default or explicit) must point to an existing directory in the package.
   const overlayName = manifest.filesDir ?? "files";
+  const isDefault = manifest.filesDir === undefined;
   const overlayDir = join(presetRoot, overlayName);
   if (!existsSync(overlayDir)) {
     throw new Error(
-      `Preset '${name}' declares filesDir='${overlayName}' but the directory is missing in the package.`,
+      isDefault
+        ? `Preset '${name}' has no '${overlayName}/' directory at the package root (default filesDir).`
+        : `Preset '${name}' declares filesDir='${overlayName}' but the directory is missing in the package.`,
     );
   }
 

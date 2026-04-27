@@ -81,10 +81,13 @@ interface WalkOptions {
   projectName: string;
   /**
    * If true, the root-level `package.json` (depth 0) is parsed-edited-stringified
-   * to set its `name` field. If false (overlay mode), any `package.json` in the
-   * source is treated as a plain text file with sentinel substitution — overlays
-   * shouldn't ship a root package.json, but if one slips in, this avoids
-   * accidentally clobbering the base template's package.json#name.
+   * to set its `name` field. If false (overlay mode), the special-case is
+   * skipped: any `package.json` in the source falls through to the binary
+   * byte-copy branch (since `.json` is intentionally outside `TEXT_EXTENSIONS`
+   * to avoid sentinel-substituting JSON files). Overlays shouldn't ship a
+   * root package.json — declare deps via the manifest's `extraDependencies`
+   * instead — but if one slips in, this avoids clobbering the base template's
+   * package.json#name with a partial copy.
    */
   rewriteRootPackageJson: boolean;
 }

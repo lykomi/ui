@@ -97,7 +97,7 @@ describe("resolvePreset", () => {
       await expect(resolvePreset("lastspace")).rejects.toThrow(/extends 'something-else'/);
     });
 
-    it("rejects manifests whose filesDir does not exist", async () => {
+    it("rejects manifests whose declared filesDir directory does not exist", async () => {
       writeFileSync(
         join(presetRoot, "manifest.json"),
         JSON.stringify({
@@ -108,6 +108,34 @@ describe("resolvePreset", () => {
         }),
       );
       await expect(resolvePreset("lastspace")).rejects.toThrow(/filesDir='missing'/);
+    });
+
+    it("defaults filesDir to 'files' when the manifest omits it", async () => {
+      writeFileSync(
+        join(presetRoot, "manifest.json"),
+        JSON.stringify({
+          name: "lastspace",
+          version: "0.0.0-test",
+          extends: "default",
+          // filesDir omitted on purpose
+        }),
+      );
+      const r = await resolvePreset("lastspace");
+      expect(r.overlayDir).toMatch(/files$/);
+    });
+
+    it("rejects manifests omitting filesDir when no 'files/' dir exists either", async () => {
+      writeFileSync(
+        join(presetRoot, "manifest.json"),
+        JSON.stringify({
+          name: "lastspace",
+          version: "0.0.0-test",
+          extends: "default",
+        }),
+      );
+      // Remove the files/ dir created in beforeEach so the default lookup fails.
+      rmSync(join(presetRoot, "files"), { recursive: true, force: true });
+      await expect(resolvePreset("lastspace")).rejects.toThrow(/no 'files\/' directory/);
     });
   });
 });
