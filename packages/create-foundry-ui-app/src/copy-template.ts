@@ -99,7 +99,13 @@ function walkAndCopy(opts: WalkOptions): void {
     for (const entry of readdirSync(currentSrc)) {
       const src = join(currentSrc, entry);
       const stat = statSync(src);
-      const renamed = entry.startsWith("_") && entry !== "_" ? "." + entry.slice(1) : entry;
+      // Single-underscore prefix → dotfile (e.g. `_gitignore` → `.gitignore`,
+      // `_npmrc` → `.npmrc`). Double-underscore prefix is preserved as-is so
+      // Python dunder files (`__init__.py`, `__main__.py`) survive intact.
+      const renamed =
+        entry.startsWith("_") && !entry.startsWith("__") && entry !== "_"
+          ? "." + entry.slice(1)
+          : entry;
       const dst = join(currentDst, renamed);
 
       if (stat.isDirectory()) {
