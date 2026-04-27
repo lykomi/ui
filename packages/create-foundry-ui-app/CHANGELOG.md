@@ -1,5 +1,15 @@
 # create-foundry-ui-app
 
+## 0.3.1
+
+### Patch Changes
+
+- 733f3d6: Doc cleanup: remove dangling `FOUNDRY_UI_TOKEN` references in README/AGENTS/template/help-text. They were left over from the era when the lastspace preset was fetched from GitHub Packages with that token; that fetch path was replaced with a no-auth npmjs registry fetch in the previous release.
+
+  The customer-side env var is now consistently named `LASTSPACE_TOKEN` (authenticates lastspace-private resources: Docker image, npm @lastspace scope, Python packages). No code-path changes — purely documentation alignment.
+
+- 7c22e6a: Preserve Python dunder files (`__init__.py`, `__main__.py`) during scaffold copy. The previous underscore-prefix-→-dotfile rename rule was too aggressive — it transformed `__init__.py` into `._init__.py`, breaking any preset that ships Python source. Now only single-underscore prefixes (e.g. `_gitignore`, `_npmrc`) get rewritten; double-underscore names pass through unchanged. Surfaced by the lastspace preset's `apps/web-api/` overlay.
+
 ## 0.3.0
 
 ### Minor Changes
