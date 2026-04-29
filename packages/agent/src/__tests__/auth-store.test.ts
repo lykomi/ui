@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { authStore } from "../msal/auth-store.ts";
+import * as authConfig from "../msal/auth-config.ts";
 
 const store = () => authStore.getState();
 
@@ -33,5 +34,111 @@ describe("authStore", () => {
       avatar: "https://example.com/bob.png",
     });
     expect(store().user?.avatar).toBe("https://example.com/bob.png");
+  });
+});
+
+describe("authStore.getAccessToken — silent → redirect fallback", () => {
+  const config = {
+    clientId: "test-client",
+    authority: "https://login.microsoftonline.com/test-tenant",
+    redirectUri: "http://localhost:8010",
+    apiScope: "api://test-api/access_as_user",
+  };
+
+  function mockMsal(overrides: Record<string, unknown> = {}) {
+    const account = { username: "alice@example.com", localAccountId: "alice-oid" };
+    const mock = {
+      initialize: vi.fn().mockResolvedValue(undefined),
+      handleRedirectPromise: vi.fn().mockResolvedValue(null),
+      getAllAccounts: vi.fn().mockReturnValue([account]),
+      loginRedirect: vi.fn().mockResolvedValue(undefined),
+      logoutRedirect: vi.fn().mockResolvedValue(undefined),
+      setActiveAccount: vi.fn(),
+      acquireTokenSilent: vi.fn().mockResolvedValue({ accessToken: "fresh-token" }),
+      acquireTokenRedirect: vi.fn().mockResolvedValue(undefined),
+      acquireTokenPopup: vi.fn().mockResolvedValue({ accessToken: "popup-token" }),
+      ...overrides,
+    };
+    vi.spyOn(authConfig, "getMsalInstance").mockReturnValue(mock);
+    vi.spyOn(authConfig, "getMsalConfig").mockReturnValue(config);
+    return mock;
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns null without navigating when MSAL isn't configured", async () => {
+    vi.spyOn(authConfig, "getMsalInstance").mockReturnValue(null);
+    vi.spyOn(authConfig, "getMsalConfig").mockReturnValue(null);
+    expect(await store().getAccessToken()).toBeNull();
+  });
+
+  it("returns the access token on a normal silent acquire", async () => {
+    const msal = mockMsal();
+    expect(await store().getAccessToken()).toBe("fresh-token");
+    expect(msal.acquireTokenSilent).toHaveBeenCalledOnce();
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled();
+    expect(msal.loginRedirect).not.toHaveBeenCalled();
+  });
+
+  it("triggers loginRedirect when no account is cached", async () => {
+    // The case that was previously stuck — MSAL silent SSO failed
+    // (third-party iframe storage blocked), no account in cache, and
+    // the old code returned null without recovering.
+    const msal = mockMsal({ getAllAccounts: vi.fn().mockReturnValue([]) });
+    expect(await store().getAccessToken()).toBeNull();
+    expect(msal.loginRedirect).toHaveBeenCalledOnce();
+    expect(msal.loginRedirect).toHaveBeenCalledWith({ scopes: [config.apiScope] });
+    expect(msal.acquireTokenSilent).not.toHaveBeenCalled();
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled();
+  });
+
+  it("triggers acquireTokenRedirect on InteractionRequiredAuthError", async () => {
+    const err = Object.assign(new Error("MFA required"), {
+      name: "InteractionRequiredAuthError",
+      errorCode: "interaction_required",
+    });
+    const msal = mockMsal({
+      acquireTokenSilent: vi.fn().mockRejectedValue(err),
+    });
+    expect(await store().getAccessToken()).toBeNull();
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
+    expect(msal.loginRedirect).not.toHaveBeenCalled();
+  });
+
+  it("triggers acquireTokenRedirect on BrowserAuthError monitor_window_timeout", async () => {
+    // Real-world: third-party-cookie blocking the silent iframe.
+    const err = Object.assign(new Error("monitor_window_timeout"), {
+      name: "BrowserAuthError",
+      errorCode: "monitor_window_timeout",
+    });
+    const msal = mockMsal({
+      acquireTokenSilent: vi.fn().mockRejectedValue(err),
+    });
+    expect(await store().getAccessToken()).toBeNull();
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
+  });
+
+  it("does NOT redirect on a transient/unknown error", async () => {
+    // A network blip shouldn't bounce the user through a login flow.
+    const err = new Error("connection reset");
+    const msal = mockMsal({
+      acquireTokenSilent: vi.fn().mockRejectedValue(err),
+    });
+    expect(await store().getAccessToken()).toBeNull();
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled();
+    expect(msal.loginRedirect).not.toHaveBeenCalled();
+  });
+
+  it("matches recoverable errors by errorCode even without a name", async () => {
+    const err = Object.assign(new Error("login_required"), {
+      errorCode: "login_required",
+    });
+    const msal = mockMsal({
+      acquireTokenSilent: vi.fn().mockRejectedValue(err),
+    });
+    expect(await store().getAccessToken()).toBeNull();
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
   });
 });
