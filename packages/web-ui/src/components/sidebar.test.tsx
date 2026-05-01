@@ -222,11 +222,13 @@ describe("Sidebar active state", () => {
       );
     });
 
-    // The Sidebar mounts twice (mobile drawer + desktop rail); both render
-    // the collapsed-rail group wrappers when collapsed. Group them by their
-    // owning <aside> and verify the per-aside structure, not the total.
-    // Filter out the outer rail container itself (which also has these
-    // classes but additionally carries ``py-3``).
+    // Sidebar renders twice (mobile drawer + desktop rail) but only the
+    // desktop rail uses ``collapsed={true}`` — the mobile drawer always
+    // renders ``collapsed={false}``, so it doesn't emit collapsed-rail
+    // group wrappers. Grouping the matched divs by owning <aside> handles
+    // the (unlikely) case where multiple instances do contribute.
+    // Filter out the outer rail container itself (which has these classes
+    // but additionally carries ``py-3``).
     const wrappersByAside = new Map<Element, HTMLDivElement[]>();
     container
       .querySelectorAll<HTMLDivElement>("div.flex.flex-col.items-center.gap-1")

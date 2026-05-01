@@ -916,7 +916,11 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         <TooltipIconButton tooltip="New Thread" side="right" onClick={handleNewConversation}>
           <SquarePen className="size-4" />
         </TooltipIconButton>
-        <div className="mt-4 flex flex-col items-stretch gap-1">
+        <div className="mt-4 flex w-full flex-col items-stretch gap-1">
+          {/* `w-full` on this inner column makes children resolve to the
+              rail width even though the outer rail uses `items-center`
+              — that way the per-group `border-t` divider spans the
+              full rail instead of just icon-column width. */}
           {/* Resolve each group's items first, drop the empties, THEN
               render — so the separator is keyed off visible-index
               (not array-index). Without this an empty group at idx 0
