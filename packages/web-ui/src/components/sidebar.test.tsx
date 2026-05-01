@@ -179,4 +179,77 @@ describe("Sidebar active state", () => {
     expect(viewsButton?.className).toContain("pl-7");
     expect(documentsButton?.className).not.toContain("pl-5");
   });
+
+  it("collapsed rail wraps each nav group and adds a top border between groups", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    const navConfig: NavGroup[] = [
+      {
+        label: "Pages",
+        hideLabel: true,
+        items: [{ to: "/", label: "Chat", icon: MessageSquare }],
+      },
+      {
+        label: "Workspaces",
+        items: [{ to: "/spaces/demo", label: "Demo Workspace", icon: FolderOpen }],
+      },
+      {
+        label: "Admin",
+        items: [{ to: "/spaces/admin/workspaces", label: "Workspaces", icon: FolderOpen }],
+      },
+    ];
+
+    useNavStore.getState().setConfig(navConfig);
+    useAppStore.setState({
+      currentPage: "/",
+      threadActive: false,
+      contextItems: [],
+      sentContext: {},
+      highlights: [],
+      selectedItemId: null,
+      content: {},
+    });
+    // Collapse the sidebar so the rail renders.
+    useSidebarStore.setState({ isOpen: false, isMobileOpen: false, width: SIDEBAR_WIDTH });
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // The Sidebar mounts twice (mobile drawer + desktop rail); both render
+    // the collapsed-rail group wrappers when collapsed. Group them by their
+    // owning <aside> and verify the per-aside structure, not the total.
+    // Filter out the outer rail container itself (which also has these
+    // classes but additionally carries ``py-3``).
+    const wrappersByAside = new Map<Element, HTMLDivElement[]>();
+    container
+      .querySelectorAll<HTMLDivElement>("div.flex.flex-col.items-center.gap-1")
+      .forEach((el) => {
+        if (el.className.includes("py-3")) return;
+        const aside = el.closest("aside");
+        if (!aside) return;
+        const list = wrappersByAside.get(aside) ?? [];
+        list.push(el);
+        wrappersByAside.set(aside, list);
+      });
+
+    // Each rendered sidebar instance must have one wrapper per nav group —
+    // first plain, second + third with the separator border.
+    const perAside = Array.from(wrappersByAside.values());
+    expect(perAside.length).toBeGreaterThan(0);
+    for (const wrappers of perAside) {
+      expect(wrappers.length).toBe(3);
+      expect(wrappers[0].className).not.toContain("border-t");
+      expect(wrappers[1].className).toContain("border-t");
+      expect(wrappers[1].className).toContain("mt-2");
+      expect(wrappers[1].className).toContain("pt-2");
+      expect(wrappers[2].className).toContain("border-t");
+    }
+  });
 });

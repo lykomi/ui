@@ -916,34 +916,53 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         <TooltipIconButton tooltip="New Thread" side="right" onClick={handleNewConversation}>
           <SquarePen className="size-4" />
         </TooltipIconButton>
-        <div className="mt-4 flex flex-col items-center gap-1">
-          {navConfig.flatMap((group) => {
+        <div className="mt-4 flex flex-col items-stretch gap-1">
+          {navConfig.map((group, groupIndex) => {
             // Modules with a non-flat collapsed rail (e.g. Spaces' "header + active workspace")
             // supply `collapsedRail`; the shell stays module-agnostic.
-            if (group.collapsedRail) {
-              const items = group.collapsedRail({
-                currentPage,
-                navContextMeta: navContext.meta ?? {},
-              });
-              return items.map(({ to, label, icon, isActive }) => (
-                <CollapsedNavShortcut
-                  key={to}
-                  to={to}
-                  label={label}
-                  icon={icon}
-                  isActive={isActive}
-                />
-              ));
-            }
-            return group.items.map(({ to, label, icon }) => (
-              <CollapsedNavShortcut
-                key={to}
-                to={to}
-                label={label}
-                icon={icon}
-                isActive={currentPage === to}
-              />
-            ));
+            const items = group.collapsedRail
+              ? group
+                  .collapsedRail({
+                    currentPage,
+                    navContextMeta: navContext.meta ?? {},
+                  })
+                  .map((it) => ({
+                    to: it.to,
+                    label: it.label,
+                    icon: it.icon,
+                    isActive: it.isActive,
+                  }))
+              : group.items.map((it) => ({
+                  to: it.to,
+                  label: it.label,
+                  icon: it.icon,
+                  isActive: currentPage === it.to,
+                }));
+            if (items.length === 0) return null;
+            // Each non-first group gets a thin top border — visually
+            // separates groups (e.g. user Workspaces vs Admin) in the
+            // collapsed rail without changing the CollapsedRailItem
+            // shape. The wrapper itself is a centred column so icons
+            // stay aligned with the rail.
+            return (
+              <div
+                key={group.label || groupIndex}
+                className={cn(
+                  "flex flex-col items-center gap-1",
+                  groupIndex > 0 && "mt-2 pt-2 border-t border-sidebar-border/40",
+                )}
+              >
+                {items.map(({ to, label, icon, isActive }) => (
+                  <CollapsedNavShortcut
+                    key={to}
+                    to={to}
+                    label={label}
+                    icon={icon}
+                    isActive={isActive}
+                  />
+                ))}
+              </div>
+            );
           })}
         </div>
       </div>
