@@ -916,35 +916,66 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         <TooltipIconButton tooltip="New Thread" side="right" onClick={handleNewConversation}>
           <SquarePen className="size-4" />
         </TooltipIconButton>
-        <div className="mt-4 flex flex-col items-center gap-1">
-          {navConfig.flatMap((group) => {
-            // Modules with a non-flat collapsed rail (e.g. Spaces' "header + active workspace")
-            // supply `collapsedRail`; the shell stays module-agnostic.
-            if (group.collapsedRail) {
-              const items = group.collapsedRail({
-                currentPage,
-                navContextMeta: navContext.meta ?? {},
-              });
-              return items.map(({ to, label, icon, isActive }) => (
-                <CollapsedNavShortcut
-                  key={to}
-                  to={to}
-                  label={label}
-                  icon={icon}
-                  isActive={isActive}
-                />
-              ));
-            }
-            return group.items.map(({ to, label, icon }) => (
-              <CollapsedNavShortcut
-                key={to}
-                to={to}
-                label={label}
-                icon={icon}
-                isActive={currentPage === to}
-              />
-            ));
-          })}
+        <div className="mt-4 flex w-full flex-col items-stretch gap-1">
+          {/* `w-full` on this inner column makes children resolve to the
+              rail width even though the outer rail uses `items-center`
+              — that way the per-group `border-t` divider spans the
+              full rail instead of just icon-column width. */}
+          {/* Resolve each group's items first, drop the empties, THEN
+              render — so the separator is keyed off visible-index
+              (not array-index). Without this an empty group at idx 0
+              would push a `border-t` onto whatever group renders first,
+              giving the rail a stray divider above the very first icon. */}
+          {navConfig
+            .map((group, groupIndex) => {
+              // Modules with a non-flat collapsed rail (e.g. Spaces'
+              // "header + active workspace") supply `collapsedRail`; the
+              // shell stays module-agnostic.
+              const items = group.collapsedRail
+                ? group
+                    .collapsedRail({
+                      currentPage,
+                      navContextMeta: navContext.meta ?? {},
+                    })
+                    .map((it) => ({
+                      to: it.to,
+                      label: it.label,
+                      icon: it.icon,
+                      isActive: it.isActive,
+                    }))
+                : group.items.map((it) => ({
+                    to: it.to,
+                    label: it.label,
+                    icon: it.icon,
+                    isActive: currentPage === it.to,
+                  }));
+              return { group, groupIndex, items };
+            })
+            .filter(({ items }) => items.length > 0)
+            .map(({ group, groupIndex, items }, visibleIndex) => (
+              // Each non-first VISIBLE group gets a thin top border —
+              // visually separates groups (e.g. user Workspaces vs
+              // Admin) in the collapsed rail without changing the
+              // CollapsedRailItem shape. The wrapper itself is a centred
+              // column so icons stay aligned with the rail.
+              <div
+                key={`${group.label || ""}-${groupIndex}`}
+                className={cn(
+                  "flex flex-col items-center gap-1",
+                  visibleIndex > 0 && "mt-2 pt-2 border-t border-sidebar-border/40",
+                )}
+              >
+                {items.map(({ to, label, icon, isActive }) => (
+                  <CollapsedNavShortcut
+                    key={to}
+                    to={to}
+                    label={label}
+                    icon={icon}
+                    isActive={isActive}
+                  />
+                ))}
+              </div>
+            ))}
         </div>
       </div>
     );

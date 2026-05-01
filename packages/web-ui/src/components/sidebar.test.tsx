@@ -179,4 +179,148 @@ describe("Sidebar active state", () => {
     expect(viewsButton?.className).toContain("pl-7");
     expect(documentsButton?.className).not.toContain("pl-5");
   });
+
+  it("collapsed rail wraps each nav group and adds a top border between groups", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    const navConfig: NavGroup[] = [
+      {
+        label: "Pages",
+        hideLabel: true,
+        items: [{ to: "/", label: "Chat", icon: MessageSquare }],
+      },
+      {
+        label: "Workspaces",
+        items: [{ to: "/spaces/demo", label: "Demo Workspace", icon: FolderOpen }],
+      },
+      {
+        label: "Admin",
+        items: [{ to: "/spaces/admin/workspaces", label: "Workspaces", icon: FolderOpen }],
+      },
+    ];
+
+    useNavStore.getState().setConfig(navConfig);
+    useAppStore.setState({
+      currentPage: "/",
+      threadActive: false,
+      contextItems: [],
+      sentContext: {},
+      highlights: [],
+      selectedItemId: null,
+      content: {},
+    });
+    // Collapse the sidebar so the rail renders.
+    useSidebarStore.setState({ isOpen: false, isMobileOpen: false, width: SIDEBAR_WIDTH });
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // Sidebar renders twice (mobile drawer + desktop rail) but only the
+    // desktop rail uses ``collapsed={true}`` — the mobile drawer always
+    // renders ``collapsed={false}``, so it doesn't emit collapsed-rail
+    // group wrappers. Grouping the matched divs by owning <aside> handles
+    // the (unlikely) case where multiple instances do contribute.
+    // Filter out the outer rail container itself (which has these classes
+    // but additionally carries ``py-3``).
+    const wrappersByAside = new Map<Element, HTMLDivElement[]>();
+    container
+      .querySelectorAll<HTMLDivElement>("div.flex.flex-col.items-center.gap-1")
+      .forEach((el) => {
+        if (el.className.includes("py-3")) return;
+        const aside = el.closest("aside");
+        if (!aside) return;
+        const list = wrappersByAside.get(aside) ?? [];
+        list.push(el);
+        wrappersByAside.set(aside, list);
+      });
+
+    // Each rendered sidebar instance must have one wrapper per nav group —
+    // first plain, second + third with the separator border.
+    const perAside = Array.from(wrappersByAside.values());
+    expect(perAside.length).toBeGreaterThan(0);
+    for (const wrappers of perAside) {
+      expect(wrappers.length).toBe(3);
+      expect(wrappers[0].className).not.toContain("border-t");
+      expect(wrappers[1].className).toContain("border-t");
+      expect(wrappers[1].className).toContain("mt-2");
+      expect(wrappers[1].className).toContain("pt-2");
+      expect(wrappers[2].className).toContain("border-t");
+    }
+  });
+
+  it("collapsed rail keeps the first VISIBLE group plain when an earlier group renders nothing", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    // The first group supplies a `collapsedRail` that returns no items —
+    // simulates an early-load state where a module hasn't populated yet.
+    // The rendering must skip it entirely AND must not push a border-top
+    // onto whatever group renders first.
+    const navConfig: NavGroup[] = [
+      {
+        label: "EmptyFirst",
+        items: [{ to: "/empty", label: "Empty", icon: MessageSquare }],
+        collapsedRail: () => [],
+      },
+      {
+        label: "Workspaces",
+        items: [{ to: "/spaces/demo", label: "Demo", icon: FolderOpen }],
+      },
+      {
+        label: "Admin",
+        items: [{ to: "/spaces/admin", label: "Admin", icon: FolderOpen }],
+      },
+    ];
+
+    useNavStore.getState().setConfig(navConfig);
+    useAppStore.setState({
+      currentPage: "/",
+      threadActive: false,
+      contextItems: [],
+      sentContext: {},
+      highlights: [],
+      selectedItemId: null,
+      content: {},
+    });
+    useSidebarStore.setState({ isOpen: false, isMobileOpen: false, width: SIDEBAR_WIDTH });
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    const wrappersByAside = new Map<Element, HTMLDivElement[]>();
+    container
+      .querySelectorAll<HTMLDivElement>("div.flex.flex-col.items-center.gap-1")
+      .forEach((el) => {
+        if (el.className.includes("py-3")) return;
+        const aside = el.closest("aside");
+        if (!aside) return;
+        const list = wrappersByAside.get(aside) ?? [];
+        list.push(el);
+        wrappersByAside.set(aside, list);
+      });
+
+    const perAside = Array.from(wrappersByAside.values());
+    expect(perAside.length).toBeGreaterThan(0);
+    for (const wrappers of perAside) {
+      // Empty group skipped → 2 visible wrappers
+      expect(wrappers.length).toBe(2);
+      // First VISIBLE wrapper has no separator (despite being array-idx 1)
+      expect(wrappers[0].className).not.toContain("border-t");
+      // Second visible wrapper carries the divider
+      expect(wrappers[1].className).toContain("border-t");
+    }
+  });
 });
