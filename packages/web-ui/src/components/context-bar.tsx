@@ -61,7 +61,21 @@ interface ContextPinsProps {
  */
 export function getNavigablePath(item: ContextItem): string | null {
   if (item.type === "page" && item.payload.kind === "page") return item.payload.path;
-  if (item.type === "ref" && item.sourcePage) return item.sourcePage;
+  if (
+    item.type === "ref" &&
+    item.payload.kind === "ref" &&
+    typeof item.sourcePage === "string" &&
+    // Guard: ``sourcePage`` is also used as a free-form breadcrumb
+    // label by some callers (e.g. "page-label" instead of "/page").
+    // Treat it as a navigation target only when it looks like an
+    // in-app path. Hash-only links (``#anchor``) are also valid —
+    // they keep the user on the current entity but scroll to the
+    // pinned atom (e.g. Spaces ``#block-{id}`` deep-link from the
+    // current page).
+    (item.sourcePage.startsWith("/") || item.sourcePage.startsWith("#"))
+  ) {
+    return item.sourcePage;
+  }
   return null;
 }
 
