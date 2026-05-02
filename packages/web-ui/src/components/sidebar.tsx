@@ -358,7 +358,7 @@ function NavLeafItem({
             "ring-2 ring-inset ring-sidebar-ring/50 bg-sidebar-selected",
           isFileDragOver &&
             !isDisabled &&
-            "ring-2 ring-dashed ring-primary bg-primary/10",
+            "outline-dashed outline-2 -outline-offset-2 outline-primary bg-primary/10",
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
@@ -424,7 +424,7 @@ function NavLeafItem({
           "ring-2 ring-inset ring-sidebar-ring/50 bg-sidebar-selected",
         isFileDragOver &&
           !isDisabled &&
-          "ring-2 ring-dashed ring-primary bg-primary/10",
+          "outline-dashed outline-2 -outline-offset-2 outline-primary bg-primary/10",
         item.dimmed && !isDisabled && "opacity-50",
       )}
     >
@@ -556,7 +556,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
             "ring-2 ring-inset ring-sidebar-ring/50 bg-sidebar-selected",
           isFileDragOver &&
             !isDisabled &&
-            "ring-2 ring-dashed ring-primary bg-primary/10",
+            "outline-dashed outline-2 -outline-offset-2 outline-primary bg-primary/10",
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
@@ -693,7 +693,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
             "ring-2 ring-inset ring-sidebar-ring/50 bg-sidebar-selected",
           isFileDragOver &&
             !isDisabled &&
-            "ring-2 ring-dashed ring-primary bg-primary/10",
+            "outline-dashed outline-2 -outline-offset-2 outline-primary bg-primary/10",
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
@@ -802,7 +802,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
           isDragOver &&
             !isFileDragOver &&
             "bg-sidebar-selected ring-2 ring-inset ring-sidebar-ring/50",
-          isFileDragOver && "ring-2 ring-dashed ring-primary bg-primary/10",
+          isFileDragOver && "outline-dashed outline-2 -outline-offset-2 outline-primary bg-primary/10",
           item.dimmed && "opacity-50",
         )
       }
