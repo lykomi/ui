@@ -110,11 +110,22 @@ function useNavItemDnd(dnd?: NavItemDnd) {
     [hasMatchingDragData, hasExternalFiles],
   );
 
+  // Capture-phase handlers run BEFORE the bubble-phase ``onDragEnter`` /
+  // ``onDragOver`` on the same node. They MUST NOT call
+  // ``e.stopPropagation()``: in React's synthetic event system, stopping
+  // propagation in the capture phase short-circuits the dispatch — neither
+  // the bubble-phase handler on the same node (which actually mutates
+  // ``isDragOver`` / ``isFileDragOver``) nor any ancestor handler runs.
+  //
+  // We keep ``preventDefault()`` here because some browsers (Chrome) need
+  // it on ``dragenter``/``dragover`` to mark the element as droppable —
+  // doing it in the capture phase makes the visual cue stable while the
+  // user is still hovering inside descendant elements (button, span,
+  // action controls).
   const onDragEnterCapture = useCallback(
     (e: React.DragEvent) => {
       if (!hasMatchingDragData(e)) return;
       e.preventDefault();
-      e.stopPropagation();
     },
     [hasMatchingDragData],
   );
@@ -123,7 +134,6 @@ function useNavItemDnd(dnd?: NavItemDnd) {
     (e: React.DragEvent) => {
       if (!hasMatchingDragData(e)) return;
       e.preventDefault();
-      e.stopPropagation();
       e.dataTransfer.dropEffect = hasExternalFiles(e) ? "copy" : "move";
     },
     [hasMatchingDragData, hasExternalFiles],
