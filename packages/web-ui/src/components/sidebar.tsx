@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router";
-import { Ellipsis, Layers, PanelLeft, PanelLeftOpen, SquarePen, ChevronRight, GripVertical, Plus } from "lucide-react";
+import { Ellipsis, Layers, PanelLeft, PanelLeftOpen, SquarePen, ChevronRight, GripVertical, Plus, Upload } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   useSidebarStore,
@@ -36,6 +36,13 @@ function getNestedNavIndent(depth: number) {
 /** Shared drag-and-drop props derived from NavItem.dnd (feature-provided). */
 function useNavItemDnd(dnd?: NavItemDnd) {
   const [isDragOver, setIsDragOver] = useState(false);
+  // Tracked separately from ``isDragOver`` so consumers can render a
+  // distinct file-drop affordance (dashed primary ring + Upload icon)
+  // instead of the subtle entity-move ring. Without the split, a user
+  // dragging files from the desktop sees the same hover state as a
+  // user dragging another tree node — they can't tell the container
+  // accepts the drop.
+  const [isFileDragOver, setIsFileDragOver] = useState(false);
   const dragCounter = useRef(0);
 
   const isDraggable = dnd?.canDrag() ?? false;
@@ -72,8 +79,11 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       e.stopPropagation();
       dragCounter.current++;
       setIsDragOver(true);
+      if (isFileDropTarget && hasExternalFiles(e)) {
+        setIsFileDragOver(true);
+      }
     },
-    [hasMatchingDragData],
+    [hasMatchingDragData, isFileDropTarget, hasExternalFiles],
   );
 
   const onDragLeave = useCallback(
@@ -84,6 +94,7 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       if (dragCounter.current <= 0) {
         dragCounter.current = 0;
         setIsDragOver(false);
+        setIsFileDragOver(false);
       }
     },
     [isDropTarget, isFileDropTarget],
@@ -131,6 +142,7 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       e.stopPropagation();
       dragCounter.current = 0;
       setIsDragOver(false);
+      setIsFileDragOver(false);
       if (hasFiles) {
         await dnd.onFileDrop!(files);
         return;
@@ -142,6 +154,7 @@ function useNavItemDnd(dnd?: NavItemDnd) {
 
   return {
     isDragOver,
+    isFileDragOver,
     draggableProps: isDraggable ? { draggable: true, onDragStart } : {},
     dropTargetProps:
       isDropTarget || isFileDropTarget
@@ -215,14 +228,22 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
       className={cn(
         "mx-2 rounded-md transition-all overflow-hidden",
         isDragOver
-          ? "h-7 bg-primary/10 border border-dashed border-primary/30 flex items-center justify-center"
+          ? cn(
+              "h-7 flex items-center justify-center gap-1",
+              isFileDragOver
+                ? "bg-primary/10 border border-dashed border-primary"
+                : "bg-primary/10 border border-dashed border-primary/30",
+            )
           : "h-1",
       )}
     >
       {isDragOver && (
-        <span className="text-[10px] text-primary/70">
-          {getContainerDropZoneLabel(isFileDragOver)}
-        </span>
+        <>
+          {isFileDragOver && <Upload className="size-3 text-primary" />}
+          <span className="text-[10px] text-primary/70">
+            {getContainerDropZoneLabel(isFileDragOver)}
+          </span>
+        </>
       )}
     </div>
   );
@@ -316,7 +337,7 @@ function NavLeafItem({
 }) {
   const isDisabled = item.disabled === true;
   const hasActions = !isDisabled && item.actions && item.actions.length > 0;
-  const { draggableProps, dropTargetProps, isDragOver } = useNavItemDnd(item.dnd);
+  const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
 
   // Items with actions use the group layout (button + action controls)
   if (hasActions) {
@@ -332,11 +353,18 @@ function NavLeafItem({
               ? ACTIVE_NAV_ROW_CLASS
               : "hover:bg-sidebar-accent/70",
           isDragOver &&
+            !isFileDragOver &&
             !isDisabled &&
             "ring-2 ring-inset ring-sidebar-ring/50 bg-sidebar-selected",
+          isFileDragOver &&
+            !isDisabled &&
+            "ring-2 ring-dashed ring-primary bg-primary/10",
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
+        {isFileDragOver && !isDisabled && (
+          <Upload className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
+        )}
         <button
           type="button"
           disabled={isDisabled}
@@ -383,7 +411,7 @@ function NavLeafItem({
       {...(isDisabled ? {} : draggableProps)}
       {...(isDisabled ? {} : dropTargetProps)}
       className={cn(
-        "flex items-center gap-2 w-full",
+        "relative flex items-center gap-2 w-full",
         "rounded-lg border border-transparent pr-3 py-1.5 text-sm text-left",
         depthPl,
         isDisabled
@@ -391,11 +419,18 @@ function NavLeafItem({
           : "text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/70",
         !isDisabled && isActive && ACTIVE_NAV_ROW_CLASS,
         isDragOver &&
+          !isFileDragOver &&
           !isDisabled &&
           "ring-2 ring-inset ring-sidebar-ring/50 bg-sidebar-selected",
+        isFileDragOver &&
+          !isDisabled &&
+          "ring-2 ring-dashed ring-primary bg-primary/10",
         item.dimmed && !isDisabled && "opacity-50",
       )}
     >
+      {isFileDragOver && !isDisabled && (
+        <Upload className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
+      )}
       <item.icon
         className={cn(
           "size-3.5 shrink-0",
@@ -498,7 +533,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const isAncestorActive = isInsideSubtree && !isActive;
   const [manualOverride, setManualOverride] = useState<boolean | null>(null);
   const isExpanded = manualOverride ?? isInsideSubtree;
-  const { draggableProps, dropTargetProps, isDragOver } = useNavItemDnd(item.dnd);
+  const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const depthPl = getNestedNavIndent(depth);
 
   const isDisabled = item.disabled === true;
@@ -516,11 +551,18 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
               ? ACTIVE_NAV_ROW_CLASS
               : "hover:bg-sidebar-accent/70",
           isDragOver &&
+            !isFileDragOver &&
             !isDisabled &&
             "ring-2 ring-inset ring-sidebar-ring/50 bg-sidebar-selected",
+          isFileDragOver &&
+            !isDisabled &&
+            "ring-2 ring-dashed ring-primary bg-primary/10",
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
+        {isFileDragOver && !isDisabled && (
+          <Upload className="absolute right-12 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
+        )}
         <button
           type="button"
           disabled={isDisabled}
@@ -633,7 +675,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
   const hasChildren = item.children && item.children.length > 0;
   const isDisabled = item.disabled === true;
   const hasActions = !isDisabled && item.actions && item.actions.length > 0;
-  const { draggableProps, dropTargetProps, isDragOver } = useNavItemDnd(item.dnd);
+  const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
 
   if (hasChildren || hasActions) {
     const inner = (selected: boolean, ancestor: boolean) => (
@@ -646,11 +688,18 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
               ? ACTIVE_NAV_ROW_CLASS
               : "hover:bg-sidebar-accent/70",
           isDragOver &&
+            !isFileDragOver &&
             !isDisabled &&
             "ring-2 ring-inset ring-sidebar-ring/50 bg-sidebar-selected",
+          isFileDragOver &&
+            !isDisabled &&
+            "ring-2 ring-dashed ring-primary bg-primary/10",
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
+        {isFileDragOver && !isDisabled && (
+          <Upload className="absolute right-12 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
+        )}
         <button
           type="button"
           onClick={() => {
@@ -746,17 +795,23 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
       {...dropTargetProps}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-2 w-full",
+          "relative flex items-center gap-2 w-full",
           "rounded-xl px-3 py-2 text-sm text-left",
           "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
           isActive && cn(ACTIVE_NAV_ROW_CLASS, ACTIVE_NAV_TEXT_CLASS),
-          isDragOver && "bg-sidebar-selected ring-2 ring-inset ring-sidebar-ring/50",
+          isDragOver &&
+            !isFileDragOver &&
+            "bg-sidebar-selected ring-2 ring-inset ring-sidebar-ring/50",
+          isFileDragOver && "ring-2 ring-dashed ring-primary bg-primary/10",
           item.dimmed && "opacity-50",
         )
       }
     >
       {({ isActive }) => (
         <>
+          {isFileDragOver && (
+            <Upload className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
+          )}
           <item.icon
             className={cn(
               "size-4 shrink-0",
