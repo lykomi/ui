@@ -51,7 +51,7 @@ export const UserMenu: FC = () => {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
-          <LogOut className="size-4 mr-2" />
+          <LogOut className="size-4" />
           Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
