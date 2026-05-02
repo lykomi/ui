@@ -86,6 +86,14 @@ function useNavItemDnd(dnd?: NavItemDnd) {
     [hasMatchingDragData, isFileDropTarget, hasExternalFiles],
   );
 
+  // ``dragenter`` / ``dragleave`` fire on every parent-to-child crossing
+  // inside the drop target (entering the inner button, then a span, etc.).
+  // The counter pattern only flips ``isDragOver`` back to false when the
+  // cursor truly leaves the OUTER element. There's a transient between
+  // crossings where leave fires before the matching enter — React 18
+  // auto-batches setState calls within a single task so the user doesn't
+  // see a flicker. If you ever observe one, switch to a relatedTarget
+  // ``contains()`` check instead of the counter.
   const onDragLeave = useCallback(
     (e: React.DragEvent) => {
       if (!hasAnyDropTarget(isDropTarget, isFileDropTarget)) return;
@@ -372,9 +380,6 @@ function NavLeafItem({
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
-        {isFileDragOver && !isDisabled && (
-          <Upload className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
-        )}
         <button
           type="button"
           disabled={isDisabled}
@@ -408,6 +413,15 @@ function NavLeafItem({
             </span>
           )}
         </button>
+        {/* File-drop hint icon — rendered as an inline flex sibling so it
+            naturally sits to the LEFT of the action controls instead of
+            overlapping them at a magic-number offset. */}
+        {isFileDragOver && !isDisabled && (
+          <Upload
+            aria-hidden="true"
+            className="size-3.5 mr-2 shrink-0 text-primary pointer-events-none"
+          />
+        )}
         <NavRowControls item={item} hasChildren={false} isExpanded={false} />
       </div>
     );
@@ -421,7 +435,7 @@ function NavLeafItem({
       {...(isDisabled ? {} : draggableProps)}
       {...(isDisabled ? {} : dropTargetProps)}
       className={cn(
-        "relative flex items-center gap-2 w-full",
+        "flex items-center gap-2 w-full",
         "rounded-lg border border-transparent pr-3 py-1.5 text-sm text-left",
         depthPl,
         isDisabled
@@ -438,9 +452,6 @@ function NavLeafItem({
         item.dimmed && !isDisabled && "opacity-50",
       )}
     >
-      {isFileDragOver && !isDisabled && (
-        <Upload className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
-      )}
       <item.icon
         className={cn(
           "size-3.5 shrink-0",
@@ -457,6 +468,12 @@ function NavLeafItem({
         >
           {item.badge}
         </span>
+      )}
+      {isFileDragOver && !isDisabled && (
+        <Upload
+          aria-hidden="true"
+          className="ml-auto size-3.5 shrink-0 text-primary pointer-events-none"
+        />
       )}
     </button>
   );
@@ -570,9 +587,6 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
-        {isFileDragOver && !isDisabled && (
-          <Upload className="absolute right-12 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
-        )}
         <button
           type="button"
           disabled={isDisabled}
@@ -626,6 +640,14 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
             </span>
           )}
         </button>
+        {/* File-drop hint icon — inline flex sibling so it sits to the
+            LEFT of the action controls instead of overlapping them. */}
+        {isFileDragOver && !isDisabled && (
+          <Upload
+            aria-hidden="true"
+            className="size-3.5 mr-2 shrink-0 text-primary pointer-events-none"
+          />
+        )}
         <NavRowControls
           item={item}
           hasChildren
@@ -707,9 +729,6 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
-        {isFileDragOver && !isDisabled && (
-          <Upload className="absolute right-12 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
-        )}
         <button
           type="button"
           onClick={() => {
@@ -762,6 +781,14 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
             </span>
           )}
         </button>
+        {/* File-drop hint icon — inline flex sibling so it sits to the
+            LEFT of the action controls instead of overlapping them. */}
+        {isFileDragOver && !isDisabled && (
+          <Upload
+            aria-hidden="true"
+            className="size-3.5 mr-2 shrink-0 text-primary pointer-events-none"
+          />
+        )}
         <NavRowControls
           item={item}
           hasChildren={Boolean(hasChildren)}
@@ -805,7 +832,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
       {...dropTargetProps}
       className={({ isActive }) =>
         cn(
-          "relative flex items-center gap-2 w-full",
+          "flex items-center gap-2 w-full",
           "rounded-xl px-3 py-2 text-sm text-left",
           "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
           isActive && cn(ACTIVE_NAV_ROW_CLASS, ACTIVE_NAV_TEXT_CLASS),
@@ -819,9 +846,6 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
     >
       {({ isActive }) => (
         <>
-          {isFileDragOver && (
-            <Upload className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-primary pointer-events-none" />
-          )}
           <item.icon
             className={cn(
               "size-4 shrink-0",
@@ -840,6 +864,12 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
             >
               {item.badge}
             </span>
+          )}
+          {isFileDragOver && (
+            <Upload
+              aria-hidden="true"
+              className="ml-auto size-3.5 shrink-0 text-primary pointer-events-none"
+            />
           )}
         </>
       )}
