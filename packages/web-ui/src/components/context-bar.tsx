@@ -37,9 +37,31 @@ interface ContextPinsProps {
   flyoutDirection?: "up" | "down";
 }
 
-/** Get navigable path from a context item (page items only). */
-function getNavigablePath(item: ContextItem): string | null {
+/** Resolve the URL a context item navigates to when clicked.
+ *
+ * Two shapes the framework knows about:
+ *
+ * 1. **Page** (``type: "page"``) — the canonical case the OSS shell
+ *    creates for "Pin this page". The payload's ``path`` IS the
+ *    navigation target.
+ * 2. **Ref** (``type: "ref"``) — created by feature modules when the
+ *    user pins a structured reference (Spaces blocks, code symbols,
+ *    DB rows, …). The framework stays agnostic about the ref shape;
+ *    the source module places the canonical deep-link URL — including
+ *    any anchor hash — in the chip's ``sourcePage`` field, which is
+ *    already the conventional "where the user pinned from" breadcrumb.
+ *    Surfacing it here makes every feature module's ref chips clickable
+ *    without an extension-point registry, and without the framework
+ *    knowing module-specific URL shapes.
+ *
+ * Other item types (``selection``, ``note``) intentionally stay
+ * non-clickable — they are excerpts / annotations, not anchors.
+ *
+ * @internal Exported for unit tests; not part of the public API.
+ */
+export function getNavigablePath(item: ContextItem): string | null {
   if (item.type === "page" && item.payload.kind === "page") return item.payload.path;
+  if (item.type === "ref" && item.sourcePage) return item.sourcePage;
   return null;
 }
 
