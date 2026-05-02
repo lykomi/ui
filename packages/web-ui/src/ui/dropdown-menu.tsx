@@ -36,7 +36,11 @@ export const DropdownMenuItem = forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+      // ``gap-2`` is the same icon-to-text spacing the framework's
+      // Button primitive uses, so a ``<lucide-icon /> Label`` pattern
+      // inside any menu item renders consistently everywhere without
+      // the consumer needing to remember the override.
+      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
       "transition-colors focus:bg-accent focus:text-accent-foreground",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
