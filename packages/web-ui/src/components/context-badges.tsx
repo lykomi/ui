@@ -78,19 +78,31 @@ const ComposerBadge: FC<{ item: ContextItem }> = ({ item }) => {
   );
 };
 
-/** Read-only badge on a sent user message (no remove button, compact). */
-const SentBadge: FC<{ item: ContextItem }> = ({ item }) => (
-  <div
-    className={cn(
-      "inline-flex items-center gap-1 max-w-60",
-      "rounded-md border border-primary/20 bg-primary/5",
-      "px-2 py-1",
-    )}
-  >
-    <ContextIcon type={item.type} className="size-3 text-primary shrink-0" />
-    <span className="text-[11px] leading-tight text-foreground truncate">{item.label}</span>
-  </div>
-);
+/** Read-only badge on a sent user message. Mirrors composer context chips. */
+const SentBadge: FC<{ item: ContextItem }> = ({ item }) => {
+  const isEphemeral = item.persistence === "ephemeral";
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className={cn(
+            "inline-flex items-center gap-1.5 max-w-70",
+            "rounded-lg bg-primary/5",
+            "px-2 py-1",
+            isEphemeral ? "border border-dashed border-primary/40" : "border border-primary/20",
+          )}
+        >
+          <ContextIcon type={item.type} className="size-3 text-primary shrink-0" />
+          <span className="text-[11px] leading-tight text-foreground truncate">{item.label}</span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="whitespace-pre-line">
+        {getBadgeTooltip(item)}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
 
 /** Renders ephemeral context badges in the composer (persistent items shown in ContextPins). */
 export const ComposerContextBadges: FC = () => {

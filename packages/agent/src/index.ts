@@ -26,3 +26,7 @@ export {
   type CitationResult,
   type CitationHandler,
 } from "./store/citation-store.ts";
+export {
+  linkStore,
+  type LinkHandler,
+} from "./store/link-store.ts";

@@ -24,14 +24,14 @@ import type {
   TextMessagePart,
   ToolCallMessagePart,
 } from "@assistant-ui/react";
-import type { Message as AGUIMessage } from "@ag-ui/core";
+import type { Context, Message as AGUIMessage } from "@ag-ui/core";
 import {
   AGUIRunner,
   clientToolRegistry,
   streamingStatusStore,
 } from "@iloveagents/foundry-agent";
 import { tokenFetch } from "@iloveagents/foundry-agent/msal";
-import { useAppStore } from "./app-store.ts";
+import { useAppStore, type AgentStateProjection } from "./app-store.ts";
 import { useDevStore } from "./dev-store.ts";
 
 interface ToolCallSnapshot {
@@ -71,6 +71,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     // ephemeral context off the last user message.
     useAppStore.getState().markThreadActive();
     const appState = useAppStore.getState().getAgentState();
+    const context = buildAGUIContext(appState);
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMsg) {
       useAppStore.getState().consumeContextForMessage(lastUserMsg.id);
@@ -136,6 +137,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       for await (const event of this.runner.run({
         messages: aguiMessages,
         state: appState as unknown as Record<string, unknown>,
+        context,
         registry: clientToolRegistry.getState(),
         abortSignal,
       })) {
@@ -260,6 +262,46 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     } finally {
       streamingStatusStore.getState().setStreamingStatus({ status: "idle" });
     }
+  }
+}
+
+function buildAGUIContext(appState: AgentStateProjection): Context[] {
+  return appState.contextItems.map((item, index) => ({
+    description: describeContextItem(item, index),
+    value: stringifyContextItem(item),
+  }));
+}
+
+function describeContextItem(item: Record<string, unknown>, index: number): string {
+  const type = typeof item.type === "string" ? item.type : "context";
+  const label = typeof item.label === "string" ? item.label : "";
+
+  if (type === "ref") {
+    const refType = typeof item.refType === "string" ? item.refType : "reference";
+    if (typeof item.targetPath === "string") {
+      return `Selected ${refType} atom. Use targetPath as the exact edit target when the user asks to modify, rewrite, or transform selected content.`;
+    }
+    return `Selected ${refType} reference. Use refId as the edit target when the user asks to modify, rewrite, or transform selected content.`;
+  }
+
+  if (type === "selection") {
+    return "Selected text from the current UI. Use it as the focus when the user asks about, rewrites, or modifies selected content.";
+  }
+
+  if (type === "page") {
+    return `Pinned page context${label ? `: ${label}` : ""}.`;
+  }
+
+  return `Context item ${index + 1}${label ? `: ${label}` : ""}.`;
+}
+
+function stringifyContextItem(item: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(item);
+  } catch {
+    const type = typeof item.type === "string" ? item.type : "context";
+    const label = typeof item.label === "string" ? item.label : "";
+    return JSON.stringify({ type, label });
   }
 }
 

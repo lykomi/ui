@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FC } from "react";
+import { cloneElement, isValidElement, useCallback, useEffect, useState, type FC } from "react";
 import {
   MarkdownTextPrimitive,
   type SyntaxHighlighterProps,
@@ -7,11 +7,11 @@ import {
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import type { Highlighter } from "shiki/bundle/web";
-import { Children, type ReactNode } from "react";
+import { Children, type ReactElement, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useStore } from "zustand";
-import { citationStore, type CitationResult } from "@iloveagents/foundry-agent";
+import { citationStore, linkStore, type CitationResult } from "@iloveagents/foundry-agent";
 
 /* ---------- Shiki syntax highlighter (lazy-loaded singleton) ---------- */
 
@@ -98,11 +98,136 @@ const CopyButton: FC<{ text: string; className?: string }> = ({ text, className 
 
 /* ---------- Inline code ---------- */
 
-const InlineCode = ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => (
-  <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono text-foreground" {...props}>
-    {children}
-  </code>
-);
+function textFromChildren(children: ReactNode): string | null {
+  if (typeof children === "string") return children;
+  if (typeof children === "number") return String(children);
+  if (!Array.isArray(children)) return null;
+  let out = "";
+  for (const child of children) {
+    if (typeof child === "string" || typeof child === "number") {
+      out += String(child);
+    } else {
+      return null;
+    }
+  }
+  return out;
+}
+
+function resolveHandledHref(rawHref: string): string | null {
+  const handler = linkStore.getState().handler;
+  if (!handler) return null;
+  const normalized = handler.normalizeHref ? handler.normalizeHref(rawHref) : rawHref;
+  if (!normalized || !handler.canHandle(normalized)) return null;
+  return normalized;
+}
+
+function openHandledHref(href: string) {
+  const handler = linkStore.getState().handler;
+  if (!handler) return;
+  handler.openLink(href);
+}
+
+const TRAILING_LINK_PUNCT_RE = /[.,;:!?)\]]+$/;
+
+function trimLinkCandidate(value: string): { href: string; suffix: string } {
+  const match = value.match(TRAILING_LINK_PUNCT_RE);
+  if (!match) return { href: value, suffix: "" };
+  return {
+    href: value.slice(0, -match[0].length),
+    suffix: match[0],
+  };
+}
+
+function exactHandledHref(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed || /\s/.test(trimmed)) return null;
+  const { href, suffix } = trimLinkCandidate(trimmed);
+  if (suffix) return null;
+  return resolveHandledHref(href);
+}
+
+const HANDLED_LINK_RE = /(https?:\/\/[^\s<>"`]+|\/[A-Za-z0-9][^\s<>"`]*)/g;
+
+const HandledLink: FC<{
+  href: string;
+  children: ReactNode;
+  className?: string;
+} & React.AnchorHTMLAttributes<HTMLAnchorElement>> = ({ href, children, className, ...props }) => {
+  const handledHref = useStore(linkStore, () => resolveHandledHref(href));
+
+  if (!handledHref) {
+    return (
+      <a
+        href={href}
+        className={cn("text-primary hover:underline", className)}
+        target="_blank"
+        rel="noopener noreferrer"
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={handledHref}
+      className={cn("text-primary hover:underline", className)}
+      onClick={(event) => {
+        event.preventDefault();
+        openHandledHref(handledHref);
+      }}
+      {...props}
+    >
+      {children}
+    </a>
+  );
+};
+
+const AutoLinkedText: FC<{ text: string }> = ({ text }) => {
+  useStore(linkStore, (s) => s.handler);
+
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  for (const match of text.matchAll(HANDLED_LINK_RE)) {
+    const raw = match[0];
+    const start = match.index ?? 0;
+    const { href, suffix } = trimLinkCandidate(raw);
+    const handledHref = resolveHandledHref(href);
+    if (!handledHref) continue;
+    if (start > lastIndex) parts.push(text.slice(lastIndex, start));
+    parts.push(
+      <HandledLink key={`${start}-${href}`} href={handledHref}>
+        {href}
+      </HandledLink>,
+    );
+    if (suffix) parts.push(suffix);
+    lastIndex = start + raw.length;
+  }
+  if (lastIndex === 0) return <>{text}</>;
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return <>{parts}</>;
+};
+
+const InlineCode = ({ children, ...props }: React.HTMLAttributes<HTMLElement>) => {
+  const value = textFromChildren(children);
+  const handledHref = useStore(linkStore, () => (value ? exactHandledHref(value) : null));
+  const className = "rounded bg-muted px-1.5 py-0.5 text-sm font-mono text-foreground";
+
+  if (handledHref) {
+    return (
+      <HandledLink href={handledHref} className={className}>
+        {children}
+      </HandledLink>
+    );
+  }
+
+  return (
+    <code className={className} {...props}>
+      {children}
+    </code>
+  );
+};
 
 /* ---------- Code block with header + highlighting (used by ReactMarkdown / tool panel) ---------- */
 
@@ -261,15 +386,9 @@ export const markdownComponents: Components = {
     </blockquote>
   ),
   a: ({ children, href, ...props }) => (
-    <a
-      href={href}
-      className="text-primary hover:underline"
-      target="_blank"
-      rel="noopener noreferrer"
-      {...props}
-    >
+    <HandledLink href={href || ""} {...props}>
       {children}
-    </a>
+    </HandledLink>
   ),
   hr: (props) => <hr className="my-6 border-border" {...props} />,
   table: ({ children, ...props }) => (
@@ -349,17 +468,25 @@ const CitationRef: FC<{ index: number }> = ({ index }) => {
  * Walk React children and replace [n] text fragments with CitationRef
  * components. Only processes string children — leaves elements untouched.
  */
-function injectCitations(children: ReactNode): ReactNode {
+export function injectCitations(children: ReactNode): ReactNode {
   return Children.map(children, (child) => {
-    if (typeof child !== "string") return child;
-    if (!CITE_RE.test(child)) return child;
+    if (typeof child === "string") {
+      if (!CITE_RE.test(child)) return <AutoLinkedText text={child} />;
 
-    const parts = child.split(CITE_RE);
-    return parts.map((part, i) => {
-      const m = /^\[(\d+)\]$/.exec(part);
-      if (m) return <CitationRef key={i} index={parseInt(m[1], 10)} />;
-      return part;
-    });
+      const parts = child.split(CITE_RE);
+      return parts.map((part, i) => {
+        const m = /^\[(\d+)\]$/.exec(part);
+        if (m) return <CitationRef key={i} index={parseInt(m[1], 10)} />;
+        return <AutoLinkedText key={i} text={part} />;
+      });
+    }
+
+    if (!isValidElement(child)) return child;
+
+    const element = child as ReactElement<{ children?: ReactNode }>;
+    const nested = element.props.children;
+    if (nested == null) return child;
+    return cloneElement(element, undefined, injectCitations(nested));
   });
 }
 

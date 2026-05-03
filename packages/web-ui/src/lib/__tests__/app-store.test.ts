@@ -54,6 +54,27 @@ const refItem = (refId = "entity-1:block-1", preview = "Introduction") => ({
   persistence: "persistent" as const,
 });
 
+const scopedRefItem = (
+  selectionScope: "block" | "text" | "atom",
+  preview = "Introduction",
+  targetPath?: string,
+) => ({
+  type: "ref" as const,
+  label: preview,
+  payload: {
+    kind: "ref" as const,
+    refType: "block",
+    refId: "entity-1:block-1",
+    preview,
+    meta: {
+      selectionScope,
+      ...(targetPath ? { targetPath } : {}),
+    },
+  },
+  sourcePage: "/spaces/entity-1#block-block-1",
+  persistence: selectionScope === "block" ? ("persistent" as const) : ("ephemeral" as const),
+});
+
 describe("app-store", () => {
   beforeEach(reset);
 
@@ -106,6 +127,27 @@ describe("app-store", () => {
       store().addContextItem(refItem("e1:b1", "Intro"));
       store().addContextItem(refItem("e1:b1", "Intro copy"));
       expect(store().contextItems).toHaveLength(1);
+    });
+
+    it("allows scoped refs for the same block alongside the durable block ref", () => {
+      store().addContextItem(scopedRefItem("block", "Whole block"));
+      store().addContextItem(scopedRefItem("text", "Specific phrase"));
+      store().addContextItem(
+        scopedRefItem("atom", "Table cell", "$.blocks[?(@.id=='block-1')].rows[0].cells[0]"),
+      );
+      expect(store().contextItems).toHaveLength(3);
+    });
+
+    it("deduplicates scoped refs by their actual scope key", () => {
+      store().addContextItem(scopedRefItem("text", "Specific phrase"));
+      store().addContextItem(scopedRefItem("text", "Specific phrase"));
+      store().addContextItem(
+        scopedRefItem("atom", "Table cell", "$.blocks[?(@.id=='block-1')].rows[0].cells[0]"),
+      );
+      store().addContextItem(
+        scopedRefItem("atom", "Updated table cell", "$.blocks[?(@.id=='block-1')].rows[0].cells[0]"),
+      );
+      expect(store().contextItems).toHaveLength(2);
     });
 
     it("allows ref items with different refIds", () => {

@@ -1,5 +1,5 @@
 /**
- * Floating "Add to context" button for text selection in the tool panel.
+ * Floating "Add to chat" button for text selection in the tool panel.
  *
  * Appears near the selected text when the user makes a selection within
  * the panel content area. Clicking adds the selection to the context store.
@@ -21,7 +21,7 @@ interface PopoverPosition {
 }
 
 const POPOVER_HEIGHT = 36;
-const POPOVER_WIDTH = 150;
+const POPOVER_WIDTH = 126;
 const OFFSET = 8;
 
 export function SelectionPopover({ containerRef }: SelectionPopoverProps) {
@@ -150,7 +150,7 @@ export function SelectionPopover({ containerRef }: SelectionPopoverProps) {
       onClick={handleAddToContext}
     >
       <TextSelect className="size-3.5 text-primary" />
-      Add to context
+      Add to chat
     </button>
   );
 }

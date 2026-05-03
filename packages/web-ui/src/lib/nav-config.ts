@@ -55,6 +55,11 @@ export interface NavItem {
   dimmed?: boolean;
   /** Small text badge after the label (e.g., "managed", "locked"). */
   badge?: string;
+  /** Small status dot after the label for quiet state hints such as pending review impact. */
+  statusDot?: {
+    tone?: "neutral" | "info" | "low-impact" | "medium-impact" | "high-impact" | "pending";
+    label?: string;
+  };
   /** Page description sent to the agent for context */
   description?: string;
   /** Arbitrary metadata sent to the agent (e.g., workspace IDs, entity types) */

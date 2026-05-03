@@ -4,6 +4,8 @@ import {
   ComposerPrimitive,
   MessagePrimitive,
   ActionBarPrimitive,
+  useAuiState,
+  useThreadViewport,
 } from "@assistant-ui/react";
 import {
   MessageSquare,
@@ -20,7 +22,8 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 import { Button } from "@iloveagents/foundry-web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { ContextPins } from "./context-bar.tsx";
-import { ComposerContextBadges } from "./context-badges.tsx";
+import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
+import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import { MarkdownText } from "./markdown-text.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
 import { useAppStore } from "../lib/app-store.ts";
@@ -39,8 +42,15 @@ function BubbleAssistantMessage() {
           }}
         />
       </div>
-      <div className="flex items-center gap-1 mt-1">
-        <ActionBarPrimitive.Root hideWhenRunning className="flex items-center gap-1">
+      <div className="flex h-7 w-8 items-center mt-1">
+        <ActionBarPrimitive.Root
+          hideWhenRunning
+          className={cn(
+            "pointer-events-none flex items-center gap-1 opacity-0 transition-opacity",
+            "group-hover:pointer-events-auto group-hover:opacity-100",
+            "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+          )}
+        >
           <ActionBarPrimitive.Copy asChild>
             <TooltipIconButton tooltip="Copy" size="icon" className="size-7">
               <MessagePrimitive.If copied={false}>
@@ -58,14 +68,35 @@ function BubbleAssistantMessage() {
 }
 
 function BubbleUserMessage() {
+  const messageId = useAuiState((s) => s.message.id);
+
   return (
     <MessagePrimitive.Root className="w-full mb-2">
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-1">
+        <SentContextBadges messageId={messageId} />
         <div className="max-w-[85%] bg-muted rounded-2xl px-3 py-2 text-sm text-foreground">
           <MessagePrimitive.Content />
         </div>
       </div>
     </MessagePrimitive.Root>
+  );
+}
+
+function BubbleScrollToBottomButton() {
+  const isAtBottom = useThreadViewport((s) => s.isAtBottom);
+  const scrollToBottom = useThreadViewport((s) => s.scrollToBottom);
+
+  if (isAtBottom) return null;
+
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 rounded-full shadow-md size-7"
+      onClick={() => scrollToBottom({ behavior: "smooth" })}
+    >
+      <ChevronDown className="size-3" />
+    </Button>
   );
 }
 
@@ -252,19 +283,11 @@ export function ChatBubble() {
                     </ThreadPrimitive.If>
                   </div>
                 </ThreadPrimitive.If>
-              </ThreadPrimitive.Viewport>
 
-              <ThreadPrimitive.If empty={false}>
-                <ThreadPrimitive.ScrollToBottom asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 rounded-full shadow-md size-7"
-                  >
-                    <ChevronDown className="size-3" />
-                  </Button>
-                </ThreadPrimitive.ScrollToBottom>
-              </ThreadPrimitive.If>
+                <ThreadPrimitive.If empty={false}>
+                  <BubbleScrollToBottomButton />
+                </ThreadPrimitive.If>
+              </ThreadPrimitive.Viewport>
             </div>
 
             {/* Composer — same pattern as full chat: clip + pin + input + send */}
@@ -279,6 +302,7 @@ export function ChatBubble() {
                   "transition-all duration-200",
                 )}
               >
+                <ComposerSubmitBridge />
                 <ComposerContextBadges />
                 <div className="flex items-center gap-2">
                   <div className="flex items-center -space-x-1 shrink-0">
