@@ -93,6 +93,21 @@ const DEFAULT_NAV_CONTEXT: NavContext = {
   contextInstructions: null,
 };
 
+function refDedupKey(payload: ReferencePayload): string {
+  const selectionScope =
+    typeof payload.meta?.selectionScope === "string" ? payload.meta.selectionScope : "block";
+  const targetPath =
+    typeof payload.meta?.targetPath === "string" ? payload.meta.targetPath : undefined;
+
+  if (selectionScope === "atom" && targetPath) {
+    return `${payload.refType}:${payload.refId}:atom:${targetPath}`;
+  }
+  if (selectionScope === "text") {
+    return `${payload.refType}:${payload.refId}:text:${payload.preview ?? ""}`;
+  }
+  return `${payload.refType}:${payload.refId}:block`;
+}
+
 interface AppState {
   // Thread state
   threadActive: boolean;
@@ -188,7 +203,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (item.type === "ref" && existing.type === "ref") {
         const a = item.payload as ReferencePayload;
         const b = existing.payload as ReferencePayload;
-        return a.refId === b.refId;
+        return refDedupKey(a) === refDedupKey(b);
       }
       // selection / note: dedup by label + sourcePage
       return existing.label === item.label && existing.sourcePage === item.sourcePage;
@@ -270,6 +285,9 @@ export const useAppStore = create<AppState>((set, get) => ({
               refType: payload.refType,
               refId: payload.refId,
               preview: payload.preview?.slice(0, 100),
+              meta: payload.meta,
+              targetPath:
+                typeof payload.meta?.targetPath === "string" ? payload.meta.targetPath : undefined,
               sourcePage,
             };
           default:

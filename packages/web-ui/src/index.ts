@@ -111,6 +111,15 @@ export type {
 } from "./lib/tool-panel-store.ts";
 export { useSidebarStore, SIDEBAR_WIDTH, RAIL_WIDTH } from "./lib/sidebar-store.ts";
 export { useChatBubbleStore } from "./lib/chat-bubble-store.ts";
+export { submitComposerText } from "./lib/composer-submit-store.ts";
+export {
+  registerSelectionContextResolver,
+  resolveSelectionContext,
+  type SelectionContextInput,
+  type SelectionContextItem,
+  type SelectionContextResolver,
+  type SelectionContextResult,
+} from "./lib/selection-context.ts";
 export { useThemeStore } from "./lib/theme-store.ts";
 export type { ThemeMode } from "./lib/theme-store.ts";
 export {

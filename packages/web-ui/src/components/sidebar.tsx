@@ -27,8 +27,43 @@ const ACTIVE_NAV_BADGE_CLASS =
   "border border-sidebar-border bg-background/60 text-sidebar-foreground";
 const NESTED_NAV_INDENTS = ["pl-5", "pl-7", "pl-9", "pl-11", "pl-13"] as const;
 
+type NavStatusDot = NonNullable<NavItem["statusDot"]>;
+
 function getNestedNavIndent(depth: number) {
   return NESTED_NAV_INDENTS[depth] ?? NESTED_NAV_INDENTS[NESTED_NAV_INDENTS.length - 1];
+}
+
+function statusDotColor(tone: NavStatusDot["tone"]) {
+  switch (tone) {
+    case "low-impact":
+      return "var(--impact-low, currentColor)";
+    case "medium-impact":
+      return "var(--impact-medium, currentColor)";
+    case "high-impact":
+      return "var(--impact-high, currentColor)";
+    case "pending":
+      return "var(--impact-unknown, currentColor)";
+    case "info":
+      return "var(--primary, currentColor)";
+    case "neutral":
+    default:
+      return "currentColor";
+  }
+}
+
+function NavStatusDot({ statusDot }: { statusDot?: NavStatusDot }) {
+  if (!statusDot) return null;
+  return (
+    <span
+      aria-label={statusDot.label}
+      title={statusDot.label}
+      className={cn(
+        "size-1.5 shrink-0 rounded-full opacity-90",
+        statusDot.tone === "pending" && "animate-pulse",
+      )}
+      style={{ backgroundColor: statusDotColor(statusDot.tone) }}
+    />
+  );
 }
 
 // --- Generic drag-and-drop via NavItem.dnd ---
@@ -412,6 +447,7 @@ function NavLeafItem({
               {item.badge}
             </span>
           )}
+          <NavStatusDot statusDot={item.statusDot} />
         </button>
         {/* File-drop hint icon — rendered as an inline flex sibling so it
             naturally sits to the LEFT of the action controls instead of
@@ -469,6 +505,7 @@ function NavLeafItem({
           {item.badge}
         </span>
       )}
+      <NavStatusDot statusDot={item.statusDot} />
       {isFileDragOver && !isDisabled && (
         <Upload
           aria-hidden="true"
@@ -639,6 +676,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
               {item.badge}
             </span>
           )}
+          <NavStatusDot statusDot={item.statusDot} />
         </button>
         {/* File-drop hint icon — inline flex sibling so it sits to the
             LEFT of the action controls instead of overlapping them. */}
@@ -780,6 +818,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
               {item.badge}
             </span>
           )}
+          <NavStatusDot statusDot={item.statusDot} />
         </button>
         {/* File-drop hint icon — inline flex sibling so it sits to the
             LEFT of the action controls instead of overlapping them. */}
@@ -865,6 +904,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
               {item.badge}
             </span>
           )}
+          <NavStatusDot statusDot={item.statusDot} />
           {isFileDragOver && (
             <Upload
               aria-hidden="true"

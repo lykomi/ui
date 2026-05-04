@@ -8,6 +8,7 @@ import {
   ErrorPrimitive,
   useAuiState,
   useComposerRuntime,
+  useThreadViewport,
 } from "@assistant-ui/react";
 import {
   ArrowUp,
@@ -31,6 +32,7 @@ import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { userAttachmentComponents, composerAttachmentComponents } from "./chat-attachments.tsx";
 import { SentContextBadges, ComposerContextBadges } from "./context-badges.tsx";
 import { ContextPins } from "./context-bar.tsx";
+import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { MarkdownText } from "./markdown-text.tsx";
 import { ToolFallback } from "./tool-fallback.tsx";
@@ -106,7 +108,9 @@ const AssistantMessage: FC = () => (
       <MessageError />
 
       <div className="flex items-center gap-2 mt-1">
-        <AssistantActionBar />
+        <div className="flex h-8 w-[4.25rem] items-center">
+          <AssistantActionBar />
+        </div>
         <BranchPicker />
       </div>
     </div>
@@ -114,7 +118,14 @@ const AssistantMessage: FC = () => (
 );
 
 const AssistantActionBar: FC = () => (
-  <ActionBarPrimitive.Root hideWhenRunning className="flex items-center gap-1 -ml-2">
+  <ActionBarPrimitive.Root
+    hideWhenRunning
+    className={cn(
+      "pointer-events-none flex items-center gap-1 -ml-2 opacity-0 transition-opacity",
+      "group-hover:pointer-events-auto group-hover:opacity-100",
+      "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+    )}
+  >
     <ActionBarPrimitive.Copy asChild>
       <TooltipIconButton tooltip="Copy" size="icon">
         <MessagePrimitive.If copied={false}>
@@ -219,17 +230,23 @@ const STARTER_SUGGESTIONS = [
   "Draft a concise release note from bullet points",
 ];
 
-const ScrollToBottomButton: FC = () => (
-  <ThreadPrimitive.ScrollToBottom asChild>
+const ScrollToBottomButton: FC = () => {
+  const isAtBottom = useThreadViewport((s) => s.isAtBottom);
+  const scrollToBottom = useThreadViewport((s) => s.scrollToBottom);
+
+  if (isAtBottom) return null;
+
+  return (
     <Button
       variant="outline"
       size="icon"
       className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 rounded-full shadow-md"
+      onClick={() => scrollToBottom({ behavior: "smooth" })}
     >
       <ChevronDown className="size-4" />
     </Button>
-  </ThreadPrimitive.ScrollToBottom>
-);
+  );
+};
 
 const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -366,8 +383,10 @@ export function ChatContent() {
                 </ThreadPrimitive.If>
               </div>
             </ThreadPrimitive.If>
+            <ThreadPrimitive.If empty={false}>
+              <ScrollToBottomButton />
+            </ThreadPrimitive.If>
           </ThreadPrimitive.Viewport>
-          <ScrollToBottomButton />
         </div>
 
         <div className="shrink-0 bg-background">
@@ -389,6 +408,7 @@ export function ChatContent() {
                 "transition-all duration-300",
               )}
             >
+              <ComposerSubmitBridge />
               <ComposerContextBadges />
               <ComposerPrimitive.Attachments components={composerAttachmentComponents} />
               <div className="flex items-center gap-2">

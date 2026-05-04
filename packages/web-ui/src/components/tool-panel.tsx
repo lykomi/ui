@@ -86,10 +86,10 @@ export function ToolPanel() {
   }, [entityId, entityPin, content, addContextItem, removeContextItem]);
 
   const handleNavigateToEntity = useCallback(() => {
-    if (!entityId) return;
-    navigate(`/spaces/${entityId}`);
+    if (!entityId || !content) return;
+    navigate(content.type === "page" ? content.content : `/spaces/${entityId}`);
     closePanel();
-  }, [entityId, navigate, closePanel]);
+  }, [entityId, content, navigate, closePanel]);
 
   const handleCopyAll = useCallback(() => {
     if (!content) return;

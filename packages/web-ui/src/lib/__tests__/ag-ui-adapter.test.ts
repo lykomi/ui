@@ -15,6 +15,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { RunnerEvent } from "@iloveagents/foundry-agent";
 
+const appStoreMock = vi.hoisted(() => ({
+  agentState: { contextItems: [] as Array<Record<string, unknown>> },
+  consumedMessageIds: [] as string[],
+}));
+
 const runMock = vi.fn();
 const runnerMock = vi.fn().mockImplementation(() => ({
   threadId: "thread-1",
@@ -46,8 +51,10 @@ vi.mock("../app-store.ts", () => ({
   useAppStore: {
     getState: () => ({
       markThreadActive: () => {},
-      getAgentState: () => ({ contextItems: [] }),
-      consumeContextForMessage: () => {},
+      getAgentState: () => appStoreMock.agentState,
+      consumeContextForMessage: (messageId: string) => {
+        appStoreMock.consumedMessageIds.push(messageId);
+      },
     }),
   },
 }));
@@ -75,6 +82,8 @@ describe("AGUIAdapterSDK", () => {
   beforeEach(() => {
     runMock.mockReset();
     runnerMock.mockClear();
+    appStoreMock.agentState = { contextItems: [] };
+    appStoreMock.consumedMessageIds = [];
   });
 
   it("yields a terminal complete after a text-only run", async () => {
@@ -173,6 +182,37 @@ describe("AGUIAdapterSDK", () => {
     }
 
     expect(out[out.length - 1].status).toEqual({ type: "complete", reason: "stop" });
+  });
+
+  it("forwards app context items through the native AG-UI context field", async () => {
+    appStoreMock.agentState = {
+      contextItems: [
+        {
+          type: "ref",
+          refType: "block",
+          refId: "entity-1:block-2",
+          preview: "A selected table cell",
+          targetPath: "$.blocks[?(@.id=='block-2')].rows[0].cells[1]",
+          sourcePage: "/spaces/entity-1#block-block-2",
+        },
+      ],
+    };
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
+
+    const adapter = new AGUIAdapterSDK();
+    for await (const _ of adapter.run(makeRunInput())) {
+      // Drain the adapter.
+    }
+
+    expect(runMock).toHaveBeenCalledTimes(1);
+    expect(runMock.mock.calls[0][0].context).toEqual([
+      {
+        description:
+          "Selected block atom. Use targetPath as the exact edit target when the user asks to modify, rewrite, or transform selected content.",
+        value: JSON.stringify(appStoreMock.agentState.contextItems[0]),
+      },
+    ]);
+    expect(appStoreMock.consumedMessageIds).toEqual(["u-1"]);
   });
 });
 
