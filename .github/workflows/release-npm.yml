@@ -44,12 +44,9 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
-
-      - name: Use npm CLI with trusted publishing support
-        run: npm install -g npm@^11.5.1
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
