@@ -10,17 +10,10 @@ export {
 } from "./client/service-fetch.ts";
 
 // --- Tool registry ---
-export {
-  clientToolRegistry,
-  type ClientToolEntry,
-  type ToolRegistry,
-} from "./tools/registry.ts";
+export { clientToolRegistry, type ClientToolEntry, type ToolRegistry } from "./tools/registry.ts";
 
 // --- Stores (vanilla) ---
-export {
-  streamingStatusStore,
-  type StreamingStatus,
-} from "./store/streaming-status-store.ts";
+export { streamingStatusStore, type StreamingStatus } from "./store/streaming-status-store.ts";
 export {
   citationStore,
   type CitationResult,
@@ -28,5 +21,7 @@ export {
 } from "./store/citation-store.ts";
 export {
   linkStore,
+  resolveLinkHandler,
   type LinkHandler,
+  type ResolvedLinkHandler,
 } from "./store/link-store.ts";

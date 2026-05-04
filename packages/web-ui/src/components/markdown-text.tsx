@@ -11,7 +11,12 @@ import { Children, type ReactElement, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useStore } from "zustand";
-import { citationStore, linkStore, type CitationResult } from "@iloveagents/foundry-agent";
+import {
+  citationStore,
+  linkStore,
+  resolveLinkHandler,
+  type CitationResult,
+} from "@iloveagents/foundry-agent";
 
 /* ---------- Shiki syntax highlighter (lazy-loaded singleton) ---------- */
 
@@ -114,17 +119,12 @@ function textFromChildren(children: ReactNode): string | null {
 }
 
 function resolveHandledHref(rawHref: string): string | null {
-  const handler = linkStore.getState().handler;
-  if (!handler) return null;
-  const normalized = handler.normalizeHref ? handler.normalizeHref(rawHref) : rawHref;
-  if (!normalized || !handler.canHandle(normalized)) return null;
-  return normalized;
+  return resolveLinkHandler(rawHref)?.href ?? null;
 }
 
 function openHandledHref(href: string) {
-  const handler = linkStore.getState().handler;
-  if (!handler) return;
-  handler.openLink(href);
+  const resolved = resolveLinkHandler(href);
+  resolved?.handler.openLink(resolved.href);
 }
 
 const TRAILING_LINK_PUNCT_RE = /[.,;:!?)\]]+$/;
@@ -148,11 +148,13 @@ function exactHandledHref(value: string): string | null {
 
 const HANDLED_LINK_RE = /(https?:\/\/[^\s<>"`]+|\/[A-Za-z0-9][^\s<>"`]*)/g;
 
-const HandledLink: FC<{
-  href: string;
-  children: ReactNode;
-  className?: string;
-} & React.AnchorHTMLAttributes<HTMLAnchorElement>> = ({ href, children, className, ...props }) => {
+const HandledLink: FC<
+  {
+    href: string;
+    children: ReactNode;
+    className?: string;
+  } & React.AnchorHTMLAttributes<HTMLAnchorElement>
+> = ({ href, children, className, ...props }) => {
   const handledHref = useStore(linkStore, () => resolveHandledHref(href));
 
   if (!handledHref) {
@@ -185,7 +187,7 @@ const HandledLink: FC<{
 };
 
 const AutoLinkedText: FC<{ text: string }> = ({ text }) => {
-  useStore(linkStore, (s) => s.handler);
+  useStore(linkStore, (s) => s.handlers);
 
   const parts: ReactNode[] = [];
   let lastIndex = 0;
