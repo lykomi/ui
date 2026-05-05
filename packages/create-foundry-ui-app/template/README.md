@@ -59,7 +59,7 @@ To add the eomi Spaces module (private commercial extension — agentic CMS, doc
 npx create-foundry-ui-app my-app --preset lastspace
 ```
 
-Requires `LASTSPACE_TOKEN` env var (per-customer PAT). See [eomi customer docs](https://github.com/ltwlf/lastspace).
+Requires `LASTSPACE_TOKEN` env var (per-customer PAT). See the [Spaces customer docs](https://github.com/ltwlf/lastspace).
 
 ## License
 
