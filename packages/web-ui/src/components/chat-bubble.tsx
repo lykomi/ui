@@ -11,6 +11,7 @@ import {
   MessageSquare,
   X,
   Maximize2,
+  SquarePen,
   ArrowUp,
   Square,
   ChevronDown,
@@ -28,6 +29,7 @@ import { MarkdownText } from "./markdown-text.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
 import { useAppStore } from "../lib/app-store.ts";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
+import { useNewConversation } from "../lib/use-new-conversation.ts";
 import { RAIL_WIDTH, useSidebarStore } from "../lib/sidebar-store.ts";
 
 const CHAT_BUBBLE_INSET = 8;
@@ -106,6 +108,7 @@ export function ChatBubble() {
   const openBubble = useChatBubbleStore((s) => s.open);
   const closeBubble = useChatBubbleStore((s) => s.close);
   const expandChat = useChatBubbleStore((s) => s.expand);
+  const startNewThread = useNewConversation({ navigateToChat: false, preserveNavigation: true });
   const isSidebarOpen = useSidebarStore((s) => s.isOpen);
   const sidebarWidth = useSidebarStore((s) => s.width);
   const pageLabel = useAppStore((s) => s.navContext.label);
@@ -240,6 +243,14 @@ export function ChatBubble() {
             </div>
             <div className="flex items-center gap-0.5">
               <TooltipIconButton
+                tooltip="New Thread"
+                size="icon"
+                className="size-7"
+                onClick={startNewThread}
+              >
+                <SquarePen className="size-3.5" />
+              </TooltipIconButton>
+              <TooltipIconButton
                 tooltip="Expand chat"
                 size="icon"
                 className="size-7"
@@ -283,11 +294,10 @@ export function ChatBubble() {
                     </ThreadPrimitive.If>
                   </div>
                 </ThreadPrimitive.If>
-
-                <ThreadPrimitive.If empty={false}>
-                  <BubbleScrollToBottomButton />
-                </ThreadPrimitive.If>
               </ThreadPrimitive.Viewport>
+              <ThreadPrimitive.If empty={false}>
+                <BubbleScrollToBottomButton />
+              </ThreadPrimitive.If>
             </div>
 
             {/* Composer — same pattern as full chat: clip + pin + input + send */}
