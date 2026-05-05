@@ -86,7 +86,7 @@ export function ThemeDocumentMetadata() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    document.title = runtime.branding.appTitle || runtime.branding.appName || "LastSpace.ai";
+    document.title = runtime.branding.appTitle || runtime.branding.appName || "eomi";
   }, [runtime.branding.appName, runtime.branding.appTitle]);
 
   return null;

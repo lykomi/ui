@@ -14,7 +14,7 @@ export function AppBrand({
   labelClassName?: string;
 }) {
   const runtime = useThemeRuntime();
-  const brandName = runtime.branding.appName || "LastSpace.ai";
+  const brandName = runtime.branding.appName || "eomi";
   const logoUrl =
     runtime.mode === "dark"
       ? runtime.branding.darkLogoUrl || runtime.branding.logoUrl

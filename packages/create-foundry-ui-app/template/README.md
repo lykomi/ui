@@ -51,15 +51,15 @@ add_agent_framework_fastapi_endpoint(app, agent, path="/api/agent")
 
 The shell's default `defaultAgentFetch` POSTs to `/api/agent` — point your dev proxy at the backend.
 
-## Add Spaces (LastSpace.ai commercial)
+## Add Spaces (eomi commercial)
 
-To add the LastSpace Spaces module (private commercial extension — agentic CMS, document intelligence, workflow execution), use the `lastspace` preset instead of the default:
+To add the eomi Spaces module (private commercial extension — agentic CMS, document intelligence, workflow execution), use the `lastspace` preset instead of the default:
 
 ```bash
 npx create-foundry-ui-app my-app --preset lastspace
 ```
 
-Requires `LASTSPACE_TOKEN` env var (per-customer PAT). See [LastSpace customer docs](https://github.com/ltwlf/lastspace).
+Requires `LASTSPACE_TOKEN` env var (per-customer PAT). See [eomi customer docs](https://github.com/ltwlf/lastspace).
 
 ## License
 
