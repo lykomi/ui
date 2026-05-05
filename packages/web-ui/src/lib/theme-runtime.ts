@@ -595,8 +595,8 @@ export const FOUNDRY_VIOLET_THEME: ThemeDefinition = {
     radius: "0.875rem",
   },
   branding: {
-    appName: "LastSpace.ai",
-    appTitle: "LastSpace.ai",
+    appName: "eomi",
+    appTitle: "eomi",
   },
 };
 
