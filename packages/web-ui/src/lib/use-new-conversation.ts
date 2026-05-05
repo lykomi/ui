@@ -12,7 +12,7 @@ import { useSidebarStore } from "./sidebar-store.ts";
  * Shared hook for starting a new conversation.
  * Used by ChatHeader and Sidebar to keep behavior in sync.
  */
-export function useNewConversation() {
+export function useNewConversation(options?: { navigateToChat?: boolean; preserveNavigation?: boolean }) {
   const aui = useAui();
   const { resetThread } = useAGUIAdapter();
   const navigate = useNavigate();
@@ -22,12 +22,33 @@ export function useNewConversation() {
   const clearCitations = useStore(citationStore, (s) => s.clear);
 
   return useCallback(() => {
+    const preserved = options?.preserveNavigation
+      ? {
+          currentPage: useAppStore.getState().currentPage,
+          navContext: useAppStore.getState().navContext,
+        }
+      : null;
     closePanel();
     resetApp();
+    if (preserved) {
+      useAppStore.setState(preserved);
+    }
     closeMobile();
     clearCitations();
     resetThread();
     aui.threads().switchToNewThread();
-    navigate("/");
-  }, [closePanel, resetApp, closeMobile, clearCitations, resetThread, aui, navigate]);
+    if (options?.navigateToChat ?? true) {
+      navigate("/");
+    }
+  }, [
+    closePanel,
+    resetApp,
+    options?.preserveNavigation,
+    closeMobile,
+    clearCitations,
+    resetThread,
+    aui,
+    options?.navigateToChat,
+    navigate,
+  ]);
 }

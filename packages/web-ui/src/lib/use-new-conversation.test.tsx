@@ -39,6 +39,18 @@ function Trigger() {
   );
 }
 
+function PreserveNavigationTrigger() {
+  const handleNewConversation = useNewConversation({
+    navigateToChat: false,
+    preserveNavigation: true,
+  });
+  return (
+    <button type="button" onClick={handleNewConversation}>
+      New Bubble Thread
+    </button>
+  );
+}
+
 describe("useNewConversation", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -120,5 +132,31 @@ describe("useNewConversation", () => {
     expect(useSidebarStore.getState().isMobileOpen).toBe(false);
     expect(citationStore.getState().results).toEqual([]);
     expect(citationStore.getState().handler).toBeNull();
+  });
+
+  it("can reset the thread without leaving the current page", async () => {
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo"]}>
+          <PreserveNavigationTrigger />
+          <LocationProbe />
+        </MemoryRouter>,
+      );
+    });
+
+    const button = container.querySelector("button");
+    expect(button).toBeTruthy();
+
+    await act(async () => {
+      button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(container.querySelector('[data-testid="location"]')?.textContent).toBe("/spaces/demo");
+    expect(switchToNewThread).toHaveBeenCalledTimes(1);
+    expect(resetThread).toHaveBeenCalledTimes(1);
+    expect(useAppStore.getState().currentPage).toBe("/spaces/demo");
+    expect(useAppStore.getState().navContext.label).toBe("Demo");
+    expect(useAppStore.getState().threadActive).toBe(false);
+    expect(useAppStore.getState().contextItems).toEqual([]);
   });
 });

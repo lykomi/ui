@@ -383,10 +383,10 @@ export function ChatContent() {
                 </ThreadPrimitive.If>
               </div>
             </ThreadPrimitive.If>
-            <ThreadPrimitive.If empty={false}>
-              <ScrollToBottomButton />
-            </ThreadPrimitive.If>
           </ThreadPrimitive.Viewport>
+          <ThreadPrimitive.If empty={false}>
+            <ScrollToBottomButton />
+          </ThreadPrimitive.If>
         </div>
 
         <div className="shrink-0 bg-background">
