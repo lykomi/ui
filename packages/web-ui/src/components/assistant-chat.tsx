@@ -225,9 +225,9 @@ const ComposerActionButton: FC = () => {
 
 /** Starter prompts shown on empty state. Customize these for your agent's capabilities. */
 const STARTER_SUGGESTIONS = [
-  "Show me a short document about Python",
-  "Summarize what you can help me with here",
-  "Draft a concise release note from bullet points",
+  "Create a new Contract Space",
+  "List all contracts I have access to",
+  "Show me what I can do here",
 ];
 
 const ScrollToBottomButton: FC = () => {
