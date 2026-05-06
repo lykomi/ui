@@ -102,6 +102,7 @@ export interface AgentStateProjection {
 const MAX_ITEMS = 10;
 const MAX_LABEL_LENGTH = 500;
 const MAX_CONTEXT_VALUE_LENGTH = 2_000;
+const TRUNCATION_SUFFIX = "...";
 
 const DEFAULT_NAV_CONTEXT: NavContext = {
   group: null,
@@ -134,7 +135,7 @@ function refDedupKey(payload: ReferencePayload): string {
 
 function compactContextValue(value: unknown): unknown {
   if (typeof value === "string" && value.length > MAX_CONTEXT_VALUE_LENGTH) {
-    return `${value.slice(0, MAX_CONTEXT_VALUE_LENGTH)}...`;
+    return `${value.slice(0, MAX_CONTEXT_VALUE_LENGTH - TRUNCATION_SUFFIX.length)}${TRUNCATION_SUFFIX}`;
   }
   return value;
 }

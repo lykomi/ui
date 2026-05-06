@@ -9,6 +9,18 @@ export interface AuthUser {
   oid?: string;
 }
 
+export class AuthInteractionRequiredError extends Error {
+  readonly code?: string;
+  readonly cause?: unknown;
+
+  constructor(message: string, options: { code?: string; cause?: unknown } = {}) {
+    super(message);
+    this.name = "AuthInteractionRequiredError";
+    this.code = options.code;
+    this.cause = options.cause;
+  }
+}
+
 interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
@@ -41,6 +53,11 @@ interface AuthState {
    * cache. This avoids the broken half-authenticated state where the SPA
    * still renders an account but every API call goes out without a bearer
    * token after MSAL returned `interaction_required`.
+   *
+   * Recoverable auth failures reject with `AuthInteractionRequiredError`
+   * after recovery has been started. The error exposes `code` and `cause`
+   * so callers can distinguish a normal interaction-required redirect from
+   * a blocked/failed redirect attempt.
    *
    * Other `BrowserAuthError` codes (`interaction_in_progress`,
    * `hash_empty_error`, `hash_does_not_contain_known_properties`,
@@ -87,11 +104,61 @@ function isRecoverableAuthError(err: unknown): boolean {
   return name === INTERACTION_REQUIRED_NAME || RECOVERABLE_ERROR_CODES.has(code);
 }
 
+function authErrorName(err: unknown): string | undefined {
+  return err && typeof err === "object" ? (err as { name?: string }).name : undefined;
+}
+
+function authErrorCode(err: unknown): string | undefined {
+  return err && typeof err === "object" ? (err as { errorCode?: string }).errorCode : undefined;
+}
+
+function authErrorMessage(err: unknown): string | undefined {
+  if (err instanceof Error) return err.message;
+  return err && typeof err === "object" ? (err as { message?: string }).message : undefined;
+}
+
+function describeAuthError(err: unknown): string {
+  const parts = [
+    authErrorName(err) ? `name=${authErrorName(err)}` : undefined,
+    authErrorCode(err) ? `code=${authErrorCode(err)}` : undefined,
+    authErrorMessage(err) ? `message=${authErrorMessage(err)}` : undefined,
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
+function createInteractionRequiredError(
+  tokenError: unknown,
+  redirectError?: unknown,
+): AuthInteractionRequiredError {
+  const tokenDetail = describeAuthError(tokenError) || "unknown token acquisition error";
+  const redirectDetail = redirectError ? describeAuthError(redirectError) : "";
+
+  if (redirectError) {
+    return new AuthInteractionRequiredError(
+      `Authentication interaction required, but login redirect failed (${redirectDetail}). Original token error: ${tokenDetail}.`,
+      {
+        code: authErrorCode(redirectError) ?? authErrorCode(tokenError),
+        cause: redirectError,
+      },
+    );
+  }
+
+  return new AuthInteractionRequiredError(
+    `Authentication interaction required after token acquisition failed (${tokenDetail}).`,
+    {
+      code: authErrorCode(tokenError),
+      cause: tokenError,
+    },
+  );
+}
+
 async function startInteractiveRecovery(
   msal: MsalClientApplication,
   account: MsalAccountInfo,
   scope: string,
+  reason: unknown,
 ): Promise<never> {
+  let redirectError: unknown;
   if (!interactiveRecoveryStarted) {
     interactiveRecoveryStarted = true;
     authStore.setState({ user: null, isAuthenticated: false });
@@ -99,15 +166,17 @@ async function startInteractiveRecovery(
     await msal.clearCache({ account }).catch(() => undefined);
     try {
       await msal.loginRedirect({ scopes: [scope] });
-    } catch {
-      // The redirect is expected to navigate away; callers still stop.
+    } catch (err) {
+      // The redirect is expected to navigate away; if it settles by throwing,
+      // keep that failure attached so logs/UI can show what blocked recovery.
+      redirectError = err;
     } finally {
       // In tests or blocked-popup environments the promise can settle without
       // navigation. Allow a later user action/retry to start recovery again.
       interactiveRecoveryStarted = false;
     }
   }
-  throw new Error("Authentication interaction required.");
+  throw createInteractionRequiredError(reason, redirectError);
 }
 
 export const authStore = createStore<AuthState>((set) => ({
@@ -147,7 +216,7 @@ export const authStore = createStore<AuthState>((set) => ({
       return result.accessToken;
     } catch (err) {
       if (isRecoverableAuthError(err)) {
-        return startInteractiveRecovery(msal, accounts[0], scope);
+        return startInteractiveRecovery(msal, accounts[0], scope, err);
       }
       return null;
     }

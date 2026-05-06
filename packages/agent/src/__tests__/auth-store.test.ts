@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { authStore } from "../msal/auth-store.ts";
+import { AuthInteractionRequiredError, authStore } from "../msal/auth-store.ts";
 import * as authConfig from "../msal/auth-config.ts";
 
 const store = () => authStore.getState();
@@ -66,6 +66,30 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     return mock;
   }
 
+  async function expectInteractiveRecoveryError(
+    promise: Promise<unknown>,
+    expected: {
+      code?: string;
+      cause: unknown;
+      messageIncludes: string[];
+    },
+  ) {
+    let thrown: unknown;
+    try {
+      await promise;
+    } catch (err) {
+      thrown = err;
+    }
+
+    expect(thrown).toBeInstanceOf(AuthInteractionRequiredError);
+    const authError = thrown as AuthInteractionRequiredError;
+    expect(authError.code).toBe(expected.code);
+    expect(authError.cause).toBe(expected.cause);
+    for (const value of expected.messageIncludes) {
+      expect(authError.message).toContain(value);
+    }
+  }
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -100,9 +124,16 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       errorCode: "interaction_required",
     });
     const msal = mockMsal({ acquireTokenSilent: vi.fn().mockRejectedValue(err) });
-    await expect(store().getAccessToken()).rejects.toThrow(
-      "Authentication interaction required",
-    );
+    await expectInteractiveRecoveryError(store().getAccessToken(), {
+      code: "interaction_required",
+      cause: err,
+      messageIncludes: [
+        "Authentication interaction required",
+        "InteractionRequiredAuthError",
+        "interaction_required",
+        "MFA required",
+      ],
+    });
     expect(msal.clearCache).toHaveBeenCalledWith({
       account: { username: "alice@example.com", localAccountId: "alice-oid" },
     });
@@ -119,9 +150,11 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       errorCode: "consent_required",
     });
     const msal = mockMsal({ acquireTokenSilent: vi.fn().mockRejectedValue(err) });
-    await expect(store().getAccessToken()).rejects.toThrow(
-      "Authentication interaction required",
-    );
+    await expectInteractiveRecoveryError(store().getAccessToken(), {
+      code: "consent_required",
+      cause: err,
+      messageIncludes: ["Authentication interaction required", "consent_required"],
+    });
     expect(msal.clearCache).toHaveBeenCalledOnce();
     expect(msal.loginRedirect).toHaveBeenCalledOnce();
   });
@@ -134,9 +167,11 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       errorCode: "monitor_window_timeout",
     });
     const msal = mockMsal({ acquireTokenSilent: vi.fn().mockRejectedValue(err) });
-    await expect(store().getAccessToken()).rejects.toThrow(
-      "Authentication interaction required",
-    );
+    await expectInteractiveRecoveryError(store().getAccessToken(), {
+      code: "monitor_window_timeout",
+      cause: err,
+      messageIncludes: ["Authentication interaction required", "monitor_window_timeout"],
+    });
     expect(msal.clearCache).toHaveBeenCalledOnce();
     expect(msal.loginRedirect).toHaveBeenCalledOnce();
   });
@@ -175,9 +210,39 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       name: "InteractionRequiredAuthError",
     });
     const msal = mockMsal({ acquireTokenSilent: vi.fn().mockRejectedValue(err) });
-    await expect(store().getAccessToken()).rejects.toThrow(
-      "Authentication interaction required",
-    );
+    await expectInteractiveRecoveryError(store().getAccessToken(), {
+      cause: err,
+      messageIncludes: ["Authentication interaction required", "InteractionRequiredAuthError"],
+    });
+    expect(msal.clearCache).toHaveBeenCalledOnce();
+    expect(msal.loginRedirect).toHaveBeenCalledOnce();
+  });
+
+  it("preserves redirect failure details when interactive recovery cannot start", async () => {
+    const tokenErr = Object.assign(new Error("MFA required"), {
+      name: "InteractionRequiredAuthError",
+      errorCode: "interaction_required",
+    });
+    const redirectErr = Object.assign(new Error("redirect blocked"), {
+      name: "BrowserAuthError",
+      errorCode: "redirect_failed",
+    });
+    const msal = mockMsal({
+      acquireTokenSilent: vi.fn().mockRejectedValue(tokenErr),
+      loginRedirect: vi.fn().mockRejectedValue(redirectErr),
+    });
+
+    await expectInteractiveRecoveryError(store().getAccessToken(), {
+      code: "redirect_failed",
+      cause: redirectErr,
+      messageIncludes: [
+        "Authentication interaction required",
+        "login redirect failed",
+        "redirect_failed",
+        "Original token error",
+        "interaction_required",
+      ],
+    });
     expect(msal.clearCache).toHaveBeenCalledOnce();
     expect(msal.loginRedirect).toHaveBeenCalledOnce();
   });
