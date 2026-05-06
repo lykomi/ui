@@ -223,8 +223,12 @@ const ComposerActionButton: FC = () => {
   );
 };
 
-/** Starter prompts shown on empty state. Customize these for your agent's capabilities. */
-const STARTER_SUGGESTIONS = [
+/**
+ * Default starter prompts shown on empty state. Override per-app by passing
+ * a `starterSuggestions` prop to `<ChatContent>`. An empty array (`[]`)
+ * suppresses the suggestion buttons entirely.
+ */
+export const DEFAULT_STARTER_SUGGESTIONS = [
   "Create a new Contract Space",
   "List all contracts I have access to",
   "Show me what I can do here",
@@ -306,11 +310,23 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
+export interface ChatContentProps {
+  /**
+   * Starter prompts shown when the thread is empty. Defaults to
+   * `DEFAULT_STARTER_SUGGESTIONS`. Pass an empty array to hide the
+   * suggestion buttons entirely. Customer apps (e.g. ANDRITZ Contracts)
+   * can pass a workspace-aware list derived from app context.
+   */
+  starterSuggestions?: string[];
+}
+
 /**
  * Reusable chat content — used by ChatPage and ChatBubble.
  * Renders inside a ThreadPrimitive.Root context.
  */
-export function ChatContent() {
+export function ChatContent({
+  starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
+}: ChatContentProps = {}) {
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const collapseChat = useChatBubbleStore((s) => s.collapse);
   const showPagePanel = useChatBubbleStore((s) => s.showPagePanel);
@@ -357,15 +373,17 @@ export function ChatContent() {
                 <h1 className="text-[2rem] font-normal text-foreground text-center mb-6">
                   How can I help you today?
                 </h1>
-                <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                  {STARTER_SUGGESTIONS.map((prompt) => (
-                    <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
-                      <Button variant="outline" className="text-sm">
-                        {prompt}
-                      </Button>
-                    </ThreadPrimitive.Suggestion>
-                  ))}
-                </div>
+                {starterSuggestions.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                    {starterSuggestions.map((prompt) => (
+                      <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
+                        <Button variant="outline" className="text-sm">
+                          {prompt}
+                        </Button>
+                      </ThreadPrimitive.Suggestion>
+                    ))}
+                  </div>
+                )}
               </div>
             </ThreadPrimitive.Empty>
 
