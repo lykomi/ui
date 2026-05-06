@@ -76,8 +76,11 @@ export function createServiceFetch(options: ServiceFetchOptions): ServiceFetch {
         if (token) {
           headers.set("Authorization", `Bearer ${token}`);
         }
-      } catch {
-        // Token acquisition failed — proceed without
+      } catch (error) {
+        // A thrown token acquisition error usually means the auth layer is
+        // starting an interactive recovery. Do not downgrade protected API
+        // calls to anonymous requests; that creates noisy 401s and stale UI.
+        throw error;
       }
     }
 

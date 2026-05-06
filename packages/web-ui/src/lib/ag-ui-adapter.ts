@@ -278,8 +278,21 @@ function describeContextItem(item: Record<string, unknown>, index: number): stri
 
   if (type === "ref") {
     const refType = typeof item.refType === "string" ? item.refType : "reference";
-    if (typeof item.targetPath === "string") {
-      return `Selected ${refType} atom. Use targetPath as the exact edit target when the user asks to modify, rewrite, or transform selected content.`;
+    const target = isRecord(item.target) ? item.target : undefined;
+    const targetPath =
+      typeof item.targetPath === "string"
+        ? item.targetPath
+        : typeof target?.path === "string"
+          ? target.path
+          : undefined;
+    const targetLabel = typeof target?.label === "string" ? target.label : undefined;
+    const targetScope = typeof target?.scope === "string" ? target.scope : undefined;
+    if (targetPath) {
+      if (!targetLabel && !targetScope) {
+        return `Selected ${refType} atom. Use targetPath as the exact edit target when the user asks to modify, rewrite, or transform selected content.`;
+      }
+      const targetText = targetLabel || targetScope || "JSON atom";
+      return `Selected ${refType} ${targetText}. Use targetPath as the exact JSON edit target when the user asks to modify, rewrite, or transform this reference.`;
     }
     return `Selected ${refType} reference. Use refId as the edit target when the user asks to modify, rewrite, or transform selected content.`;
   }
@@ -303,6 +316,10 @@ function stringifyContextItem(item: Record<string, unknown>): string {
     const label = typeof item.label === "string" ? item.label : "";
     return JSON.stringify({ type, label });
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**

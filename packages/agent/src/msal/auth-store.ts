@@ -1,5 +1,6 @@
 import { createStore } from "zustand/vanilla";
 import { getMsalInstance, getMsalConfig } from "./auth-config.ts";
+import type { MsalAccountInfo, MsalClientApplication } from "./auth-config.ts";
 
 export interface AuthUser {
   name: string;
@@ -25,13 +26,8 @@ interface AuthState {
    * Recovery semantics — follows the canonical MSAL.js pattern documented
    * at https://learn.microsoft.com/entra/msal/javascript/browser/errors:
    *
-   *   try {
-   *     await msal.acquireTokenSilent(req);
-   *   } catch (error) {
-   *     if (error instanceof InteractionRequiredAuthError) {
-   *       await msal.acquireTokenRedirect(req);
-   *     }
-   *   }
+   *   Try acquireTokenSilent first, then use an interactive redirect when
+   *   MSAL reports that user interaction is required.
    *
    * Plus one extra recoverable case explicitly called out in those docs:
    * `BrowserAuthError: monitor_window_timeout`. Microsoft's recommendation
@@ -40,6 +36,11 @@ interface AuthState {
    * we take the last option, which matches third-party-iframe storage
    * blocking on Chrome 120+ / Edge / Safari (the silent iframe times
    * out because the cross-site cookie is partitioned).
+   *
+   * Before starting that redirect, clear the stale local account/token
+   * cache. This avoids the broken half-authenticated state where the SPA
+   * still renders an account but every API call goes out without a bearer
+   * token after MSAL returned `interaction_required`.
    *
    * Other `BrowserAuthError` codes (`interaction_in_progress`,
    * `hash_empty_error`, `hash_does_not_contain_known_properties`,
@@ -77,11 +78,36 @@ const RECOVERABLE_ERROR_CODES = new Set([
  * class name as a fallback when the error code isn't set. */
 const INTERACTION_REQUIRED_NAME = "InteractionRequiredAuthError";
 
+let interactiveRecoveryStarted = false;
+
 function isRecoverableAuthError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const name = (err as { name?: string }).name ?? "";
   const code = (err as { errorCode?: string }).errorCode ?? "";
   return name === INTERACTION_REQUIRED_NAME || RECOVERABLE_ERROR_CODES.has(code);
+}
+
+async function startInteractiveRecovery(
+  msal: MsalClientApplication,
+  account: MsalAccountInfo,
+  scope: string,
+): Promise<never> {
+  if (!interactiveRecoveryStarted) {
+    interactiveRecoveryStarted = true;
+    authStore.setState({ user: null, isAuthenticated: false });
+    msal.setActiveAccount(null);
+    await msal.clearCache({ account }).catch(() => undefined);
+    try {
+      await msal.loginRedirect({ scopes: [scope] });
+    } catch {
+      // The redirect is expected to navigate away; callers still stop.
+    } finally {
+      // In tests or blocked-popup environments the promise can settle without
+      // navigation. Allow a later user action/retry to start recovery again.
+      interactiveRecoveryStarted = false;
+    }
+  }
+  throw new Error("Authentication interaction required.");
 }
 
 export const authStore = createStore<AuthState>((set) => ({
@@ -121,14 +147,7 @@ export const authStore = createStore<AuthState>((set) => ({
       return result.accessToken;
     } catch (err) {
       if (isRecoverableAuthError(err)) {
-        try {
-          await msal.acquireTokenRedirect({
-            scopes: [scope],
-            account: accounts[0],
-          });
-        } catch {
-          // Redirect navigates away; nothing to return.
-        }
+        return startInteractiveRecovery(msal, accounts[0], scope);
       }
       return null;
     }

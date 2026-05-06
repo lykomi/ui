@@ -214,6 +214,47 @@ describe("AGUIAdapterSDK", () => {
     ]);
     expect(appStoreMock.consumedMessageIds).toEqual(["u-1"]);
   });
+
+  it("describes typed JSON ref targets without losing the stable ref handle", async () => {
+    appStoreMock.agentState = {
+      contextItems: [
+        {
+          type: "ref",
+          label: "Page Instructions · Test Page",
+          refType: "entity-field",
+          refId: "entity-1:instructions.agent_instructions",
+          preview: "Current: old\nProposed: new",
+          targetPath: "$.instructions.agent_instructions",
+          target: {
+            kind: "json-field",
+            path: "$.instructions.agent_instructions",
+            label: "Page Instructions",
+            scope: "entity-field",
+            containerId: "entity-1",
+            containerLabel: "Test Page",
+            currentValue: "old",
+            proposedValue: "new",
+            changeIds: ["change-1"],
+          },
+          sourcePage: "/spaces/entity-1",
+        },
+      ],
+    };
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
+
+    const adapter = new AGUIAdapterSDK();
+    for await (const _ of adapter.run(makeRunInput())) {
+      // Drain the adapter.
+    }
+
+    expect(runMock.mock.calls[0][0].context).toEqual([
+      {
+        description:
+          "Selected entity-field Page Instructions. Use targetPath as the exact JSON edit target when the user asks to modify, rewrite, or transform this reference.",
+        value: JSON.stringify(appStoreMock.agentState.contextItems[0]),
+      },
+    ]);
+  });
 });
 
 interface ChatModelRunResultLike {

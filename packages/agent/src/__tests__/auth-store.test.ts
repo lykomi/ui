@@ -51,6 +51,7 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     const mock = {
       initialize: vi.fn().mockResolvedValue(undefined),
       handleRedirectPromise: vi.fn().mockResolvedValue(null),
+      clearCache: vi.fn().mockResolvedValue(undefined),
       getAllAccounts: vi.fn().mockReturnValue([account]),
       loginRedirect: vi.fn().mockResolvedValue(undefined),
       logoutRedirect: vi.fn().mockResolvedValue(undefined),
@@ -93,31 +94,39 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     expect(msal.loginRedirect).not.toHaveBeenCalled();
   });
 
-  it("triggers acquireTokenRedirect on InteractionRequiredAuthError (canonical pattern)", async () => {
+  it("clears stale cache and redirects on InteractionRequiredAuthError", async () => {
     const err = Object.assign(new Error("MFA required"), {
       name: "InteractionRequiredAuthError",
       errorCode: "interaction_required",
     });
     const msal = mockMsal({ acquireTokenSilent: vi.fn().mockRejectedValue(err) });
-    expect(await store().getAccessToken()).toBeNull();
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledWith({
-      scopes: [config.apiScope],
+    await expect(store().getAccessToken()).rejects.toThrow(
+      "Authentication interaction required",
+    );
+    expect(msal.clearCache).toHaveBeenCalledWith({
       account: { username: "alice@example.com", localAccountId: "alice-oid" },
     });
+    expect(msal.loginRedirect).toHaveBeenCalledOnce();
+    expect(msal.loginRedirect).toHaveBeenCalledWith({
+      scopes: [config.apiScope],
+    });
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled();
   });
 
-  it("triggers acquireTokenRedirect on consent_required", async () => {
+  it("clears stale cache and redirects on consent_required", async () => {
     const err = Object.assign(new Error("consent required"), {
       name: "InteractionRequiredAuthError",
       errorCode: "consent_required",
     });
     const msal = mockMsal({ acquireTokenSilent: vi.fn().mockRejectedValue(err) });
-    expect(await store().getAccessToken()).toBeNull();
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
+    await expect(store().getAccessToken()).rejects.toThrow(
+      "Authentication interaction required",
+    );
+    expect(msal.clearCache).toHaveBeenCalledOnce();
+    expect(msal.loginRedirect).toHaveBeenCalledOnce();
   });
 
-  it("triggers acquireTokenRedirect on monitor_window_timeout (third-party-iframe block)", async () => {
+  it("clears stale cache and redirects on monitor_window_timeout", async () => {
     // Microsoft Learn → "Common errors in MSAL JS" → monitor_window_timeout
     // → documented remedy includes "Invoke an interactive API".
     const err = Object.assign(new Error("monitor_window_timeout"), {
@@ -125,8 +134,11 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       errorCode: "monitor_window_timeout",
     });
     const msal = mockMsal({ acquireTokenSilent: vi.fn().mockRejectedValue(err) });
-    expect(await store().getAccessToken()).toBeNull();
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
+    await expect(store().getAccessToken()).rejects.toThrow(
+      "Authentication interaction required",
+    );
+    expect(msal.clearCache).toHaveBeenCalledOnce();
+    expect(msal.loginRedirect).toHaveBeenCalledOnce();
   });
 
   it("does NOT redirect on interaction_in_progress (would race with another flow)", async () => {
@@ -163,7 +175,10 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       name: "InteractionRequiredAuthError",
     });
     const msal = mockMsal({ acquireTokenSilent: vi.fn().mockRejectedValue(err) });
-    expect(await store().getAccessToken()).toBeNull();
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
+    await expect(store().getAccessToken()).rejects.toThrow(
+      "Authentication interaction required",
+    );
+    expect(msal.clearCache).toHaveBeenCalledOnce();
+    expect(msal.loginRedirect).toHaveBeenCalledOnce();
   });
 });
