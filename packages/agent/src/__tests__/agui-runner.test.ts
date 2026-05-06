@@ -6,7 +6,7 @@ import type { AgentSubscriber } from "@ag-ui/client";
 // runAgent fires them in order, synchronously yielding the loop between
 // each one so the runner's queue can drain.
 
-type ScriptedRun = (subscriber: AgentSubscriber) => Promise<void>;
+type ScriptedRun = (subscriber: AgentSubscriber, agent: { messages: unknown[] }) => Promise<void>;
 
 let nextScript: ScriptedRun[] = [];
 let runCount = 0;
@@ -38,7 +38,7 @@ vi.mock("@ag-ui/client", () => {
       const turnIdx = runCount;
       runCount++;
       const script = nextScript[turnIdx];
-      if (script) await script(subscriber);
+      if (script) await script(subscriber, this);
     }
 
     abortRun() {
@@ -52,7 +52,10 @@ import { AGUIRunner } from "../client/agui-runner.ts";
 import { clientToolRegistry } from "../tools/registry.ts";
 import type { RunnerEvent } from "../client/runner-events.ts";
 
-function makeRegistry(client: { isRegistered: (name: string) => boolean; executeTool?: (name: string, args: string) => Promise<string> }) {
+function makeRegistry(client: {
+  isRegistered: (name: string) => boolean;
+  executeTool?: (name: string, args: string) => Promise<string>;
+}) {
   return {
     isRegistered: client.isRegistered,
     executeTool: client.executeTool ?? (async () => JSON.stringify({})),
@@ -60,9 +63,24 @@ function makeRegistry(client: { isRegistered: (name: string) => boolean; execute
   };
 }
 
-async function collect(runner: AGUIRunner, registry: ReturnType<typeof makeRegistry>): Promise<RunnerEvent[]> {
+async function collect(
+  runner: AGUIRunner,
+  registry: ReturnType<typeof makeRegistry>,
+): Promise<RunnerEvent[]> {
   const out: RunnerEvent[] = [];
   for await (const evt of runner.run({ messages: [], registry })) {
+    out.push(evt);
+  }
+  return out;
+}
+
+async function collectWithMessages(
+  runner: AGUIRunner,
+  messages: Parameters<AGUIRunner["run"]>[0]["messages"],
+  registry: ReturnType<typeof makeRegistry>,
+): Promise<RunnerEvent[]> {
+  const out: RunnerEvent[] = [];
+  for await (const evt of runner.run({ messages, registry })) {
     out.push(evt);
   }
   return out;
@@ -103,8 +121,8 @@ describe("AGUIRunner", () => {
     expect(types).toContain("text-message-end");
     expect(types).toContain("run-finished");
 
-    const deltas = events.filter((e): e is Extract<RunnerEvent, { type: "text-delta" }> =>
-      e.type === "text-delta",
+    const deltas = events.filter(
+      (e): e is Extract<RunnerEvent, { type: "text-delta" }> => e.type === "text-delta",
     );
     expect(deltas.map((d) => d.delta).join("")).toBe("Hello world");
   });
@@ -121,7 +139,7 @@ describe("AGUIRunner", () => {
           } as never,
         } as never);
         await s.onToolCallArgsEvent?.({
-          event: { type: "TOOL_CALL_ARGS", toolCallId: "tc-1", delta: "{\"q\":\"x\"}" } as never,
+          event: { type: "TOOL_CALL_ARGS", toolCallId: "tc-1", delta: '{"q":"x"}' } as never,
         } as never);
         await s.onToolCallEndEvent?.({
           event: { type: "TOOL_CALL_END", toolCallId: "tc-1" } as never,
@@ -140,8 +158,8 @@ describe("AGUIRunner", () => {
     const runner = new AGUIRunner();
     const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
 
-    const start = events.find((e): e is Extract<RunnerEvent, { type: "tool-call-start" }> =>
-      e.type === "tool-call-start",
+    const start = events.find(
+      (e): e is Extract<RunnerEvent, { type: "tool-call-start" }> => e.type === "tool-call-start",
     );
     expect(start).toBeDefined();
     expect(start!.isClientSide).toBe(false);
@@ -212,8 +230,8 @@ describe("AGUIRunner", () => {
     expect(lastAssistantMsg?.toolCalls?.[0]?.id).toBe("tc-1");
 
     // tool-call-start should have isClientSide=true
-    const start = events.find((e): e is Extract<RunnerEvent, { type: "tool-call-start" }> =>
-      e.type === "tool-call-start",
+    const start = events.find(
+      (e): e is Extract<RunnerEvent, { type: "tool-call-start" }> => e.type === "tool-call-start",
     );
     expect(start!.isClientSide).toBe(true);
   });
@@ -276,6 +294,63 @@ describe("AGUIRunner", () => {
     expect(lastAssistant?.content).toBe("Navigating...");
   });
 
+  it("preserves hidden protocol messages from AG-UI snapshots across visible UI turns", async () => {
+    const registry = makeRegistry({ isRegistered: () => false });
+    const runner = new AGUIRunner();
+
+    nextScript = [
+      async (s, agent) => {
+        agent.messages = [
+          {
+            id: "spaces-global-guidance:abc",
+            role: "system",
+            content: "Tenant guidance",
+          },
+          { id: "u-1", role: "user", content: "What is your name?" },
+          { id: "a-1", role: "assistant", content: "Magic Luna." },
+        ];
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    await collectWithMessages(
+      runner,
+      [{ id: "u-1", role: "user", content: "What is your name?" }],
+      registry,
+    );
+
+    nextScript = [
+      async (s) => {
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const events = await collectWithMessages(
+      runner,
+      [
+        { id: "u-1", role: "user", content: "What is your name?" },
+        { id: "a-1", role: "assistant", content: "Magic Luna." },
+        { id: "u-2", role: "user", content: "Say your name again." },
+      ],
+      registry,
+    );
+
+    const request = events.find(
+      (event): event is Extract<RunnerEvent, { type: "request-sent" }> =>
+        event.type === "request-sent",
+    );
+    expect(request?.input.messages).toEqual([
+      {
+        id: "spaces-global-guidance:abc",
+        role: "system",
+        content: "Tenant guidance",
+      },
+      { id: "u-1", role: "user", content: "What is your name?" },
+      { id: "a-1", role: "assistant", content: "Magic Luna." },
+      { id: "u-2", role: "user", content: "Say your name again." },
+    ]);
+  });
+
   it("yields turn-started exactly once per run iteration", async () => {
     nextScript = [
       async (s) => {
@@ -320,8 +395,8 @@ describe("AGUIRunner", () => {
     const runner = new AGUIRunner();
     const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
 
-    const err = events.find((e): e is Extract<RunnerEvent, { type: "run-error" }> =>
-      e.type === "run-error",
+    const err = events.find(
+      (e): e is Extract<RunnerEvent, { type: "run-error" }> => e.type === "run-error",
     );
     expect(err).toBeDefined();
     expect(err!.message).toBe("boom");

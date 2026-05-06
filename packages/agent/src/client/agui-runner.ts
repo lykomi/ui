@@ -48,6 +48,51 @@ export interface AGUIRunInput {
   context?: Context[];
 }
 
+function shouldPreserveAcrossVisibleHistory(message: Message): boolean {
+  return message.role === "system" || message.role === "developer" || message.role === "reasoning";
+}
+
+function mergeProtocolMessagesFromSnapshot(
+  previousMessages: Message[],
+  visibleMessages: Message[],
+): Message[] {
+  if (previousMessages.length === 0) return [...visibleMessages];
+
+  const visibleById = new Map(visibleMessages.map((message) => [message.id, message]));
+  const previousVisibleIds = new Set(
+    previousMessages
+      .filter((message) => !shouldPreserveAcrossVisibleHistory(message))
+      .map((message) => message.id),
+  );
+  const isSameVisibleThread = visibleMessages.some((message) => previousVisibleIds.has(message.id));
+  if (!isSameVisibleThread) return [...visibleMessages];
+
+  const merged: Message[] = [];
+  const emitted = new Set<string>();
+
+  for (const previous of previousMessages) {
+    const currentVisible = visibleById.get(previous.id);
+    if (currentVisible) {
+      merged.push(currentVisible);
+      emitted.add(currentVisible.id);
+      continue;
+    }
+
+    if (shouldPreserveAcrossVisibleHistory(previous)) {
+      merged.push(previous);
+      emitted.add(previous.id);
+    }
+  }
+
+  for (const message of visibleMessages) {
+    if (!emitted.has(message.id)) {
+      merged.push(message);
+    }
+  }
+
+  return merged;
+}
+
 /**
  * Bridges callback-driven `AgentSubscriber` events into an async-iterable
  * queue the runner's generator drains. Single-producer / single-consumer.
@@ -126,10 +171,17 @@ export class AGUIRunner {
   async *run(input: AGUIRunInput): AsyncGenerator<RunnerEvent> {
     const { messages, state, registry, abortSignal, context } = input;
     const toolCalls = new Map<string, ToolCallState>();
-    let currentMessages: Message[] = [...messages];
+    let currentMessages: Message[] = mergeProtocolMessagesFromSnapshot(
+      this.httpAgent.messages,
+      messages,
+    );
 
-    // Replace once at the top: subsequent turns append to currentMessages
-    // (per AG-UI convention — see footgun in apps/web AGENTS.md cross-link).
+    // Replace once at the top with the reconciled AG-UI history. assistant-ui
+    // stores only visible chat turns, while AG-UI snapshots may contain
+    // model-visible but UI-hidden protocol messages such as system/developer
+    // guidance. Preserve those messages across turns when the visible history
+    // belongs to the same thread so the next request remains a complete AG-UI
+    // conversation without leaking system messages into the rendered chat.
     this.httpAgent.setMessages(currentMessages);
     if (state) this.httpAgent.setState(state);
 

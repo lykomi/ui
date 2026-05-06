@@ -16,7 +16,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { RunnerEvent } from "@iloveagents/foundry-agent";
 
 const appStoreMock = vi.hoisted(() => ({
-  agentState: { contextItems: [] as Array<Record<string, unknown>> },
+  agentState: {
+    contextItems: [] as Array<Record<string, unknown>>,
+    navigation: { contextInstructions: null as string | null },
+  },
   consumedMessageIds: [] as string[],
 }));
 
@@ -73,7 +76,9 @@ import { AGUIAdapterSDK } from "../ag-ui-adapter.ts";
 
 function makeRunInput() {
   return {
-    messages: [{ id: "u-1", role: "user" as const, content: [{ type: "text" as const, text: "hi" }] }],
+    messages: [
+      { id: "u-1", role: "user" as const, content: [{ type: "text" as const, text: "hi" }] },
+    ],
     abortSignal: undefined as AbortSignal | undefined,
   };
 }
@@ -82,7 +87,10 @@ describe("AGUIAdapterSDK", () => {
   beforeEach(() => {
     runMock.mockReset();
     runnerMock.mockClear();
-    appStoreMock.agentState = { contextItems: [] };
+    appStoreMock.agentState = {
+      contextItems: [],
+      navigation: { contextInstructions: null },
+    };
     appStoreMock.consumedMessageIds = [];
   });
 
@@ -186,6 +194,7 @@ describe("AGUIAdapterSDK", () => {
 
   it("forwards app context items through the native AG-UI context field", async () => {
     appStoreMock.agentState = {
+      navigation: { contextInstructions: null },
       contextItems: [
         {
           type: "ref",
@@ -217,6 +226,7 @@ describe("AGUIAdapterSDK", () => {
 
   it("describes typed JSON ref targets without losing the stable ref handle", async () => {
     appStoreMock.agentState = {
+      navigation: { contextInstructions: null },
       contextItems: [
         {
           type: "ref",

@@ -25,11 +25,7 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 import type { Context, Message as AGUIMessage } from "@ag-ui/core";
-import {
-  AGUIRunner,
-  clientToolRegistry,
-  streamingStatusStore,
-} from "@iloveagents/foundry-agent";
+import { AGUIRunner, clientToolRegistry, streamingStatusStore } from "@iloveagents/foundry-agent";
 import { tokenFetch } from "@iloveagents/foundry-agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
 import { useDevStore } from "./dev-store.ts";
@@ -45,10 +41,7 @@ interface ToolCallSnapshot {
 export class AGUIAdapterSDK implements ChatModelAdapter {
   private readonly runner: AGUIRunner;
 
-  constructor(
-    url: string = "/api/agent",
-    options?: { threadId?: string; fetchFn?: typeof fetch },
-  ) {
+  constructor(url: string = "/api/agent", options?: { threadId?: string; fetchFn?: typeof fetch }) {
     this.runner = new AGUIRunner({
       url,
       threadId: options?.threadId,
@@ -91,9 +84,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
      * generator returns. assistant-ui leaves the message stuck in the
      * loading state if the last yield's status is `running`.
      */
-    const buildResult = (
-      statusOverride?: ChatModelRunResult["status"],
-    ): ChatModelRunResult => {
+    const buildResult = (statusOverride?: ChatModelRunResult["status"]): ChatModelRunResult => {
       const content: (ToolCallMessagePart | TextMessagePart)[] = [];
 
       for (const [id, tc] of toolCalls) {
