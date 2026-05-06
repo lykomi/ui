@@ -25,6 +25,7 @@ export interface MsalAccountInfo {
 export interface MsalClientApplication {
   initialize(): Promise<void>;
   handleRedirectPromise(): Promise<unknown>;
+  clearCache(request?: { account?: MsalAccountInfo }): Promise<void>;
   getAllAccounts(): MsalAccountInfo[];
   loginRedirect(request: { scopes: string[]; prompt?: string }): Promise<void>;
   logoutRedirect(): Promise<void>;

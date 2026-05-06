@@ -339,6 +339,39 @@ describe("app-store", () => {
       expect(projection.navigation.groupMeta).toEqual({ orgId: "org-1" });
       expect(projection.navigation.group).toBe("Contracts");
     });
+
+    it("compacts reference target values within the documented context limit", () => {
+      const longValue = "x".repeat(2_001);
+
+      store().addContextItem({
+        type: "ref",
+        label: "Long field",
+        sourcePage: "/spaces/entity-1",
+        persistence: "ephemeral",
+        payload: {
+          kind: "ref",
+          refType: "entity-field",
+          refId: "entity-1",
+          target: {
+            path: "$.instructions.page",
+            label: "Page Instructions",
+            currentValue: longValue,
+            proposedValue: longValue,
+          },
+        },
+      });
+
+      const projection = store().getAgentState();
+      const target = projection.contextItems[0].target as {
+        currentValue: string;
+        proposedValue: string;
+      };
+
+      expect(target.currentValue).toHaveLength(2_000);
+      expect(target.currentValue.endsWith("...")).toBe(true);
+      expect(target.proposedValue).toHaveLength(2_000);
+      expect(target.proposedValue.endsWith("...")).toBe(true);
+    });
   });
 
   describe("resetAll", () => {

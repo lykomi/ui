@@ -33,6 +33,25 @@ export interface ReferencePayload {
   refId: string;
   /** Optional display text (~100 chars) */
   preview?: string;
+  /**
+   * Optional exact JSON target inside the referenced domain object.
+   *
+   * This keeps the existing refType/refId contract stable for deep links
+   * while allowing feature modules to target one schema-declared field,
+   * table cell, JSON atom, or app-defined custom value precisely.
+   */
+  target?: {
+    kind?: string;
+    path?: string;
+    label?: string;
+    scope?: string;
+    containerId?: string;
+    containerLabel?: string;
+    currentValue?: unknown;
+    proposedValue?: unknown;
+    changeIds?: string[];
+    meta?: Record<string, unknown>;
+  };
   /** Domain-specific data the agent can use */
   meta?: Record<string, unknown>;
 }
@@ -82,6 +101,8 @@ export interface AgentStateProjection {
 
 const MAX_ITEMS = 10;
 const MAX_LABEL_LENGTH = 500;
+const MAX_CONTEXT_VALUE_LENGTH = 2_000;
+const TRUNCATION_SUFFIX = "...";
 
 const DEFAULT_NAV_CONTEXT: NavContext = {
   group: null,
@@ -97,7 +118,11 @@ function refDedupKey(payload: ReferencePayload): string {
   const selectionScope =
     typeof payload.meta?.selectionScope === "string" ? payload.meta.selectionScope : "block";
   const targetPath =
-    typeof payload.meta?.targetPath === "string" ? payload.meta.targetPath : undefined;
+    typeof payload.target?.path === "string"
+      ? payload.target.path
+      : typeof payload.meta?.targetPath === "string"
+        ? payload.meta.targetPath
+        : undefined;
 
   if (selectionScope === "atom" && targetPath) {
     return `${payload.refType}:${payload.refId}:atom:${targetPath}`;
@@ -106,6 +131,24 @@ function refDedupKey(payload: ReferencePayload): string {
     return `${payload.refType}:${payload.refId}:text:${payload.preview ?? ""}`;
   }
   return `${payload.refType}:${payload.refId}:block`;
+}
+
+function compactContextValue(value: unknown): unknown {
+  if (typeof value === "string" && value.length > MAX_CONTEXT_VALUE_LENGTH) {
+    return `${value.slice(0, MAX_CONTEXT_VALUE_LENGTH - TRUNCATION_SUFFIX.length)}${TRUNCATION_SUFFIX}`;
+  }
+  return value;
+}
+
+function compactReferenceTarget(
+  target: ReferencePayload["target"],
+): ReferencePayload["target"] {
+  if (!target) return undefined;
+  return {
+    ...target,
+    currentValue: compactContextValue(target.currentValue),
+    proposedValue: compactContextValue(target.proposedValue),
+  };
 }
 
 interface AppState {
@@ -282,12 +325,18 @@ export const useAppStore = create<AppState>((set, get) => ({
           case "ref":
             return {
               type,
+              label: label.slice(0, 200),
               refType: payload.refType,
               refId: payload.refId,
               preview: payload.preview?.slice(0, 100),
+              target: compactReferenceTarget(payload.target),
               meta: payload.meta,
               targetPath:
-                typeof payload.meta?.targetPath === "string" ? payload.meta.targetPath : undefined,
+                typeof payload.target?.path === "string"
+                  ? payload.target.path
+                  : typeof payload.meta?.targetPath === "string"
+                    ? payload.meta.targetPath
+                    : undefined,
               sourcePage,
             };
           default:

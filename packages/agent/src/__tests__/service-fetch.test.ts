@@ -172,15 +172,12 @@ describe("createServiceFetch", () => {
     expect(merged.get("X-Init-Only")).toBe("init");
   });
 
-  it("recovers when acquireToken throws", async () => {
+  it("does not downgrade token failures to anonymous protected calls", async () => {
     const acquireToken = vi.fn().mockRejectedValue(new Error("token boom"));
     const serviceFetch = createServiceFetch({ acquireToken });
 
-    await serviceFetch("/api/spaces/entities");
+    await expect(serviceFetch("/api/spaces/entities")).rejects.toThrow("token boom");
 
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [, init] = fetchSpy.mock.calls[0]!;
-    const headers = new Headers(init?.headers);
-    expect(headers.get("Authorization")).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
