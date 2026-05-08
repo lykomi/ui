@@ -1,6 +1,6 @@
 {
   "name": "@iloveagents/foundry-web-primitives",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "types": "./src/index.ts",
