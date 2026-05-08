@@ -84,6 +84,17 @@ interface AuthState {
     audience?: "api" | "spaces",
     options?: { forceRefresh?: boolean },
   ) => Promise<string | null>;
+
+  /**
+   * Force interactive recovery: clear MSAL's cache for the active account
+   * and start a ``loginRedirect``. Use this from the fetch interceptor
+   * when even a force-refreshed access token still gets rejected by the
+   * resource server (the silent path can't tell us "this is fundamentally
+   * the wrong token" — it has to come from the protected API saying 401
+   * after we already retried). Throws ``AuthInteractionRequiredError``
+   * once the redirect has been kicked off so the caller can stop processing.
+   */
+  recoverFromHardAuthFailure: (reason: unknown) => Promise<never>;
 }
 
 /** Recoverable error codes per MSAL.js docs — every one of these has the
@@ -232,5 +243,30 @@ export const authStore = createStore<AuthState>((set) => ({
       }
       return null;
     }
+  },
+
+  recoverFromHardAuthFailure: async (reason) => {
+    // The silent path produced a token but the resource server rejected
+    // it (audience drift, conditional-access re-eval, claims challenge,
+    // tenant-policy change, etc.). The cached refresh token can't help
+    // — a token minted from it would carry the same identity claims —
+    // so the only correct UX is a full ``loginRedirect`` that produces
+    // a fresh token bound to the current server policy.
+    const msal = getMsalInstance();
+    const config = getMsalConfig();
+    if (!msal || !config) {
+      throw new AuthInteractionRequiredError(
+        "Authentication interaction required (no MSAL instance configured).",
+        { cause: reason },
+      );
+    }
+    const accounts = msal.getAllAccounts();
+    if (accounts.length === 0) {
+      throw new AuthInteractionRequiredError(
+        "Authentication interaction required (no cached account).",
+        { cause: reason },
+      );
+    }
+    return startInteractiveRecovery(msal, accounts[0], config.apiScope, reason);
   },
 }));

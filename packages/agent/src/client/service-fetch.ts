@@ -27,6 +27,27 @@ export interface ServiceFetchOptions {
   acquireToken: (options?: { forceRefresh?: boolean }) => Promise<string | null>;
 
   /**
+   * Force interactive recovery (e.g. ``loginRedirect``) when even a
+   * force-refreshed access token gets rejected by the resource server.
+   * The fetch interceptor calls this after a SECOND consecutive 401 —
+   * at that point we know the silent refresh produced a token the
+   * server still won't accept (audience drift, conditional-access
+   * re-eval, tenant-policy change), and the only correct UX is to
+   * mint a fresh session.
+   *
+   * Implementations should clear cached auth state and start a redirect
+   * to the IdP. They MUST throw rather than return so the fetch caller
+   * can stop processing the in-flight request — when this resolves
+   * normally the redirect is in flight and the page is about to
+   * navigate away.
+   *
+   * Optional: when omitted, the fetch interceptor lets the second 401
+   * propagate as-is. Hosts without an interactive recovery path (e.g.
+   * tests, embedded apps) should leave it unset.
+   */
+  recoverFromHardAuthFailure?: (reason: unknown) => Promise<never>;
+
+  /**
    * Router FQDN for production (e.g. `https://lastspace-prod.eastus2.example.com`).
    * Empty / undefined leaves the URL untouched (Vite proxy handles routing
    * in dev).
@@ -152,6 +173,25 @@ export function createServiceFetch(options: ServiceFetchOptions): ServiceFetch {
     // Drain the failed response body — letting it sit unread keeps the
     // underlying connection occupied on some runtimes.
     response.body?.cancel().catch(() => undefined);
-    return dispatch(true);
+    const retried = await dispatch(true);
+
+    // Hard auth failure: even the force-refreshed token got rejected.
+    // The silent path can't recover this — a token minted from the
+    // cached refresh token carries the same identity claims as the
+    // original, so it'll keep getting rejected for the same reason
+    // (audience drift, conditional-access re-eval, claims challenge,
+    // tenant-policy change). Only a brand-new ``loginRedirect`` produces
+    // a token bound to the current server policy. Without this branch
+    // the user sees an endless 401 loop until they manually log out.
+    if (retried.status === 401 && options.recoverFromHardAuthFailure) {
+      retried.body?.cancel().catch(() => undefined);
+      // ``recoverFromHardAuthFailure`` throws once the redirect is in
+      // flight; the throw stops the calling pipeline so we don't
+      // return a stale 401 the caller might handle as a real failure.
+      await options.recoverFromHardAuthFailure(
+        new Error("API returned 401 after force-refresh retry"),
+      );
+    }
+    return retried;
   };
 }

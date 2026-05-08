@@ -48,5 +48,21 @@ export async function tokenFetch(
     return response;
   }
   response.body?.cancel().catch(() => undefined);
-  return dispatch(true);
+  const retried = await dispatch(true);
+  if (retried.status === 401) {
+    // Second 401 after a force-refresh retry — the silent token path
+    // can't recover this (refresh-token grant produces the same
+    // identity claims that just got rejected). Kick off interactive
+    // recovery so a fresh ``loginRedirect`` mints a token bound to
+    // current server policy. ``recoverFromHardAuthFailure`` throws
+    // once the redirect is in flight so we don't return a stale 401
+    // the caller might handle as a real failure.
+    retried.body?.cancel().catch(() => undefined);
+    await authStore
+      .getState()
+      .recoverFromHardAuthFailure(
+        new Error("API returned 401 after force-refresh retry"),
+      );
+  }
+  return retried;
 }

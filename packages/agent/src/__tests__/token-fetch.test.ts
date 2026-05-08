@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getAccessToken = vi.fn();
+const recoverFromHardAuthFailure = vi.fn();
 
 vi.mock("../msal/auth-store.ts", () => ({
   authStore: {
     getState: () => ({
       getAccessToken,
+      recoverFromHardAuthFailure,
     }),
   },
 }));
@@ -15,6 +17,7 @@ import { tokenFetch } from "../msal/token-fetch.ts";
 describe("tokenFetch", () => {
   beforeEach(() => {
     getAccessToken.mockReset();
+    recoverFromHardAuthFailure.mockReset();
     vi.restoreAllMocks();
   });
 
@@ -105,17 +108,27 @@ describe("tokenFetch", () => {
     expect(getAccessToken).toHaveBeenCalledTimes(1);
   });
 
-  it("only retries once on a hard 401-then-401 path", async () => {
+  it("escalates to interactive recovery on a hard 401-then-401 path", async () => {
+    // Server-policy drift: even the force-refreshed token is rejected.
+    // The fetch interceptor must call ``recoverFromHardAuthFailure`` so
+    // the auth layer can kick off ``loginRedirect``. The recovery
+    // throws once the redirect is in flight; the throw stops the
+    // calling pipeline.
     getAccessToken.mockResolvedValue("token");
+    recoverFromHardAuthFailure.mockRejectedValue(
+      new Error("loginRedirect in flight"),
+    );
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(null, { status: 401 }));
 
-    const res = await tokenFetch("https://example.com/api/items");
+    await expect(tokenFetch("https://example.com/api/items")).rejects.toThrow(
+      "loginRedirect in flight",
+    );
 
-    expect(res.status).toBe(401);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(getAccessToken).toHaveBeenCalledTimes(2);
+    expect(recoverFromHardAuthFailure).toHaveBeenCalledTimes(1);
   });
 });

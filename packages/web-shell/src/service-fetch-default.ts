@@ -10,8 +10,16 @@ import { authStore } from "@iloveagents/foundry-agent/msal";
  * interceptor passes on the 401 retry path. Without it, the retry would
  * still ask MSAL for a cached token and the long-lived-tab 401 loop never
  * recovers.
+ *
+ * ``recoverFromHardAuthFailure`` kicks in when even the force-refresh
+ * retry comes back with 401 — at that point the silent path is
+ * exhausted and only a fresh ``loginRedirect`` will produce a token
+ * the resource server accepts (server-side policy / audience / claims
+ * have drifted under the cached identity).
  */
 export const defaultAgentFetch: typeof fetch = createServiceFetch({
   acquireToken: (options) => authStore.getState().getAccessToken("api", options),
+  recoverFromHardAuthFailure: (reason) =>
+    authStore.getState().recoverFromHardAuthFailure(reason),
   baseUrl: import.meta.env.VITE_API_BASE_URL,
 });

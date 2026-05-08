@@ -284,9 +284,10 @@ describe("createServiceFetch", () => {
     });
 
     it("only retries once even if the second attempt also returns 401", async () => {
-      // Hard auth failure (refresh token expired). The second 401 propagates
-      // to the caller; the auth layer's interaction-required path is what
-      // kicks the user to loginRedirect, not an infinite retry loop here.
+      // Hard auth failure (refresh token expired). With no
+      // ``recoverFromHardAuthFailure`` configured, the second 401
+      // propagates to the caller. (Tests cover the recovery path
+      // separately below.)
       fetchSpy.mockReset();
       fetchSpy
         .mockResolvedValueOnce(new Response(null, { status: 401 }))
@@ -299,6 +300,79 @@ describe("createServiceFetch", () => {
       expect(res.status).toBe(401);
       expect(fetchSpy).toHaveBeenCalledTimes(2);
       expect(acquireToken).toHaveBeenCalledTimes(2);
+    });
+
+    it("kicks off interactive recovery after a second 401", async () => {
+      // Server-policy drift: even the force-refreshed token is rejected.
+      // The fetch interceptor must escalate to loginRedirect via the
+      // recoverFromHardAuthFailure callback — without it the user is
+      // stuck in a silent 401 loop forever (the bug this fix exists for).
+      fetchSpy.mockReset();
+      fetchSpy
+        .mockResolvedValueOnce(new Response(null, { status: 401 }))
+        .mockResolvedValueOnce(new Response(null, { status: 401 }));
+      const acquireToken = vi
+        .fn()
+        .mockResolvedValueOnce("stale-token")
+        .mockResolvedValueOnce("force-refreshed-but-still-bad-token");
+      const recoverFromHardAuthFailure = vi
+        .fn()
+        .mockRejectedValue(new Error("loginRedirect in flight"));
+      const serviceFetch = createServiceFetch({
+        acquireToken,
+        recoverFromHardAuthFailure,
+      });
+
+      await expect(serviceFetch("/api/spaces/entities")).rejects.toThrow(
+        "loginRedirect in flight",
+      );
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(acquireToken).toHaveBeenCalledTimes(2);
+      expect(recoverFromHardAuthFailure).toHaveBeenCalledTimes(1);
+      // Reason carries enough context to log/alert without leaking tokens.
+      const reason = recoverFromHardAuthFailure.mock.calls[0]![0];
+      expect(reason).toBeInstanceOf(Error);
+      expect((reason as Error).message).toMatch(/401/);
+    });
+
+    it("does NOT call recoverFromHardAuthFailure on first-attempt success", async () => {
+      // Sanity: when the first request succeeds, recovery callback must
+      // never fire.
+      fetchSpy.mockReset();
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 200 }));
+      const acquireToken = vi.fn().mockResolvedValue("good-token");
+      const recoverFromHardAuthFailure = vi.fn();
+      const serviceFetch = createServiceFetch({
+        acquireToken,
+        recoverFromHardAuthFailure,
+      });
+
+      const res = await serviceFetch("/api/spaces/entities");
+      expect(res.status).toBe(200);
+      expect(recoverFromHardAuthFailure).not.toHaveBeenCalled();
+    });
+
+    it("does NOT call recoverFromHardAuthFailure when the retry recovers", async () => {
+      // Standard recovery — first 401, retry with forceRefresh succeeds.
+      // Recovery callback must not fire (would needlessly bounce the user
+      // through loginRedirect).
+      fetchSpy.mockReset();
+      fetchSpy
+        .mockResolvedValueOnce(new Response(null, { status: 401 }))
+        .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      const acquireToken = vi
+        .fn()
+        .mockResolvedValueOnce("stale")
+        .mockResolvedValueOnce("fresh");
+      const recoverFromHardAuthFailure = vi.fn();
+      const serviceFetch = createServiceFetch({
+        acquireToken,
+        recoverFromHardAuthFailure,
+      });
+
+      const res = await serviceFetch("/api/spaces/entities");
+      expect(res.status).toBe(200);
+      expect(recoverFromHardAuthFailure).not.toHaveBeenCalled();
     });
   });
 });

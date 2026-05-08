@@ -125,6 +125,26 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     );
   });
 
+  it("recoverFromHardAuthFailure clears cache + starts loginRedirect", async () => {
+    // When the fetch interceptor's force-refresh retry STILL gets 401,
+    // the only correct UX is a fresh ``loginRedirect`` (server policy
+    // drift, audience mismatch, etc.). Same recovery primitive used by
+    // the silent path, but invoked from the resource-server signal
+    // rather than an MSAL exception.
+    const msal = mockMsal();
+    const reason = new Error("API returned 401 after force-refresh retry");
+    await expectInteractiveRecoveryError(
+      store().recoverFromHardAuthFailure(reason),
+      {
+        code: undefined,
+        cause: reason,
+        messageIncludes: ["interaction required"],
+      },
+    );
+    expect(msal.clearCache).toHaveBeenCalled();
+    expect(msal.loginRedirect).toHaveBeenCalledOnce();
+  });
+
   it("returns null without redirecting when no account is cached", async () => {
     // AuthGuard calls loginRedirect when accounts.length === 0; double-
     // redirecting from getAccessToken would race with AuthGuard.
