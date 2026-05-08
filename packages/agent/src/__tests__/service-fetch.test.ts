@@ -180,4 +180,125 @@ describe("createServiceFetch", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  describe("401 retry with forceRefresh", () => {
+    it("retries once with forceRefresh when first attempt returns 401", async () => {
+      // Resource server rejects the first (stale-cached) token, then accepts
+      // the freshly-acquired one. This is the long-lived-tab recovery path.
+      fetchSpy.mockReset();
+      fetchSpy
+        .mockResolvedValueOnce(new Response(null, { status: 401 }))
+        .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      const acquireToken = vi
+        .fn()
+        .mockResolvedValueOnce("stale-token")
+        .mockResolvedValueOnce("fresh-token");
+      const serviceFetch = createServiceFetch({ acquireToken });
+
+      const res = await serviceFetch("/api/spaces/entities");
+
+      expect(res.status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(acquireToken).toHaveBeenCalledTimes(2);
+      // First call: no forceRefresh (use cached token)
+      expect(acquireToken).toHaveBeenNthCalledWith(1, undefined);
+      // Second call: forceRefresh: true (skip MSAL cache, hit token endpoint)
+      expect(acquireToken).toHaveBeenNthCalledWith(2, { forceRefresh: true });
+
+      const firstAuth = new Headers(fetchSpy.mock.calls[0]![1]?.headers).get(
+        "Authorization",
+      );
+      const secondAuth = new Headers(fetchSpy.mock.calls[1]![1]?.headers).get(
+        "Authorization",
+      );
+      expect(firstAuth).toBe("Bearer stale-token");
+      expect(secondAuth).toBe("Bearer fresh-token");
+    });
+
+    it("does not retry on non-401 responses", async () => {
+      fetchSpy.mockReset();
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 500 }));
+      const acquireToken = vi.fn().mockResolvedValue("token");
+      const serviceFetch = createServiceFetch({ acquireToken });
+
+      const res = await serviceFetch("/api/spaces/entities");
+
+      expect(res.status).toBe(500);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(acquireToken).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not retry when caller supplied their own Authorization header", async () => {
+      // The caller owns the token in this case; retrying would let our auth
+      // layer overwrite their explicit header on the second attempt.
+      fetchSpy.mockReset();
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 401 }));
+      const acquireToken = vi.fn();
+      const serviceFetch = createServiceFetch({ acquireToken });
+
+      const res = await serviceFetch("/api/spaces/entities", {
+        headers: { Authorization: "Bearer caller-supplied" },
+      });
+
+      expect(res.status).toBe(401);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(acquireToken).not.toHaveBeenCalled();
+    });
+
+    it("preserves a POST body across the 401 retry", async () => {
+      // Regression for the body-stream-consumed bug: ReadableStream bodies
+      // are single-consume, so the retry would otherwise see an empty body
+      // and a server-side validation failure that masks the real auth
+      // recovery. We assert the second attempt receives the same body.
+      fetchSpy.mockReset();
+      fetchSpy
+        .mockResolvedValueOnce(new Response(null, { status: 401 }))
+        .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      const acquireToken = vi
+        .fn()
+        .mockResolvedValueOnce("stale-token")
+        .mockResolvedValueOnce("fresh-token");
+      const serviceFetch = createServiceFetch({ acquireToken });
+
+      const payload = JSON.stringify({ name: "create-this", id: 42 });
+      const request = new Request("https://example.com/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      });
+
+      const res = await serviceFetch(request);
+
+      expect(res.status).toBe(200);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+      // Each fetch call's body must be readable and equal to the original.
+      // Awaiting both confirms neither call's body stream was already
+      // drained by the time fetch received it.
+      const firstAttempt = fetchSpy.mock.calls[0]![1];
+      const secondAttempt = fetchSpy.mock.calls[1]![1];
+      const firstBody = await new Response(firstAttempt?.body as BodyInit).text();
+      const secondBody = await new Response(secondAttempt?.body as BodyInit).text();
+      expect(firstBody).toBe(payload);
+      expect(secondBody).toBe(payload);
+    });
+
+    it("only retries once even if the second attempt also returns 401", async () => {
+      // Hard auth failure (refresh token expired). The second 401 propagates
+      // to the caller; the auth layer's interaction-required path is what
+      // kicks the user to loginRedirect, not an infinite retry loop here.
+      fetchSpy.mockReset();
+      fetchSpy
+        .mockResolvedValueOnce(new Response(null, { status: 401 }))
+        .mockResolvedValueOnce(new Response(null, { status: 401 }));
+      const acquireToken = vi.fn().mockResolvedValue("token");
+      const serviceFetch = createServiceFetch({ acquireToken });
+
+      const res = await serviceFetch("/api/spaces/entities");
+
+      expect(res.status).toBe(401);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(acquireToken).toHaveBeenCalledTimes(2);
+    });
+  });
 });

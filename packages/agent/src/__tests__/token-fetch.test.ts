@@ -62,4 +62,60 @@ describe("tokenFetch", () => {
     const [, init] = fetchSpy.mock.calls[0]!;
     expect(init).toBeUndefined();
   });
+
+  it("retries once with forceRefresh when first attempt returns 401", async () => {
+    // Long-lived tab path: cached token is rejected by the API → MSAL is
+    // asked to round-trip the token endpoint with the refresh token.
+    getAccessToken
+      .mockResolvedValueOnce("stale-token")
+      .mockResolvedValueOnce("fresh-token");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    const res = await tokenFetch("https://example.com/api/items");
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(getAccessToken).toHaveBeenCalledTimes(2);
+    expect(getAccessToken).toHaveBeenNthCalledWith(1, "api", undefined);
+    expect(getAccessToken).toHaveBeenNthCalledWith(2, "api", { forceRefresh: true });
+
+    const firstAuth = new Headers(fetchSpy.mock.calls[0]![1]?.headers).get(
+      "Authorization",
+    );
+    const secondAuth = new Headers(fetchSpy.mock.calls[1]![1]?.headers).get(
+      "Authorization",
+    );
+    expect(firstAuth).toBe("Bearer stale-token");
+    expect(secondAuth).toBe("Bearer fresh-token");
+  });
+
+  it("does not retry on non-401 responses", async () => {
+    getAccessToken.mockResolvedValue("token");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+
+    const res = await tokenFetch("https://example.com/api/items");
+
+    expect(res.status).toBe(500);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(getAccessToken).toHaveBeenCalledTimes(1);
+  });
+
+  it("only retries once on a hard 401-then-401 path", async () => {
+    getAccessToken.mockResolvedValue("token");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }));
+
+    const res = await tokenFetch("https://example.com/api/items");
+
+    expect(res.status).toBe(401);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(getAccessToken).toHaveBeenCalledTimes(2);
+  });
 });

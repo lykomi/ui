@@ -33,6 +33,16 @@ export interface MsalClientApplication {
   acquireTokenSilent(request: {
     scopes: string[];
     account: MsalAccountInfo;
+    /**
+     * Skip MSAL's local cache and force a round-trip to the token
+     * endpoint using the cached refresh token. The fetch interceptor
+     * uses this on a 401 retry — the first attempt may have served a
+     * cached access token MSAL still thought valid (within
+     * ``tokenRenewalOffsetSeconds``) that the resource server has
+     * since rejected (claims challenge, conditional access re-eval,
+     * audience drift).
+     */
+    forceRefresh?: boolean;
   }): Promise<{ accessToken: string }>;
   acquireTokenRedirect(request: {
     scopes: string[];

@@ -72,8 +72,18 @@ interface AuthState {
    * Errors are matched by `name` / `errorCode` rather than `instanceof`
    * because `@azure/msal-browser` is loaded via dynamic import; the
    * error class identity isn't shared across module boundaries.
+   *
+   * `forceRefresh: true` skips MSAL's local cache and goes back to the
+   * token endpoint with the cached refresh token. Use it from the
+   * fetch interceptor when a protected API returns 401 — the first
+   * attempt may have used a stale cached access token (claims
+   * challenge, conditional-access re-eval, audience drift, etc.) that
+   * MSAL still considered valid against its own clock.
    */
-  getAccessToken: (audience?: "api" | "spaces") => Promise<string | null>;
+  getAccessToken: (
+    audience?: "api" | "spaces",
+    options?: { forceRefresh?: boolean },
+  ) => Promise<string | null>;
 }
 
 /** Recoverable error codes per MSAL.js docs — every one of these has the
@@ -193,7 +203,7 @@ export const authStore = createStore<AuthState>((set) => ({
     }
   },
 
-  getAccessToken: async (_audience = "api") => {
+  getAccessToken: async (_audience = "api", options) => {
     const msal = getMsalInstance();
     const config = getMsalConfig();
     if (!msal || !config) return null;
@@ -207,11 +217,13 @@ export const authStore = createStore<AuthState>((set) => ({
 
     // Single API-scoped token — Spaces accepts both audiences (multi-audience JWT).
     const scope = config.apiScope;
+    const forceRefresh = options?.forceRefresh === true;
 
     try {
       const result = await msal.acquireTokenSilent({
         scopes: [scope],
         account: accounts[0],
+        forceRefresh,
       });
       return result.accessToken;
     } catch (err) {

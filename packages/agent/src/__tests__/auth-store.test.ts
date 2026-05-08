@@ -104,8 +104,25 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     const msal = mockMsal();
     expect(await store().getAccessToken()).toBe("fresh-token");
     expect(msal.acquireTokenSilent).toHaveBeenCalledOnce();
+    expect(msal.acquireTokenSilent).toHaveBeenCalledWith(
+      expect.objectContaining({ forceRefresh: false }),
+    );
     expect(msal.acquireTokenRedirect).not.toHaveBeenCalled();
     expect(msal.loginRedirect).not.toHaveBeenCalled();
+  });
+
+  it("forwards forceRefresh to acquireTokenSilent on the 401-retry path", async () => {
+    // The fetch interceptor passes ``{ forceRefresh: true }`` after a
+    // protected API returns 401. MSAL must skip its local cache and round-
+    // trip the token endpoint so we stop sending the same stale-but-cached
+    // access token.
+    const msal = mockMsal();
+    expect(await store().getAccessToken("api", { forceRefresh: true })).toBe(
+      "fresh-token",
+    );
+    expect(msal.acquireTokenSilent).toHaveBeenCalledWith(
+      expect.objectContaining({ forceRefresh: true }),
+    );
   });
 
   it("returns null without redirecting when no account is cached", async () => {
