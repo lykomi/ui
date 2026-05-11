@@ -173,16 +173,43 @@ export function createServiceFetch(options: ServiceFetchOptions): ServiceFetch {
     // Drain the failed response body — letting it sit unread keeps the
     // underlying connection occupied on some runtimes.
     response.body?.cancel().catch(() => undefined);
-    const retried = await dispatch(true);
 
-    // Hard auth failure: even the force-refreshed token got rejected.
-    // The silent path can't recover this — a token minted from the
-    // cached refresh token carries the same identity claims as the
-    // original, so it'll keep getting rejected for the same reason
-    // (audience drift, conditional-access re-eval, claims challenge,
-    // tenant-policy change). Only a brand-new ``loginRedirect`` produces
-    // a token bound to the current server policy. Without this branch
-    // the user sees an endless 401 loop until they manually log out.
+    // Two failure shapes for the retry:
+    //   (a) The force-refreshed token grant FAILS — refresh token gone
+    //       (24h SPA cap), interaction-required claims challenge, etc.
+    //       ``acquireToken`` throws inside ``dispatch`` BEFORE the fetch
+    //       leaves the browser, and the error propagates out of
+    //       ``dispatch(true)``. Without the catch below it bubbles all
+    //       the way to the caller, which often (e.g.
+    //       ``fetchSchemas``) catches and silently sets defaults — the
+    //       user sees endless console-401s and zero UI re-auth prompt.
+    //   (b) The grant succeeds but the resource server STILL rejects
+    //       the token (audience drift, server-side policy change). The
+    //       retried response status is 401.
+    // Both must funnel into ``recoverFromHardAuthFailure`` so the auth
+    // layer can kick off ``loginRedirect`` — the only correct UX for a
+    // hard expiry. We treat the two paths symmetrically.
+    let retried: Response;
+    try {
+      retried = await dispatch(true);
+    } catch (err) {
+      if (options.recoverFromHardAuthFailure) {
+        // ``recoverFromHardAuthFailure`` is expected to throw once the
+        // redirect is in flight; if it returns (e.g. test stub) we
+        // re-throw the original so the caller still sees the auth
+        // failure rather than a phantom recovery.
+        await options.recoverFromHardAuthFailure(err);
+      }
+      throw err;
+    }
+
+    // Hard auth failure path (b): even the force-refreshed token got
+    // rejected. A token minted from the cached refresh token carries
+    // the same identity claims as the original, so it'll keep getting
+    // rejected for the same reason. Only a brand-new ``loginRedirect``
+    // produces a token bound to the current server policy. Without
+    // this branch the user sees an endless 401 loop until they
+    // manually log out.
     if (retried.status === 401 && options.recoverFromHardAuthFailure) {
       retried.body?.cancel().catch(() => undefined);
       // ``recoverFromHardAuthFailure`` throws once the redirect is in
