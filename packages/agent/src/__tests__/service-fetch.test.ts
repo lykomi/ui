@@ -352,6 +352,65 @@ describe("createServiceFetch", () => {
       expect(recoverFromHardAuthFailure).not.toHaveBeenCalled();
     });
 
+    it("kicks off interactive recovery when acquireToken throws on retry", async () => {
+      // Hard expiry path: refresh-token window closed (24h SPA cap) or
+      // claims challenge pending. The force-refresh retry's
+      // ``acquireToken`` rejects BEFORE the second fetch leaves the
+      // browser. Without this branch the throw bubbles up to callers
+      // that have bare ``catch {}`` (e.g. useContentTreeStore.fetchSchemas)
+      // and the user is stuck in a silent 401 loop with no re-auth UI.
+      fetchSpy.mockReset();
+      fetchSpy.mockResolvedValueOnce(new Response(null, { status: 401 }));
+      const msalError = new Error("InteractionRequiredAuthError: refresh token expired");
+      const acquireToken = vi
+        .fn()
+        .mockResolvedValueOnce("stale-token")
+        .mockRejectedValueOnce(msalError);
+      const recoverFromHardAuthFailure = vi
+        .fn()
+        .mockRejectedValue(new Error("loginRedirect in flight"));
+      const serviceFetch = createServiceFetch({
+        acquireToken,
+        recoverFromHardAuthFailure,
+      });
+
+      // The wrapped TokenAcquisitionError propagates as the thrown
+      // error; recovery has already kicked off by then.
+      await expect(serviceFetch("/api/spaces/entities")).rejects.toThrow();
+      expect(fetchSpy).toHaveBeenCalledTimes(1); // second fetch never left
+      expect(acquireToken).toHaveBeenCalledTimes(2);
+      expect(recoverFromHardAuthFailure).toHaveBeenCalledTimes(1);
+      // Recovery receives the ORIGINAL MSAL error, not the wrapper —
+      // telemetry / logging downstream should see the real cause.
+      expect(recoverFromHardAuthFailure.mock.calls[0]![0]).toBe(msalError);
+    });
+
+    it("does NOT call recoverFromHardAuthFailure on transport errors during retry", async () => {
+      // Regression for review feedback on PR #30: the retry-catch must
+      // distinguish auth failures (TokenAcquisitionError) from
+      // generic transport failures (network drop, AbortError, CORS
+      // preflight reject). The latter must NOT trigger loginRedirect
+      // — that would bounce users through Entra ID on any flaky-wifi
+      // moment.
+      fetchSpy.mockReset();
+      const networkErr = new TypeError("NetworkError: Failed to fetch");
+      fetchSpy
+        .mockResolvedValueOnce(new Response(null, { status: 401 }))
+        .mockRejectedValueOnce(networkErr);
+      const acquireToken = vi.fn().mockResolvedValue("token");
+      const recoverFromHardAuthFailure = vi.fn();
+      const serviceFetch = createServiceFetch({
+        acquireToken,
+        recoverFromHardAuthFailure,
+      });
+
+      // Network error propagates as-is; no recovery attempted.
+      await expect(serviceFetch("/api/spaces/entities")).rejects.toBe(networkErr);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(acquireToken).toHaveBeenCalledTimes(2); // both attempts got a token
+      expect(recoverFromHardAuthFailure).not.toHaveBeenCalled();
+    });
+
     it("does NOT call recoverFromHardAuthFailure when the retry recovers", async () => {
       // Standard recovery — first 401, retry with forceRefresh succeeds.
       // Recovery callback must not fire (would needlessly bounce the user

@@ -66,6 +66,26 @@ export type ServiceFetch = (
   init?: RequestInit,
 ) => Promise<Response>;
 
+/**
+ * Wrapper thrown when ``acquireToken`` rejects inside the fetch
+ * interceptor. Lets the outer 401-retry layer distinguish
+ * token-acquisition failures (which warrant interactive recovery) from
+ * generic ``fetch`` rejections like network drops, aborts, or CORS
+ * preflight failures (which do NOT — those would needlessly bounce the
+ * user through ``loginRedirect`` on a transient transport error).
+ *
+ * Exported so hosts that wrap ``serviceFetch`` further can ``instanceof``
+ * against the same class without re-declaring it.
+ */
+export class TokenAcquisitionError extends Error {
+  override readonly name = "TokenAcquisitionError";
+  readonly cause: unknown;
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.cause = cause;
+  }
+}
+
 const defaultOriginResolver = (): string =>
   typeof window !== "undefined" ? window.location.origin : "";
 
@@ -134,11 +154,15 @@ export function createServiceFetch(options: ServiceFetchOptions): ServiceFetch {
             headers.set("Authorization", `Bearer ${token}`);
           }
         } catch (error) {
-          // A thrown token acquisition error usually means the auth layer
-          // is starting an interactive recovery. Do not downgrade protected
-          // API calls to anonymous requests; that creates noisy 401s and
-          // stale UI.
-          throw error;
+          // A thrown token-acquisition error usually means the auth layer
+          // is starting an interactive recovery. Do not downgrade
+          // protected API calls to anonymous requests; that creates
+          // noisy 401s and stale UI. Wrap the error so the outer
+          // 401-retry layer can distinguish it from generic ``fetch``
+          // rejections (network drops, aborts, CORS preflight fails)
+          // and only escalate to ``recoverFromHardAuthFailure`` for
+          // genuine auth failures.
+          throw new TokenAcquisitionError(error);
         }
       }
       if (input instanceof Request) {
@@ -178,27 +202,34 @@ export function createServiceFetch(options: ServiceFetchOptions): ServiceFetch {
     //   (a) The force-refreshed token grant FAILS — refresh token gone
     //       (24h SPA cap), interaction-required claims challenge, etc.
     //       ``acquireToken`` throws inside ``dispatch`` BEFORE the fetch
-    //       leaves the browser, and the error propagates out of
-    //       ``dispatch(true)``. Without the catch below it bubbles all
-    //       the way to the caller, which often (e.g.
-    //       ``fetchSchemas``) catches and silently sets defaults — the
-    //       user sees endless console-401s and zero UI re-auth prompt.
+    //       leaves the browser. ``dispatch`` re-throws wrapped in
+    //       ``TokenAcquisitionError`` so we can distinguish this case
+    //       from network errors below.
     //   (b) The grant succeeds but the resource server STILL rejects
     //       the token (audience drift, server-side policy change). The
     //       retried response status is 401.
     // Both must funnel into ``recoverFromHardAuthFailure`` so the auth
     // layer can kick off ``loginRedirect`` — the only correct UX for a
-    // hard expiry. We treat the two paths symmetrically.
+    // hard expiry. We treat the two auth paths symmetrically.
+    //
+    // We deliberately do NOT trigger recovery on generic ``dispatch``
+    // throws (TypeError from network drops, AbortError from caller
+    // cancellation, CORS-preflight failures, etc.) — those are
+    // transient transport problems, not auth state corruption, and
+    // bouncing the user through ``loginRedirect`` for a flaky network
+    // would be a much worse UX than letting the error propagate.
     let retried: Response;
     try {
       retried = await dispatch(true);
     } catch (err) {
-      if (options.recoverFromHardAuthFailure) {
+      if (err instanceof TokenAcquisitionError && options.recoverFromHardAuthFailure) {
         // ``recoverFromHardAuthFailure`` is expected to throw once the
         // redirect is in flight; if it returns (e.g. test stub) we
-        // re-throw the original so the caller still sees the auth
-        // failure rather than a phantom recovery.
-        await options.recoverFromHardAuthFailure(err);
+        // re-throw the wrapped original so the caller still sees the
+        // auth failure rather than a phantom recovery. We pass the
+        // unwrapped ``cause`` to recovery so it sees the real MSAL
+        // error (InteractionRequiredAuthError etc.) for telemetry.
+        await options.recoverFromHardAuthFailure(err.cause);
       }
       throw err;
     }
