@@ -253,6 +253,28 @@ async function startInteractiveRecovery(
     let redirectError: unknown;
     authStore.setState({ user: null, isAuthenticated: false });
 
+    // Step 0: strip a lingering MSAL error hash from the URL before
+    // attempting any redirect. MSAL.js's redirect primitives refuse
+    // to navigate with ``BrowserAuthError: block_iframe_reload`` when
+    // the current page URL still carries a previous silent-auth
+    // failure in its fragment (e.g.
+    // ``#error=interaction_required&error_description=AADSTS160021…``
+    // from an earlier ``handleRedirectPromise`` that surfaced
+    // "user session does not exist"). The SDK's own anti-loop guard
+    // sees the unconsumed error and aborts — leaving the user
+    // permanently stuck unless they manually clear browser state.
+    //
+    // We can defuse that guard cleanly by replacing the URL with a
+    // fragment-less copy via ``history.replaceState`` before the
+    // redirect call. MSAL then sees a "clean" page and proceeds.
+    // The original page state (path + search) is preserved so the
+    // user lands back where they started after re-auth.
+    //
+    // Reference:
+    //   https://aka.ms/msal.js.errors#block_iframe_reload
+    //   https://github.com/AzureAD/microsoft-authentication-library-for-js/issues/5623
+    stripStaleMsalErrorHash();
+
     // Step 1: surgically evict the bad account record from MSAL's
     // own token cache BEFORE redirecting. Two reasons:
     //
@@ -351,6 +373,46 @@ async function startInteractiveRecovery(
  * pass an empty string to MSAL (the SDK treats that as "ignore" but
  * older versions choke on the empty key).
  */
+/**
+ * Replace the page's URL fragment with an empty one when it carries
+ * a leftover MSAL/Entra error response (``#error=…``,
+ * ``#error_description=…``, ``#error_code=…``, or
+ * ``#error_uri=…``). Preserves path + query string so the user
+ * lands back on the same page after the imminent recovery redirect.
+ *
+ * Why this is necessary:
+ *   MSAL.js's redirect primitives include an anti-loop guard that
+ *   refuses to navigate when the current URL fragment encodes a
+ *   prior auth error — the SDK raises ``block_iframe_reload``
+ *   instead of redirecting. In production we hit this when an
+ *   earlier ``acquireTokenSilent`` had its hidden iframe receive an
+ *   ``AADSTS160021: Application requested a user session which does
+ *   not exist`` response, MSAL surfaced it via
+ *   ``handleRedirectPromise`` but left the fragment intact.
+ *   Subsequent recovery redirects all aborted with
+ *   ``block_iframe_reload`` and the user was stuck until they
+ *   manually cleared browser storage.
+ *
+ * This helper is a no-op on non-browser environments and a no-op
+ * when no error fragment is present.
+ */
+function stripStaleMsalErrorHash(): void {
+  if (typeof window === "undefined" || typeof history === "undefined") return;
+  const hash = window.location.hash || "";
+  if (!hash) return;
+  // ``hash`` is e.g. ``#error=interaction_required&error_description=…``.
+  // We look for any of the error-shaped keys MSAL emits.
+  if (!/(?:^|[#&])error(?:_description|_code|_uri)?=/.test(hash)) return;
+  try {
+    const cleanUrl = window.location.pathname + window.location.search;
+    history.replaceState(null, "", cleanUrl);
+  } catch {
+    // Some embedded environments lock down history.replaceState
+    // (sandboxed iframes etc.). If that happens we still try the
+    // redirect — MSAL may or may not succeed; nothing we can do.
+  }
+}
+
 function extractClaimsChallenge(reason: unknown): string | undefined {
   if (!reason || typeof reason !== "object") return undefined;
   const direct = (reason as { claims?: unknown }).claims;

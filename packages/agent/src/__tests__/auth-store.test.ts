@@ -488,3 +488,109 @@ describe("authStore — orphaned-state recovery", () => {
     expect(msal.loginRedirect).not.toHaveBeenCalled();
   });
 });
+
+describe("authStore — block_iframe_reload defuse", () => {
+  // MSAL.js refuses to redirect when the current URL fragment still
+  // carries a prior silent-auth failure (``#error=…``). In production
+  // we shipped clearCache + prompt:'login' but users were STILL stuck
+  // because the redirect itself was aborting with
+  // ``BrowserAuthError: block_iframe_reload``. The fix:
+  // ``startInteractiveRecovery`` must strip the error fragment from
+  // the URL with ``history.replaceState`` BEFORE calling
+  // ``acquireTokenRedirect`` / ``loginRedirect``.
+
+  const config = {
+    clientId: "test-client",
+    authority: "https://login.microsoftonline.com/test-tenant",
+    redirectUri: "http://localhost:8010",
+    apiScope: "api://test-api/access_as_user",
+  };
+
+  function mockMsal(overrides: Record<string, unknown> = {}) {
+    const account = { username: "alice@example.com", localAccountId: "alice-oid" };
+    const mock = {
+      initialize: vi.fn().mockResolvedValue(undefined),
+      handleRedirectPromise: vi.fn().mockResolvedValue(null),
+      clearCache: vi.fn().mockResolvedValue(undefined),
+      getAllAccounts: vi.fn().mockReturnValue([account]),
+      loginRedirect: vi.fn().mockResolvedValue(undefined),
+      logoutRedirect: vi.fn().mockResolvedValue(undefined),
+      setActiveAccount: vi.fn(),
+      acquireTokenSilent: vi.fn().mockResolvedValue({ accessToken: "fresh" }),
+      acquireTokenRedirect: vi.fn().mockResolvedValue(undefined),
+      acquireTokenPopup: vi.fn().mockResolvedValue({ accessToken: "popup" }),
+      ...overrides,
+    };
+    vi.spyOn(authConfig, "getMsalInstance").mockReturnValue(mock);
+    vi.spyOn(authConfig, "getMsalConfig").mockReturnValue(config);
+    return mock;
+  }
+
+  beforeEach(() => {
+    // Reset URL fragment between tests.
+    window.history.replaceState(null, "", "/");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("strips a stale MSAL error fragment before calling acquireTokenRedirect", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/spaces/some-entity?foo=bar" +
+        "#error=interaction_required" +
+        "&error_description=AADSTS160021%3a+Application+requested+a+user+session+which+does+not+exist" +
+        "&state=eyJpZCI6IngifQ%3D%3D",
+    );
+    expect(window.location.hash).toContain("error=interaction_required");
+
+    const msal = mockMsal();
+    const reason = new Error("API returned 401 after force-refresh retry");
+    let acquireRedirectHash: string | null = null;
+    msal.acquireTokenRedirect = vi.fn(async () => {
+      acquireRedirectHash = window.location.hash;
+    });
+
+    await expect(authStore.getState().recoverFromHardAuthFailure(reason)).rejects.toBeInstanceOf(AuthInteractionRequiredError);
+
+    // By the time MSAL's redirect API is called, the page fragment
+    // has been wiped. MSAL won't see the stale ``error=`` and won't
+    // trip its ``block_iframe_reload`` guard.
+    expect(acquireRedirectHash).toBe("");
+    // Path + query string are preserved so the post-redirect landing
+    // page is the SAME page the user was on when their session went
+    // bad.
+    expect(window.location.pathname).toBe("/spaces/some-entity");
+    expect(window.location.search).toBe("?foo=bar");
+  });
+
+  it("leaves a clean URL alone (no spurious history mutation)", async () => {
+    window.history.replaceState(null, "", "/spaces?clean=1");
+    const original = window.location.href;
+    const msal = mockMsal();
+    await expect(authStore
+        .getState()
+        .recoverFromHardAuthFailure(new Error("policy drift"))).rejects.toBeInstanceOf(AuthInteractionRequiredError);
+    // Path + query stay identical (no replaceState invocation).
+    expect(window.location.href).toBe(original);
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
+  });
+
+  it("strips error_code / error_uri fragments too (not just error_description)", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/spaces#error_code=AADSTS160021&error_uri=https%3a%2f%2flogin.example",
+    );
+    const msal = mockMsal();
+    let hashAtRedirect: string | null = null;
+    msal.acquireTokenRedirect = vi.fn(async () => {
+      hashAtRedirect = window.location.hash;
+    });
+    await expect(authStore.getState().recoverFromHardAuthFailure(new Error("x"))).rejects.toBeInstanceOf(AuthInteractionRequiredError);
+    expect(hashAtRedirect).toBe("");
+  });
+});
