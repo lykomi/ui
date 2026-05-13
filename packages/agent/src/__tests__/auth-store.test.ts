@@ -125,13 +125,20 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     );
   });
 
-  it("recoverFromHardAuthFailure starts acquireTokenRedirect (preserves account)", async () => {
+  it("recoverFromHardAuthFailure evicts bad account + redirects with prompt:'login'", async () => {
     // When the fetch interceptor's force-refresh retry STILL gets 401,
     // server-side drift (audience / claims / conditional-access) means
-    // we need a fresh interactive auth. Same recovery primitive as the
-    // silent-failure path: ``acquireTokenRedirect`` first (preserves
-    // the account record), ``loginRedirect`` only as fallback. Cache
-    // is NOT cleared before redirect.
+    // we need a fresh interactive auth. Two non-negotiable behaviours
+    // that prevent the "silent redirect loop":
+    //   1. ``clearCache({ account })`` BEFORE redirect — evicts the
+    //      bad refresh-token / claims so MSAL doesn't reuse the same
+    //      poisoned material after the redirect lands.
+    //   2. ``prompt: "login"`` on BOTH redirect primitives — forces
+    //      Entra to re-prompt for credentials instead of silently
+    //      returning the SAME stale token from its server-side SSO
+    //      session.
+    // See GitHub #6840 and the Microsoft Identity Platform "claims
+    // challenge" guidance.
     const msal = mockMsal();
     const reason = new Error("API returned 401 after force-refresh retry");
     await expectInteractiveRecoveryError(
@@ -142,8 +149,41 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
         messageIncludes: ["interaction required"],
       },
     );
+    expect(msal.clearCache).toHaveBeenCalledOnce();
+    expect(msal.clearCache).toHaveBeenCalledWith({
+      account: { username: "alice@example.com", localAccountId: "alice-oid" },
+    });
     expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
-    expect(msal.clearCache).not.toHaveBeenCalled();
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: "login" }),
+    );
+  });
+
+  it("forwards a claims-challenge payload from the failure reason to MSAL", async () => {
+    // Continuous Access Evaluation / Conditional-Access challenge:
+    // the fetch interceptor extracted ``claims`` from the resource
+    // server's ``WWW-Authenticate`` header and stamped it onto the
+    // recovery reason. The redirect must carry it through so Entra
+    // mints a token that explicitly satisfies the challenge.
+    const msal = mockMsal();
+    const reason = Object.assign(
+      new Error("API returned 401 after force-refresh retry"),
+      { claims: "eyJjbGFpbXMiOiIuLi4ifQ" },
+    );
+    await expectInteractiveRecoveryError(
+      store().recoverFromHardAuthFailure(reason),
+      {
+        code: undefined,
+        cause: reason,
+        messageIncludes: ["interaction required"],
+      },
+    );
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        claims: "eyJjbGFpbXMiOiIuLi4ifQ",
+        prompt: "login",
+      }),
+    );
   });
 
   it("returns null without redirecting when no account is cached", async () => {
@@ -156,12 +196,17 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     expect(msal.loginRedirect).not.toHaveBeenCalled();
   });
 
-  it("uses acquireTokenRedirect on InteractionRequiredAuthError (preserves account)", async () => {
-    // Canonical 2026 MSAL.js pattern: ``acquireTokenRedirect`` is the
-    // documented primitive for refreshing a known account's tokens
-    // without a full ``loginRedirect``. Critically, the cache is NOT
-    // cleared before the redirect — that was the orphaned-state bug
-    // (account record gone + tokens lingering when redirect fails).
+  it("uses acquireTokenRedirect on InteractionRequiredAuthError, evicting the bad account first", async () => {
+    // Canonical 2026 MSAL.js recovery pattern (per Microsoft Identity
+    // Platform docs + GitHub #6840):
+    //   1. ``clearCache({ account })`` — surgical eviction of the bad
+    //      token + claims, BEFORE redirect. The earlier
+    //      "no-clearCache-before-redirect" rule was about the broad
+    //      ``clearCache()`` form (which produces the orphaned-state
+    //      bug); the per-account form is the documented fix.
+    //   2. ``acquireTokenRedirect`` with ``prompt: "login"`` — forces
+    //      re-prompt instead of letting Entra silently reuse the SSO
+    //      session.
     const err = Object.assign(new Error("MFA required"), {
       name: "InteractionRequiredAuthError",
       errorCode: "interaction_required",
@@ -177,15 +222,16 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
         "MFA required",
       ],
     });
+    expect(msal.clearCache).toHaveBeenCalledOnce();
+    expect(msal.clearCache).toHaveBeenCalledWith({
+      account: { username: "alice@example.com", localAccountId: "alice-oid" },
+    });
     expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
     expect(msal.acquireTokenRedirect).toHaveBeenCalledWith({
       scopes: [config.apiScope],
       account: { username: "alice@example.com", localAccountId: "alice-oid" },
+      prompt: "login",
     });
-    // Cache MUST NOT be cleared before redirect — see
-    // AzureAD/microsoft-authentication-library-for-js#7551 and the
-    // orphaned-state production bug this fix exists to address.
-    expect(msal.clearCache).not.toHaveBeenCalled();
     expect(msal.setActiveAccount).not.toHaveBeenCalled();
   });
 
@@ -211,7 +257,7 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     expect(msal.loginRedirect).toHaveBeenCalledOnce();
   });
 
-  it("recovers on consent_required without clearing cache before redirect", async () => {
+  it("recovers on consent_required by evicting bad account + acquireTokenRedirect", async () => {
     const err = Object.assign(new Error("consent required"), {
       name: "InteractionRequiredAuthError",
       errorCode: "consent_required",
@@ -222,11 +268,15 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       cause: err,
       messageIncludes: ["Authentication interaction required", "consent_required"],
     });
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
-    expect(msal.clearCache).not.toHaveBeenCalled();
+    expect(msal.clearCache).toHaveBeenCalledWith(
+      expect.objectContaining({ account: expect.objectContaining({ localAccountId: "alice-oid" }) }),
+    );
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: "login" }),
+    );
   });
 
-  it("recovers on monitor_window_timeout without clearing cache before redirect", async () => {
+  it("recovers on monitor_window_timeout by evicting bad account + acquireTokenRedirect", async () => {
     // Microsoft Learn → "Common errors in MSAL JS" → monitor_window_timeout
     // → documented remedy includes "Invoke an interactive API".
     const err = Object.assign(new Error("monitor_window_timeout"), {
@@ -239,8 +289,12 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       cause: err,
       messageIncludes: ["Authentication interaction required", "monitor_window_timeout"],
     });
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
-    expect(msal.clearCache).not.toHaveBeenCalled();
+    expect(msal.clearCache).toHaveBeenCalledWith(
+      expect.objectContaining({ account: expect.objectContaining({ localAccountId: "alice-oid" }) }),
+    );
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: "login" }),
+    );
   });
 
   it("does NOT redirect on interaction_in_progress (would race with another flow)", async () => {
@@ -281,8 +335,10 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       cause: err,
       messageIncludes: ["Authentication interaction required", "InteractionRequiredAuthError"],
     });
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
-    expect(msal.clearCache).not.toHaveBeenCalled();
+    expect(msal.clearCache).toHaveBeenCalledOnce();
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: "login" }),
+    );
   });
 
   it("preserves redirect failure details when both redirect attempts fail", async () => {
@@ -315,11 +371,17 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
         "interaction_required",
       ],
     });
-    expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
-    expect(msal.loginRedirect).toHaveBeenCalledOnce();
-    // Even on full failure, cache is NOT touched — leaves state intact
-    // for the next attempt rather than creating an orphaned cache.
-    expect(msal.clearCache).not.toHaveBeenCalled();
+    expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: "login" }),
+    );
+    expect(msal.loginRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: "login" }),
+    );
+    // Per-account cache eviction DID happen as the canonical pre-
+    // redirect step (see GitHub #6840). The "no clearCache" rule
+    // applies only to the broad ``clearCache()`` form, not the
+    // ``clearCache({ account })`` variant we use here.
+    expect(msal.clearCache).toHaveBeenCalledOnce();
   });
 });
 

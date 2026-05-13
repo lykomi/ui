@@ -242,14 +242,77 @@ export function createServiceFetch(options: ServiceFetchOptions): ServiceFetch {
     // this branch the user sees an endless 401 loop until they
     // manually log out.
     if (retried.status === 401 && options.recoverFromHardAuthFailure) {
+      // Continuous Access Evaluation / Conditional-Access claims
+      // challenge passthrough. When the resource server requires a
+      // step-up (MFA, device compliance, revocation invalidation),
+      // it returns 401 with ``WWW-Authenticate: Bearer ... claims="…"``.
+      // We forward the payload through the recovery callback so the
+      // auth layer's redirect carries it to Entra ID and the
+      // re-minted token satisfies the exact challenge. Without it,
+      // Entra re-issues the same already-rejected claims set and the
+      // user loops back into the broken state.
+      const claims = parseClaimsChallengeFromWwwAuthenticate(
+        retried.headers.get("www-authenticate"),
+      );
       retried.body?.cancel().catch(() => undefined);
+      const reason = new AuthInteractionRequiredError(
+        "API returned 401 after force-refresh retry",
+        claims ? { claims } : undefined,
+      );
       // ``recoverFromHardAuthFailure`` throws once the redirect is in
       // flight; the throw stops the calling pipeline so we don't
       // return a stale 401 the caller might handle as a real failure.
-      await options.recoverFromHardAuthFailure(
-        new Error("API returned 401 after force-refresh retry"),
-      );
+      await options.recoverFromHardAuthFailure(reason);
     }
     return retried;
   };
+}
+
+/**
+ * Error class the fetch interceptor raises (and forwards through
+ * ``recoverFromHardAuthFailure``) when a 401 needs interactive
+ * recovery. Exposed so the auth-layer recovery can pick up a
+ * ``claims`` field if one was extracted from the
+ * ``WWW-Authenticate`` header.
+ */
+export class AuthInteractionRequiredError extends Error {
+  override readonly name = "AuthInteractionRequiredError";
+  readonly claims?: string;
+  constructor(message: string, options?: { claims?: string }) {
+    super(message);
+    this.claims = options?.claims;
+  }
+}
+
+/**
+ * Extract the claims challenge string from a resource server's
+ * ``WWW-Authenticate: Bearer ... claims="…"`` header. Returns
+ * ``undefined`` when the header is missing, malformed, or carries
+ * no claims directive.
+ *
+ * The value is forwarded VERBATIM to MSAL's
+ * ``acquireTokenRedirect({ claims })``; MSAL handles the
+ * base64-url decode + JSON parse itself. We don't try to validate
+ * the inner shape — letting Entra speak for itself avoids drift if
+ * the schema evolves.
+ *
+ * Spec: RFC 6750 ``WWW-Authenticate`` + CAE claims-challenge
+ * supplement (Microsoft Identity Platform docs).
+ */
+export function parseClaimsChallengeFromWwwAuthenticate(
+  header: string | null | undefined,
+): string | undefined {
+  if (!header) return undefined;
+  // ``WWW-Authenticate`` can carry multiple challenges separated by
+  // commas (e.g. ``Basic realm="x", Bearer ...``). We only care
+  // about the Bearer challenge.
+  const bearer = header.match(/Bearer\s+([^,]+(?:,(?!\s*[A-Za-z]+\s)[^,]*)*)/i);
+  if (!bearer) return undefined;
+  // Inside the Bearer params, find ``claims="..."`` (quoted) or
+  // ``claims=token68`` (unquoted, base64url).
+  const quoted = bearer[1].match(/claims\s*=\s*"([^"]*)"/i);
+  if (quoted) return quoted[1].length > 0 ? quoted[1] : undefined;
+  const unquoted = bearer[1].match(/claims\s*=\s*([A-Za-z0-9_\-+/=]+)/i);
+  if (unquoted) return unquoted[1].length > 0 ? unquoted[1] : undefined;
+  return undefined;
 }

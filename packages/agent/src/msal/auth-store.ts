@@ -237,38 +237,91 @@ async function startInteractiveRecovery(
     return activeRecoveryPromise;
   }
 
+  // Extract a claims challenge from the failure reason (if any).
+  // Production scenarios that surface here with a payload:
+  //   * Conditional Access re-eval (MFA step-up required).
+  //   * Continuous Access Evaluation revocation.
+  //   * Device-compliance change mid-session.
+  // The service-fetch interceptor parses WWW-Authenticate when it
+  // can and stamps the payload onto the recovery reason — we pass
+  // it through to MSAL so the next token explicitly satisfies the
+  // challenge. Without this, Entra would silently re-issue the same
+  // already-rejected claims set and we'd loop right back.
+  const claims = extractClaimsChallenge(reason);
+
   activeRecoveryPromise = (async () => {
     let redirectError: unknown;
     authStore.setState({ user: null, isAuthenticated: false });
 
-    // Step 1: ``acquireTokenRedirect`` — the documented primitive for
-    // refreshing a known account's tokens without forcing full
-    // re-auth. Preserves the account record across the navigation,
-    // which is critical: ``loginRedirect`` + pre-redirect
-    // ``clearCache`` (the previous design) caused the orphaned-state
-    // bug we just hit in production (account record gone, tokens
-    // linger, every API call returns null token + 401 forever).
+    // Step 1: surgically evict the bad account record from MSAL's
+    // own token cache BEFORE redirecting. Two reasons:
+    //
+    //  (a) The bad refresh token / claims set is what's causing the
+    //      hard-auth failure. Leaving it in cache means MSAL's
+    //      acquireTokenSilent (called by every other in-flight or
+    //      post-redirect request) hands out the SAME poisoned token
+    //      until the entry naturally expires.
+    //  (b) Microsoft's "orphaned-state" anti-pattern is about
+    //      clearing AFTER initiating a redirect (i.e. clearing while
+    //      MSAL is mid-flight). Clearing the SPECIFIC account
+    //      BEFORE the redirect is the documented pattern — see
+    //      https://github.com/AzureAD/microsoft-authentication-library-for-js/issues/6840
+    //      and the SDK's own ``IPublicClientApplication.clearCache``
+    //      contract which accepts ``{ account }``.
+    //
+    // Wrapped in a try/catch so a cache-removal hiccup doesn't
+    // strand the user without ever attempting the redirect.
     if (account) {
       try {
-        await msal.acquireTokenRedirect({ scopes: [scope], account });
-        // If we reach here without navigating, MSAL settled the promise
-        // before the browser navigation kicked in (test environments,
+        await msal.clearCache({ account });
+      } catch (err) {
+        // Telemetry only — keep flowing into the redirect path.
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[msal-recovery] clearCache(account) failed; continuing with redirect",
+          err,
+        );
+      }
+    }
+
+    // Step 2: ``acquireTokenRedirect`` with ``prompt: "login"`` —
+    // forces a fresh interactive authentication even if Entra still
+    // has a live SSO session for the user. Without ``prompt: "login"``
+    // the redirect silently round-trips through Entra and returns a
+    // token built from the SAME state we just tried to escape from
+    // (this is the "silent redirect loop" users actually experience:
+    // the page bounces to login.microsoftonline.com and back, still
+    // broken). The full re-auth path produces a fresh refresh-token
+    // + fresh claims bound to current server policy.
+    if (account) {
+      try {
+        await msal.acquireTokenRedirect({
+          scopes: [scope],
+          account,
+          prompt: "login",
+          ...(claims ? { claims } : {}),
+        });
+        // If we reach here without navigating, MSAL settled the
+        // promise before browser navigation kicked in (test envs,
         // blocked redirects, etc.). Fall through to loginRedirect.
       } catch (err) {
         redirectError = err;
       }
     }
 
-    // Step 2: full ``loginRedirect`` fallback. Used when:
-    //   * No account was passed (orphaned-state caller)
-    //   * acquireTokenRedirect threw a non-navigation error
-    //   * acquireTokenRedirect settled without navigating
-    // Still NO ``clearCache`` before this — let MSAL handle its own
-    // state across the navigation. Only nuke localStorage if BOTH
-    // redirect attempts fail (the orphaned-state caller does this
-    // up-front because their state is already corrupt).
+    // Step 3: full ``loginRedirect`` fallback. Same ``prompt: "login"``
+    // contract so even this path can't loop back into broken state.
+    // Used when:
+    //   * No account was passed (orphaned-state caller already
+    //     wiped localStorage upstream).
+    //   * acquireTokenRedirect threw a non-navigation error.
+    //   * acquireTokenRedirect settled without navigating.
     try {
-      await msal.loginRedirect({ scopes: [scope] });
+      await msal.loginRedirect({
+        scopes: [scope],
+        prompt: "login",
+        ...(claims ? { claims } : {}),
+      });
     } catch (err) {
       redirectError = err;
     }
@@ -281,6 +334,35 @@ async function startInteractiveRecovery(
   } finally {
     activeRecoveryPromise = null;
   }
+}
+
+/**
+ * Pull a CAE / Conditional-Access claims-challenge payload out of a
+ * recovery-trigger error. Two shapes are produced upstream:
+ *
+ *   * The fetch interceptor (``service-fetch``) parses the
+ *     ``WWW-Authenticate`` header on a 401 response and constructs
+ *     an error whose ``claims`` (or ``cause.claims``) field carries
+ *     the base64 payload it found.
+ *   * MSAL.js's own ``InteractionRequiredAuthError`` instances expose
+ *     ``claims`` directly when Azure returned one.
+ *
+ * Return ``undefined`` when none is present — callers should NOT
+ * pass an empty string to MSAL (the SDK treats that as "ignore" but
+ * older versions choke on the empty key).
+ */
+function extractClaimsChallenge(reason: unknown): string | undefined {
+  if (!reason || typeof reason !== "object") return undefined;
+  const direct = (reason as { claims?: unknown }).claims;
+  if (typeof direct === "string" && direct.length > 0) return direct;
+  const cause = (reason as { cause?: unknown }).cause;
+  if (cause && typeof cause === "object") {
+    const fromCause = (cause as { claims?: unknown }).claims;
+    if (typeof fromCause === "string" && fromCause.length > 0) {
+      return fromCause;
+    }
+  }
+  return undefined;
 }
 
 export const authStore = createStore<AuthState>((set) => ({

@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createServiceFetch } from "../client/service-fetch.ts";
+import {
+  createServiceFetch,
+  parseClaimsChallengeFromWwwAuthenticate,
+} from "../client/service-fetch.ts";
 
 describe("createServiceFetch", () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>;
@@ -433,5 +436,90 @@ describe("createServiceFetch", () => {
       expect(res.status).toBe(200);
       expect(recoverFromHardAuthFailure).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("parseClaimsChallengeFromWwwAuthenticate", () => {
+  it("returns undefined when header is missing", () => {
+    expect(parseClaimsChallengeFromWwwAuthenticate(null)).toBeUndefined();
+    expect(parseClaimsChallengeFromWwwAuthenticate(undefined)).toBeUndefined();
+    expect(parseClaimsChallengeFromWwwAuthenticate("")).toBeUndefined();
+  });
+
+  it("returns undefined when Bearer challenge carries no claims", () => {
+    const header = 'Bearer realm="example", error="invalid_token"';
+    expect(parseClaimsChallengeFromWwwAuthenticate(header)).toBeUndefined();
+  });
+
+  it("extracts quoted claims payload", () => {
+    // Microsoft Identity Platform CAE / Conditional Access challenge
+    // shape — base64url payload inside double quotes.
+    const claims = "eyJhY2Nlc3NfdG9rZW4iOnsibmJmIjp7ImVzc2VudGlhbCI6dHJ1ZSwidmFsdWUiOiIxNjAwMDAwMDAwIn19fQ";
+    const header = `Bearer realm="example", error="insufficient_claims", claims="${claims}"`;
+    expect(parseClaimsChallengeFromWwwAuthenticate(header)).toBe(claims);
+  });
+
+  it("extracts unquoted token68 claims payload", () => {
+    const claims = "eyJhY2Nlc3NfdG9rZW4iOnsibmJmIjp7ImVzc2VudGlhbCI6dHJ1ZX19fQ";
+    const header = `Bearer claims=${claims}`;
+    expect(parseClaimsChallengeFromWwwAuthenticate(header)).toBe(claims);
+  });
+
+  it("ignores non-Bearer challenges", () => {
+    const header = 'Basic realm="x", Digest realm="y", claims="ignored"';
+    expect(parseClaimsChallengeFromWwwAuthenticate(header)).toBeUndefined();
+  });
+
+  it("picks the Bearer claims even when other challenges are present", () => {
+    const header = 'Basic realm="x", Bearer realm="api", error="insufficient_claims", claims="ABC123"';
+    expect(parseClaimsChallengeFromWwwAuthenticate(header)).toBe("ABC123");
+  });
+});
+
+describe("createServiceFetch — claims-challenge passthrough", () => {
+  let fetchSpy: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetchSpy = vi.fn();
+    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch;
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("forwards a WWW-Authenticate claims challenge through recoverFromHardAuthFailure", async () => {
+    // Resource server returned 401 with a CAE claims challenge. The
+    // retry succeeds at the token level (forceRefresh produced a
+    // fresh access token) but the server STILL rejects because the
+    // user needs a step-up. Recovery must carry the challenge to
+    // MSAL so the next token explicitly satisfies it.
+    const claims = "eyJjbGFpbXMiOiJBQkMifQ";
+    fetchSpy
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 401,
+          headers: {
+            "WWW-Authenticate": `Bearer realm="api", error="insufficient_claims", claims="${claims}"`,
+          },
+        }),
+      );
+    const acquireToken = vi
+      .fn()
+      .mockResolvedValueOnce("stale")
+      .mockResolvedValueOnce("fresh");
+    const recoverFromHardAuthFailure = vi
+      .fn()
+      .mockRejectedValue(new Error("redirecting"));
+    const serviceFetch = createServiceFetch({
+      acquireToken,
+      recoverFromHardAuthFailure,
+    });
+
+    await expect(serviceFetch("/api/spaces/entities")).rejects.toThrow();
+    expect(recoverFromHardAuthFailure).toHaveBeenCalledTimes(1);
+    const reason = recoverFromHardAuthFailure.mock.calls[0]![0];
+    // Stamped onto the recovery reason so auth-store can forward it
+    // to MSAL.acquireTokenRedirect({ claims }).
+    expect((reason as { claims?: string }).claims).toBe(claims);
   });
 });

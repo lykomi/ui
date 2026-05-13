@@ -27,7 +27,12 @@ export interface MsalClientApplication {
   handleRedirectPromise(): Promise<unknown>;
   clearCache(request?: { account?: MsalAccountInfo }): Promise<void>;
   getAllAccounts(): MsalAccountInfo[];
-  loginRedirect(request: { scopes: string[]; prompt?: string }): Promise<void>;
+  loginRedirect(request: {
+    scopes: string[];
+    prompt?: string;
+    /** Same claims-challenge passthrough as ``acquireTokenRedirect``. */
+    claims?: string;
+  }): Promise<void>;
   logoutRedirect(): Promise<void>;
   setActiveAccount(account: MsalAccountInfo | null): void;
   acquireTokenSilent(request: {
@@ -47,6 +52,25 @@ export interface MsalClientApplication {
   acquireTokenRedirect(request: {
     scopes: string[];
     account: MsalAccountInfo;
+    /**
+     * Force a fresh interactive login regardless of Entra SSO state.
+     * Without ``prompt: "login"``, when the user still has a live
+     * Entra session, the redirect silently round-trips and returns
+     * THE SAME stale token / claims — leaving the SPA back in the
+     * exact broken state we tried to recover from. See
+     * https://learn.microsoft.com/entra/identity-platform/msal-error-handling-js
+     * "Hard expiry / silent redirect loop" pattern.
+     */
+    prompt?: string;
+    /**
+     * Optional Continuous Access Evaluation / Conditional Access
+     * claims challenge payload, parsed from a resource-server 401
+     * response's ``WWW-Authenticate: Bearer ... claims="..."``
+     * header. When present, MSAL passes it through to Entra so the
+     * issued token explicitly satisfies the challenge (MFA step-up,
+     * device-compliance refresh, revocation invalidation, etc.).
+     */
+    claims?: string;
   }): Promise<void>;
   acquireTokenPopup(request: {
     scopes: string[];
