@@ -26,7 +26,14 @@ interface CitationState {
   setResults: (results: CitationResult[]) => void;
   /** Register a handler for citation click actions */
   setHandler: (handler: CitationHandler) => void;
-  /** Clear all citations (e.g. on new conversation) */
+  /**
+   * Reset per-conversation state. Clears ``results`` only — the handler
+   * is module-level state registered once at app boot by feature modules
+   * (e.g. ``registerSpacesCitationHandler``) and must persist across
+   * conversations. Wiping it on "New Thread" produced inert ``[n]``
+   * markers for the rest of the session, since the registration guard
+   * (``registerOnce`` in spaces ``use-spaces-init``) suppresses re-binding.
+   */
   clear: () => void;
 }
 
@@ -41,5 +48,5 @@ export const citationStore = createStore<CitationState>((set) => ({
   handler: null,
   setResults: (results) => set({ results }),
   setHandler: (handler) => set({ handler }),
-  clear: () => set({ results: [], handler: null }),
+  clear: () => set({ results: [] }),
 }));

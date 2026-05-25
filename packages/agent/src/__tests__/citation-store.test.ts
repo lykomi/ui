@@ -33,14 +33,20 @@ describe("citationStore", () => {
   });
 
   describe("clear", () => {
-    it("resets results and handler", () => {
+    it("resets results but preserves the registered handler", () => {
+      // The handler is registered once at app boot by a feature module
+      // (e.g. SPACES). It MUST survive "New Thread" / per-conversation
+      // resets — otherwise every [n] marker in chat becomes inert after
+      // the first new-thread click, since the registration guard
+      // suppresses re-binding for the rest of the session.
+      const handler: CitationHandler = { openCitation: () => {} };
       citationStore.getState().setResults([mockResult]);
-      citationStore.getState().setHandler({ openCitation: () => {} });
+      citationStore.getState().setHandler(handler);
 
       citationStore.getState().clear();
 
       expect(citationStore.getState().results).toEqual([]);
-      expect(citationStore.getState().handler).toBeNull();
+      expect(citationStore.getState().handler).toBe(handler);
     });
   });
 });

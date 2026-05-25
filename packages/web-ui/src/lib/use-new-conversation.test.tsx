@@ -131,7 +131,13 @@ describe("useNewConversation", () => {
     expect(useToolPanelStore.getState().isOpen).toBe(false);
     expect(useSidebarStore.getState().isMobileOpen).toBe(false);
     expect(citationStore.getState().results).toEqual([]);
-    expect(citationStore.getState().handler).toBeNull();
+    // Handler is module-level state registered once at app boot by
+    // feature modules (e.g. SPACES' ``registerSpacesCitationHandler``)
+    // and MUST survive per-conversation resets — wiping it here would
+    // make every ``[n]`` marker inert for the rest of the session,
+    // since the registration guard suppresses re-binding. See
+    // ``packages/agent/src/store/citation-store.ts``.
+    expect(citationStore.getState().handler).not.toBeNull();
   });
 
   it("can reset the thread without leaving the current page", async () => {
