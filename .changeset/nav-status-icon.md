@@ -1,5 +1,5 @@
 ---
-"@iloveagents/foundry-web-ui": minor
+"@iloveagents/foundry-web-ui": patch
 ---
 
 Add `NavItem.statusIcon` slot for sidebar warning / status hints.
