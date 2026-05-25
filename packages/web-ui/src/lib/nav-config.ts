@@ -60,6 +60,17 @@ export interface NavItem {
     tone?: "neutral" | "info" | "low-impact" | "medium-impact" | "high-impact" | "pending";
     label?: string;
   };
+  /**
+   * Optional warning / status icon shown after the label. Use for
+   * "something needs attention" annotations (e.g. failed indexing,
+   * permission drift) where a coloured dot isn't legible enough.
+   * Pass any LucideIcon; the tone drives the colour.
+   */
+  statusIcon?: {
+    icon: LucideIcon;
+    tone?: "neutral" | "info" | "warning" | "danger";
+    label?: string;
+  };
   /** Page description sent to the agent for context */
   description?: string;
   /** Arbitrary metadata sent to the agent (e.g., workspace IDs, entity types) */

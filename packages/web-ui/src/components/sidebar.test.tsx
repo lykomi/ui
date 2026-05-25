@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { FolderOpen, MessageSquare } from "lucide-react";
+import { AlertTriangle, FolderOpen, MessageSquare } from "lucide-react";
 import { useNavStore } from "../lib/nav-store.ts";
 import { useAppStore } from "../lib/app-store.ts";
 import { SIDEBAR_WIDTH, useSidebarStore } from "../lib/sidebar-store.ts";
@@ -321,6 +321,88 @@ describe("Sidebar active state", () => {
       expect(wrappers[0].className).not.toContain("border-t");
       // Second visible wrapper carries the divider
       expect(wrappers[1].className).toContain("border-t");
+    }
+  });
+
+  it("renders NavItem.statusIcon with tone class + tooltip label", async () => {
+    // The statusIcon slot is consumer-driven (e.g. ``spaces-web-ui``
+    // stamps a warning triangle on workspaces with failed indexing).
+    // This test pins three things the consumer relies on:
+    //   1. The supplied LucideIcon component is rendered.
+    //   2. The tone maps to the right Tailwind class (``warning`` →
+    //      ``text-warning``).
+    //   3. The ``label`` lands on both ``aria-label`` and the
+    //      ``title`` attribute so the icon gets a hover tooltip and
+    //      a screen-reader announcement without the consumer having
+    //      to wire anything else.
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    const navConfig: NavGroup[] = [
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/wsA",
+            label: "Workspace With Failures",
+            icon: FolderOpen,
+            statusIcon: {
+              icon: AlertTriangle,
+              tone: "warning",
+              label: "3 documents failed to index",
+            },
+          },
+          {
+            to: "/spaces/wsB",
+            label: "Healthy Workspace",
+            icon: FolderOpen,
+          },
+        ],
+      },
+    ];
+    useNavStore.getState().setConfig(navConfig);
+    useAppStore.setState({
+      currentPage: "/spaces/wsA",
+      threadActive: false,
+      contextItems: [],
+      sentContext: {},
+      highlights: [],
+      selectedItemId: null,
+      content: {},
+    });
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/wsA"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // The warning row carries the icon wrapped in a span. The label
+    // lands on both ``aria-label`` (screen reader) and ``title``
+    // (hover tooltip) on the wrapping span; the inner svg carries
+    // the tone class.
+    const warningWrappers = container.querySelectorAll<HTMLElement>(
+      'span[aria-label="3 documents failed to index"]',
+    );
+    expect(warningWrappers.length).toBeGreaterThan(0);
+    const wrapper = warningWrappers[0];
+    expect(wrapper.getAttribute("title")).toBe("3 documents failed to index");
+    expect(wrapper.querySelector("svg.text-warning")).not.toBeNull();
+
+    // No statusIcon on the healthy workspace ⇒ its leaf row
+    // contains no warning svg. Workspaces are rendered as NavLink
+    // anchors (button is for folders), so scope to ``a, button``
+    // and reject ancestor containers that happen to enclose BOTH
+    // workspaces.
+    const healthyRowLeaves = Array.from(
+      container.querySelectorAll<HTMLElement>("a, button"),
+    ).filter((el) => el.textContent?.includes("Healthy Workspace"));
+    expect(healthyRowLeaves.length).toBeGreaterThan(0);
+    for (const leaf of healthyRowLeaves) {
+      expect(leaf.querySelectorAll("svg.text-warning").length).toBe(0);
     }
   });
 });

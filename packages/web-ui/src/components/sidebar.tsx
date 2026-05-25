@@ -28,6 +28,7 @@ const ACTIVE_NAV_BADGE_CLASS =
 const NESTED_NAV_INDENTS = ["pl-5", "pl-7", "pl-9", "pl-11", "pl-13"] as const;
 
 type NavStatusDot = NonNullable<NavItem["statusDot"]>;
+type NavStatusIcon = NonNullable<NavItem["statusIcon"]>;
 
 function getNestedNavIndent(depth: number) {
   return NESTED_NAV_INDENTS[depth] ?? NESTED_NAV_INDENTS[NESTED_NAV_INDENTS.length - 1];
@@ -63,6 +64,43 @@ function NavStatusDot({ statusDot }: { statusDot?: NavStatusDot }) {
       )}
       style={{ backgroundColor: statusDotColor(statusDot.tone) }}
     />
+  );
+}
+
+function statusIconClass(tone: NavStatusIcon["tone"]) {
+  switch (tone) {
+    case "warning":
+      return "text-warning";
+    case "danger":
+      return "text-destructive";
+    case "info":
+      return "text-primary";
+    case "neutral":
+    default:
+      return "text-sidebar-foreground/60";
+  }
+}
+
+function NavStatusIcon({ statusIcon }: { statusIcon?: NavStatusIcon }) {
+  if (!statusIcon) return null;
+  const Icon = statusIcon.icon;
+  // Wrap in a ``<span>`` so the browser tooltip (``title``) and the
+  // screen-reader announcement (``aria-label``) attach to a real DOM
+  // node — lucide-react's icon types don't accept ``title`` as a
+  // prop. Kept small (size-3) so the icon doesn't compete with the
+  // entity icon on the left of the row.
+  return (
+    <span
+      role="img"
+      aria-label={statusIcon.label}
+      title={statusIcon.label}
+      className="inline-flex shrink-0"
+    >
+      <Icon
+        aria-hidden="true"
+        className={cn("size-3 shrink-0", statusIconClass(statusIcon.tone))}
+      />
+    </span>
   );
 }
 
@@ -447,6 +485,7 @@ function NavLeafItem({
               {item.badge}
             </span>
           )}
+          <NavStatusIcon statusIcon={item.statusIcon} />
           <NavStatusDot statusDot={item.statusDot} />
         </button>
         {/* File-drop hint icon — rendered as an inline flex sibling so it
@@ -505,6 +544,7 @@ function NavLeafItem({
           {item.badge}
         </span>
       )}
+      <NavStatusIcon statusIcon={item.statusIcon} />
       <NavStatusDot statusDot={item.statusDot} />
       {isFileDragOver && !isDisabled && (
         <Upload
@@ -676,6 +716,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
               {item.badge}
             </span>
           )}
+          <NavStatusIcon statusIcon={item.statusIcon} />
           <NavStatusDot statusDot={item.statusDot} />
         </button>
         {/* File-drop hint icon — inline flex sibling so it sits to the
@@ -818,6 +859,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
               {item.badge}
             </span>
           )}
+          <NavStatusIcon statusIcon={item.statusIcon} />
           <NavStatusDot statusDot={item.statusDot} />
         </button>
         {/* File-drop hint icon — inline flex sibling so it sits to the
@@ -904,6 +946,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
               {item.badge}
             </span>
           )}
+          <NavStatusIcon statusIcon={item.statusIcon} />
           <NavStatusDot statusDot={item.statusDot} />
           {isFileDragOver && (
             <Upload
