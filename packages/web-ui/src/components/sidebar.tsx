@@ -27,6 +27,39 @@ const ACTIVE_NAV_BADGE_CLASS =
   "border border-sidebar-border bg-background/60 text-sidebar-foreground";
 const NESTED_NAV_INDENTS = ["pl-5", "pl-7", "pl-9", "pl-11", "pl-13"] as const;
 
+// Shared icon-column geometry. Top-level item rows render their
+// leading icon at ``size-4`` (16px) followed by ``gap-2`` (8px)
+// before the label. The group-header chevron uses the SAME column
+// width + gap so the group label and item labels share an exact
+// x-coordinate — without this invariant headers visually drift right
+// (previously the chevron defaulted to ``size-6`` = 24px) and the
+// sidebar looks ragged. Verified empirically against the live DOM:
+// item icon x-min ≈ header chevron x-min, item label x ≈ header
+// label x (within 1px allowing for the item's ``border-transparent``
+// inset).
+const SIDEBAR_ITEM_ICON_CLASS = "size-4 shrink-0";
+const SIDEBAR_ITEM_GAP_CLASS = "gap-2";
+// Outer padding for the group-header wrapper. Horizontal matches
+// ``px-3`` on item buttons so the chevron column lines up with the
+// item icon column. Vertical is asymmetric: ``pt-3`` (12px) above
+// gives breathing room between sections, ``pb-1`` (4px) below bonds
+// the header to its first child — the ChatGPT / Linear / Notion
+// "header sits on its children" pattern. Symmetric ``py-2`` made
+// the header float midway between sections instead of belonging
+// to the group below it.
+const SIDEBAR_GROUP_HEADER_PADDING = "px-3 pt-4 pb-0";
+// Typography for the group-header LABEL text (CHATS / WORKSPACES /
+// ADMIN / …). Stays at ``text-xs`` (12px) — same size as before —
+// but bumps weight from ``font-medium`` to ``font-semibold``. The
+// extra weight gives section headers the structural presence they
+// need to feel like section dividers without spending vertical
+// space; combined with ``uppercase tracking-wider`` it's the
+// ChatGPT / Linear / Notion small-caps section-label rhythm.
+// Bumping size AND weight together stacked too much visual mass
+// against the already-wide uppercase tracking — felt shouty.
+const SIDEBAR_GROUP_HEADER_LABEL_CLASS =
+  "text-xs font-semibold uppercase tracking-wider";
+
 type NavStatusDot = NonNullable<NavItem["statusDot"]>;
 type NavStatusIcon = NonNullable<NavItem["statusIcon"]>;
 
@@ -1184,7 +1217,12 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   return (
     <div data-nav-group-label={group.label}>
       {!group.hideLabel && (
-        <div className="px-3 py-2">
+        // Outer padding matches the depth-0 item button's ``px-3`` so
+        // the chevron / leading spacer sits in the SAME icon column as
+        // item icons, and the group label ends up at the exact x-coordinate
+        // as item labels. See ``SIDEBAR_GROUP_HEADER_PADDING`` definition
+        // for the alignment invariant.
+        <div className={SIDEBAR_GROUP_HEADER_PADDING}>
           {isCollapsible ? (
             // Collapsible header is a flex of three siblings: chevron
             // toggle (own button), label (NavLink when ``group.to``
@@ -1192,19 +1230,45 @@ function NavGroupSection({ group }: { group: NavGroup }) {
             // landing page — Workspaces does this), createActions
             // menu. Three SIBLINGS, not nested, so HTML stays valid
             // (no <button> inside <button> / inside Radix's button).
-            <div className="group/header flex items-center justify-between rounded-lg transition-colors hover:bg-sidebar-accent/70">
+            //
+            // Geometry: the chevron occupies the SAME width as item
+            // icons (``SIDEBAR_ITEM_ICON_CLASS``) followed by
+            // ``SIDEBAR_ITEM_GAP_CLASS``, so the group label and the
+            // item labels share an exact x-coordinate. The chevron's
+            // click target is larger than its visual size — extended
+            // via padding on the wrapper button — so users don't have
+            // to hit a tiny target. The clickable invisible padding
+            // OVERLAPS the gap rather than pushing the label right
+            // (negative-margin + extra padding cancel out).
+            <div
+              className={cn(
+                "group/header flex items-center justify-between rounded-lg transition-colors hover:bg-sidebar-accent/70",
+                SIDEBAR_ITEM_GAP_CLASS,
+              )}
+            >
               <button
                 type="button"
                 data-nav-group-toggle
                 onClick={() => toggleGroupCollapsed(group.label, persistedCollapsed)}
                 aria-expanded={!collapsed}
                 aria-label={collapsed ? `Expand ${group.label}` : `Collapse ${group.label}`}
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded text-sidebar-foreground/50 hover:text-sidebar-foreground"
+                // Visual cell width = ``SIDEBAR_ITEM_ICON_CLASS`` (14px)
+                // so the chevron sits in the same column as item icons
+                // and the group label aligns with item labels. The
+                // chevron SVG (``size-3`` = 12px) is smaller than the
+                // cell so it reads as a hint, not a primary control.
+                // Hit area is the cell width; the row's ``group/header``
+                // hover state covers the rest of the strip so users get
+                // visual feedback even on near-misses.
+                className={cn(
+                  "inline-flex items-center justify-center rounded text-sidebar-foreground/50 hover:text-sidebar-foreground",
+                  SIDEBAR_ITEM_ICON_CLASS,
+                )}
               >
                 {collapsed ? (
-                  <ChevronRight className="size-3 transition-transform" />
+                  <ChevronRight className="size-3.5 transition-transform" />
                 ) : (
-                  <ChevronDown className="size-3 transition-transform" />
+                  <ChevronDown className="size-3.5 transition-transform" />
                 )}
               </button>
               {group.to ? (
@@ -1213,7 +1277,8 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                     <>
                       <span
                         className={cn(
-                          "truncate text-xs font-medium uppercase tracking-wider",
+                          "truncate",
+                          SIDEBAR_GROUP_HEADER_LABEL_CLASS,
                           isActive
                             ? "text-sidebar-selected-foreground"
                             : "text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground",
@@ -1231,7 +1296,12 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                   onClick={() => toggleGroupCollapsed(group.label, persistedCollapsed)}
                   className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left"
                 >
-                  <span className="truncate text-xs font-medium uppercase tracking-wider text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground">
+                  <span
+                    className={cn(
+                      "truncate text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground",
+                      SIDEBAR_GROUP_HEADER_LABEL_CLASS,
+                    )}
+                  >
                     {group.label}
                   </span>
                   <NavStatusDot statusDot={bubbledStatusDot} />
@@ -1242,12 +1312,23 @@ function NavGroupSection({ group }: { group: NavGroup }) {
               )}
             </div>
           ) : group.to ? (
-            <div className="flex items-center justify-between rounded-lg py-1.5 transition-colors hover:bg-sidebar-accent/70">
+            // Non-collapsible header: no chevron, but we still emit an
+            // invisible spacer of ``SIDEBAR_ITEM_ICON_CLASS`` width + the
+            // shared gap so the group label lands in the same column as
+            // collapsible headers and item labels.
+            <div
+              className={cn(
+                "flex items-center justify-between rounded-lg py-1.5 transition-colors hover:bg-sidebar-accent/70",
+                SIDEBAR_ITEM_GAP_CLASS,
+              )}
+            >
+              <span aria-hidden="true" className={SIDEBAR_ITEM_ICON_CLASS} />
               <NavLink to={group.to} end className="min-w-0 flex-1">
                 {({ isActive }) => (
                   <span
                     className={cn(
-                      "block text-xs font-medium uppercase tracking-wider",
+                      "block",
+                      SIDEBAR_GROUP_HEADER_LABEL_CLASS,
                       isActive
                         ? "text-sidebar-selected-foreground"
                         : "text-sidebar-foreground/65 hover:text-sidebar-foreground",
@@ -1262,9 +1343,17 @@ function NavGroupSection({ group }: { group: NavGroup }) {
               )}
             </div>
           ) : (
-            <span className="text-xs font-medium uppercase tracking-wider text-sidebar-foreground/65">
-              {group.label}
-            </span>
+            <div className={cn("flex items-center", SIDEBAR_ITEM_GAP_CLASS)}>
+              <span aria-hidden="true" className={SIDEBAR_ITEM_ICON_CLASS} />
+              <span
+                className={cn(
+                  "text-sidebar-foreground/65",
+                  SIDEBAR_GROUP_HEADER_LABEL_CLASS,
+                )}
+              >
+                {group.label}
+              </span>
+            </div>
           )}
         </div>
       )}
