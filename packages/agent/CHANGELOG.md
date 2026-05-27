@@ -1,5 +1,18 @@
 # @iloveagents/foundry-agent
 
+## 0.2.1
+
+### Patch Changes
+
+- No source changes. The 0.2.0 publish for `@iloveagents/foundry-agent` and
+  `@iloveagents/foundry-web-primitives` failed because npm had `0.2.0`
+  reserved for those two packages from an older publish-then-unpublish
+  cycle (the version was reserved before the recent v1 incident — see
+  git tag history). `@iloveagents/foundry-web-shell@0.2.0` and
+  `@iloveagents/foundry-web-ui@0.2.0` published cleanly. Bumping the
+  whole fixed group to 0.2.1 so all four publish together at a version
+  number that's free across all four packages.
+
 ## 0.2.0
 
 ### Minor Changes

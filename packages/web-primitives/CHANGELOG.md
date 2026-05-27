@@ -1,5 +1,17 @@
 # @iloveagents/foundry-web-primitives
 
+## 0.2.1
+
+### Patch Changes
+
+- No source changes. Bumped in lock-step with the fixed group so the
+  whole group can publish at a version number that's free across all
+  four packages. `@iloveagents/foundry-agent@0.2.0` and
+  `@iloveagents/foundry-web-primitives@0.2.0` were blocked by an old
+  npm reservation; `shell` and `ui` published at 0.2.0 successfully.
+  0.2.1 unblocks the two stuck packages without leaving the fixed
+  group drifting.
+
 ## 0.2.0
 
 ### Minor Changes

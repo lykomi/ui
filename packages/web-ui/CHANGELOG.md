@@ -1,5 +1,14 @@
 # @iloveagents/foundry-web-ui
 
+## 0.2.1
+
+### Patch Changes
+
+- No source changes. Bumped in lock-step with the fixed group so the
+  whole group can publish at a version number that's free across all
+  four packages. (`ui@0.2.0` already published cleanly; this is a
+  follow-the-group patch bump.)
+
 ## 0.2.0
 
 ### Minor Changes
