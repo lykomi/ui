@@ -1,6 +1,6 @@
 {
   "name": "@iloveagents/foundry-agent",
-  "version": "1.0.1",
+  "version": "0.2.0",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "types": "./src/index.ts",

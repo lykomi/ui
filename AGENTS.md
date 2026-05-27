@@ -50,6 +50,8 @@ Rules:
 - Use `@/` path aliases in packages (relative imports only).
 - Add backward-compatibility shims pre-1.0 — every caller updates lock-step in the same PR.
 - Import `react`, `react-dom`, `@assistant-ui/*`, or bare `"zustand"` inside `packages/agent/src/` (msal subpath excepted for `@azure/msal-browser`).
+- **Re-introduce sibling `@iloveagents/foundry-*` packages into `peerDependencies`.** They belong in `dependencies` because the four packages always ship together as a coordinated fixed group from this monorepo. Listing them as peerDeps triggers changesets'
+  `shouldBumpMajor` cascade: a single `minor` changeset on any of the four would (a) exit the sibling's strict `^0.x.y` peerDep range, (b) promote every dependent to a major bump, (c) the `fixed` group syncs all four to the highest version → an unintentional 0.x → 1.0.0 jump. This happened on 2026-05-27 (1.0.0 and 1.0.1 were briefly published and unpublished; both version numbers are now permanently reserved on npm). Sibling foundry-`*` cross-references stay in `dependencies` with `workspace:*` — pnpm hoists by name so consumers still get a single instance.
 
 # Code Style
 

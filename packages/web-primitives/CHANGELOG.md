@@ -1,45 +1,20 @@
 # @iloveagents/foundry-web-primitives
 
-## 1.0.1
-
-### Patch Changes
-
-- e54a336: chore(release): republish web-shell + web-ui (npm refused 1.0.0 — version was previously reserved)
-
-  No source changes. The 1.0.0 release ran successfully for
-  `@iloveagents/foundry-agent` and `@iloveagents/foundry-web-primitives`,
-  but the npm publish for `@iloveagents/foundry-web-shell@1.0.0` and
-  `@iloveagents/foundry-web-ui@1.0.0` failed with E400 "Cannot publish
-  over previously published version" — those exact version numbers
-  appear to have been reserved on the registry from an earlier
-  publish-then-unpublish cycle. Bumping the fixed group to 1.0.1 so
-  the four packages stay version-aligned and the publish goes through.
-
-## 1.0.0
+## 0.2.0
 
 ### Minor Changes
 
-- 9105483: shell: ChatConversationConfig API + sticky-runtime threadId
+- shell: ChatConversationConfig API + sticky-runtime threadId — bumped as
+  part of the fixed group with `foundry-web-shell` / `foundry-web-ui` /
+  `foundry-agent`. No direct source changes in this package.
 
-  Lets a downstream module (e.g. `@ltwlf/spaces-web-ui`) attach a
-  `ChatConversationConfig` to its `ChatModule`. The shell then:
-  - Pre-mints a fresh thread UUID via `useRef` so the AG-UI runtime's
-    `threadId` is defined from first render — no `undefined → defined`
-    remount mid-conversation when the user sends the first message.
-  - Calls `config.useStickyConversationId()` (when declared) and
-    feeds the resulting id into the runtime so the chat stays "live"
-    while the user browses non-chat routes (Workspaces, Jobs, etc.).
-  - Per-config keyed child components (`StickyAwareRuntime` vs
-    `UrlOnlyRuntime`) so optional hooks satisfy Rules-of-Hooks across
-    multi-module config swaps.
+### NOTE: 1.0.0 / 1.0.1 were accidental
 
-  UI: collapsible nav groups in `sidebar.tsx` with persisted state via
-  `useSyncExternalStore` + localStorage, plus stable group ordering via
-  new `priority` field in `nav-config.ts`.
-
-  `ag-ui-runtime-provider.tsx` accepts an external `threadId` and
-  `historyAdapterFactory` so the consuming app can wire its own
-  persistence (e.g. `ThreadHistoryAdapter` → REST `/api/conversations`).
+These version numbers were published briefly on 2026-05-27 due to the
+peerDep cascade bug in the sibling packages (see `foundry-agent`'s 0.2.0
+changelog entry), then unpublished. The version numbers themselves are
+now permanently reserved on npm and CANNOT be re-published. Do not
+depend on 1.0.x.
 
 ## 0.1.5
 

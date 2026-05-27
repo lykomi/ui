@@ -1,30 +1,10 @@
 # @iloveagents/foundry-web-shell
 
-## 1.0.1
-
-### Patch Changes
-
-- e54a336: chore(release): republish web-shell + web-ui (npm refused 1.0.0 — version was previously reserved)
-
-  No source changes. The 1.0.0 release ran successfully for
-  `@iloveagents/foundry-agent` and `@iloveagents/foundry-web-primitives`,
-  but the npm publish for `@iloveagents/foundry-web-shell@1.0.0` and
-  `@iloveagents/foundry-web-ui@1.0.0` failed with E400 "Cannot publish
-  over previously published version" — those exact version numbers
-  appear to have been reserved on the registry from an earlier
-  publish-then-unpublish cycle. Bumping the fixed group to 1.0.1 so
-  the four packages stay version-aligned and the publish goes through.
-
-- Updated dependencies [e54a336]
-  - @iloveagents/foundry-web-ui@1.0.1
-  - @iloveagents/foundry-agent@1.0.1
-  - @iloveagents/foundry-web-primitives@1.0.1
-
-## 1.0.0
+## 0.2.0
 
 ### Minor Changes
 
-- 9105483: shell: ChatConversationConfig API + sticky-runtime threadId
+- shell: ChatConversationConfig API + sticky-runtime threadId
 
   Lets a downstream module (e.g. `@ltwlf/spaces-web-ui`) attach a
   `ChatConversationConfig` to its `ChatModule`. The shell then:
@@ -38,21 +18,28 @@
     `UrlOnlyRuntime`) so optional hooks satisfy Rules-of-Hooks across
     multi-module config swaps.
 
-  UI: collapsible nav groups in `sidebar.tsx` with persisted state via
-  `useSyncExternalStore` + localStorage, plus stable group ordering via
-  new `priority` field in `nav-config.ts`.
-
-  `ag-ui-runtime-provider.tsx` accepts an external `threadId` and
-  `historyAdapterFactory` so the consuming app can wire its own
-  persistence (e.g. `ThreadHistoryAdapter` → REST `/api/conversations`).
-
 ### Patch Changes
 
-- Updated dependencies [9105483]
-- Updated dependencies [2b10540]
-  - @iloveagents/foundry-web-ui@1.0.0
-  - @iloveagents/foundry-agent@1.0.0
-  - @iloveagents/foundry-web-primitives@1.0.0
+- Move `@iloveagents/foundry-agent`, `-web-primitives`, `-web-ui` from
+  `peerDependencies` to `dependencies`. They always ship together as a
+  coordinated fixed group from this monorepo — they were never
+  independently-versioned peers. Declaring them as peerDeps caused
+  changesets' `shouldBumpMajor` cascade to promote the entire group to
+  a major version on every minor changeset. See the root `foundry-agent`
+  CHANGELOG entry for details.
+
+- Updated dependencies
+  - @iloveagents/foundry-web-ui@0.2.0
+  - @iloveagents/foundry-agent@0.2.0
+  - @iloveagents/foundry-web-primitives@0.2.0
+
+### NOTE: 1.0.1 was accidental
+
+Version 1.0.1 was published briefly on 2026-05-27 due to the peerDep
+cascade bug described above (1.0.0 was reserved but not published —
+1.0.1 was the retry). It has been unpublished. Both 1.0.0 and 1.0.1
+are now permanently reserved on npm and CANNOT be re-published. Do
+not depend on 1.0.x.
 
 ## 0.1.5
 

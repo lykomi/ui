@@ -1,25 +1,10 @@
 # @iloveagents/foundry-agent
 
-## 1.0.1
-
-### Patch Changes
-
-- e54a336: chore(release): republish web-shell + web-ui (npm refused 1.0.0 — version was previously reserved)
-
-  No source changes. The 1.0.0 release ran successfully for
-  `@iloveagents/foundry-agent` and `@iloveagents/foundry-web-primitives`,
-  but the npm publish for `@iloveagents/foundry-web-shell@1.0.0` and
-  `@iloveagents/foundry-web-ui@1.0.0` failed with E400 "Cannot publish
-  over previously published version" — those exact version numbers
-  appear to have been reserved on the registry from an earlier
-  publish-then-unpublish cycle. Bumping the fixed group to 1.0.1 so
-  the four packages stay version-aligned and the publish goes through.
-
-## 1.0.0
+## 0.2.0
 
 ### Minor Changes
 
-- 9105483: shell: ChatConversationConfig API + sticky-runtime threadId
+- shell: ChatConversationConfig API + sticky-runtime threadId
 
   Lets a downstream module (e.g. `@ltwlf/spaces-web-ui`) attach a
   `ChatConversationConfig` to its `ChatModule`. The shell then:
@@ -43,9 +28,31 @@
 
 ### Patch Changes
 
-- 2b10540: Fix `citationStore.clear()` so the registered handler survives per-conversation resets.
+- Fix `citationStore.clear()` so the registered handler survives per-conversation resets.
 
   The previous implementation wiped both `results` AND `handler`. `useNewConversation` calls `clear()` on every "New Thread" click. Combined with the `registerOnce`-style handler registration in feature modules (e.g. SPACES' `registerSpacesCitationHandler`), the result was that all `[n]` citation markers in chat became inert non-clickable spans for the rest of the session after the first new-thread click. `clear()` now resets `results` only — the handler is module-level state and must persist.
+
+- Move sibling `@iloveagents/foundry-*` declarations from `peerDependencies`
+  to `dependencies` in `foundry-web-shell` and `foundry-web-ui`. These four
+  packages always ship together as a coordinated fixed group from the same
+  monorepo — they were never independently-versioned peers, so declaring
+  them as peerDeps caused changesets' `shouldBumpMajor` cascade to promote
+  the entire group to a major version on every minor changeset (a single
+  minor on any of the four would exit the sibling's `^0.x.y` peerDep range
+  → all dependents promoted to major → fixed group synced all four to
+  major → 0.1.5 unexpectedly jumped to 1.0.0). Moving to `dependencies`
+  eliminates the cascade entirely; `dependencies` never trigger
+  `shouldBumpMajor`. Consumers that already install each foundry-\* package
+  directly are unaffected — pnpm hoists by name, so a single instance
+  resolves across the dep graph regardless of declaration site.
+
+### NOTE: 1.0.0 / 1.0.1 were accidental
+
+These version numbers were published briefly on 2026-05-27 due to the
+peerDep cascade bug described above, then unpublished. The version
+numbers themselves are now permanently reserved on npm and CANNOT be
+re-published. This 0.2.0 release captures all the work that was in
+the accidental 1.0.x releases. Do not depend on 1.0.x.
 
 ## 0.1.5
 
