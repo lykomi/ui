@@ -283,9 +283,39 @@ function RuntimeBody({
   prevStickyRef.current = sticky;
 
   // Effective id seen by AGUIRuntimeProvider — always defined.
-  //   sticky (current conversation) wins, else fall back to the
-  //   shell-minted UUID for fresh chats.
-  const effectiveThreadId: string = sticky ?? urlMatch ?? freshIdRef.current;
+  //
+  // Priority order matters and is intentional:
+  //   1. ``urlMatch`` — when the user is on ``/chat/<id>`` the URL is
+  //      ALWAYS the authoritative conversation. This MUST come before
+  //      ``sticky`` because of a stale-render race on cross-chat
+  //      navigation:
+  //        - User is on ``/chat/A``. ``active-chat-store`` holds ``A``.
+  //          So ``sticky = A``.
+  //        - User clicks a Recents row for ``B`` →
+  //          ``react-router`` updates pathname to ``/chat/B``.
+  //        - On the synchronous render that follows, ``urlMatch`` is
+  //          ``B`` (read from ``useLocation``) but
+  //          ``useTrackActiveChatFromUrl``'s ``useEffect`` hasn't run
+  //          yet — so ``sticky`` is still ``A``.
+  //        - With ``sticky ?? urlMatch`` we'd compute
+  //          ``effectiveThreadId = A``, bind the AG-UI adapter to ``A``,
+  //          and the first message the user sends would create a NEW
+  //          row at ``A``'s old thread id while the URL says ``B``.
+  //          Symptoms: TWO active dots in the sidebar (URL highlights
+  //          row ``B``, the new row's id activates the dot on a
+  //          freshly-appeared "Untitled chat"); resume appears to
+  //          mint a new conversation; messages land on the wrong row.
+  //      Putting ``urlMatch`` first eliminates the race entirely: when
+  //      the URL says we're on chat ``B``, the runtime targets ``B``
+  //      from the very first render, regardless of stale store state.
+  //   2. ``sticky`` — for non-chat URLs (``/spaces``, ``/tasks`` …)
+  //      ``urlMatch`` is ``undefined``. ``sticky`` keeps the popout
+  //      chat "live" while the user browses elsewhere.
+  //   3. ``freshIdRef.current`` — brand-new chat on ``/`` with no
+  //      sticky and no URL match. Pre-minted so the runtime's
+  //      ``threadId`` is defined from the first render (no
+  //      ``undefined → defined`` remount of assistant-ui).
+  const effectiveThreadId: string = urlMatch ?? sticky ?? freshIdRef.current;
 
   const historyAdapterFactory = useCallback<AGUIHistoryAdapterFactory>(
     (args: AGUIChatConversationFactoryArgs) =>
