@@ -6,6 +6,7 @@ export { defaultAgentFetch } from "./service-fetch-default.ts";
 export { defineChatModule } from "./types.ts";
 export type {
   ChatModule,
+  ChatConversationConfig,
   ShellPage,
   AuthAdapter,
   BootstrapShellOptions,

@@ -5,6 +5,10 @@ export { ToolPanelLayout } from "./components/tool-panel-layout.tsx";
 export { MarkdownText, markdownComponents } from "./components/markdown-text.tsx";
 export { ClientToolExecutor } from "./components/client-tool-executor.tsx";
 export { AGUIRuntimeProvider, useAGUIAdapter } from "./components/ag-ui-runtime-provider.tsx";
+export type {
+  AGUIChatConversationFactoryArgs,
+  AGUIHistoryAdapterFactory,
+} from "./components/ag-ui-runtime-provider.tsx";
 export { ChatContent, DEFAULT_STARTER_SUGGESTIONS } from "./components/assistant-chat.tsx";
 export type { ChatContentProps } from "./components/assistant-chat.tsx";
 export { ChatBubble } from "./components/chat-bubble.tsx";

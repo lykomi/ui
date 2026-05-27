@@ -113,6 +113,27 @@ export interface CollapsedRailContext {
 export interface NavGroup {
   label: string;
   items: NavItem[];
+  /**
+   * Render order weight. Higher = higher in the sidebar. Default 0.
+   * Ties keep insertion order (stable sort), so existing call sites
+   * that don't set a priority preserve the legacy "addGroup appends"
+   * behaviour. Use this to pin a group to a specific slot regardless
+   * of which feature hook finishes first.
+   */
+  priority?: number;
+  /**
+   * When true, the group header gets a click-to-toggle chevron and
+   * the children hide when collapsed. State persists per group label
+   * in localStorage so the user's preference survives reloads. Mutually
+   * exclusive with ``hideLabel`` — a hidden label can't host a chevron.
+   *
+   * If any child carries a :attr:`NavItem.statusDot`, it bubbles up to
+   * the collapsed header so the user can still see "the active chat is
+   * inside this collapsed group" without auto-expanding.
+   */
+  collapsible?: boolean;
+  /** Initial collapse state when no user preference is stored. */
+  defaultCollapsed?: boolean;
   /** Optional link for the group header label */
   to?: string;
   /** Hide the group header while preserving group semantics. */

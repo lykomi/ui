@@ -406,3 +406,206 @@ describe("Sidebar active state", () => {
     }
   });
 });
+
+describe("Sidebar group priority + collapse + status bubble-up", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+  let originalActEnvironment: boolean | undefined;
+  let originalInnerWidth: number;
+  let originalMatchMedia: typeof window.matchMedia | undefined;
+
+  beforeEach(() => {
+    originalActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
+    originalInnerWidth = window.innerWidth;
+    originalMatchMedia = window.matchMedia;
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+    localStorage.clear();
+    window.innerWidth = 1280;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value:
+        originalMatchMedia ||
+        ((query: string) =>
+          ({
+            matches: false,
+            media: query,
+            onchange: null,
+            addListener: () => {},
+            removeListener: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            dispatchEvent: () => false,
+          })),
+    });
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    act(() => {
+      root = createRoot(container);
+    });
+    useSidebarStore.setState({ collapsed: false, width: SIDEBAR_WIDTH });
+    useNavStore.setState({ groups: [], config: [] } as Parameters<
+      typeof useNavStore.setState
+    >[0]);
+  });
+
+  afterEach(() => {
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+    globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment;
+    window.innerWidth = originalInnerWidth;
+    if (originalMatchMedia) {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        writable: true,
+        value: originalMatchMedia,
+      });
+    } else {
+      // @ts-expect-error deleting configurable test override
+      delete window.matchMedia;
+    }
+  });
+
+  function indexOfLabel(label: string): number {
+    const headers = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-nav-group-label]"),
+    );
+    return headers.findIndex(
+      (el) => el.getAttribute("data-nav-group-label") === label,
+    );
+  }
+
+  it("sorts groups by NavGroup.priority desc (higher priority first)", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+    const navConfig: NavGroup[] = [
+      {
+        label: "Low",
+        priority: 10,
+        items: [{ to: "/low", label: "Low item", icon: FolderOpen }],
+      },
+      {
+        label: "High",
+        priority: 100,
+        items: [{ to: "/high", label: "High item", icon: FolderOpen }],
+      },
+      {
+        label: "Mid",
+        priority: 50,
+        items: [{ to: "/mid", label: "Mid item", icon: FolderOpen }],
+      },
+    ];
+    useNavStore.getState().setConfig(navConfig);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    const idxHigh = indexOfLabel("High");
+    const idxMid = indexOfLabel("Mid");
+    const idxLow = indexOfLabel("Low");
+    expect(idxHigh).toBeGreaterThanOrEqual(0);
+    expect(idxMid).toBeGreaterThan(idxHigh);
+    expect(idxLow).toBeGreaterThan(idxMid);
+  });
+
+  it("collapsing a group hides its children and persists to localStorage", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+    const navConfig: NavGroup[] = [
+      {
+        label: "Recents",
+        collapsible: true,
+        items: [
+          { to: "/chat/1", label: "First chat", icon: MessageSquare },
+          { to: "/chat/2", label: "Second chat", icon: MessageSquare },
+        ],
+      },
+    ];
+    useNavStore.getState().setConfig(navConfig);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // Children visible initially (count varies — the sidebar may
+    // also render an icon-only tooltip mirror in jsdom; we only care
+    // that "First chat" appears at least once now and disappears
+    // after collapse).
+    const childTextBefore = container.textContent ?? "";
+    expect(childTextBefore).toContain("First chat");
+    expect(childTextBefore).toContain("Second chat");
+
+    // Click the group header toggle button.
+    const headerToggle = container.querySelector<HTMLElement>(
+      '[data-nav-group-label="Recents"] [data-nav-group-toggle]',
+    );
+    expect(headerToggle).toBeTruthy();
+    await act(async () => {
+      headerToggle!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    // Children gone after collapse.
+    const childTextAfter = container.textContent ?? "";
+    expect(childTextAfter).not.toContain("First chat");
+    expect(childTextAfter).not.toContain("Second chat");
+
+    // Persisted to localStorage under the generic package-scoped key.
+    const persisted = JSON.parse(
+      localStorage.getItem("sidebar-nav-collapsed") ?? "{}",
+    );
+    expect(persisted.Recents).toBe(true);
+  });
+
+  it("child statusDot bubbles up to the collapsed group header", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+    const navConfig: NavGroup[] = [
+      {
+        label: "Recents",
+        collapsible: true,
+        defaultCollapsed: true,
+        items: [
+          {
+            to: "/chat/active",
+            label: "Active chat",
+            icon: MessageSquare,
+            statusDot: { tone: "primary", srLabel: "active" },
+          },
+          { to: "/chat/idle", label: "Idle chat", icon: MessageSquare },
+        ],
+      },
+    ];
+    useNavStore.getState().setConfig(navConfig);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    const header = container.querySelector<HTMLElement>(
+      '[data-nav-group-label="Recents"]',
+    );
+    expect(header).toBeTruthy();
+    // The bubbled-up dot is rendered with the same status-dot marker
+    // as a child status dot; scope the lookup to the header.
+    const bubble = header!.querySelector<HTMLElement>("[data-nav-status-dot]");
+    expect(bubble).toBeTruthy();
+  });
+});

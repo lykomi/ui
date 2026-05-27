@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { NavLink, useNavigate } from "react-router";
-import { Ellipsis, Layers, PanelLeft, PanelLeftOpen, SquarePen, ChevronRight, GripVertical, Plus, Upload } from "lucide-react";
+import { Ellipsis, Layers, PanelLeft, PanelLeftOpen, SquarePen, ChevronDown, ChevronRight, GripVertical, Plus, Upload } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   useSidebarStore,
@@ -12,7 +12,7 @@ import { useToolPanelStore } from "../lib/tool-panel-store.ts";
 import { useNewConversation } from "../lib/use-new-conversation.ts";
 import { useNavStore } from "../lib/nav-store.ts";
 import { useAppStore } from "../lib/app-store.ts";
-import type { NavItem, NavItemDnd } from "../lib/nav-config.ts";
+import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import { getContainerDropZoneLabel, hasAnyDropTarget, hasExternalFilesData } from "../lib/nav-dnd.ts";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { Button } from "@iloveagents/foundry-web-primitives";
@@ -54,13 +54,20 @@ function statusDotColor(tone: NavStatusDot["tone"]) {
 
 function NavStatusDot({ statusDot }: { statusDot?: NavStatusDot }) {
   if (!statusDot) return null;
+  // Both "pending" (impact in progress) and "info" (live / active —
+  // e.g. the currently-resumed chat conversation) pulse so the eye is
+  // drawn to "something is happening / you are here right now".
+  // Other tones render static.
+  const pulse = statusDot.tone === "pending" || statusDot.tone === "info";
   return (
     <span
+      data-nav-status-dot
+      data-nav-status-tone={statusDot.tone}
       aria-label={statusDot.label}
       title={statusDot.label}
       className={cn(
         "size-1.5 shrink-0 rounded-full opacity-90",
-        statusDot.tone === "pending" && "animate-pulse",
+        pulse && "animate-pulse",
       )}
       style={{ backgroundColor: statusDotColor(statusDot.tone) }}
     />
@@ -1037,17 +1044,10 @@ function SidebarResizeHandle() {
   );
 }
 
-function ThreadIndicator() {
-  const threadActive = useAppStore((s) => s.threadActive);
-  if (!threadActive) return null;
-
-  return (
-    <div className="px-4 pb-2 flex items-center gap-2">
-      <span className="text-xs text-muted-foreground">Active thread</span>
-      <div className="size-1.5 rounded-full bg-primary animate-pulse" />
-    </div>
-  );
-}
+// ThreadIndicator (the "Active thread •" badge under New Thread) was
+// removed — the active conversation's selected row in the Recents
+// group is now the source of truth for "you're in a chat right now".
+// Kept as a comment so future spelunkers know it was intentional.
 
 function CollapsedNavShortcut({
   to,
@@ -1073,10 +1073,264 @@ function CollapsedNavShortcut({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Collapsible nav-group state — persisted per-label in localStorage so the
+// user's "minimised Admin section" choice survives reloads. A single JSON
+// blob keyed on label means we only touch one storage key per render and
+// we can subscribe via useSyncExternalStore for cheap cross-component
+// updates (toggle one group, all SidebarContent instances re-render).
+// ---------------------------------------------------------------------------
+
+// Generic package-scoped key — ``foundry-web-ui`` is consumed beyond
+// the Spaces app, so we avoid consumer-specific names like
+// ``spaces.nav.collapsed``. Matches the keying style used by the
+// adjacent sidebar-store helpers (``sidebar``, ``sidebar-width``,
+// ``theme``).
+const COLLAPSE_STORAGE_KEY = "sidebar-nav-collapsed";
+type CollapseMap = Record<string, boolean>;
+
+let _collapseCache: CollapseMap | null = null;
+const _collapseListeners = new Set<() => void>();
+
+function readCollapseMap(): CollapseMap {
+  if (_collapseCache) return _collapseCache;
+  if (typeof window === "undefined") {
+    _collapseCache = {};
+    return _collapseCache;
+  }
+  try {
+    const raw = window.localStorage.getItem(COLLAPSE_STORAGE_KEY);
+    _collapseCache = raw ? (JSON.parse(raw) as CollapseMap) : {};
+  } catch {
+    _collapseCache = {};
+  }
+  return _collapseCache;
+}
+
+function writeCollapseMap(next: CollapseMap): void {
+  _collapseCache = next;
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // localStorage full / disabled — toggle still works in-memory for
+      // this page session.
+    }
+  }
+  for (const fn of _collapseListeners) fn();
+}
+
+function subscribeCollapse(fn: () => void): () => void {
+  _collapseListeners.add(fn);
+  return () => {
+    _collapseListeners.delete(fn);
+  };
+}
+
+/**
+ * Read the persisted collapse state for a single group. ``defaultCollapsed``
+ * is the fallback when the user has never toggled this group.
+ */
+function useGroupCollapsed(label: string, defaultCollapsed: boolean | undefined): boolean {
+  const map = useSyncExternalStore(subscribeCollapse, readCollapseMap, readCollapseMap);
+  // Use ``hasOwnProperty`` instead of the ``in`` operator so a label
+  // that happens to collide with a prototype key (e.g. ``toString``,
+  // ``__proto__``, ``constructor``) is not treated as a persisted
+  // entry. ``map`` is parsed JSON so its prototype is ``Object``'s.
+  return Object.prototype.hasOwnProperty.call(map, label)
+    ? map[label]
+    : Boolean(defaultCollapsed);
+}
+
+function toggleGroupCollapsed(label: string, current: boolean): void {
+  writeCollapseMap({ ...readCollapseMap(), [label]: !current });
+}
+
+/**
+ * Walk a group's items (and their children) to find the first statusDot.
+ * Used to "bubble up" the active-chat indicator onto a collapsed group
+ * header — so the user never loses sight of "your active conversation is
+ * inside this minimised section".
+ */
+function findFirstStatusDot(items: readonly NavItem[]): NavStatusDot | undefined {
+  for (const item of items) {
+    if (item.statusDot) return item.statusDot;
+    if (item.children && item.children.length > 0) {
+      const nested = findFirstStatusDot(item.children);
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Render a single nav group: label header (with optional collapse
+ * chevron + bubbled-up status dot) + child items. Pulled out into its
+ * own component so each group's collapse state is its own hook scope
+ * — toggling one doesn't re-render siblings.
+ */
+function NavGroupSection({ group }: { group: NavGroup }) {
+  // hideLabel + collapsible are mutually exclusive — a hidden label
+  // can't host a chevron. The collapsible flag is the opt-in; legacy
+  // groups stay uncollapsable so behaviour is unchanged.
+  const isCollapsible = !group.hideLabel && Boolean(group.collapsible);
+  const persistedCollapsed = useGroupCollapsed(group.label, group.defaultCollapsed);
+  const collapsed = isCollapsible && persistedCollapsed;
+  // Bubble: show the first child statusDot on the collapsed header so
+  // the user never loses sight of "the active chat is inside this
+  // minimised group". Only render when actually collapsed.
+  const bubbledStatusDot = collapsed ? findFirstStatusDot(group.items) : undefined;
+
+  return (
+    <div data-nav-group-label={group.label}>
+      {!group.hideLabel && (
+        <div className="px-3 py-2">
+          {isCollapsible ? (
+            // Collapsible header is a flex of three siblings: chevron
+            // toggle (own button), label (NavLink when ``group.to``
+            // is set so the user can still navigate to the group
+            // landing page — Workspaces does this), createActions
+            // menu. Three SIBLINGS, not nested, so HTML stays valid
+            // (no <button> inside <button> / inside Radix's button).
+            <div className="group/header flex items-center justify-between rounded-lg transition-colors hover:bg-sidebar-accent/70">
+              <button
+                type="button"
+                data-nav-group-toggle
+                onClick={() => toggleGroupCollapsed(group.label, persistedCollapsed)}
+                aria-expanded={!collapsed}
+                aria-label={collapsed ? `Expand ${group.label}` : `Collapse ${group.label}`}
+                className="inline-flex size-6 shrink-0 items-center justify-center rounded text-sidebar-foreground/50 hover:text-sidebar-foreground"
+              >
+                {collapsed ? (
+                  <ChevronRight className="size-3 transition-transform" />
+                ) : (
+                  <ChevronDown className="size-3 transition-transform" />
+                )}
+              </button>
+              {group.to ? (
+                <NavLink to={group.to} end className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5">
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={cn(
+                          "truncate text-xs font-medium uppercase tracking-wider",
+                          isActive
+                            ? "text-sidebar-selected-foreground"
+                            : "text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground",
+                        )}
+                      >
+                        {group.label}
+                      </span>
+                      <NavStatusDot statusDot={bubbledStatusDot} />
+                    </>
+                  )}
+                </NavLink>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleGroupCollapsed(group.label, persistedCollapsed)}
+                  className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left"
+                >
+                  <span className="truncate text-xs font-medium uppercase tracking-wider text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground">
+                    {group.label}
+                  </span>
+                  <NavStatusDot statusDot={bubbledStatusDot} />
+                </button>
+              )}
+              {group.createActions && group.createActions.length > 0 && (
+                <CreateActionsMenu group={group} />
+              )}
+            </div>
+          ) : group.to ? (
+            <div className="flex items-center justify-between rounded-lg py-1.5 transition-colors hover:bg-sidebar-accent/70">
+              <NavLink to={group.to} end className="min-w-0 flex-1">
+                {({ isActive }) => (
+                  <span
+                    className={cn(
+                      "block text-xs font-medium uppercase tracking-wider",
+                      isActive
+                        ? "text-sidebar-selected-foreground"
+                        : "text-sidebar-foreground/65 hover:text-sidebar-foreground",
+                    )}
+                  >
+                    {group.label}
+                  </span>
+                )}
+              </NavLink>
+              {group.createActions && group.createActions.length > 0 && (
+                <CreateActionsMenu group={group} />
+              )}
+            </div>
+          ) : (
+            <span className="text-xs font-medium uppercase tracking-wider text-sidebar-foreground/65">
+              {group.label}
+            </span>
+          )}
+        </div>
+      )}
+      {!collapsed &&
+        group.items.map((item) => (
+          <CollapsibleNavItem key={item.to + item.label} item={item} />
+        ))}
+    </div>
+  );
+}
+
+/**
+ * The "+" dropdown shown next to a group label when the group declares
+ * ``createActions``. Pulled out so both the collapsible-button branch
+ * and the legacy plain-label branch can render it identically.
+ *
+ * The trigger button stops click propagation so opening the menu
+ * doesn't also toggle the surrounding collapsible-header button.
+ */
+function CreateActionsMenu({ group }: { group: NavGroup }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex size-6 items-center justify-center text-sidebar-foreground/65 transition-colors hover:text-sidebar-foreground"
+          aria-label={`Create in ${group.label}`}
+        >
+          <Plus className="size-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {(group.createActions ?? []).map((action) => (
+          <DropdownMenuItem
+            key={action.id}
+            onSelect={(e) => {
+              e.preventDefault();
+              action.handler();
+            }}
+          >
+            {action.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function SidebarContent({ collapsed }: { collapsed: boolean }) {
   const toggle = useSidebarStore((s) => s.toggle);
   const handleNewConversation = useNewConversation();
-  const navConfig = useNavStore((s) => s.config);
+  const rawNavConfig = useNavStore((s) => s.config);
+  // Sort by `priority` descending so feature hooks can declare slot
+  // intent (e.g. "Recents above Tasks") instead of relying on the
+  // order in which addGroup() happened to be called. Stable sort: ties
+  // preserve insertion order, so groups that don't set a priority keep
+  // the legacy append-where-you-arrive behaviour.
+  const navConfig = useMemo(
+    () =>
+      [...rawNavConfig]
+        .map((g, i) => ({ g, i, p: g.priority ?? 0 }))
+        .sort((a, b) => b.p - a.p || a.i - b.i)
+        .map(({ g }) => g),
+    [rawNavConfig],
+  );
   const currentPage = useAppStore((s) => s.currentPage);
   const navContext = useAppStore((s) => s.navContext);
 
@@ -1190,7 +1444,9 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         </button>
       </div>
 
-      <ThreadIndicator />
+      {/* ThreadIndicator removed — the active conversation's row in
+          the Recents group is now the source of truth for "you're in a
+          chat right now". A separate pulsing dot was redundant noise. */}
 
       {/* Navigation groups */}
       <nav
@@ -1199,63 +1455,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         onDropCapture={preventNativeFileDrop}
       >
         {navConfig.map((group) => (
-          <div key={group.label}>
-            {!group.hideLabel && (
-              <div className="px-3 py-2">
-                {group.to ? (
-                  <div className="flex items-center justify-between rounded-lg py-1.5 transition-colors hover:bg-sidebar-accent/70">
-                    <NavLink to={group.to} end className="min-w-0 flex-1">
-                      {({ isActive }) => (
-                        <span
-                          className={cn(
-                            "block text-xs font-medium uppercase tracking-wider",
-                            isActive
-                              ? "text-sidebar-selected-foreground"
-                              : "text-sidebar-foreground/65 hover:text-sidebar-foreground",
-                          )}
-                        >
-                          {group.label}
-                        </span>
-                      )}
-                    </NavLink>
-                    {group.createActions && group.createActions.length > 0 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            type="button"
-                            className="inline-flex size-6 items-center justify-center text-sidebar-foreground/65 transition-colors hover:text-sidebar-foreground"
-                            aria-label={`Create in ${group.label}`}
-                          >
-                            <Plus className="size-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          {group.createActions.map((action) => (
-                            <DropdownMenuItem
-                              key={action.id}
-                              onSelect={(e) => {
-                                e.preventDefault();
-                                action.handler();
-                              }}
-                            >
-                              {action.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-xs font-medium uppercase tracking-wider text-sidebar-foreground/65">
-                    {group.label}
-                  </span>
-                )}
-              </div>
-            )}
-            {group.items.map((item) => (
-              <CollapsibleNavItem key={item.to + item.label} item={item} />
-            ))}
-          </div>
+          <NavGroupSection key={group.label} group={group} />
         ))}
       </nav>
 
