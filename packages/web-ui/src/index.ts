@@ -116,6 +116,7 @@ export type {
 } from "./lib/tool-panel-store.ts";
 export { useSidebarStore, SIDEBAR_WIDTH, RAIL_WIDTH } from "./lib/sidebar-store.ts";
 export { useChatBubbleStore } from "./lib/chat-bubble-store.ts";
+export { useChatLifecycleStore } from "./lib/chat-lifecycle-store.ts";
 export { submitComposerText } from "./lib/composer-submit-store.ts";
 export {
   registerSelectionContextResolver,
