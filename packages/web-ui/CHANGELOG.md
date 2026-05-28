@@ -1,5 +1,96 @@
 # @iloveagents/foundry-web-ui
 
+## 0.2.2
+
+### Patch Changes
+
+- 395f0cd: web-ui: popover New Thread didn't actually start a new thread
+
+  When the user clicks the compose / SquarePen "New Thread" button in
+  the floating chat popover (`ChatBubble` on workspace/entity pages with
+  `navigateToChat: false`), the runtime was supposed to discard the
+  current thread and start fresh. In practice the popover header
+  subtitle flipped to "New conversation" but the message list stayed
+  populated with the prior chat's messages — the button looked like a
+  no-op.
+
+  Root cause: `useNewConversation` bumped the AGUIRuntime inner key to
+  remount, but the parent `RuntimeBody`'s `effectiveThreadId`
+  (`urlMatch ?? sticky ?? freshIdRef.current`) stayed pinned to the
+  sticky active-chat id. The history adapter on the fresh inner mount
+  immediately loaded the same chat's messages from the server →
+  nothing visibly changed.
+
+  The sidebar "New Thread" button avoided this only by side-effect —
+  it navigates to `/`, which triggers `useTrackActiveChatFromUrl` to
+  clear sticky. The popover preserves the user's workspace context and
+  doesn't navigate, so sticky never cleared.
+
+  Fix: add a tiny DI store `useChatLifecycleStore` exposing an
+  `onNewConversation` callback. `useNewConversation` invokes it BEFORE
+  `resetThread` so the host (spaces-web-ui in lastspace) can clear its
+  sticky id; the next render's `effectiveThreadId` has already advanced
+  to a freshly-minted UUID, and the history adapter binds to that
+  instead of re-hydrating the prior chat.
+
+  Customers that don't track sticky ids leave `onNewConversation`
+  unset; the call site no-ops gracefully.
+
+- 1ba01ef: web-ui(sidebar): align group-header labels (CHATS, WORKSPACES, ADMIN, …)
+  with the leftmost edge of their item labels
+
+  Previously the collapsible group header used `px-3` on the outer wrapper
+  and a `size-6` chevron, while item rows used `pl-5` (depth-0 indent) +
+  `size-3.5` icon + `gap-2`. Result: group labels landed at ~36px from the
+  sidebar edge while item labels landed at 42px — group labels drifted
+  right of the children they introduced and the visual rhythm broke.
+
+  Make the header's leading column a shared `SIDEBAR_ITEM_ICON_CLASS` +
+  `SIDEBAR_ITEM_GAP_CLASS` cell — the same constants item icons use — so
+  every group label (collapsible, link-style, or plain) lands at the same
+  x-coordinate as item labels. The chevron now sits in the icon column;
+  its hit-area is preserved at 28px via `-m-2 p-2` (negative-margin
+  absorbs the extra padding so the visual cell stays 14px and label
+  geometry doesn't shift).
+
+  Non-collapsible header branches get an explicit invisible spacer of the
+  same width so their labels align too.
+
+- 8184a8c: shell: URL is authoritative for the runtime threadId — fixes
+  resume-creates-new-conversation race
+
+  `ChatConversationAwareRuntime` previously computed
+  `effectiveThreadId = sticky ?? urlMatch ?? freshIdRef.current`.
+  When the user navigated from one chat to another via a Recents
+  click, the synchronous render that followed the URL change had:
+  - `urlMatch = B` (read from the now-updated `useLocation`)
+  - `sticky = A` (the active-chat-store hadn't been updated by
+    `useTrackActiveChatFromUrl`'s `useEffect` yet — effects run
+    AFTER the commit phase)
+
+  `sticky ?? urlMatch` picked `A` (the previous chat). The AG-UI
+  adapter was constructed with `threadId = A`. The first message the
+  user sent went to `/api/agent` with `thread_id = A`, the middleware
+  created a new row keyed by `A`... wait actually no, here's what
+  happens — the runtime mints a fresh runner UUID when given a
+  mismatched threadId; that fresh UUID became a new conversation row,
+  appearing as "Untitled chat" at the top of the sidebar while the
+  URL still said `/chat/B`. Two active-looking dots: one for `B`
+  (NavLink URL match), one for the new row (statusDot from the
+  updated active-chat-store after the lazy ensure ran).
+
+  Swap the priority: `urlMatch ?? sticky ?? freshIdRef.current`. The
+  URL is authoritative whenever it's set (i.e. on `/chat/<id>`
+  routes), eliminating the stale-sticky race entirely. `sticky` is
+  still consulted as the second-priority fallback for non-chat
+  routes (`/spaces`, `/tasks`) so the popout chat stays "live" while
+  the user browses workspaces — that's the original purpose of
+  `useStickyConversationId` and it's preserved.
+
+- Updated dependencies [8184a8c]
+  - @iloveagents/foundry-agent@0.2.2
+  - @iloveagents/foundry-web-primitives@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes
