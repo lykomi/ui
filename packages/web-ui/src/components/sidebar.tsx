@@ -1407,6 +1407,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
   const toggle = useSidebarStore((s) => s.toggle);
   const handleNewConversation = useNewConversation();
   const rawNavConfig = useNavStore((s) => s.config);
+  const navLoading = useNavStore((s) => s.navLoading);
   // Sort by `priority` descending so feature hooks can declare slot
   // intent (e.g. "Recents above Tasks") instead of relying on the
   // order in which addGroup() happened to be called. Stable sort: ties
@@ -1420,6 +1421,12 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         .map(({ g }) => g),
     [rawNavConfig],
   );
+  // Show skeleton rows during the cold nav fetch — but only until the
+  // integrator's primary dynamic group ("Workspaces") has been published.
+  // Once it exists, real rows render even if a later phase (status dots) is
+  // still resolving, so the skeleton never flashes over a populated tree.
+  const hasWorkspacesGroup = navConfig.some((group) => group.label === "Workspaces");
+  const showNavSkeleton = navLoading && !hasWorkspacesGroup;
   const currentPage = useAppStore((s) => s.currentPage);
   const navContext = useAppStore((s) => s.navContext);
 
@@ -1546,6 +1553,16 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         {navConfig.map((group) => (
           <NavGroupSection key={group.label} group={group} />
         ))}
+        {showNavSkeleton && (
+          <div className="space-y-1 px-1 pt-2" aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-7 mx-1 rounded-lg animate-pulse bg-sidebar-accent/40"
+              />
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* Footer actions — registered by feature modules */}

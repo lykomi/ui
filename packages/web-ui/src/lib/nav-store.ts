@@ -24,8 +24,18 @@ export interface NavFooterAction {
 interface NavStoreState {
   config: NavGroup[];
   footerActions: NavFooterAction[];
+  /**
+   * True while an integrator's nav sync is loading its first batch of
+   * groups. Optional/defaulted (starts ``false``) so existing consumers
+   * that never set it are unaffected. The sidebar reads it to render
+   * skeleton rows instead of an empty list during the cold fetch —
+   * avoids the "empty sidebar for N seconds" gap on a slow nav sync.
+   */
+  navLoading: boolean;
   /** Replace the entire config */
   setConfig: (config: NavGroup[]) => void;
+  /** Toggle the cold-load skeleton state. */
+  setNavLoading: (loading: boolean) => void;
   /** Add a group (replaces existing group with the same label) */
   addGroup: (group: NavGroup) => void;
   /** Remove a group by label */
@@ -39,8 +49,11 @@ interface NavStoreState {
 export const useNavStore = create<NavStoreState>((set, get) => ({
   config: DEFAULT_NAV_CONFIG,
   footerActions: [],
+  navLoading: false,
 
   setConfig: (config) => set({ config }),
+
+  setNavLoading: (navLoading) => set({ navLoading }),
 
   addGroup: (group) => {
     const config = get().config;
