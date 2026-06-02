@@ -2,6 +2,7 @@ import type { FC, ReactNode } from "react";
 import { AuthProvider } from "@iloveagents/foundry-web-ui";
 import type { MsalAuthConfig } from "@iloveagents/foundry-agent/msal";
 import type { AuthAdapter } from "./types.ts";
+import { runtimeConfig } from "./runtime-config.ts";
 
 
 
@@ -23,15 +24,16 @@ function AuthConfigError({ missingKeys }: AuthConfigErrorProps) {
 }
 
 /**
- * Read MSAL configuration from Vite env. Returns the resolved config or the
- * list of missing keys. The shell renders <AuthConfigError /> when any key
- * is missing.
+ * Read MSAL configuration. Prefers runtime config (`window.__APP_CONFIG__`,
+ * injected by the container at startup) and falls back to build-time Vite env
+ * (`import.meta.env`) for local dev — see {@link runtimeConfig}. Returns the
+ * resolved config or the list of missing keys; the shell renders
+ * <AuthConfigError /> when any key is missing.
  */
-function readMsalConfigFromEnv(): MsalAuthConfig | { missing: string[] } {
-  const env = import.meta.env;
-  const clientId = env.VITE_MSAL_CLIENT_ID;
-  const authority = env.VITE_MSAL_AUTHORITY;
-  const apiScope = env.VITE_MSAL_API_SCOPE;
+function readMsalConfig(): MsalAuthConfig | { missing: string[] } {
+  const clientId = runtimeConfig("VITE_MSAL_CLIENT_ID");
+  const authority = runtimeConfig("VITE_MSAL_AUTHORITY");
+  const apiScope = runtimeConfig("VITE_MSAL_API_SCOPE");
   const missing = [
     !clientId ? "VITE_MSAL_CLIENT_ID" : null,
     !authority ? "VITE_MSAL_AUTHORITY" : null,
@@ -39,21 +41,22 @@ function readMsalConfigFromEnv(): MsalAuthConfig | { missing: string[] } {
   ].filter((v): v is string => v !== null);
   if (missing.length > 0) return { missing };
   return {
-    clientId: clientId!,
-    authority: authority!,
-    apiScope: apiScope!,
+    clientId,
+    authority,
+    apiScope,
     redirectUri: window.location.origin,
   };
 }
 
 /**
- * Default MSAL-backed auth adapter. Reads VITE_MSAL_* from import.meta.env.
+ * Default MSAL-backed auth adapter. Reads VITE_MSAL_* from runtime config
+ * (`window.__APP_CONFIG__`) with `import.meta.env` fallback for local dev.
  * Customers override via `bootstrapShell({ authProvider: { Provider: ... } })`
  * for tests or non-MSAL deployments.
  */
 export const defaultAuthAdapter: AuthAdapter = {
   Provider: ({ children }: { children: ReactNode }) => {
-    const result = readMsalConfigFromEnv();
+    const result = readMsalConfig();
     if ("missing" in result) {
       return <AuthConfigError missingKeys={result.missing} />;
     }

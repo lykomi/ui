@@ -1,5 +1,6 @@
 import { createServiceFetch } from "@iloveagents/foundry-agent";
 import { authStore } from "@iloveagents/foundry-agent/msal";
+import { runtimeConfig } from "./runtime-config.ts";
 
 /**
  * Default agent fetch client wired to the MSAL token store and the host's
@@ -21,5 +22,5 @@ export const defaultAgentFetch: typeof fetch = createServiceFetch({
   acquireToken: (options) => authStore.getState().getAccessToken("api", options),
   recoverFromHardAuthFailure: (reason) =>
     authStore.getState().recoverFromHardAuthFailure(reason),
-  baseUrl: import.meta.env.VITE_API_BASE_URL,
+  baseUrl: runtimeConfig("VITE_API_BASE_URL"),
 });
