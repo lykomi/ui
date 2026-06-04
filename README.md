@@ -27,7 +27,7 @@ For new projects, scaffold via:
 npm create foundry-ui-app my-app
 ```
 
-(CLI ships in [#100-E](https://github.com/ltwlf/lastspace/issues/90).)
+(See [`create-foundry-ui-app`](packages/create-foundry-ui-app).)
 
 ## Develop
 

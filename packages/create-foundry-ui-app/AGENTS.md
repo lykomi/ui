@@ -38,7 +38,7 @@ npx create-foundry-ui-app <target-dir> [--preset <name>] [--no-install] [--force
 # Build
 
 ```bash
-pnpm build       # tsup → dist/index.js with ESM + Node20 + shebang shim
+pnpm build       # tsdown → dist/index.mjs with ESM + Node20 + shebang shim
 pnpm test:unit   # vitest run (copy-template logic, preset resolver)
 pnpm typecheck   # tsc --noEmit
 ```

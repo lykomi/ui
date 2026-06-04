@@ -36,6 +36,6 @@ Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via regist
 - **NavItem.dnd** — drag-and-drop behavior on sidebar items
 - **Panel renderer registry** — custom content renderers for the side panel
 - **Citation handler** — handles `[n]` citation clicks in markdown
-- **Tool UI** — custom rendering for agent tools via `useAssistantToolUI`
+- **Tool UI** — custom rendering for agent tools via `makeAssistantToolUI`
 
 See [AGENTS.md](./AGENTS.md) for architecture details and import boundary rules.

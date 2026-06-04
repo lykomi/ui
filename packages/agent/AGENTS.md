@@ -33,7 +33,7 @@ Files under `packages/agent/src/` (excluding `msal/`) MUST NOT import:
 
 Files under `packages/agent/src/msal/` MAY import `@azure/msal-browser` (dynamic import only — keeps the dep optional). They MUST NOT import `@azure/msal-react` (which is React-bound and lives in `@iloveagents/foundry-web-ui`).
 
-`packages/agent/` MUST NOT import from any other `@lastspace/*` package — agent is the leaf of the open-core graph.
+`packages/agent/` MUST NOT import from any other `@iloveagents/foundry-*` package — agent is the leaf of the open-core graph. (No package here may import `@lastspace/*` commercial downstream, either.)
 
 # Why `zustand/vanilla`
 

@@ -2,7 +2,7 @@ Browser bootstrap for the LastSpace agent UI starter. Published as `@iloveagents
 
 # Architecture
 
-Source-shipping (no build step) — same convention as the other `@lastspace/*` packages.
+Source-shipping (no build step) — same convention as the other `@iloveagents/foundry-*` packages.
 
 ```
 src/
@@ -79,4 +79,4 @@ pnpm --filter @iloveagents/foundry-web-shell typecheck   # tsc --noEmit
 
 # Authoring a module
 
-See [`docs/AUTHORING_A_MODULE.md`](../../docs/AUTHORING_A_MODULE.md).
+The `ChatModule` protocol is documented in **Public API** above; the canonical type definitions live in [`src/types.ts`](src/types.ts) (`ChatModule`, `defineChatModule`). For the nav-mutation-from-`useInit` pattern, have your module's `useInit` write the sidebar nav `config` into `useNavStore` (the same store [`src/shell-layout.tsx`](src/shell-layout.tsx) reads via `useNavStore((s) => s.config)`).
