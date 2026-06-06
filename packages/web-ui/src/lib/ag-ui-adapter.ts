@@ -243,13 +243,27 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
 
       // Terminal yield — runner generator returned. assistant-ui leaves
       // the message stuck in the loading state if the last yield's
-      // `status` is `running`, so we always emit a final `complete` once
-      // the runner is fully done (after every turn + every follow-up).
-      // `runError` is recorded above but not re-thrown: the terminal yield
-      // settles the message with reason=stop so the bubble unsticks; an
-      // unhandled throw would re-introduce the stuck-running bug.
-      void runError;
-      yield buildResult({ type: "complete", reason: "stop" });
+      // `status` is `running`, so we always emit a final settle once the
+      // runner is fully done (after every turn + every follow-up).
+      //
+      // If the run errored (the AG-UI backend emitted RUN_ERROR — e.g. the
+      // agent exhausted rate-limit/transient retries, or a non-retryable
+      // 4xx), settle as `incomplete`/`error` instead of `complete`/`stop`,
+      // carrying the error message. This keeps any partial content AND
+      // flips the message into assistant-ui's error state so the existing
+      // `<MessagePrimitive.Error>` renders a visible, retryable error —
+      // not a silent empty bubble. We yield the terminal status rather
+      // than throwing; an unhandled throw re-introduces the stuck-running
+      // bug (the runner generator has already returned here).
+      if (runError !== null) {
+        yield buildResult({
+          type: "incomplete",
+          reason: "error",
+          error: runError || "The run failed.",
+        });
+      } else {
+        yield buildResult({ type: "complete", reason: "stop" });
+      }
     } finally {
       streamingStatusStore.getState().setStreamingStatus({ status: "idle" });
     }

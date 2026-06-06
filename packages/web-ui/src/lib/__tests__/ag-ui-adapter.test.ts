@@ -4,10 +4,11 @@
  * The shim is a generator-driven assistant-ui `ChatModelAdapter` wrapping
  * `@iloveagents/foundry-agent`'s `AGUIRunner`. The contract under test:
  *   - Every intermediate yield carries `status: { type: "running" }`.
- *   - The FINAL yield carries `status: { type: "complete", reason: "stop" }`
- *     even after a multi-turn client-tool follow-up — the previous adapter
- *     left this status as `running` and the message bubble got stuck in
- *     the loading state. See PR #116 review.
+ *   - The FINAL yield settles the message so the bubble unsticks (the
+ *     previous adapter left it `running` and it got stuck loading — PR #116):
+ *     `{ type: "complete", reason: "stop" }` on success, or
+ *     `{ type: "incomplete", reason: "error", error }` on RUN_ERROR so the
+ *     UI shows a visible error instead of a silent empty bubble.
  *   - `content` is cumulative — every yield holds the full content array,
  *     not deltas (assistant-ui v0.12 contract).
  */
@@ -170,7 +171,7 @@ describe("AGUIAdapterSDK", () => {
     expect(finalContent.find((p) => p.type === "text")?.text).toBe("Done");
   });
 
-  it("yields a terminal complete on run-error (does not throw)", async () => {
+  it("settles run-error as incomplete/error so the UI shows it (does not throw)", async () => {
     runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {
       yield { type: "turn-started" };
       yield { type: "request-sent", input: {} };
@@ -181,15 +182,20 @@ describe("AGUIAdapterSDK", () => {
 
     const adapter = new AGUIAdapterSDK();
     const out: ChatModelRunResultLike[] = [];
-    // The shim swallows run errors and emits a terminal complete so the
-    // bubble unsticks. Throwing here would re-introduce the stuck-running
-    // regression because assistant-ui treats unhandled throws as the
-    // message being abandoned mid-run.
+    // On RUN_ERROR the adapter settles the message as incomplete/error
+    // (NOT a silent complete/stop) so assistant-ui's <MessagePrimitive.Error>
+    // renders a visible, retryable error. It must still settle via a
+    // terminal yield rather than throw — an unhandled throw re-introduces
+    // the stuck-running regression (message abandoned mid-run).
     for await (const r of adapter.run(makeRunInput())) {
       out.push({ status: r.status, content: r.content });
     }
 
-    expect(out[out.length - 1].status).toEqual({ type: "complete", reason: "stop" });
+    expect(out[out.length - 1].status).toEqual({
+      type: "incomplete",
+      reason: "error",
+      error: "boom",
+    });
   });
 
   it("forwards app context items through the native AG-UI context field", async () => {
