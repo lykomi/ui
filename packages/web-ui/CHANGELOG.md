@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.3.1
+
+### Patch Changes
+
+- 9ec870e: Surface AG-UI run errors in chat instead of rendering an empty assistant bubble.
+  - @iloveagents/foundry-agent@0.3.1
+  - @iloveagents/foundry-web-primitives@0.3.1
+
 ## 0.3.0
 
 ### Patch Changes
