@@ -13,6 +13,7 @@ export function NameDialog({
   placeholder,
   label = "Name",
   submitLabel = "Create",
+  pendingLabel,
   initialValue = "",
   error,
   pending = false,
@@ -26,6 +27,7 @@ export function NameDialog({
   placeholder: string;
   label?: ReactNode;
   submitLabel?: string;
+  pendingLabel?: string;
   initialValue?: string;
   error?: ReactNode;
   pending?: boolean;
@@ -56,7 +58,7 @@ export function NameDialog({
             form={`${inputId}-form`}
             disabled={!value.trim() || pending}
           >
-            {pending ? `${submitLabel}...` : submitLabel}
+            {pending ? (pendingLabel ?? `${submitLabel}...`) : submitLabel}
           </Button>
         </>
       }
@@ -66,6 +68,7 @@ export function NameDialog({
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
+          if (pending) return;
           const trimmed = value.trim();
           if (!trimmed) return;
           void onSubmit(trimmed);
@@ -77,6 +80,7 @@ export function NameDialog({
             value={value}
             onChange={(event) => setValue(event.target.value)}
             placeholder={placeholder}
+            disabled={pending}
             autoFocus
           />
         </Field>

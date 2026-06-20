@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { NavLink, useNavigate } from "react-router";
+import { NavLink, useLocation, useNavigate } from "react-router";
 import { Ellipsis, Layers, PanelLeft, PanelLeftOpen, SquarePen, ChevronDown, ChevronRight, GripVertical, Plus, Upload } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -65,6 +65,79 @@ type NavStatusIcon = NonNullable<NavItem["statusIcon"]>;
 
 function getNestedNavIndent(depth: number) {
   return NESTED_NAV_INDENTS[depth] ?? NESTED_NAV_INDENTS[NESTED_NAV_INDENTS.length - 1];
+}
+
+function scrollNavRowIntoView(nav: HTMLElement, row: HTMLElement) {
+  const navRect = nav.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  if (rowRect.top < navRect.top || rowRect.bottom > navRect.bottom) {
+    const rowCenter = rowRect.top - navRect.top + rowRect.height / 2;
+    nav.scrollTop += rowCenter - nav.clientHeight / 2;
+  }
+}
+
+export const _scrollNavRowIntoViewForTest = scrollNavRowIntoView;
+
+function useActiveNavRowScroll<T extends HTMLElement>(isActive: boolean) {
+  const ref = useRef<T | null>(null);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const scroll = () => {
+      const element = ref.current;
+      if (!element) return;
+      const rect = element.getBoundingClientRect();
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const isOnScreen =
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.right > 0 &&
+        rect.left < viewportWidth;
+      if (!isOnScreen) return;
+      const nav = element.closest<HTMLElement>("nav");
+      if (!nav) return;
+      scrollNavRowIntoView(nav, element);
+    };
+
+    const frame = window.requestAnimationFrame(scroll);
+    const retry = window.setTimeout(scroll, 120);
+    const finalRetry = window.setTimeout(scroll, 400);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(retry);
+      window.clearTimeout(finalRetry);
+    };
+  }, [isActive]);
+
+  return ref;
+}
+
+function useScrollActiveNavRow(currentPage: string, navConfig: NavGroup[], collapsed: boolean) {
+  useEffect(() => {
+    if (collapsed) return;
+    const scroll = () => {
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const navs = Array.from(document.querySelectorAll<HTMLElement>("nav")).filter((nav) => {
+        const rect = nav.getBoundingClientRect();
+        return rect.width > 0 && rect.right > 0 && rect.left < viewportWidth;
+      });
+      for (const nav of navs) {
+        const row = nav.querySelector<HTMLElement>('[data-active-nav-row="true"]');
+        if (!row) continue;
+        scrollNavRowIntoView(nav, row);
+        break;
+      }
+    };
+
+    const frame = window.requestAnimationFrame(scroll);
+    const retry = window.setTimeout(scroll, 120);
+    const finalRetry = window.setTimeout(scroll, 400);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(retry);
+      window.clearTimeout(finalRetry);
+    };
+  }, [collapsed, currentPage, navConfig]);
 }
 
 function statusDotColor(tone: NavStatusDot["tone"]) {
@@ -467,13 +540,17 @@ function NavLeafItem({
   depthPl?: string;
 }) {
   const isDisabled = item.disabled === true;
-  const hasActions = !isDisabled && item.actions && item.actions.length > 0;
+  const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
+  const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && hasActions);
+  const activeButtonRef = useActiveNavRowScroll<HTMLButtonElement>(isActive && !hasActions);
 
   // Items with actions use the group layout (button + action controls)
   if (hasActions) {
     return (
       <div
+        ref={activeRowRef}
+        data-active-nav-row={isActive ? "true" : undefined}
         {...(isDisabled ? {} : dropTargetProps)}
         {...(isDisabled ? {} : draggableProps)}
         className={cn(
@@ -544,6 +621,8 @@ function NavLeafItem({
 
   return (
     <button
+      ref={activeButtonRef}
+      data-active-nav-row={isActive ? "true" : undefined}
       type="button"
       disabled={isDisabled}
       onClick={isDisabled ? undefined : onClick}
@@ -606,10 +685,10 @@ function SubNavItems({
   depth?: number;
 }) {
   const navigate = useNavigate();
-  const currentPage = useAppStore((s) => s.currentPage);
+  const currentPath = useLocation().pathname;
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
-  const isOnParent = currentPage === parentPath;
+  const isOnParent = currentPath === parentPath;
   const [activeLabel, setActiveLabel] = useState(items[0]?.label ?? "");
   const childDepthPl = getNestedNavIndent(depth);
 
@@ -632,7 +711,7 @@ function SubNavItems({
         // parent path (e.g., folders) are never highlighted on the parent page.
         const isActive = allShareParent
           ? isOnParent && activeLabel === child.label
-          : child.to !== parentPath && currentPage === child.to;
+          : child.to !== parentPath && currentPath === child.to;
         return (
           <NavLeafItem
             key={child.to + child.label}
@@ -669,11 +748,11 @@ function isInSubtree(currentPage: string, item: NavItem): boolean {
 /** Nested folder with collapsible children (used inside SubNavItems). */
 function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const navigate = useNavigate();
-  const currentPage = useAppStore((s) => s.currentPage);
+  const currentPath = useLocation().pathname;
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
-  const isInsideSubtree = isInSubtree(currentPage, item);
-  const isActive = currentPage === item.to;
+  const isInsideSubtree = isInSubtree(currentPath, item);
+  const isActive = currentPath === item.to;
   const isAncestorActive = isInsideSubtree && !isActive;
   const [manualOverride, setManualOverride] = useState<boolean | null>(null);
   const isExpanded = manualOverride ?? isInsideSubtree;
@@ -681,10 +760,13 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const depthPl = getNestedNavIndent(depth);
 
   const isDisabled = item.disabled === true;
+  const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive);
 
   return (
     <div {...(isDisabled ? {} : dropTargetProps)}>
       <div
+        ref={activeRowRef}
+        data-active-nav-row={isActive ? "true" : undefined}
         {...(isDisabled ? {} : draggableProps)}
         className={cn(
           "group relative flex items-center w-full",
@@ -783,7 +865,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
                 <NestedFolderItem key={child.to + child.label} item={child} depth={depth + 1} />
               );
             }
-            const isChildActive = currentPage === child.to;
+            const isChildActive = currentPath === child.to;
             return (
               <NavLeafItem
                 key={child.to + child.label}
@@ -815,22 +897,27 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
 
 function CollapsibleNavItem({ item }: { item: NavItem }) {
   const navigate = useNavigate();
-  const currentPage = useAppStore((s) => s.currentPage);
+  const currentPath = useLocation().pathname;
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
-  const isInsideSubtree = isInSubtree(currentPage, item);
-  const isActive = currentPage === item.to;
+  const isInsideSubtree = isInSubtree(currentPath, item);
+  const isActive = currentPath === item.to;
   const isAncestorActive = isInsideSubtree && !isActive;
   const [manualOverride, setManualOverride] = useState<boolean | null>(null);
   const isExpanded = manualOverride ?? isInsideSubtree;
-  const hasChildren = item.children && item.children.length > 0;
+  const hasChildren = Boolean(item.children && item.children.length > 0);
   const isDisabled = item.disabled === true;
-  const hasActions = !isDisabled && item.actions && item.actions.length > 0;
+  const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
+  const rendersRow = Boolean(hasChildren || hasActions);
+  const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);
+  const activeLinkRef = useActiveNavRowScroll<HTMLAnchorElement>(isActive && !rendersRow);
 
-  if (hasChildren || hasActions) {
+  if (rendersRow) {
     const inner = (selected: boolean, ancestor: boolean) => (
       <div
+        ref={activeRowRef}
+        data-active-nav-row={selected ? "true" : undefined}
         className={cn(
           "group relative flex items-center w-full rounded-xl border border-transparent transition-colors",
           isDisabled
@@ -948,6 +1035,8 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
 
   return (
     <NavLink
+      ref={activeLinkRef}
+      data-active-nav-row={currentPath === item.to ? "true" : undefined}
       to={item.to}
       {...draggableProps}
       {...dropTargetProps}
@@ -1427,8 +1516,9 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
   // still resolving, so the skeleton never flashes over a populated tree.
   const hasWorkspacesGroup = navConfig.some((group) => group.label === "Workspaces");
   const showNavSkeleton = navLoading && !hasWorkspacesGroup;
-  const currentPage = useAppStore((s) => s.currentPage);
+  const currentPage = useLocation().pathname;
   const navContext = useAppStore((s) => s.navContext);
+  useScrollActiveNavRow(currentPage, navConfig, collapsed);
 
   const preventNativeFileDrop = useCallback((e: React.DragEvent) => {
     if (!e.dataTransfer.types.includes("Files")) return;

@@ -405,6 +405,43 @@ describe("Sidebar active state", () => {
       expect(leaf.querySelectorAll("svg.text-warning").length).toBe(0);
     }
   });
+
+  it("scrolls an offscreen active row into the visible nav container", async () => {
+    const { _scrollNavRowIntoViewForTest } = await import("./sidebar.tsx");
+    const nav = document.createElement("nav");
+    const row = document.createElement("div");
+
+    Object.defineProperty(nav, "clientHeight", { configurable: true, value: 700 });
+    Object.defineProperty(nav, "scrollTop", { configurable: true, writable: true, value: 3000 });
+    nav.getBoundingClientRect = () =>
+      ({
+        top: 100,
+        bottom: 800,
+        left: 0,
+        right: 248,
+        width: 248,
+        height: 700,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    row.getBoundingClientRect = () =>
+      ({
+        top: -373,
+        bottom: -335,
+        left: 4,
+        right: 243,
+        width: 239,
+        height: 38,
+        x: 4,
+        y: -373,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    _scrollNavRowIntoViewForTest(nav, row);
+
+    expect(nav.scrollTop).toBe(2196);
+  });
 });
 
 describe("Sidebar group priority + collapse + status bubble-up", () => {
