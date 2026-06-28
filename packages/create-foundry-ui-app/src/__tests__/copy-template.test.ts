@@ -13,7 +13,22 @@ describe("copyTemplate", () => {
     targetDir = mkdtempSync(join(tmpdir(), "cf-dst-"));
     writeFileSync(
       join(sourceDir, "package.json"),
-      JSON.stringify({ name: "__PROJECT_NAME__", version: "0.0.0", private: true }, null, 2),
+      JSON.stringify(
+        {
+          name: "__PROJECT_NAME__",
+          version: "0.0.0",
+          private: true,
+          dependencies: {
+            "@iloveagents/foundry-agent": "^0.1.0",
+            "@iloveagents/foundry-web-primitives": "^0.1.0",
+            "@iloveagents/foundry-web-shell": "^0.1.0",
+            "@iloveagents/foundry-web-ui": "^0.1.0",
+            react: "^19.0.0",
+          },
+        },
+        null,
+        2,
+      ),
     );
     writeFileSync(join(sourceDir, "_gitignore"), "node_modules/\n");
     writeFileSync(join(sourceDir, "README.md"), "# __PROJECT_NAME__\n\nHello.\n");
@@ -62,6 +77,21 @@ describe("copyTemplate", () => {
     expect(pkg.private).toBe(true);
   });
 
+  it("stamps exact Foundry UI package versions into package.json", async () => {
+    await copyTemplate({
+      sourceDir,
+      targetDir,
+      projectName: "my-app",
+      foundryPackageVersion: "0.4.1",
+    });
+    const pkg = JSON.parse(readFileSync(join(targetDir, "package.json"), "utf-8"));
+    expect(pkg.dependencies["@iloveagents/foundry-agent"]).toBe("0.4.1");
+    expect(pkg.dependencies["@iloveagents/foundry-web-primitives"]).toBe("0.4.1");
+    expect(pkg.dependencies["@iloveagents/foundry-web-shell"]).toBe("0.4.1");
+    expect(pkg.dependencies["@iloveagents/foundry-web-ui"]).toBe("0.4.1");
+    expect(pkg.dependencies.react).toBe("^19.0.0");
+  });
+
   it("rewrites __PROJECT_NAME__ in markdown text files via sentinel", async () => {
     await copyTemplate({ sourceDir, targetDir, projectName: "my-app" });
     const readme = readFileSync(join(targetDir, "README.md"), "utf-8");
@@ -70,10 +100,7 @@ describe("copyTemplate", () => {
   });
 
   it("rewrites all occurrences when there are multiple per file", async () => {
-    writeFileSync(
-      join(sourceDir, "multi.md"),
-      "__PROJECT_NAME__\n__PROJECT_NAME__\n",
-    );
+    writeFileSync(join(sourceDir, "multi.md"), "__PROJECT_NAME__\n__PROJECT_NAME__\n");
     await copyTemplate({ sourceDir, targetDir, projectName: "x" });
     expect(readFileSync(join(targetDir, "multi.md"), "utf-8")).toBe("x\nx\n");
   });

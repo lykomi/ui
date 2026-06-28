@@ -1,4 +1,11 @@
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 export interface CopyTemplateOptions {
@@ -10,6 +17,10 @@ export interface CopyTemplateOptions {
    * text files (README, HTML, etc.).
    */
   projectName: string;
+  /**
+   * Exact Foundry UI package version to stamp into generated apps.
+   */
+  foundryPackageVersion?: string;
 }
 
 export interface ApplyOverlayOptions {
@@ -79,6 +90,7 @@ interface WalkOptions {
   srcDir: string;
   dstDir: string;
   projectName: string;
+  foundryPackageVersion?: string;
   /**
    * If true, the root-level `package.json` (depth 0) is parsed-edited-stringified
    * to set its `name` field. If false (overlay mode), the special-case is
@@ -93,7 +105,7 @@ interface WalkOptions {
 }
 
 function walkAndCopy(opts: WalkOptions): void {
-  const { srcDir, dstDir, projectName, rewriteRootPackageJson } = opts;
+  const { srcDir, dstDir, projectName, foundryPackageVersion, rewriteRootPackageJson } = opts;
 
   function walk(currentSrc: string, currentDst: string, depth: number): void {
     for (const entry of readdirSync(currentSrc)) {
@@ -118,6 +130,9 @@ function walkAndCopy(opts: WalkOptions): void {
       if (rewriteRootPackageJson && depth === 0 && entry === "package.json") {
         const parsed = JSON.parse(readFileSync(src, "utf-8"));
         parsed.name = projectName;
+        if (foundryPackageVersion) {
+          syncFoundryPackageVersions(parsed, foundryPackageVersion);
+        }
         writeFileSync(dst, JSON.stringify(parsed, null, 2) + "\n");
         continue;
       }
@@ -143,6 +158,7 @@ export async function copyTemplate(opts: CopyTemplateOptions): Promise<void> {
     srcDir: opts.sourceDir,
     dstDir: opts.targetDir,
     projectName: opts.projectName,
+    foundryPackageVersion: opts.foundryPackageVersion,
     rewriteRootPackageJson: true,
   });
 }
@@ -193,4 +209,25 @@ function sortKeys<T extends Record<string, string>>(obj: T): T {
     (sorted as Record<string, string>)[key] = obj[key];
   }
   return sorted;
+}
+
+const FOUNDRY_PACKAGES = [
+  "@iloveagents/foundry-agent",
+  "@iloveagents/foundry-web-primitives",
+  "@iloveagents/foundry-web-shell",
+  "@iloveagents/foundry-web-ui",
+] as const;
+
+function syncFoundryPackageVersions(pkg: Record<string, unknown>, version: string): void {
+  for (const sectionName of ["dependencies", "devDependencies"] as const) {
+    const section = pkg[sectionName];
+    if (!section || typeof section !== "object" || Array.isArray(section)) continue;
+
+    const dependencies = section as Record<string, unknown>;
+    for (const packageName of FOUNDRY_PACKAGES) {
+      if (packageName in dependencies) {
+        dependencies[packageName] = version;
+      }
+    }
+  }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readdirSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import * as p from "@clack/prompts";
 import { applyOverlay, copyTemplate, mergeExtraDependencies } from "./copy-template.js";
@@ -84,10 +84,28 @@ function reportEnvVars(envVars: PresetEnvVar[] | undefined): void {
   }
   if (optional.length > 0) {
     p.log.info(
-      "Optional env vars:\n" +
-        optional.map((v) => `  - ${v.name}: ${v.description}`).join("\n"),
+      "Optional env vars:\n" + optional.map((v) => `  - ${v.name}: ${v.description}`).join("\n"),
     );
   }
+}
+
+function readTemplateFoundryPackageVersion(templateDir: string): string {
+  const pkgPath = join(templateDir, "package.json");
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as {
+    dependencies?: Record<string, string>;
+  };
+  const version = pkg.dependencies?.["@iloveagents/foundry-agent"];
+
+  if (!version) {
+    throw new Error(`Template package.json is missing @iloveagents/foundry-agent.`);
+  }
+  if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) {
+    throw new Error(
+      `Template @iloveagents/foundry-agent must use an exact version, got '${version}'.`,
+    );
+  }
+
+  return version;
 }
 
 async function main(): Promise<number> {
@@ -131,12 +149,14 @@ async function main(): Promise<number> {
   const preset = await resolvePreset(args.preset);
   // Project name = basename of the target path, sanitized for npm/JS naming.
   const rawName = basename(targetPath);
-  const projectName = rawName.replace(/^[^a-zA-Z]+/, "").replace(/[^a-zA-Z0-9-_]/g, "-") || "my-app";
+  const projectName =
+    rawName.replace(/^[^a-zA-Z]+/, "").replace(/[^a-zA-Z0-9-_]/g, "-") || "my-app";
 
   await copyTemplate({
     sourceDir: preset.templateDir,
     targetDir: targetPath,
     projectName,
+    foundryPackageVersion: readTemplateFoundryPackageVersion(preset.templateDir),
   });
   if (preset.overlayDir) {
     await applyOverlay({
@@ -161,7 +181,9 @@ async function main(): Promise<number> {
     });
     if (result.status !== 0) {
       installSpinner.error("pnpm install failed");
-      p.log.warn("Scaffold completed but install failed. cd into the dir and re-run `pnpm install`.");
+      p.log.warn(
+        "Scaffold completed but install failed. cd into the dir and re-run `pnpm install`.",
+      );
       return result.status ?? 1;
     }
     installSpinner.stop("pnpm install done");
