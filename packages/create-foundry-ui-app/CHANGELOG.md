@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.4.1
+
+### Patch Changes
+
+- ab0b38d: Stamp generated apps with the template's pinned Foundry UI package version so new scaffolds install a consistent package set.
+
 ## 0.4.0
 
 ### Minor Changes
