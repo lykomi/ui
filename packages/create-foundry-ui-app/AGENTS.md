@@ -1,27 +1,21 @@
-npm scaffolding CLI for Foundry UI. Customers run `npx create-foundry-ui-app my-app` to get a working starter that consumes `@iloveagents/foundry-*` from npm at `^0.1.0`.
+npm scaffolding CLI for Foundry UI. Customers run `npx create-foundry-ui-app my-app` to get a chat-first agent starter that consumes `@iloveagents/foundry-*` from npm at `^0.3.1`.
 
 # Architecture
 
-```
+```text
 src/
-  index.ts             ← CLI entry: argv parsing, prompts, scaffold + optional pnpm install
-  copy-template.ts     ← recursive copy + __PROJECT_NAME__ substitution + _gitignore → .gitignore rename
-  presets.ts           ← preset registry (default = bundled template; lastspace = future fetched preset)
-  __tests__/           ← vitest unit tests (no real fs writes outside tmpdir)
+  index.ts             CLI entry: argv parsing, prompts, scaffold + optional pnpm install
+  copy-template.ts     recursive copy + __PROJECT_NAME__ substitution + _gitignore -> .gitignore rename
+  presets.ts           preset registry; default = bundled template
+  __tests__/           vitest unit tests
 
-template/              ← bundled "default" preset (the scaffold output)
-  package.json         ← __PROJECT_NAME__ sentinel, deps on @iloveagents/foundry-* at ^0.1.0
-  index.html
-  vite.config.ts
-  tsconfig.{json,app.json,node.json}
-  eslint.config.js
-  _gitignore           ← prefixed because npm strips top-level dotfiles from tarballs
-  src/
-    main.tsx           ← bootstrapShell({ modules: [], pages: customerPages })
-    pages/{index,chat-page}.tsx
-    index.css          ← tailwindcss + @source for foundry-* node_modules
-    vite-env.d.ts
-  README.md            ← customer onboarding (rewritten with __PROJECT_NAME__)
+template/
+  package.json         generated app scripts and npm deps
+  README.md            generated app onboarding
+  AGENTS.md            generated app coding-agent contract
+  CLAUDE.md            imports AGENTS.md for Claude Code
+  agent/               FastAPI + Microsoft Agent Framework AG-UI service
+  src/                 Foundry UI React app
 ```
 
 # Public API
@@ -30,34 +24,54 @@ template/              ← bundled "default" preset (the scaffold output)
 npx create-foundry-ui-app <target-dir> [--preset <name>] [--no-install] [--force]
 ```
 
-- `--preset default` (default) — bundled OSS shell, no modules.
-- `--preset lastspace` — fetched from lastspace repo via `LASTSPACE_TOKEN` env var (private; reserved, ships in lastspace#100-F).
-- `--no-install` — skip `pnpm install`. Used by the test suite + agents that want to inspect the output before installing.
-- `--force` — allow scaffolding into a non-empty target.
+- `--preset default` - bundled OSS starter: Foundry UI chat, FastAPI agent service, hello/weather tools.
+- `--preset lastspace` - private Spaces preset, requires `LASTSPACE_TOKEN`.
+- `--no-install` - skip `pnpm install`.
+- `--force` - allow scaffolding into a non-empty target.
 
 # Build
 
 ```bash
-pnpm build       # tsdown → dist/index.mjs with ESM + Node20 + shebang shim
-pnpm test:unit   # vitest run (copy-template logic, preset resolver)
-pnpm typecheck   # tsc --noEmit
+pnpm build
+pnpm test:unit
+pnpm typecheck
 ```
 
-The published package ships `dist/` + `template/` per `package.json#files`. Source TS is NOT shipped (unlike the framework packages — this is a CLI executed via npx, not a library).
+The published package ships `dist/` plus `template/` via `package.json#files`.
 
-# Boundaries
+# Template Rules
 
-**Always do:**
-- Add new presets via the `presets.ts` registry, not by branching on flags in `index.ts`.
-- For scaffolded `template/` content: pin `@iloveagents/foundry-*` at `^0.1.0` (matches the locked version-fixed group in `.changeset/config.json`).
-- For the template's `index.css`: keep the `@source "../../node_modules/@iloveagents/foundry-*/src"` directives. Tailwind v4 silently purges classes from source-shipping packages without these — the consumer's UI looks broken (lesson from lastspace PR #127).
+Always:
 
-**Never do:**
-- Add UnJS deps (giget, c12) just for templating. The CLI stays under ~300 LOC of plain TS — if preset composition outgrows that, revisit. Lock-in to UnJS would be the wrong call for a starter we want broadly adoptable.
-- Add a general-purpose templating engine. Single-sentinel substitution (`__PROJECT_NAME__`) is enough.
-- Embed customer-specific data in the bundled template. The template is the canonical OSS starter — any customer-flavored content goes through the preset mechanism.
+- Keep the default template generic and chat-first.
+- Keep package deps on the current coordinated `@iloveagents/foundry-*` release range.
+- Keep `agent/` as the service folder name.
+- Keep `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` as the primary env vars.
+- Keep the default generated app name and browser title as `Foundry UI`.
+- Document app theming through `theme` layers in `src/main.tsx`.
+- Keep `src/index.css` importing `@iloveagents/foundry-web-ui/styles.css`.
+- Keep Tailwind v4 `@source "../node_modules/@iloveagents/.../dist"` directives.
+- Keep `AGENTS.md` and `CLAUDE.md` in the generated template.
+
+Never:
+
+- Add customer/demo-event copy to the default template.
+- Add a landing page before the chat.
+- Hide tool registration behind abstractions; users should add tools in `agent/app/tools.py` and `AGENT_TOOLS`.
+- Add a general-purpose templating engine. `__PROJECT_NAME__` substitution is enough.
+
+# UX Bar
+
+The default scaffold should feel like a serious agent bootstrap:
+
+- One command path to a running app.
+- One obvious file for tools.
+- One obvious env file for Foundry config.
+- Minimal README, no product tour.
+- Browser-verifiable chat flow with hello/weather tools.
 
 # Related
 
-- The `lastspace` preset (private, fetched at scaffold time) is shipped in `ltwlf/lastspace`. See lastspace#100-F.
-- Customers running `create-lastspace-app` (a thin wrapper) actually invoke this CLI under the hood with `--preset lastspace`.
+- Root architecture: `../../AGENTS.md`
+- Generated app contract: `template/AGENTS.md`
+- CLI tests: `src/__tests__/`

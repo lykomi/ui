@@ -1,17 +1,30 @@
 {
   "name": "@iloveagents/foundry-agent",
   "version": "0.3.1",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "type": "module",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./msal": "./src/msal/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./msal": {
+      "types": "./dist/msal/index.d.ts",
+      "import": "./dist/msal/index.js"
+    }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist",
     "test:unit": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -27,11 +40,12 @@
     }
   },
   "devDependencies": {
+    "@ag-ui/client": "^0.0.52",
+    "@ag-ui/core": "^0.0.52",
+    "@azure/msal-browser": "^5.0.0",
+    "jsdom": "^28.1.0",
     "typescript": "~5.9.3",
     "vitest": "^4.1.4",
-    "jsdom": "^28.1.0",
-    "zustand": "^5.0.0",
-    "@ag-ui/client": "^0.0.52",
-    "@ag-ui/core": "^0.0.52"
+    "zustand": "^5.0.0"
   }
 }

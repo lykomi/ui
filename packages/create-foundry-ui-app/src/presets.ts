@@ -40,6 +40,7 @@ const REGISTRY_NPMJS = "https://registry.npmjs.org";
  * Resolve a preset name to a base template + optional overlay.
  *
  * - `default` (or unspecified) → bundled `template/` next to the CLI's dist.
+ *   Includes the OSS shell, FastAPI AG-UI agent service, and hello/tool demo env vars.
  * - `lastspace` → fetched from `@lastspace/preset` on **npmjs (public, no
  *   auth)**. The manifest's `extends: "default"` resolves the base bundled
  *   template; `files/` becomes the overlay. The preset itself contains zero
@@ -52,7 +53,24 @@ const REGISTRY_NPMJS = "https://registry.npmjs.org";
  */
 export async function resolvePreset(name: string): Promise<ResolvedPreset> {
   if (name === "default") {
-    return { name, templateDir: bundledTemplateDir() };
+    return {
+      name,
+      templateDir: bundledTemplateDir(),
+      envVars: [
+        {
+          name: "FOUNDRY_PROJECT_ENDPOINT",
+          description: "Microsoft Foundry project endpoint for the Agent Framework service.",
+          required: true,
+          secret: false,
+        },
+        {
+          name: "FOUNDRY_MODEL",
+          description: "Model deployment name used by FoundryChatClient, for example gpt-5.4.",
+          required: true,
+          secret: false,
+        },
+      ],
+    };
   }
   if (name === "lastspace") {
     const localOverride = process.env.FOUNDRY_UI_PRESET_LASTSPACE_PATH;

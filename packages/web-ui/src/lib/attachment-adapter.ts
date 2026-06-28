@@ -1,12 +1,13 @@
 /**
  * File attachment adapter for assistant-ui.
  *
- * Reads files client-side as base64 and produces FileMessagePart content.
- * The AG-UI adapter converts these to BinaryInputContent for the protocol,
- * and the agent framework passes them to the Responses API as input_file
- * or input_image -- no separate upload endpoint needed.
+ * Reads image files client-side as base64 and produces FileMessagePart content.
+ * Non-image documents are represented as text metadata so starter apps don't
+ * send malformed multimodal payloads to providers that require a separate file
+ * upload or document extraction pipeline.
  *
- * Supported: images (PNG, JPEG, WEBP, GIF), PDFs, DOCX
+ * Supported: images (PNG, JPEG, WEBP, GIF). PDFs/DOCX can be attached, but the
+ * default starter only sends their metadata to the agent.
  */
 
 import type {
@@ -70,6 +71,24 @@ export class FileAttachmentAdapter implements AttachmentAdapter {
   }
 
   async send(attachment: PendingAttachment): Promise<CompleteAttachment> {
+    const mimeType = attachment.contentType ?? "application/octet-stream";
+
+    if (!mimeType.startsWith("image/")) {
+      return {
+        ...attachment,
+        status: { type: "complete" },
+        content: [
+          {
+            type: "text" as const,
+            text:
+              `[Attached file: ${attachment.name}` +
+              `; type: ${mimeType}` +
+              `; size: ${formatFileSize(attachment.file.size)}]`,
+          },
+        ],
+      };
+    }
+
     const base64 = await fileToBase64(attachment.file);
 
     return {
@@ -79,7 +98,7 @@ export class FileAttachmentAdapter implements AttachmentAdapter {
         {
           type: "file" as const,
           data: base64,
-          mimeType: attachment.contentType ?? "application/octet-stream",
+          mimeType,
           filename: attachment.name,
         },
       ],
@@ -89,4 +108,10 @@ export class FileAttachmentAdapter implements AttachmentAdapter {
   async remove(_attachment: Attachment): Promise<void> {
     // No-op -- files are read client-side, nothing to clean up
   }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${Math.round((bytes / 1024 / 1024) * 10) / 10} MB`;
 }

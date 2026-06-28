@@ -27,9 +27,9 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write       # changesets action commits version bumps
-  pull-requests: write  # changesets action opens Version Packages PR
-  id-token: write       # required for future npm Trusted Publishing OIDC
+  contents: write # changesets action commits version bumps
+  pull-requests: write # changesets action opens Version Packages PR
+  id-token: write # required for future npm Trusted Publishing OIDC
 
 jobs:
   release:
@@ -50,6 +50,18 @@ jobs:
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
+
+      - name: Quality gate
+        run: pnpm test
+
+      - name: Check npm package contents
+        run: pnpm pack:check
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Smoke generated starter in browser
+        run: pnpm smoke:starter:browser
 
       - name: Create Version PR or publish
         uses: changesets/action@v1

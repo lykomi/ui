@@ -300,7 +300,7 @@ export function ChatBubble() {
               </ThreadPrimitive.If>
             </div>
 
-            {/* Composer — same pattern as full chat: clip + pin + input + send */}
+            {/* Composer — same pattern as full chat: attachment + input + send */}
             <div className="shrink-0 border-t border-border px-3 py-3">
               <ComposerPrimitive.Root
                 className={cn(
@@ -325,7 +325,7 @@ export function ChatBubble() {
                         <Paperclip className="size-3.5" />
                       </TooltipIconButton>
                     </ComposerPrimitive.AddAttachment>
-                    <ContextPins compact showPinButton />
+                    <ContextPins compact />
                   </div>
                   <ComposerPrimitive.Input
                     autoFocus

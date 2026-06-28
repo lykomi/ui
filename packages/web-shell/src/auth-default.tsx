@@ -4,8 +4,6 @@ import type { MsalAuthConfig } from "@iloveagents/foundry-agent/msal";
 import type { AuthAdapter } from "./types.ts";
 import { runtimeConfig } from "./runtime-config.ts";
 
-
-
 interface AuthConfigErrorProps {
   missingKeys: string[];
 }

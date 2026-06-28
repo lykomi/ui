@@ -1,73 +1,137 @@
-# __PROJECT_NAME__
+# **PROJECT_NAME**
 
-Scaffolded by [`create-foundry-ui-app`](https://www.npmjs.com/package/create-foundry-ui-app) — a Foundry UI starter built on the AG-UI protocol, Microsoft Agent Framework, and Azure AI Foundry.
+Foundry UI starter: a chat-first React app with a Microsoft Agent Framework service exposed through AG-UI.
 
-## Quick start
+## Quick Start
 
 ```bash
 pnpm install
+cp agent/.env.example agent/.env
+az login
 pnpm dev
 ```
 
-The app boots at `http://localhost:8010`. The default page is the Foundry UI `ChatPanel` — connect it to a backend (e.g. a FastAPI app exposing the AG-UI endpoint via `agent_framework.ag_ui`) to see real chat.
+Open `http://localhost:8010`.
+
+`pnpm dev` starts:
+
+- UI: `http://localhost:8010`
+- Agent service: `http://localhost:9120`
+- AG-UI endpoint: `/api/agent` proxied to the agent service
+
+## Configure Foundry
+
+Edit `agent/.env`:
+
+```bash
+FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>
+FOUNDRY_MODEL=gpt-5.4
+```
+
+The agent uses `DefaultAzureCredential`, so local development works with `az login`. In Azure, use managed identity or the standard service principal environment variables.
+
+## Try It
+
+The first screen is the chat. Try:
+
+- `Say hello world using the hello_world tool`
+- `Check the weather in Seattle`
+- `What tools can you use?`
+
+The bundled tools live in `agent/app/tools.py`.
+
+## Update Modes
+
+You can use this starter in two modes:
+
+| Mode           | How                                                                    | Best for                                | Updates                                                                                                                                     |
+| -------------- | ---------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package-backed | Keep `@iloveagents/foundry-*` dependencies in `package.json`           | Apps that want central Foundry UI fixes | Run `pnpm update @iloveagents/foundry-web-ui @iloveagents/foundry-web-shell @iloveagents/foundry-web-primitives @iloveagents/foundry-agent` |
+| Full copy      | Copy this repo or turn the generated app into your own GitHub template | Apps that need deep customization       | You own the code and manually merge upstream ideas                                                                                          |
+
+Template changes such as new files or folder structure are not applied automatically to an existing app. Package updates improve the shared UI, shell, and AG-UI transport without replacing your local `agent/` or `src/` files.
+
+## Theme The App
+
+App name, browser title, logos, colors, radius, and fonts are configured through the `theme` layers in `src/main.tsx`.
+
+```ts
+bootstrapShell({
+  pages: customerPages,
+  authProvider: localDemoAuth,
+  agentFetch: fetch,
+  theme: [
+    {
+      id: "app-branding",
+      definition: {
+        branding: {
+          appName: "Foundry UI",
+          appTitle: "Foundry UI",
+          logoUrl: "/logo.svg",
+          darkLogoUrl: "/logo-dark.svg",
+        },
+        light: {
+          primary: "oklch(0.54 0.21 282)",
+        },
+        radius: {
+          radius: "0.5rem",
+        },
+      },
+    },
+  ],
+});
+```
+
+Keep `@import "@iloveagents/foundry-web-ui/styles.css";` in `src/index.css`; it exposes the package theme tokens to Tailwind.
+
+## Add A Tool
+
+Add a function in `agent/app/tools.py` and include it in `AGENT_TOOLS`:
+
+```python
+from typing import Annotated
+
+from agent_framework import tool
+from pydantic import Field
+
+
+@tool(approval_mode="never_require")
+def get_time(
+    city: Annotated[str, Field(description="The city to report time for.")],
+) -> str:
+    """Return a demo time response."""
+    return f"It is demo time in {city}."
+
+
+AGENT_TOOLS = [hello_world, get_weather, get_time]
+```
+
+Restart `pnpm dev` after changing Python dependencies or environment variables. Tool code itself reloads through Uvicorn.
+
+## Project Map
+
+```text
+agent/                  FastAPI + Microsoft Agent Framework AG-UI endpoint
+agent/app/tools.py      Add agent tools here
+src/main.tsx            Foundry UI shell bootstrap
+src/pages/chat-page.tsx Chat screen and quick starts
+src/index.css           Tailwind v4 + Foundry UI theme resource and package dist scanning
+```
 
 ## Auth
 
-The shell expects MSAL config from environment variables:
+This starter uses local pass-through auth so the demo runs without an Entra app registration.
 
-```
-VITE_MSAL_CLIENT_ID=<your Entra app's client id>
+For production MSAL auth, remove `authProvider` and `agentFetch` from `src/main.tsx`, then set:
+
+```bash
+VITE_MSAL_CLIENT_ID=<client-id>
 VITE_MSAL_AUTHORITY=https://login.microsoftonline.com/<tenant-id>
 VITE_MSAL_API_SCOPE=api://<api-app-id>/access_as_user
 ```
 
-Without these, the shell renders an `AuthConfigError` UI on first load.
+## Notes
 
-## What's bundled
-
-| Package | Purpose |
-|---|---|
-| `@iloveagents/foundry-web-shell` | Browser bootstrap (`bootstrapShell`) |
-| `@iloveagents/foundry-web-ui` | React UI core — `ChatPanel`, sidebar, hooks |
-| `@iloveagents/foundry-web-primitives` | Leaf primitives — Button, Input, etc. |
-| `@iloveagents/foundry-agent` | Cross-runtime AG-UI transport (no DOM, no React) |
-
-All consumed from npm at `^0.1.0`. Source: [`iloveagents/foundry-ui`](https://github.com/iLoveAgents/foundry-ui).
-
-## Add a backend
-
-Pair this with a Python FastAPI backend using the Microsoft Agent Framework + AG-UI mount:
-
-```python
-from agent_framework import Agent
-from agent_framework.azure import AzureOpenAIResponsesClient
-from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint
-from fastapi import FastAPI
-
-app = FastAPI()
-agent = Agent(client=AzureOpenAIResponsesClient(...), instructions="...", tools=[...])
-add_agent_framework_fastapi_endpoint(app, agent, path="/api/agent")
-```
-
-The shell's default `defaultAgentFetch` POSTs to `/api/agent` — point your dev proxy at the backend.
-
-## Add Spaces (eomi commercial)
-
-To add the eomi Spaces module (private commercial extension — agentic CMS, document intelligence, workflow execution), use the `lastspace` preset instead of the default:
-
-```bash
-npx create-foundry-ui-app my-app --preset lastspace
-```
-
-Requires `LASTSPACE_TOKEN` env var (per-customer PAT). See the [Spaces customer docs](https://github.com/ltwlf/lastspace).
-
-## License
-
-SEE LICENSE IN LICENSE — fill in your own.
-
-## Next
-
-- Add your customer pages in `src/pages/`.
-- Add ChatModules to `bootstrapShell({ modules: [...] })` in `src/main.tsx`.
-- Connect a real AG-UI backend (Python FastAPI + Agent Framework).
-- Configure Entra auth.
+- `AGENTS.md` is the local coding-agent contract.
+- `CLAUDE.md` imports `AGENTS.md` for Claude Code.
+- Non-image attachments are sent as metadata by default. Add a document extraction tool when your app needs real document understanding.

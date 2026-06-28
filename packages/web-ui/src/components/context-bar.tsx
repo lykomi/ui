@@ -80,7 +80,7 @@ export function getNavigablePath(item: ContextItem): string | null {
 }
 
 export const ContextPins: FC<ContextPinsProps> = ({
-  showPinButton = true,
+  showPinButton = false,
   compact = false,
   flyoutDirection = "up",
 }) => {

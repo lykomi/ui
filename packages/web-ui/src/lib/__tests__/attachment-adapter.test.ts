@@ -46,3 +46,37 @@ describe("FileAttachmentAdapter.add", () => {
     expect((await adapter.add({ file: pdf })).type).toBe("document");
   });
 });
+
+describe("FileAttachmentAdapter.send", () => {
+  it("sends non-image documents as text metadata", async () => {
+    const file = new File(["hello"], "brief.docx", {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const pending = await adapter.add({ file });
+    const complete = await adapter.send(pending);
+
+    expect(complete.content).toEqual([
+      {
+        type: "text",
+        text:
+          "[Attached file: brief.docx; type: " +
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document; size: 5 B]",
+      },
+    ]);
+  });
+
+  it("sends images as base64 file content", async () => {
+    const file = new File(["hello"], "photo.png", { type: "image/png" });
+    const pending = await adapter.add({ file });
+    const complete = await adapter.send(pending);
+
+    expect(complete.content).toEqual([
+      {
+        type: "file",
+        data: "aGVsbG8=",
+        mimeType: "image/png",
+        filename: "photo.png",
+      },
+    ]);
+  });
+});

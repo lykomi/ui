@@ -230,6 +230,52 @@ describe("AGUIAdapterSDK", () => {
     expect(appStoreMock.consumedMessageIds).toEqual(["u-1"]);
   });
 
+  it("includes completed text attachment content in outbound AG-UI messages", async () => {
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
+
+    const adapter = new AGUIAdapterSDK();
+    for await (const _ of adapter.run({
+      messages: [
+        {
+          id: "u-file",
+          role: "user" as const,
+          content: [{ type: "text" as const, text: "what is this" }],
+          attachments: [
+            {
+              id: "att-1",
+              type: "document",
+              name: "brief.docx",
+              contentType:
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              status: { type: "complete" },
+              content: [
+                {
+                  type: "text",
+                  text:
+                    "[Attached file: brief.docx; type: " +
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document; size: 5 B]",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      abortSignal: undefined,
+    } as Parameters<AGUIAdapterSDK["run"]>[0])) {
+      // Drain the adapter.
+    }
+
+    expect(runMock.mock.calls[0][0].messages).toEqual([
+      {
+        id: "u-file",
+        role: "user",
+        content:
+          "what is this\n[Attached file: brief.docx; type: " +
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document; size: 5 B]",
+      },
+    ]);
+  });
+
   it("describes typed JSON ref targets without losing the stable ref handle", async () => {
     appStoreMock.agentState = {
       navigation: { contextInstructions: null },

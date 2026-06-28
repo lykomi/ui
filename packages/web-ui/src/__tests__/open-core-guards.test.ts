@@ -71,9 +71,7 @@ const AGENT_BANNED_IMPORTS = [
  *  shell is a thin composition layer (bootstrapShell + ChatModule wiring +
  *  auth provider seam), not application surface. Growth indicates leakage.
  */
-const FILE_COUNT_CEILINGS = [
-  { path: "packages/web-shell/src", ceiling: 15, hardFail: true },
-];
+const FILE_COUNT_CEILINGS = [{ path: "packages/web-shell/src", ceiling: 15, hardFail: true }];
 
 /**
  * Shared deps where all consumers must agree on the major version.

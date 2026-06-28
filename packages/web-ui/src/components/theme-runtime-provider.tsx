@@ -86,7 +86,7 @@ export function ThemeDocumentMetadata() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    document.title = runtime.branding.appTitle || runtime.branding.appName || "eomi";
+    document.title = runtime.branding.appTitle || runtime.branding.appName || "Foundry UI";
   }, [runtime.branding.appName, runtime.branding.appTitle]);
 
   return null;

@@ -11,6 +11,10 @@ describe("resolvePreset", () => {
     expect(r.name).toBe("default");
     expect(r.templateDir).toMatch(/template$/);
     expect(r.overlayDir).toBeUndefined();
+    expect(r.envVars?.map((envVar) => envVar.name)).toEqual([
+      "FOUNDRY_PROJECT_ENDPOINT",
+      "FOUNDRY_MODEL",
+    ]);
   });
 
   it("rejects unknown presets with a clear error", async () => {

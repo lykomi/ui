@@ -1,12 +1,8 @@
-import { cloneElement, isValidElement, useCallback, useEffect, useState, type FC } from "react";
-import {
-  MarkdownTextPrimitive,
-  type SyntaxHighlighterProps,
-  type CodeHeaderProps,
-} from "@assistant-ui/react-markdown";
+import { cloneElement, isValidElement, useCallback, useState, type FC } from "react";
+import { useMessagePartText } from "@assistant-ui/react";
 import remarkGfm from "remark-gfm";
+import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
-import type { Highlighter } from "shiki/bundle/web";
 import { Children, type ReactElement, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
@@ -17,56 +13,6 @@ import {
   resolveLinkHandler,
   type CitationResult,
 } from "@iloveagents/foundry-agent";
-
-/* ---------- Shiki syntax highlighter (lazy-loaded singleton) ---------- */
-
-let highlighterPromise: Promise<Highlighter> | null = null;
-
-function getHighlighter(): Promise<Highlighter> {
-  if (!highlighterPromise) {
-    highlighterPromise = import("shiki/bundle/web").then((mod) =>
-      mod.createHighlighter({
-        themes: ["github-dark"],
-        langs: [],
-      }),
-    );
-  }
-  return highlighterPromise;
-}
-
-/**
- * Shared hook: returns highlighted HTML for a code string, or null while loading.
- * Always uses github-dark because code blocks have a dark background (bg-code-block)
- * regardless of the app's light/dark mode.
- */
-function useShikiHighlight(code: string, language: string | undefined): string | null {
-  const [html, setHtml] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!language) return;
-    let cancelled = false;
-
-    getHighlighter().then(async (hl) => {
-      if (cancelled) return;
-      const loaded = hl.getLoadedLanguages();
-      if (!loaded.includes(language as never)) {
-        try {
-          await hl.loadLanguage(language as never);
-        } catch {
-          // Language not supported -- keep html null (fallback rendering)
-          return;
-        }
-      }
-      if (cancelled) return;
-      setHtml(hl.codeToHtml(code, { lang: language, theme: "github-dark" }));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [language, code]);
-
-  return html;
-}
 
 /* ---------- Shared copy-to-clipboard button ---------- */
 
@@ -231,11 +177,9 @@ const InlineCode = ({ children, ...props }: React.HTMLAttributes<HTMLElement>) =
   );
 };
 
-/* ---------- Code block with header + highlighting (used by ReactMarkdown / tool panel) ---------- */
+/* ---------- Code block with header + copy action (used by ReactMarkdown / tool panel) ---------- */
 
 const HighlightedCodeBlock: FC<{ language?: string; code: string }> = ({ language, code }) => {
-  const html = useShikiHighlight(code, language);
-
   return (
     <div className="relative group my-4">
       <div
@@ -248,16 +192,9 @@ const HighlightedCodeBlock: FC<{ language?: string; code: string }> = ({ languag
         <span className="text-xs font-medium text-muted-foreground">{language || "text"}</span>
         <CopyButton text={code} />
       </div>
-      {html ? (
-        <div
-          dangerouslySetInnerHTML={{ __html: html }}
-          className="[&_pre]:bg-code-block! [&_pre]:rounded-b-lg [&_pre]:rounded-t-none [&_pre]:p-4 [&_pre]:overflow-x-auto [&_pre]:text-sm [&_pre]:font-mono"
-        />
-      ) : (
-        <pre className="rounded-b-lg bg-code-block p-4 overflow-x-auto text-sm font-mono text-code-block-foreground">
-          <code>{code}</code>
-        </pre>
-      )}
+      <pre className="rounded-b-lg bg-code-block p-4 overflow-x-auto text-sm font-mono text-code-block-foreground">
+        <code>{code}</code>
+      </pre>
     </div>
   );
 };
@@ -279,45 +216,10 @@ function extractCodeInfo(children: React.ReactNode): { language?: string; code: 
   return null;
 }
 
-/* ---------- MarkdownTextPrimitive components (chat messages) ---------- */
-
-const ShikiHighlighter: FC<SyntaxHighlighterProps> = ({ language, code, components: C }) => {
-  const html = useShikiHighlight(code, language);
-
-  if (html) {
-    return (
-      <div
-        dangerouslySetInnerHTML={{ __html: html }}
-        className="[&_pre]:bg-code-block! [&_pre]:rounded-b-lg [&_pre]:p-4 [&_pre]:overflow-x-auto [&_pre]:text-sm [&_pre]:font-mono"
-      />
-    );
-  }
-
-  return (
-    <C.Pre className="rounded-b-lg bg-code-block p-4 overflow-x-auto text-sm font-mono text-code-block-foreground">
-      <C.Code>{code}</C.Code>
-    </C.Pre>
-  );
-};
-
-const CodeBlockHeader: FC<CodeHeaderProps> = ({ language, code }) => (
-  <div
-    className={cn(
-      "flex items-center justify-between",
-      "rounded-t-lg bg-code-block px-4 py-2 mt-4",
-      "border-b border-border/30",
-    )}
-  >
-    <span className="text-xs font-medium text-muted-foreground">{language || "text"}</span>
-    <CopyButton text={code} />
-  </div>
-);
-
 /* ---------- Shared markdown components (used by both chat + tool panel) ---------- */
 
 /**
- * Shared markdown component overrides used by both the chat messages
- * (MarkdownTextPrimitive) and the tool panel (ReactMarkdown).
+ * Shared markdown component overrides used by both chat messages and the tool panel.
  */
 export const markdownComponents: Components = {
   h1: ({ children, ...props }) => (
@@ -495,14 +397,11 @@ export function injectCitations(children: ReactNode): ReactNode {
 /* ---------- MarkdownText (chat messages) ---------- */
 
 export const MarkdownText: FC = () => {
+  const part = useMessagePartText();
+
   return (
-    <MarkdownTextPrimitive
-      remarkPlugins={[remarkGfm]}
-      components={{
-        ...markdownComponents,
-        SyntaxHighlighter: ShikiHighlighter,
-        CodeHeader: CodeBlockHeader,
-      }}
-    />
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      {part.text}
+    </ReactMarkdown>
   );
 };

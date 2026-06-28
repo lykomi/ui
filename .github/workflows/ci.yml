@@ -1,6 +1,6 @@
 # CI for the foundry-ui workspace.
 #
-# Runs lint + typecheck + unit tests on every push and PR to main.
+# Runs the merge quality gate on every push and PR to main.
 
 name: CI
 
@@ -18,8 +18,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test
+  quality:
+    name: Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -34,11 +34,14 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      - name: Build + lint + typecheck + unit tests
+        run: pnpm test
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Check npm package contents
+        run: pnpm pack:check
 
-      - name: Unit tests
-        run: pnpm test:unit
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Smoke generated starter in browser
+        run: pnpm smoke:starter:browser

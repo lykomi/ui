@@ -1,4 +1,4 @@
-Foundry UI — open-source agent UI starter for the AG-UI protocol, Microsoft Agent Framework, and Azure AI Foundry. Multi-package monorepo, source-shipping TypeScript (no build step).
+Foundry UI — open-source agent UI starter for the AG-UI protocol, Microsoft Agent Framework, and Microsoft Foundry. Multi-package monorepo publishing built ESM JavaScript and `.d.ts` declarations.
 
 # Vision & Architecture
 
@@ -14,21 +14,22 @@ packages/create-foundry-ui-app/ → create-foundry-ui-app (scaffolding CLI; #100
 
 # Stack & Versions
 
-| Layer | Stack | Versions / pins |
-|---|---|---|
+| Layer    | Stack                                                                 | Versions / pins                               |
+| -------- | --------------------------------------------------------------------- | --------------------------------------------- |
 | Frontend | TypeScript strict, React 18+, Vite, Tailwind v4, shadcn over Radix UI | `@assistant-ui/react` ≥0.12.x, AG-UI protocol |
-| Tooling | pnpm workspaces, Vitest, Prettier, ESLint, Changesets | Node 22+ |
+| Tooling  | pnpm workspaces, Vitest, Prettier, ESLint, Changesets                 | Node 22+                                      |
 
 # Grounding (mandatory)
 
 Fast-moving stack. Training data is stale. Before writing code, verify the current API:
 
-| Surface | Source of truth | How to query |
-|---|---|---|
-| Microsoft Agent Framework | [microsoft/agent-framework GitHub](https://github.com/microsoft/agent-framework) `python/samples/` | Fetch the closest sample first |
-| `@assistant-ui/react`, `@ag-ui/*` | Official docs, version-pinned | Verify against the pinned version |
+| Surface                           | Source of truth                                                                                    | How to query                      |
+| --------------------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Microsoft Agent Framework         | [microsoft/agent-framework GitHub](https://github.com/microsoft/agent-framework) `python/samples/` | Fetch the closest sample first    |
+| `@assistant-ui/react`, `@ag-ui/*` | Official docs, version-pinned                                                                      | Verify against the pinned version |
 
 Rules:
+
 - Do NOT rely on training-data knowledge of `@assistant-ui/*`, `@ag-ui/*`, or Foundry APIs.
 - `@assistant-ui/react` must stay on **0.12.x or newer** (0.11.x has a `_getInitializePromise` runtime regression).
 - Tool UIs use `makeAssistantToolUI(...)` (the v0.12 canonical pattern).
@@ -38,15 +39,17 @@ Rules:
 - **AG-UI adapter** — there is no official `@assistant-ui/ag-ui` adapter. The protocol engine (`AGUIRunner` in `packages/agent/`) drives `HttpAgent.runAgent()` with an `AgentSubscriber` and yields a normalized `RunnerEvent` stream. The assistant-ui shim in `packages/web-ui/` translates those into cumulative `ChatModelRunResult` yields.
 - **Cross-runtime contract** — `@iloveagents/foundry-agent` has zero React, zero `@assistant-ui/*`, zero DOM. Enforced by `packages/web-ui/src/__tests__/open-core-guards.test.ts`. Future Outlook / Teams / native shells consume it directly.
 - **Zustand pattern** — `@iloveagents/foundry-agent` uses `zustand/vanilla`; React consumers bind via `useStore(store, selector)` from `"zustand"`.
-- **Source-shipping** — every package ships TypeScript source (no build step). Consumers compile via Vite/SWC/ESBuild.
+- **Built packages** — runtime packages publish `dist/` ESM JavaScript and `.d.ts` declarations. Keep package exports pointed at `dist`, and keep CI package checks green before merging.
 
 # Boundaries
 
 **Always do:**
+
 - Run `pnpm test` before committing (lint + typecheck + unit).
 - Run `pnpm typecheck` after TypeScript changes.
 
 **Never do:**
+
 - Use `@/` path aliases in packages (relative imports only).
 - Add backward-compatibility shims pre-1.0 — every caller updates lock-step in the same PR.
 - Import `react`, `react-dom`, `@assistant-ui/*`, or bare `"zustand"` inside `packages/agent/src/` (msal subpath excepted for `@azure/msal-browser`).
@@ -75,12 +78,12 @@ pnpm changeset      # add a versioning changeset before committing
 
 Foundry UI was extracted from `ltwlf/lastspace` (commercial product) on 2026-04-26 in the iloveagents/foundry-ui split. The four packages here were renamed:
 
-| Origin | Now |
-|---|---|
-| `@lastspace/agent` | `@iloveagents/foundry-agent` |
+| Origin                      | Now                                   |
+| --------------------------- | ------------------------------------- |
+| `@lastspace/agent`          | `@iloveagents/foundry-agent`          |
 | `@lastspace/web-primitives` | `@iloveagents/foundry-web-primitives` |
-| `@lastspace/web-ui` | `@iloveagents/foundry-web-ui` |
-| `@lastspace/web-shell` | `@iloveagents/foundry-web-shell` |
+| `@lastspace/web-ui`         | `@iloveagents/foundry-web-ui`         |
+| `@lastspace/web-shell`      | `@iloveagents/foundry-web-shell`      |
 
 Cross-repo dev workflow lives in `ltwlf/lastspace-meta` (private) — sibling-checkout pattern with pnpm workspace globs spanning both repos.
 

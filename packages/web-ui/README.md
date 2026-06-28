@@ -1,6 +1,12 @@
 # @iloveagents/foundry-web-ui
 
-React UI core for the AG-UI protocol agent starter. Provides hooks, stores, extension-point registries, the AG-UI adapter, ChatPanel, sidebar, and layout components. Depends on `@iloveagents/foundry-web-primitives` for leaf primitives (Button, Input, Field, Checkbox, Textarea, `cn`).
+React UI core for Foundry UI apps.
+
+`web-ui` is the package that renders the actual agent experience: chat UI,
+composer, AG-UI adapter, message rendering, tool-call cards, side panels,
+sidebar, theme runtime, context pins, attachment handling, and UI stores. It
+depends on `@iloveagents/foundry-web-primitives` for leaf primitives (Button,
+Input, Field, Checkbox, Textarea, `cn`).
 
 ## Install
 
@@ -22,11 +28,14 @@ import {
 import { cn } from "@iloveagents/foundry-web-primitives";
 ```
 
-Consumed as TypeScript source (no build step). Requires Tailwind v4 `@source` directives for both packages:
+This package publishes built ESM JavaScript and `.d.ts` declarations. Host apps
+must include Tailwind v4 `@source` directives so classes used inside package
+components are generated:
 
 ```css
-@source "../../packages/web-primitives/src";
-@source "../../packages/web-ui/src";
+@import "@iloveagents/foundry-web-ui/styles.css";
+@source "../node_modules/@iloveagents/foundry-web-primitives/dist";
+@source "../node_modules/@iloveagents/foundry-web-ui/dist";
 ```
 
 ## Extension Points

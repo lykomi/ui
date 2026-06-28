@@ -70,9 +70,9 @@ const UserMessage: FC = () => {
         <div className={cn("max-w-[80%]", "bg-muted rounded-2xl", "px-4 py-3", "text-foreground")}>
           <MessagePrimitive.Content />
         </div>
-        <div className="flex items-center justify-end gap-2 pr-2">
+        <div className="flex h-8 items-center justify-end gap-2 pr-2">
           <BranchPicker />
-          <div className="w-10 flex items-center justify-end">
+          <div className="flex h-8 w-10 items-center justify-end">
             <UserActionBar />
           </div>
         </div>
@@ -229,9 +229,9 @@ const ComposerActionButton: FC = () => {
  * suppresses the suggestion buttons entirely.
  */
 export const DEFAULT_STARTER_SUGGESTIONS = [
-  "Create a new Contract Space",
-  "List all contracts I have access to",
-  "Show me what I can do here",
+  "Say hello world",
+  "What tools can you use?",
+  "Help me get started",
 ];
 
 const ScrollToBottomButton: FC = () => {
@@ -318,6 +318,12 @@ export interface ChatContentProps {
    * can pass a workspace-aware list derived from app context.
    */
   starterSuggestions?: string[];
+  /**
+   * Show the page pin button in the composer. Defaults to false so generic
+   * starter apps only show attachment, input, and send controls. Apps with
+   * page-aware workflows can opt in explicitly.
+   */
+  showPinButton?: boolean;
 }
 
 /**
@@ -326,6 +332,7 @@ export interface ChatContentProps {
  */
 export function ChatContent({
   starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
+  showPinButton = false,
 }: ChatContentProps = {}) {
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const collapseChat = useChatBubbleStore((s) => s.collapse);
@@ -436,7 +443,7 @@ export function ChatContent({
                       <Paperclip className="size-5" />
                     </TooltipIconButton>
                   </ComposerPrimitive.AddAttachment>
-                  <ContextPins showPinButton />
+                  <ContextPins showPinButton={showPinButton} />
                 </div>
                 <ComposerPrimitive.Input
                   autoFocus

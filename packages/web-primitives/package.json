@@ -1,17 +1,28 @@
 {
   "name": "@iloveagents/foundry-web-primitives",
   "version": "0.3.1",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "type": "module",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "test:unit": "vitest run --passWithNoTests"
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist",
+    "test:unit": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -28,6 +39,9 @@
   "devDependencies": {
     "@types/react": "^19.2.2",
     "jsdom": "^28.1.0",
+    "lucide-react": ">=0.400.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "typescript": "~5.9.3",
     "vitest": "^4.1.4"
   }

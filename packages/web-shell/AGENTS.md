@@ -1,8 +1,8 @@
-Browser bootstrap for the LastSpace agent UI starter. Published as `@iloveagents/foundry-web-shell`. Composes `@iloveagents/foundry-web-primitives`, `@iloveagents/foundry-agent` (and `@iloveagents/foundry-agent/msal`), and `@iloveagents/foundry-web-ui` into a generic mounting point — customers and modules contribute pages, theme layers, layout extras, tool UIs, and per-request fetch interceptors via the `ChatModule` protocol.
+Browser bootstrap for Foundry UI agent apps. Published as `@iloveagents/foundry-web-shell`. Composes `@iloveagents/foundry-web-primitives`, `@iloveagents/foundry-agent` (and `@iloveagents/foundry-agent/msal`), and `@iloveagents/foundry-web-ui` into a generic mounting point — customers and modules contribute pages, theme layers, layout extras, tool UIs, and per-request fetch interceptors via the `ChatModule` protocol.
 
 # Architecture
 
-Source-shipping (no build step) — same convention as the other `@iloveagents/foundry-*` packages.
+Publishes built ESM JavaScript plus `.d.ts` declarations from `dist/`, same convention as the other `@iloveagents/foundry-*` runtime packages.
 
 ```
 src/

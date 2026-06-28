@@ -1,0 +1,9 @@
+# Copy to agent/.env and fill these values for the real Foundry agent.
+FOUNDRY_PROJECT_ENDPOINT=https://your-project.services.ai.azure.com/api/projects/your-project
+FOUNDRY_MODEL=gpt-5.4
+
+# DefaultAzureCredential uses `az login` locally, service principal env vars in CI,
+# and managed identity in Azure. Uncomment tenant/client values only when needed.
+# AZURE_TENANT_ID=
+# AZURE_CLIENT_ID=
+# AZURE_CLIENT_SECRET=

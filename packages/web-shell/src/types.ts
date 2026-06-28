@@ -159,6 +159,14 @@ export interface BootstrapShellOptions {
   theme?: ThemeLayer[];
   /** Override default MSAL-backed auth provider (e.g. for tests). */
   authProvider?: AuthAdapter;
+  /**
+   * Override the agent transport used by the AG-UI runtime.
+   *
+   * Defaults to the MSAL-backed `defaultAgentFetch`. Apps can pass a custom
+   * fetch to point at a local demo agent, a mock AG-UI transport, or a
+   * production backend without patching global `window.fetch`.
+   */
+  agentFetch?: typeof fetch;
   /** Wrap the tree in <StrictMode>. Default: true. */
   strictMode?: boolean;
   /** DOM element to mount into. Default: document.getElementById("root"). */

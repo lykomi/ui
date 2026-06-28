@@ -419,7 +419,11 @@ function convertMessagesToAGUI(messages: ChatModelRunOptions["messages"]): AGUIM
     }
 
     const hasBinary = parts.some((p) => p.type === "binary");
-    out.push({ id, role: "user", content: hasBinary ? parts : textContent });
+    const textWithAttachments = parts
+      .filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join("\n");
+    out.push({ id, role: "user", content: hasBinary ? parts : textWithAttachments });
   }
 
   return out;

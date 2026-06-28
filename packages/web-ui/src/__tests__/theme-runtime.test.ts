@@ -78,4 +78,11 @@ describe("theme runtime", () => {
   it("falls back to the default preset for unknown names", () => {
     expect(getThemePreset("unknown-preset")).toEqual(getThemePreset("foundry-violet"));
   });
+
+  it("uses Foundry UI as the default app branding", () => {
+    const runtime = resolveThemeRuntime([], "light");
+
+    expect(runtime.branding.appName).toBe("Foundry UI");
+    expect(runtime.branding.appTitle).toBe("Foundry UI");
+  });
 });

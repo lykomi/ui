@@ -18,6 +18,7 @@ export function bootstrapShell(opts: BootstrapShellOptions = {}): void {
     pages = [],
     theme = [],
     authProvider,
+    agentFetch,
     strictMode = true,
     rootElement,
   } = opts;
@@ -41,6 +42,7 @@ export function bootstrapShell(opts: BootstrapShellOptions = {}): void {
       pages={pages}
       baseThemeLayers={theme}
       authProvider={authProvider}
+      agentFetch={agentFetch}
     />
   );
 
