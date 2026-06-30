@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.5.0
+
+### Minor Changes
+
+- 4d62cfd: Add a bundled `foundry-iq` preset for Azure AI Search Foundry IQ knowledge bases and remove the stale private preset path from the public CLI surface.
+
 ## 0.4.1
 
 ### Patch Changes
