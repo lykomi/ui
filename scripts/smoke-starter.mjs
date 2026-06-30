@@ -326,18 +326,20 @@ run("node", ["packages/create-foundry-ui-app/dist/index.mjs", appDir, "--no-inst
 
 const packageJsonPath = join(appDir, "package.json");
 const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+const generatedOverrides = packageJson.overrides ?? {};
 for (const [name, specifier] of tarballs) {
   packageJson.dependencies[name] = specifier;
 }
 packageJson.pnpm = {
   ...(packageJson.pnpm ?? {}),
   overrides: {
+    ...generatedOverrides,
     ...(packageJson.pnpm?.overrides ?? {}),
     ...Object.fromEntries(tarballs),
   },
 };
 packageJson.overrides = {
-  ...(packageJson.overrides ?? {}),
+  ...generatedOverrides,
   ...Object.fromEntries(tarballs),
 };
 writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);

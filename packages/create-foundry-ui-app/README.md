@@ -2,6 +2,8 @@
 
 Create a Foundry UI agent app: React chat UI, AG-UI protocol, Microsoft Agent Framework, and [Microsoft Foundry](https://learn.microsoft.com/azure/foundry/).
 
+Foundry UI is built by [iLoveAgents](https://iloveagents.ai).
+
 ## Create An App
 
 ```bash
@@ -24,7 +26,7 @@ FOUNDRY_MODEL=gpt-5.4
 The generated app starts:
 
 - UI: `http://localhost:8010`
-- Agent service: `http://localhost:9120`
+- Agent service: `http://localhost:8020`
 - AG-UI endpoint: `/api/agent`
 
 The first screen is the chat. The bundled agent can call `hello_world` and `get_weather`.
@@ -69,10 +71,10 @@ The generated `AGENTS.md` explains the local project contract for coding agents.
 
 ## Presets
 
-| Preset      | What you get                                                                            |
-| ----------- | --------------------------------------------------------------------------------------- |
-| `default`   | Chat-first Foundry UI app with FastAPI Agent Framework service and hello/weather tools. |
-| `lastspace` | Default plus the private Spaces module. Requires `LASTSPACE_TOKEN`.                     |
+| Preset       | What you get                                                                            |
+| ------------ | --------------------------------------------------------------------------------------- |
+| `default`    | Chat-first Foundry UI app with FastAPI Agent Framework service and hello/weather tools. |
+| `foundry-iq` | Default plus an Azure AI Search Foundry IQ knowledge base retrieval tool.               |
 
 ## Packages
 

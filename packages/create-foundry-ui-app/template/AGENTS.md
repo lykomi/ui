@@ -20,7 +20,7 @@ az login
 pnpm dev
 ```
 
-The UI runs on `http://localhost:8010`. The agent service runs on `http://localhost:9120`; Vite proxies `/api/agent` to it.
+The UI runs on `http://localhost:8010`. The agent service runs on `http://localhost:8020`; Vite proxies `/api/agent` to it.
 
 # Environment
 
@@ -31,13 +31,14 @@ FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<p
 FOUNDRY_MODEL=gpt-5.4
 ```
 
-The Python agent uses `DefaultAzureCredential`. Prefer `az login` locally and managed identity or service principal env vars in hosted environments.
+`FoundryChatClient` reads the Microsoft Agent Framework env vars directly. The Python agent passes `DefaultAzureCredential`; prefer `az login` locally and managed identity or service principal env vars in hosted environments.
 
 # Agent Tools
 
 - Add tools in `agent/app/tools.py`.
 - Decorate tools with `@tool(approval_mode="never_require")` unless you intentionally add an approval flow.
 - Add new tools to `AGENT_TOOLS`; otherwise the agent cannot call them.
+- For remote MCP tools, use the commented `MCPStreamableHTTPTool` block in `agent/app/agent.py` and uncomment the `mcp` dependency in `agent/pyproject.toml`.
 - Keep starter tools deterministic enough for demos. If a tool calls a real service, handle errors with clear user-facing strings.
 
 # Update Modes

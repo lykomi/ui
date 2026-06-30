@@ -1,4 +1,4 @@
-npm scaffolding CLI for Foundry UI. Customers run `npx create-foundry-ui-app my-app` to get a chat-first agent starter that consumes `@iloveagents/foundry-*` from npm at `^0.3.1`.
+npm scaffolding CLI for Foundry UI. Customers run `npx create-foundry-ui-app my-app` to get a chat-first agent starter that consumes `@iloveagents/foundry-*` from npm.
 
 # Architecture
 
@@ -6,7 +6,7 @@ npm scaffolding CLI for Foundry UI. Customers run `npx create-foundry-ui-app my-
 src/
   index.ts             CLI entry: argv parsing, prompts, scaffold + optional pnpm install
   copy-template.ts     recursive copy + __PROJECT_NAME__ substitution + _gitignore -> .gitignore rename
-  presets.ts           preset registry; default = bundled template
+  presets.ts           preset registry; default and foundry-iq bundled
   __tests__/           vitest unit tests
 
 template/
@@ -25,7 +25,7 @@ npx create-foundry-ui-app <target-dir> [--preset <name>] [--no-install] [--force
 ```
 
 - `--preset default` - bundled OSS starter: Foundry UI chat, FastAPI agent service, hello/weather tools.
-- `--preset lastspace` - private Spaces preset, requires `LASTSPACE_TOKEN`.
+- `--preset foundry-iq` - bundled OSS starter plus Azure AI Search Foundry IQ knowledge base retrieval.
 - `--no-install` - skip `pnpm install`.
 - `--force` - allow scaffolding into a non-empty target.
 
@@ -37,7 +37,7 @@ pnpm test:unit
 pnpm typecheck
 ```
 
-The published package ships `dist/` plus `template/` via `package.json#files`.
+The published package ships `dist/`, `template/`, and bundled `presets/` via `package.json#files`.
 
 # Template Rules
 
@@ -46,12 +46,13 @@ Always:
 - Keep the default template generic and chat-first.
 - Keep package deps on the current coordinated `@iloveagents/foundry-*` release range.
 - Keep `agent/` as the service folder name.
-- Keep `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` as the primary env vars.
+- Keep `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` as the primary Agent Framework env vars.
 - Keep the default generated app name and browser title as `Foundry UI`.
 - Document app theming through `theme` layers in `src/main.tsx`.
 - Keep `src/index.css` importing `@iloveagents/foundry-web-ui/styles.css`.
 - Keep Tailwind v4 `@source "../node_modules/@iloveagents/.../dist"` directives.
 - Keep `AGENTS.md` and `CLAUDE.md` in the generated template.
+- Keep Foundry IQ-specific code in the `foundry-iq` preset overlay, not in the default template.
 
 Never:
 

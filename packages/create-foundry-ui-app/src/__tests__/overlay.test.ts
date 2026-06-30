@@ -31,7 +31,7 @@ describe("applyOverlay", () => {
     mkdirSync(join(overlayDir, "src"));
     writeFileSync(join(overlayDir, "src", "main.tsx"), "// overlay main for __PROJECT_NAME__\n");
     writeFileSync(join(overlayDir, "src", "index.css"), "/* overlay css */\n");
-    writeFileSync(join(overlayDir, "_npmrc"), "@lastspace:registry=https://npm.pkg.github.com/\n");
+    writeFileSync(join(overlayDir, "_npmrc"), "@example:registry=https://npm.pkg.github.com/\n");
     writeFileSync(
       join(overlayDir, "docker-compose.yml"),
       "services:\n  mongo:\n    image: mongo:8\n",
@@ -106,11 +106,11 @@ describe("mergeExtraDependencies", () => {
   it("merges extraDependencies into the existing dependencies map", async () => {
     await mergeExtraDependencies({
       targetDir,
-      extraDependencies: { "@lastspace/spaces-web-ui": "^0.1.0" },
+      extraDependencies: { "@example/widget": "^0.1.0" },
     });
     const pkg = JSON.parse(readFileSync(join(targetDir, "package.json"), "utf-8"));
     expect(pkg.dependencies).toEqual({
-      "@lastspace/spaces-web-ui": "^0.1.0",
+      "@example/widget": "^0.1.0",
       react: "^18",
     });
   });

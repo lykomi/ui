@@ -16,7 +16,7 @@ Open `http://localhost:8010`.
 `pnpm dev` starts:
 
 - UI: `http://localhost:8010`
-- Agent service: `http://localhost:9120`
+- Agent service: `http://localhost:8020`
 - AG-UI endpoint: `/api/agent` proxied to the agent service
 
 ## Configure Foundry
@@ -28,7 +28,7 @@ FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<p
 FOUNDRY_MODEL=gpt-5.4
 ```
 
-The agent uses `DefaultAzureCredential`, so local development works with `az login`. In Azure, use managed identity or the standard service principal environment variables.
+`FoundryChatClient` reads the Microsoft Agent Framework environment variables directly. The starter passes `DefaultAzureCredential`, so local development works with `az login`. In Azure, use managed identity or the standard service principal environment variables.
 
 ## Try It
 
@@ -107,6 +107,16 @@ AGENT_TOOLS = [hello_world, get_weather, get_time]
 ```
 
 Restart `pnpm dev` after changing Python dependencies or environment variables. Tool code itself reloads through Uvicorn.
+
+## Add An MCP Server
+
+`agent/app/agent.py` includes a commented `MCPStreamableHTTPTool` example. To enable a remote MCP server:
+
+1. Uncomment the `mcp` dependency in `agent/pyproject.toml`.
+2. Uncomment and configure `AGENT_MCP_TOOLS` in `agent/app/agent.py`.
+3. Include `*AGENT_MCP_TOOLS` in the agent `tools` list.
+
+Agent Framework connects the MCP server when the agent runs. The AG-UI endpoint picks up the discovered MCP functions, so they appear as normal agent tools in the chat flow.
 
 ## Project Map
 

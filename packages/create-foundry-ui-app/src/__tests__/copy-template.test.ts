@@ -58,8 +58,7 @@ describe("copyTemplate", () => {
     // Double-underscore prefix is a Python convention for special files
     // (`__init__.py`, `__main__.py`). The single-underscore-→-dotfile
     // rule must NOT touch them — otherwise scaffolds with Python sub-dirs
-    // get broken `._init__.py` etc. (Regression observed when adding the
-    // lastspace preset's `apps/web-api/src/__init__.py` overlay.)
+    // get broken `._init__.py` etc.
     mkdirSync(join(sourceDir, "py-pkg"));
     writeFileSync(join(sourceDir, "py-pkg", "__init__.py"), "# package marker\n");
     writeFileSync(join(sourceDir, "py-pkg", "__main__.py"), "# entry point\n");

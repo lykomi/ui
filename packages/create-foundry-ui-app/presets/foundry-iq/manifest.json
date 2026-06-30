@@ -1,0 +1,27 @@
+{
+  "name": "foundry-iq",
+  "version": "0.1.0",
+  "description": "Foundry IQ knowledge base starter with Azure AI Search MCP retrieval and per-request source authorization forwarding.",
+  "extends": "default",
+  "filesDir": "files",
+  "envVars": [
+    {
+      "name": "AZURE_AI_SEARCH_ENDPOINT",
+      "description": "Azure AI Search endpoint that hosts the Foundry IQ knowledge base, for example https://<service>.search.windows.net.",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "FOUNDRY_IQ_KNOWLEDGE_BASE",
+      "description": "Foundry IQ knowledge base name used in the MCP endpoint path.",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "FOUNDRY_IQ_QUERY_SOURCE_AUTHORIZATION",
+      "description": "Optional local-dev fallback for the x-ms-query-source-authorization header. Prefer per-request user auth in production.",
+      "required": false,
+      "secret": true
+    }
+  ]
+}

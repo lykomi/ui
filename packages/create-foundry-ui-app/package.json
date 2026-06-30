@@ -18,6 +18,7 @@
   },
   "files": [
     "dist",
+    "presets",
     "template",
     "README.md",
     "LICENSE"

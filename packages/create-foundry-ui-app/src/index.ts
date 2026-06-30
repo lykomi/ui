@@ -59,16 +59,14 @@ Scaffold a new Foundry UI app — AG-UI protocol + Microsoft Agent Framework + A
 
 Options:
   --preset <name>    Preset to scaffold from (default: "default" — OSS shell + AG-UI agent service).
-                     Other presets (e.g. "lastspace") are fetched from npmjs without auth.
-                     Some presets surface required env vars on completion (e.g. lastspace
-                     surfaces LASTSPACE_TOKEN, used downstream by pnpm install).
+                     Use "foundry-iq" for an Azure AI Search Foundry IQ knowledge base demo.
   --no-install       Skip running pnpm install in the new directory.
   --force            Allow scaffolding into a non-empty directory.
   -h, --help         Show this message.
 
 Example:
   npx create-foundry-ui-app my-app
-  npx create-foundry-ui-app my-app --preset lastspace
+  npx create-foundry-ui-app my-app --preset foundry-iq
 `);
 }
 
