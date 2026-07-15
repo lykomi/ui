@@ -37,6 +37,8 @@ import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { MarkdownText } from "./markdown-text.tsx";
 import { ToolFallback } from "./tool-fallback.tsx";
 import { LoadingIndicator, LoadingBar } from "./loading-indicator.tsx";
+import { MessageTimestamp } from "./message-timestamp.tsx";
+import { MessageError } from "./message-error.tsx";
 
 const BranchPicker: FC = () => (
   <BranchPickerPrimitive.Root
@@ -71,6 +73,7 @@ const UserMessage: FC = () => {
           <MessagePrimitive.Content />
         </div>
         <div className="flex h-8 items-center justify-end gap-2 pr-2">
+          <MessageTimestamp />
           <BranchPicker />
           <div className="flex h-8 w-10 items-center justify-end">
             <UserActionBar />
@@ -112,6 +115,7 @@ const AssistantMessage: FC = () => (
           <AssistantActionBar />
         </div>
         <BranchPicker />
+        <MessageTimestamp />
       </div>
     </div>
   </MessagePrimitive.Root>
@@ -142,17 +146,6 @@ const AssistantActionBar: FC = () => (
       </TooltipIconButton>
     </ActionBarPrimitive.Reload>
   </ActionBarPrimitive.Root>
-);
-
-const MessageError: FC = () => (
-  <MessagePrimitive.Error>
-    <ErrorPrimitive.Root className="mt-2 rounded-lg border border-destructive bg-destructive/10 p-3">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-destructive">Error:</span>
-        <ErrorPrimitive.Message className="text-sm text-destructive" />
-      </div>
-    </ErrorPrimitive.Root>
-  </MessagePrimitive.Error>
 );
 
 const EditComposer: FC = () => (

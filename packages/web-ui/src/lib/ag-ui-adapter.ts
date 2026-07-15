@@ -74,6 +74,11 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     const toolCalls = new Map<string, ToolCallSnapshot>();
     let runError: string | null = null;
 
+    // Liveness clock for the working indicator: every runner event (incl.
+    // server heartbeats) proves the run is alive; the indicator derives
+    // elapsed time from runStartedAt and staleness from lastSignalAt.
+    streamingStatusStore.getState().markRunStarted();
+
     /**
      * Build a `ChatModelRunResult` from the accumulated state.
      *
@@ -133,8 +138,13 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
         abortSignal,
       })) {
         let shouldYield = false;
+        streamingStatusStore.getState().touchSignal();
 
         switch (event.type) {
+          case "heartbeat":
+            // Server liveness ping — already recorded via touchSignal above.
+            break;
+
           case "request-sent":
             if (import.meta.env.DEV) {
               useDevStore.getState().captureRequest(event.input);
@@ -266,6 +276,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       }
     } finally {
       streamingStatusStore.getState().setStreamingStatus({ status: "idle" });
+      streamingStatusStore.getState().markRunEnded();
     }
   }
 }

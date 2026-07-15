@@ -43,7 +43,12 @@ vi.mock("@iloveagents/foundry-agent", () => ({
     }),
   },
   streamingStatusStore: {
-    getState: () => ({ setStreamingStatus: () => {} }),
+    getState: () => ({
+      setStreamingStatus: () => {},
+      touchSignal: () => {},
+      markRunStarted: () => {},
+      markRunEnded: () => {},
+    }),
   },
 }));
 

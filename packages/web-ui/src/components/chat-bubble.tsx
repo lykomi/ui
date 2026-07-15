@@ -18,6 +18,7 @@ import {
   Copy,
   Check,
   Paperclip,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { Button } from "@iloveagents/foundry-web-primitives";
@@ -27,6 +28,8 @@ import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import { MarkdownText } from "./markdown-text.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
+import { MessageTimestamp } from "./message-timestamp.tsx";
+import { MessageError } from "./message-error.tsx";
 import { useAppStore } from "../lib/app-store.ts";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { useNewConversation } from "../lib/use-new-conversation.ts";
@@ -44,7 +47,8 @@ function BubbleAssistantMessage() {
           }}
         />
       </div>
-      <div className="flex h-7 w-8 items-center mt-1">
+      <MessageError compact />
+      <div className="flex h-7 items-center gap-2 mt-1">
         <ActionBarPrimitive.Root
           hideWhenRunning
           className={cn(
@@ -63,7 +67,13 @@ function BubbleAssistantMessage() {
               </MessagePrimitive.If>
             </TooltipIconButton>
           </ActionBarPrimitive.Copy>
+          <ActionBarPrimitive.Reload asChild>
+            <TooltipIconButton tooltip="Retry" size="icon" className="size-7">
+              <RefreshCw className="size-3" />
+            </TooltipIconButton>
+          </ActionBarPrimitive.Reload>
         </ActionBarPrimitive.Root>
+        <MessageTimestamp />
       </div>
     </MessagePrimitive.Root>
   );

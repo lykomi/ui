@@ -402,3 +402,129 @@ describe("AGUIRunner", () => {
     expect(err!.message).toBe("boom");
   });
 });
+
+// --- Stream-integrity + liveness (the silent-wedge fixes) ------------------
+//
+// A proxy idle-timeout or dropped connection closes the SSE stream WITHOUT a
+// terminal RUN_FINISHED / RUN_ERROR. The AG-UI client resolves runAgent()
+// normally in that case, so the runner must detect the protocol violation
+// and surface an explicit run-error — a truncated answer must never render
+// as a completed one (a key-user wedge seen in production).
+describe("stream integrity", () => {
+  beforeEach(() => {
+    nextScript = [];
+    runCount = 0;
+  });
+
+  it("synthesizes run-error when the stream closes without a terminal event", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onTextMessageContentEvent?.({
+          event: { type: "TEXT_MESSAGE_CONTENT", delta: "partial answer…" } as never,
+        } as never);
+        // stream dies here: no RUN_FINISHED, runAgent resolves cleanly
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const err = events.find(
+      (e): e is Extract<RunnerEvent, { type: "run-error" }> => e.type === "run-error",
+    );
+    expect(err).toBeDefined();
+    expect(err!.message).toMatch(/connection to the agent was lost/i);
+    expect(events.some((e) => e.type === "run-finished")).toBe(false);
+    // terminal idle status still emitted so consumers reset their spinners
+    const statuses = events.filter(
+      (e): e is Extract<RunnerEvent, { type: "streaming-status" }> =>
+        e.type === "streaming-status",
+    );
+    expect(statuses[statuses.length - 1]?.status.status).toBe("idle");
+  });
+
+  it("does NOT synthesize an error after a proper RUN_FINISHED", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    expect(events.some((e) => e.type === "run-finished")).toBe(true);
+    expect(events.some((e) => e.type === "run-error")).toBe(false);
+  });
+
+  it("normalizes transport rejections onto run-error instead of throwing", async () => {
+    nextScript = [
+      async () => {
+        throw new Error("fetch failed: network reset");
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const err = events.find(
+      (e): e is Extract<RunnerEvent, { type: "run-error" }> => e.type === "run-error",
+    );
+    expect(err).toBeDefined();
+    expect(err!.message).toContain("fetch failed");
+  });
+
+  it("forwards server heartbeat CUSTOM events as heartbeat runner events", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onCustomEvent?.({
+          event: { type: "CUSTOM", name: "heartbeat", value: { elapsedMs: 1234 } } as never,
+        } as never);
+        await s.onCustomEvent?.({
+          event: { type: "CUSTOM", name: "something-else", value: {} } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const beats = events.filter(
+      (e): e is Extract<RunnerEvent, { type: "heartbeat" }> => e.type === "heartbeat",
+    );
+    expect(beats).toHaveLength(1);
+    expect(beats[0].elapsedMs).toBe(1234);
+  });
+
+  it("emits stalled status during a quiet stretch and recovers on the next event", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await new Promise((r) => setTimeout(r, 220)); // quiet > stallAfterMs
+        await s.onTextMessageContentEvent?.({
+          event: { type: "TEXT_MESSAGE_CONTENT", delta: "back alive" } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner({ stallAfterMs: 60 });
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const statuses = events
+      .filter(
+        (e): e is Extract<RunnerEvent, { type: "streaming-status" }> =>
+          e.type === "streaming-status",
+      )
+      .map((e) => e.status.status);
+    const stalledIdx = statuses.indexOf("stalled");
+    expect(stalledIdx).toBeGreaterThan(-1);
+    // recovery: a non-stalled status follows before the run ends
+    expect(statuses.slice(stalledIdx + 1)).toContain("thinking");
+    expect(events.some((e) => e.type === "run-error")).toBe(false);
+  });
+});

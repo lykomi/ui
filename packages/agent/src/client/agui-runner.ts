@@ -18,6 +18,7 @@ import { HttpAgent, type AgentSubscriber } from "@ag-ui/client";
 import type { Context, Message, Tool } from "@ag-ui/core";
 import type { ToolRegistry } from "../tools/registry.ts";
 import type { RunnerEvent } from "./runner-events.ts";
+import type { StreamingStatus } from "../store/streaming-status-store.ts";
 
 interface ToolCallState {
   id: string;
@@ -33,6 +34,13 @@ export interface AGUIRunnerOptions {
   threadId?: string;
   /** Optional override for the underlying fetch — useful for auth-attached fetch. */
   fetchFn?: typeof fetch;
+  /**
+   * Emit a `streaming-status: stalled` event when no AG-UI event (including
+   * server heartbeats) has arrived for this many ms during an active run.
+   * The status recovers automatically on the next event. Default 45s —
+   * three missed 15s server heartbeats. Pass `Infinity` to disable.
+   */
+  stallAfterMs?: number;
 }
 
 export interface AGUIRunInput {
@@ -147,6 +155,7 @@ class EventQueue<T> {
  */
 export class AGUIRunner {
   private readonly httpAgent: HttpAgent;
+  private readonly stallAfterMs: number;
 
   constructor(options: AGUIRunnerOptions = {}) {
     this.httpAgent = new HttpAgent({
@@ -154,6 +163,7 @@ export class AGUIRunner {
       threadId: options.threadId ?? crypto.randomUUID(),
       ...(options.fetchFn ? { fetch: options.fetchFn } : {}),
     });
+    this.stallAfterMs = options.stallAfterMs ?? 45_000;
   }
 
   get threadId(): string {
@@ -211,34 +221,85 @@ export class AGUIRunner {
           context: context ?? [],
         };
 
-        queue.push({ type: "turn-started" });
-        queue.push({ type: "streaming-status", status: { status: "thinking" } });
-        queue.push({ type: "request-sent", input: runInputSnapshot });
+        // --- Liveness + protocol-integrity bookkeeping (per turn) ---
+        // AG-UI requires a terminal RUN_FINISHED or RUN_ERROR. A stream that
+        // merely closes (proxy idle-timeout, dropped connection, dead
+        // replica) would otherwise look like a clean completion and a
+        // truncated answer would render as final — the silent-wedge bug.
+        let sawTerminal = false;
+        let stalled = false;
+        let lastStatus: StreamingStatus = { status: "thinking" };
+        let lastEventAt = Date.now();
+        const push = (evt: RunnerEvent): void => {
+          lastEventAt = Date.now();
+          if (evt.type === "streaming-status") {
+            if (evt.status.status === "stalled") {
+              stalled = true;
+            } else {
+              lastStatus = evt.status;
+              stalled = false;
+            }
+            queue.push(evt);
+            return;
+          }
+          if (stalled) {
+            // First live signal after a stall — restore the pre-stall phase.
+            stalled = false;
+            queue.push({ type: "streaming-status", status: lastStatus });
+          }
+          queue.push(evt);
+        };
+        const stallTimer = Number.isFinite(this.stallAfterMs)
+          ? setInterval(
+              () => {
+                if (stalled || sawTerminal) return;
+                if (Date.now() - lastEventAt >= this.stallAfterMs) {
+                  push({ type: "streaming-status", status: { status: "stalled" } });
+                }
+              },
+              Math.min(5_000, Math.max(25, Math.floor(this.stallAfterMs / 3))),
+            )
+          : null;
+
+        push({ type: "turn-started" });
+        push({ type: "streaming-status", status: { status: "thinking" } });
+        push({ type: "request-sent", input: runInputSnapshot });
 
         const subscriber: AgentSubscriber = {
           onRunStartedEvent: () => {
-            queue.push({ type: "run-started" });
-            queue.push({ type: "streaming-status", status: { status: "thinking" } });
+            push({ type: "run-started" });
+            push({ type: "streaming-status", status: { status: "thinking" } });
           },
           onTextMessageStartEvent: () => {
-            queue.push({ type: "streaming-status", status: { status: "streaming" } });
+            push({ type: "streaming-status", status: { status: "streaming" } });
           },
           onTextMessageContentEvent: ({ event }) => {
             turnAssistantText += event.delta;
-            queue.push({ type: "text-delta", delta: event.delta });
+            push({ type: "text-delta", delta: event.delta });
           },
           onTextMessageEndEvent: () => {
-            queue.push({ type: "text-message-end" });
+            push({ type: "text-message-end" });
+          },
+          onCustomEvent: ({ event }) => {
+            // Server heartbeat: liveness proof during long tool calls /
+            // thinking phases (also keeps intermediary idle-timeouts at bay
+            // server-side). Not a UI-visible event.
+            if (event.name !== "heartbeat") return;
+            const value = event.value as { elapsedMs?: number } | null | undefined;
+            push({
+              type: "heartbeat",
+              ...(typeof value?.elapsedMs === "number" ? { elapsedMs: value.elapsedMs } : {}),
+            });
           },
           onToolCallStartEvent: ({ event }) => {
             const id = event.toolCallId;
             const name = event.toolCallName;
             toolCalls.set(id, { id, name, args: "" });
-            queue.push({
+            push({
               type: "streaming-status",
               status: { status: "calling", toolName: name },
             });
-            queue.push({
+            push({
               type: "tool-call-start",
               id,
               name,
@@ -248,7 +309,7 @@ export class AGUIRunner {
           onToolCallArgsEvent: ({ event }) => {
             const tc = toolCalls.get(event.toolCallId);
             if (tc) tc.args += event.delta;
-            queue.push({ type: "tool-call-args", id: event.toolCallId, delta: event.delta });
+            push({ type: "tool-call-args", id: event.toolCallId, delta: event.delta });
           },
           onToolCallEndEvent: async ({ event }) => {
             const tc = toolCalls.get(event.toolCallId);
@@ -268,7 +329,7 @@ export class AGUIRunner {
               }
             }
 
-            queue.push({
+            push({
               type: "tool-call-end",
               id: event.toolCallId,
               args: tc.args,
@@ -294,7 +355,7 @@ export class AGUIRunner {
             }
             tc.result = parsedResult;
             tc.isError = isError;
-            queue.push({
+            push({
               type: "tool-call-result",
               id: event.toolCallId,
               result: parsedResult,
@@ -302,12 +363,14 @@ export class AGUIRunner {
             });
           },
           onRunFinishedEvent: () => {
-            queue.push({ type: "streaming-status", status: { status: "idle" } });
-            queue.push({ type: "run-finished" });
+            sawTerminal = true;
+            push({ type: "streaming-status", status: { status: "idle" } });
+            push({ type: "run-finished" });
           },
           onRunErrorEvent: ({ event }) => {
-            queue.push({ type: "streaming-status", status: { status: "idle" } });
-            queue.push({ type: "run-error", message: event.message ?? "Run error" });
+            sawTerminal = true;
+            push({ type: "streaming-status", status: { status: "idle" } });
+            push({ type: "run-error", message: event.message ?? "Run error" });
           },
         };
 
@@ -316,12 +379,38 @@ export class AGUIRunner {
         abortSignal?.addEventListener("abort", onAbort, { once: true });
 
         // Kick off the run — completion ends the queue. Errors during the
-        // run surface via onRunErrorEvent; transport-level rejections
-        // (e.g. fetch failure) are propagated through queue.end(err).
+        // run surface via onRunErrorEvent. Two failure shapes are normalized
+        // onto the same `run-error` surface so every failure renders in chat
+        // instead of dying silently:
+        //   1. The stream closed WITHOUT a terminal RUN_FINISHED/RUN_ERROR
+        //      (proxy idle-timeout, dropped connection, dead replica) — the
+        //      AG-UI client treats that as a clean completion, so we detect
+        //      the protocol violation here.
+        //   2. Transport-level rejection (fetch failure, TLS reset).
         const runPromise = this.httpAgent
           .runAgent({ runId, tools, context: context ?? [] }, subscriber)
-          .then(() => queue.end())
-          .catch((err: unknown) => queue.end(err));
+          .then(() => {
+            if (!sawTerminal && !abortSignal?.aborted) {
+              push({ type: "streaming-status", status: { status: "idle" } });
+              push({
+                type: "run-error",
+                message:
+                  "Connection to the agent was lost before the response finished — " +
+                  "the answer may be incomplete. Please retry.",
+              });
+            }
+            queue.end();
+          })
+          .catch((err: unknown) => {
+            if (!sawTerminal && !abortSignal?.aborted) {
+              push({ type: "streaming-status", status: { status: "idle" } });
+              push({
+                type: "run-error",
+                message: err instanceof Error ? err.message : "The request to the agent failed.",
+              });
+            }
+            queue.end();
+          });
 
         try {
           for await (const evt of queue.drain()) {
@@ -332,6 +421,7 @@ export class AGUIRunner {
             }
           }
         } finally {
+          if (stallTimer !== null) clearInterval(stallTimer);
           abortSignal?.removeEventListener("abort", onAbort);
           await runPromise; // ensure the run task is settled
         }

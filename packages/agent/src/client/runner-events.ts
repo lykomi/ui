@@ -24,4 +24,11 @@ export type RunnerEvent =
   | { type: "tool-call-result"; id: string; result: unknown; isError: boolean }
   | { type: "streaming-status"; status: StreamingStatus }
   | { type: "run-finished" }
-  | { type: "run-error"; message: string };
+  | { type: "run-error"; message: string }
+  /**
+   * Server liveness signal (AG-UI CUSTOM event named `heartbeat`, emitted by
+   * the backend between real events so long tool calls / thinking phases are
+   * distinguishable from a dead pipe). Carries the server-side elapsed run
+   * time when provided. Consumers refresh their liveness clock; no UI yield.
+   */
+  | { type: "heartbeat"; elapsedMs?: number };
