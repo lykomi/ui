@@ -12,6 +12,12 @@ export type {
 export { ChatContent, DEFAULT_STARTER_SUGGESTIONS } from "./components/assistant-chat.tsx";
 export type { ChatContentProps } from "./components/assistant-chat.tsx";
 export { ChatBubble } from "./components/chat-bubble.tsx";
+export {
+  registerChatSlots,
+  useChatSlotsStore,
+  ChatComposerBannerSlot,
+  ChatLauncherBadgeSlot,
+} from "./components/chat-slots.tsx";
 export { ChatHeader } from "./components/chat-header.tsx";
 export {
   ComposerAttachment,

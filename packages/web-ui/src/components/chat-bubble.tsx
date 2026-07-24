@@ -26,6 +26,7 @@ import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { ContextPins } from "./context-bar.tsx";
 import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
+import { ChatComposerBannerSlot, ChatLauncherBadgeSlot } from "./chat-slots.tsx";
 import { MarkdownText } from "./markdown-text.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
 import { MessageTimestamp } from "./message-timestamp.tsx";
@@ -193,24 +194,30 @@ export function ChatBubble() {
         />
       )}
 
-      {/* Trigger button — bottom-left corner */}
+      {/* Trigger button — bottom-left corner. The positioned `group` wrapper
+          is the anchor contract for ChatLauncherBadgeSlot: badges position
+          absolutely over the button and may use group-hover for a flyout. */}
       {!isOpen && (
-        <button
-          type="button"
-          onClick={openBubble}
-          className={cn(
-            "fixed bottom-4 z-50",
-            "size-10 rounded-full",
-            "bg-primary text-primary-foreground shadow-lg",
-            "flex items-center justify-center",
-            "hover:bg-primary/90 transition-all duration-200",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          )}
+        <div
+          className="fixed z-50 group"
           style={{ left: CHAT_BUBBLE_INSET, bottom: CHAT_BUBBLE_INSET }}
-          aria-label="Open chat"
         >
-          <MessageSquare className="size-4" />
-        </button>
+          <button
+            type="button"
+            onClick={openBubble}
+            className={cn(
+              "size-10 rounded-full",
+              "bg-primary text-primary-foreground shadow-lg",
+              "flex items-center justify-center",
+              "hover:bg-primary/90 transition-all duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+            aria-label="Open chat"
+          >
+            <MessageSquare className="size-4" />
+          </button>
+          <ChatLauncherBadgeSlot />
+        </div>
       )}
 
       {/* Chat panel — draggable, anchored bottom-left by default */}
@@ -311,8 +318,10 @@ export function ChatBubble() {
             </div>
 
             {/* Composer — same pattern as full chat: attachment + input + send */}
-            <div className="shrink-0 border-t border-border px-3 py-3">
-              <ComposerPrimitive.Root
+            <div className="shrink-0 border-t border-border">
+              <ChatComposerBannerSlot />
+              <div className="px-3 py-3">
+                <ComposerPrimitive.Root
                 className={cn(
                   "flex flex-col gap-1",
                   "rounded-2xl border border-input",
@@ -373,7 +382,8 @@ export function ChatBubble() {
                     </ComposerPrimitive.Send>
                   </ThreadPrimitive.If>
                 </div>
-              </ComposerPrimitive.Root>
+                </ComposerPrimitive.Root>
+              </div>
             </div>
           </ThreadPrimitive.Root>
         </div>

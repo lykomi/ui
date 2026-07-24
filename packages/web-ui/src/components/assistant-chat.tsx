@@ -33,6 +33,7 @@ import { userAttachmentComponents, composerAttachmentComponents } from "./chat-a
 import { SentContextBadges, ComposerContextBadges } from "./context-badges.tsx";
 import { ContextPins } from "./context-bar.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
+import { ChatComposerBannerSlot } from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { MarkdownText } from "./markdown-text.tsx";
 import { ToolFallback } from "./tool-fallback.tsx";
@@ -408,6 +409,7 @@ export function ChatContent({
         </div>
 
         <div className="shrink-0 bg-background">
+          <ChatComposerBannerSlot />
           <ThreadPrimitive.If running={false}>
             <div className="border-t border-border" />
           </ThreadPrimitive.If>
