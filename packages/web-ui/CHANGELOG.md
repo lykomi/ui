@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.6.0
+
+### Minor Changes
+
+- 512560d: Chat extension slots: `registerChatSlots({ composerBanner, launcherBadge })` lets modules render a persistent strip above the composer (full chat + bubble panel) and a badge over the collapsed chat launcher (wrapped in a positioned `group` anchor for hover flyouts). Used by Spaces for always-visible background-task progress.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.6.0
+- @iloveagents/foundry-web-primitives@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes
