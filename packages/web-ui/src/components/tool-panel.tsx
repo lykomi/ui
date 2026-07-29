@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { X, Maximize2, Minimize2, Copy, Check, Pin, PinOff, FolderOpen } from "lucide-react";
 import { useNavigate } from "react-router";
 import { cn } from "@iloveagents/foundry-web-primitives";
-import { useToolPanelStore, type ToolPanelContent } from "../lib/tool-panel-store.ts";
+import {
+  clampPanelWidth,
+  MIN_PANEL_WIDTH,
+  useToolPanelStore,
+  type ToolPanelContent,
+} from "../lib/tool-panel-store.ts";
 import { useAppStore } from "../lib/app-store.ts";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -47,6 +52,40 @@ export function ToolPanel() {
   const content = useToolPanelStore((state) => state.content);
   const closePanel = useToolPanelStore((state) => state.closePanel);
   const panelWidth = useToolPanelStore((state) => state.panelWidth);
+  const setPanelWidth = useToolPanelStore((state) => state.setPanelWidth);
+  const useOverlay = useToolPanelStore((state) => state.useOverlay);
+  /** Pointer id of an in-flight resize drag (null when idle). */
+  const dragPointerId = useRef<number | null>(null);
+  const maxPanelWidth =
+    typeof window !== "undefined"
+      ? clampPanelWidth(Number.POSITIVE_INFINITY, window.innerWidth)
+      : MIN_PANEL_WIDTH;
+
+  useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      if (dragPointerId.current === null) return;
+      setPanelWidth(window.innerWidth - event.clientX);
+    };
+    // pointercancel matters: a cancelled drag must not leave the document
+    // unselectable with a col-resize cursor (review catch).
+    const onPointerEnd = (event: PointerEvent) => {
+      if (dragPointerId.current !== null && event.pointerId !== dragPointerId.current) return;
+      dragPointerId.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerEnd);
+    window.addEventListener("pointercancel", onPointerEnd);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerEnd);
+      window.removeEventListener("pointercancel", onPointerEnd);
+      // Unmounting mid-drag must not strand the styles either.
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [setPanelWidth]);
   const isFullscreen = useToolPanelStore((state) => state.isFullscreen);
   const toggleFullscreen = useToolPanelStore((state) => state.toggleFullscreen);
   const navigate = useNavigate();
@@ -126,6 +165,44 @@ export function ToolPanel() {
       )}
       style={{ width: panelWidth }}
     >
+      {/* Drag-to-resize the split (side-by-side mode only). Mirrors the
+          navigation sidebar's handle: listeners live in an effect, the
+          drag ends on pointerup OR pointercancel, and cleanup always
+          restores userSelect. Keyboard: arrows nudge, Shift jumps,
+          Home/End go to the extremes. */}
+      {isOpen && !useOverlay && !isFullscreen ? (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize panel"
+          aria-valuemin={MIN_PANEL_WIDTH}
+          aria-valuemax={maxPanelWidth}
+          aria-valuenow={Math.round(panelWidth)}
+          tabIndex={0}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            dragPointerId.current = event.pointerId;
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+          }}
+          onKeyDown={(event) => {
+            const step = event.shiftKey ? 80 : 24;
+            if (event.key === "ArrowLeft") setPanelWidth(panelWidth + step);
+            else if (event.key === "ArrowRight") setPanelWidth(panelWidth - step);
+            else if (event.key === "Home") setPanelWidth(maxPanelWidth);
+            else if (event.key === "End") setPanelWidth(MIN_PANEL_WIDTH);
+            else return;
+            event.preventDefault();
+          }}
+          className={cn(
+            "absolute left-0 top-0 z-10 h-full w-2 -translate-x-1/2",
+            "cursor-col-resize touch-none",
+            "before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2",
+            "before:bg-transparent hover:before:bg-primary/40 focus-visible:before:bg-primary",
+            "focus:outline-none",
+          )}
+        />
+      ) : null}
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">

@@ -34,11 +34,37 @@ export interface PanelRendererEntry {
 }
 
 const SIDE_BY_SIDE_BREAKPOINT = 1280;
+/** Smallest useful panel, and the space the chat/content beside it must keep. */
+export const MIN_PANEL_WIDTH = 360;
+const MIN_SIBLING_WIDTH = 420;
+const PANEL_WIDTH_STORAGE_KEY = "foundry.toolPanel.width";
+
+/** Clamp a desired width so neither side can be squeezed out of usefulness. */
+export const clampPanelWidth = (desired: number, viewport: number): number => {
+  if (viewport < SIDE_BY_SIDE_BREAKPOINT) return viewport;
+  const max = Math.max(MIN_PANEL_WIDTH, viewport - MIN_SIBLING_WIDTH);
+  return Math.round(Math.min(max, Math.max(MIN_PANEL_WIDTH, desired)));
+};
+
+const readStoredPanelWidth = (): number | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(PANEL_WIDTH_STORAGE_KEY);
+    const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  } catch {
+    return null; // private mode / storage disabled — fall back to the default
+  }
+};
 
 const getPanelWidth = (): number => {
   if (typeof window === "undefined") return 800;
   const screenWidth = window.innerWidth;
   if (screenWidth < SIDE_BY_SIDE_BREAKPOINT) return screenWidth;
+  // A width the user dragged to wins over the computed default, re-clamped
+  // to the current viewport so a narrow window can't strand the content.
+  const stored = readStoredPanelWidth();
+  if (stored !== null) return clampPanelWidth(stored, screenWidth);
   return Math.min(1000, Math.max(600, screenWidth * 0.5));
 };
 
@@ -65,6 +91,8 @@ interface ToolPanelState {
   setContent: (content: ToolPanelContent) => void;
   updateLayout: () => void;
   toggleFullscreen: () => void;
+  /** Drag-to-resize the split; clamped and persisted per user. */
+  setPanelWidth: (width: number) => void;
   /** Register a custom content renderer (e.g., PDF viewer, entity pages). */
   registerRenderer: (entry: PanelRendererEntry) => void;
 }
@@ -82,6 +110,17 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
     set((state) => ({ renderers: [...state.renderers, entry] })),
   closePanel: () => set({ isOpen: false, isFullscreen: false }),
   setContent: (content) => set({ content }),
+  setPanelWidth: (width) => {
+    if (typeof window === "undefined") return;
+    if (get().isFullscreen) return;
+    const next = clampPanelWidth(width, window.innerWidth);
+    try {
+      window.localStorage.setItem(PANEL_WIDTH_STORAGE_KEY, String(next));
+    } catch {
+      // Persisting is best-effort; the drag still applies for this session.
+    }
+    set({ panelWidth: next });
+  },
   updateLayout: () => {
     const { isFullscreen } = get();
     if (!isFullscreen) {
