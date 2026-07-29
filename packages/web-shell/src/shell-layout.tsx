@@ -22,6 +22,7 @@ import {
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { X } from "lucide-react";
 import type { ChatModule } from "./types.ts";
+import { usePagePanelWidth, MIN_PAGE_PANEL_WIDTH } from "./use-page-panel-width.ts";
 
 interface ShellLayoutProps {
   modules: ChatModule[];
@@ -97,6 +98,14 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
   const page = <Outlet />;
 
   // Aggregate module layoutExtras into a single fragment.
+  const {
+    width: pagePanelWidth,
+    setWidth: setPagePanelWidth,
+    nudgeWidth: nudgePagePanelWidth,
+    startDrag: startPagePanelDrag,
+    maxWidth: pagePanelMaxWidth,
+  } = usePagePanelWidth();
+
   const layoutExtras: ReactNode[] = [];
   for (const m of modules) {
     if (m.layoutExtras) {
@@ -123,10 +132,40 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
 
                 {showPagePanel && (
                   <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Resize content panel"
+                    aria-valuemin={MIN_PAGE_PANEL_WIDTH}
+                    aria-valuemax={pagePanelMaxWidth}
+                    aria-valuenow={Math.round(pagePanelWidth)}
+                    tabIndex={0}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      startPagePanelDrag(event.pointerId);
+                    }}
+                    onKeyDown={(event) => {
+                      const step = event.shiftKey ? 80 : 24;
+                      if (event.key === "ArrowLeft") nudgePagePanelWidth(step);
+                      else if (event.key === "ArrowRight") nudgePagePanelWidth(-step);
+                      else if (event.key === "Home") setPagePanelWidth(pagePanelMaxWidth);
+                      else if (event.key === "End") setPagePanelWidth(MIN_PAGE_PANEL_WIDTH);
+                      else return;
+                      event.preventDefault();
+                    }}
+                    className={cn(
+                      "hidden w-1.5 shrink-0 cursor-col-resize touch-none xl:block",
+                      "bg-transparent hover:bg-primary/30 focus-visible:bg-primary",
+                      "focus:outline-none",
+                    )}
+                  />
+                )}
+
+                {showPagePanel && (
+                  <div
                     className={cn(
                       "hidden h-full shrink-0 border-l border-border bg-background xl:flex xl:flex-col",
                     )}
-                    style={{ width: 600 }}
+                    style={{ width: pagePanelWidth }}
                   >
                     <PagePanelActions />
                     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">{page}</div>
