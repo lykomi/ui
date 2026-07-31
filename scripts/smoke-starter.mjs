@@ -305,6 +305,19 @@ async function runBrowserStarterSmoke() {
       });
     });
 
+    if (screenshotPath) {
+      // The shell defaults to the collapsed rail and persists the choice under
+      // localStorage["sidebar"] (see web-ui's sidebar-store). Seed it before
+      // the SPA boots so the capture shows the expanded navigation.
+      await page.addInitScript(() => {
+        try {
+          localStorage.setItem("sidebar", "true");
+        } catch {
+          // Storage unavailable; fall back to the default rail.
+        }
+      });
+    }
+
     await page.goto(url, { waitUntil: "domcontentloaded" });
 
     const title = await page.title();
@@ -317,18 +330,6 @@ async function runBrowserStarterSmoke() {
     await page.getByText("Hello from the", { exact: false }).first().waitFor({ timeout: 10_000 });
 
     if (screenshotPath) {
-      // Best-effort: expand the nav sidebar so the frame shows more of the
-      // shell. Never fatal — the capture is still valid collapsed.
-      try {
-        await page
-          .getByRole("button", { name: /sidebar/i })
-          .first()
-          .click({ timeout: 3_000 });
-        await page.waitForTimeout(600);
-      } catch {
-        // Sidebar toggle not found or not clickable; keep the default state.
-      }
-
       // Let streaming settle and the composer lose focus so the capture has no
       // caret or half-rendered markdown in it.
       await page.locator("body").click({ position: { x: 5, y: 5 } });
