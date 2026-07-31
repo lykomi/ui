@@ -1,0 +1,68 @@
+{
+  "name": "@iloveagents/foundry-agent",
+  "version": "0.7.0",
+  "license": "MIT",
+  "description": "Cross-runtime AG-UI transport for Foundry UI — AGUIRunner protocol engine, vanilla zustand stores, optional MSAL auth subpath, service-fetch factory. Zero React, zero DOM.",
+  "keywords": [
+    "ag-ui",
+    "agent",
+    "agent-framework",
+    "azure-foundry",
+    "foundry-ui",
+    "msal",
+    "zustand"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iLoveAgents/foundry-ui.git",
+    "directory": "packages/agent"
+  },
+  "homepage": "https://github.com/iLoveAgents/foundry-ui/tree/main/packages/agent#readme",
+  "bugs": "https://github.com/iLoveAgents/foundry-ui/issues",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./msal": {
+      "types": "./dist/msal/index.d.ts",
+      "import": "./dist/msal/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "zustand": "^5.0.0",
+    "@ag-ui/client": "^0.0.52",
+    "@ag-ui/core": "^0.0.52",
+    "@azure/msal-browser": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@azure/msal-browser": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@ag-ui/client": "^0.0.52",
+    "@ag-ui/core": "^0.0.52",
+    "@azure/msal-browser": "^5.0.0",
+    "jsdom": "^28.1.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.4",
+    "zustand": "^5.0.0"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "name": "__PROJECT_NAME__",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.23.0",
+  "scripts": {
+    "dev": "concurrently -k -n agent,web -c cyan,green \"pnpm dev:agent\" \"pnpm dev:web\"",
+    "dev:web": "vite",
+    "dev:agent": "cd agent && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8020",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@iloveagents/foundry-agent": "0.6.0",
+    "@iloveagents/foundry-web-primitives": "0.6.0",
+    "@iloveagents/foundry-web-shell": "0.6.0",
+    "@iloveagents/foundry-web-ui": "0.6.0",
+    "@assistant-ui/react": "^0.12.25",
+    "@assistant-ui/tap": "0.5.16",
+    "@ag-ui/client": "^0.0.52",
+    "@ag-ui/core": "^0.0.52",
+    "@azure/msal-browser": "^5.6.3",
+    "@azure/msal-react": "^5.2.1",
+    "@tanstack/react-query": "^5.99.0",
+    "lucide-react": "^0.553.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router": "^7.14.1",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react-swc": "^4.3.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.5.0",
+    "prettier": "^3.8.3",
+    "tailwindcss": "^4.2.2",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^7.2.2"
+  },
+  "overrides": {
+    "@assistant-ui/store": "0.2.10",
+    "@assistant-ui/tap": "0.5.16"
+  }
+}

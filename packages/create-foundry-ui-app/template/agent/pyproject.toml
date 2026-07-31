@@ -1,0 +1,21 @@
+[project]
+name = "__PROJECT_NAME__-agent"
+version = "0.0.0"
+description = "FastAPI + Microsoft Agent Framework service for __PROJECT_NAME__."
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "agent-framework-ag-ui>=1.0.0b260429",
+  "agent-framework-core>=1.2.2,<2",
+  "agent-framework-foundry>=1.2.2,<2",
+  "azure-identity>=1.25.1",
+  "fastapi[standard]>=0.115.0",
+  # Uncomment when enabling MCPStreamableHTTPTool in app/agent.py.
+  # "mcp>=1.24.0,<2",
+  "pydantic>=2.12.0",
+  "python-dotenv>=1.0.1",
+  "uvicorn[standard]>=0.34.0",
+]
+
+[tool.uv]
+package = false
+prerelease = "allow"

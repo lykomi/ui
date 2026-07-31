@@ -1,0 +1,18 @@
+{
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(node *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(wc *)",
+      "Bash(./scripts/*)",
+      "Read(./**)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:learn.microsoft.com)",
+      "WebFetch(domain:www.assistant-ui.com)",
+      "WebFetch(domain:docs.ag-ui.com)"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+packages:
+  - packages/*
+
+ignoredBuiltDependencies:
+  - '@swc/core'
+  - esbuild
+
+# Force a single copy of libraries that rely on React context to flow across
+# the workspace (assistant-ui, react-router) — when two packages declare
+# slightly different ranges, pnpm can resolve to different patch versions and
+# end up with two copies in the bundle.
+# Single source of truth for the singleton pins (pnpm 10 reads overrides from
+# here; do NOT duplicate them in package.json `pnpm.overrides` — two copies
+# drift). The meta workspace (ltwlf/lastspace-meta) mirrors these.
+overrides:
+  react-router: "^7.14.1"
+  '@assistant-ui/react': "^0.12.25"
+  '@ag-ui/client': "^0.0.52"
+  '@ag-ui/core': "^0.0.52"

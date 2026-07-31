@@ -1,0 +1,76 @@
+# Release workflow for `@iloveagents/foundry-*` npm packages.
+#
+# Auth: npm Trusted Publishing (OIDC). No NPM_TOKEN required — the
+# `id-token: write` permission below + per-package Trusted Publisher trust
+# configured on npmjs.com authenticates this workflow against npm.
+#
+# Trusted Publisher configured for: iLoveAgents/foundry-ui + this workflow file.
+# Each of the four packages has its own trust entry under
+# npmjs.com → Packages → <pkg> → Settings → Trusted publishing.
+#
+# Behaviour:
+#   - On push to main, runs the Changesets action.
+#   - If pending changesets exist: opens / updates a "chore: version packages"
+#     PR that bumps versions + writes CHANGELOG entries.
+#   - When that PR merges: this workflow re-runs, sees no pending changesets,
+#     and runs `pnpm changeset publish` which publishes via OIDC.
+
+name: Release npm
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-npm
+  cancel-in-progress: false
+
+permissions:
+  contents: write # changesets action commits version bumps
+  pull-requests: write # changesets action opens Version Packages PR
+  id-token: write # required for future npm Trusted Publishing OIDC
+
+jobs:
+  release:
+    name: Version + Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Quality gate
+        run: pnpm test
+
+      - name: Check npm package contents
+        run: pnpm pack:check
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Smoke generated starter in browser
+        run: pnpm smoke:starter:browser
+
+      - name: Create Version PR or publish
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset:version
+          publish: pnpm changeset:publish
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # NPM_TOKEN intentionally omitted — Trusted Publishing uses the
+          # OIDC token from `id-token: write` above; no static secret needed.

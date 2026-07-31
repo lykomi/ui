@@ -1,0 +1,107 @@
+# @iloveagents/foundry-web-primitives
+
+## 0.7.0
+
+## 0.6.0
+
+## 0.5.0
+
+## 0.4.0
+
+## 0.3.1
+
+## 0.3.0
+
+## 0.2.2
+
+### Patch Changes
+
+- 8184a8c: shell: URL is authoritative for the runtime threadId — fixes
+  resume-creates-new-conversation race
+
+  `ChatConversationAwareRuntime` previously computed
+  `effectiveThreadId = sticky ?? urlMatch ?? freshIdRef.current`.
+  When the user navigated from one chat to another via a Recents
+  click, the synchronous render that followed the URL change had:
+  - `urlMatch = B` (read from the now-updated `useLocation`)
+  - `sticky = A` (the active-chat-store hadn't been updated by
+    `useTrackActiveChatFromUrl`'s `useEffect` yet — effects run
+    AFTER the commit phase)
+
+  `sticky ?? urlMatch` picked `A` (the previous chat). The AG-UI
+  adapter was constructed with `threadId = A`. The first message the
+  user sent went to `/api/agent` with `thread_id = A`, the middleware
+  created a new row keyed by `A`... wait actually no, here's what
+  happens — the runtime mints a fresh runner UUID when given a
+  mismatched threadId; that fresh UUID became a new conversation row,
+  appearing as "Untitled chat" at the top of the sidebar while the
+  URL still said `/chat/B`. Two active-looking dots: one for `B`
+  (NavLink URL match), one for the new row (statusDot from the
+  updated active-chat-store after the lazy ensure ran).
+
+  Swap the priority: `urlMatch ?? sticky ?? freshIdRef.current`. The
+  URL is authoritative whenever it's set (i.e. on `/chat/<id>`
+  routes), eliminating the stale-sticky race entirely. `sticky` is
+  still consulted as the second-priority fallback for non-chat
+  routes (`/spaces`, `/tasks`) so the popout chat stays "live" while
+  the user browses workspaces — that's the original purpose of
+  `useStickyConversationId` and it's preserved.
+
+## 0.2.1
+
+### Patch Changes
+
+- No source changes. Bumped in lock-step with the fixed group so the
+  whole group can publish at a version number that's free across all
+  four packages. `@iloveagents/foundry-agent@0.2.0` and
+  `@iloveagents/foundry-web-primitives@0.2.0` were blocked by an old
+  npm reservation; `shell` and `ui` published at 0.2.0 successfully.
+  0.2.1 unblocks the two stuck packages without leaving the fixed
+  group drifting.
+
+## 0.2.0
+
+### Minor Changes
+
+- shell: ChatConversationConfig API + sticky-runtime threadId — bumped as
+  part of the fixed group with `foundry-web-shell` / `foundry-web-ui` /
+  `foundry-agent`. No direct source changes in this package.
+
+### NOTE: 1.0.0 / 1.0.1 were accidental
+
+These version numbers were published briefly on 2026-05-27 due to the
+peerDep cascade bug in the sibling packages (see `foundry-agent`'s 0.2.0
+changelog entry), then unpublished. The version numbers themselves are
+now permanently reserved on npm and CANNOT be re-published. Do not
+depend on 1.0.x.
+
+## 0.1.5
+
+## 0.1.4
+
+## 0.1.3
+
+## 0.1.2
+
+## 0.1.1
+
+### Patch Changes
+
+- 689d3e9: feat(sidebar): distinct file-drop affordance for nav containers
+
+  `useNavItemDnd` now exposes `isFileDragOver` separately from `isDragOver`
+  so consuming nav items can render a prominent file-drop visual (dashed
+  primary outline + soft primary background + Upload icon) when the user
+  is dragging native files over the container. Previously file drags
+  shared the same subtle ring as entity-move drags, so users couldn't
+  tell that a folder accepted external files. Applies to all five nav-
+  item shapes (action-row leaf, button leaf, `NestedFolderItem`,
+  `CollapsibleNavItem` with children/actions, `NavLink` fallthrough) and
+  updates `ContainerDropZone` for visual parity.
+
+  Also fixes a related regression: the capture-phase
+  `onDragEnterCapture` / `onDragOverCapture` handlers were calling
+  `e.stopPropagation()`, which short-circuits React's synthetic dispatch
+  and prevented the bubble-phase `onDragEnter` (where state actually
+  mutates) from running. Removed — `preventDefault()` alone is enough to
+  mark the element as droppable.

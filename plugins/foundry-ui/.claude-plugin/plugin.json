@@ -1,0 +1,13 @@
+{
+  "name": "foundry-ui",
+  "description": "Agent toolkit for apps built on Foundry UI — grounding skill for the assistant-ui/AG-UI/Agent Framework stack, ChatModule authoring skill, and doc MCP servers.",
+  "version": "0.1.0",
+  "author": {
+    "name": "iLoveAgents",
+    "url": "https://github.com/iLoveAgents"
+  },
+  "homepage": "https://github.com/iLoveAgents/foundry-ui",
+  "repository": "https://github.com/iLoveAgents/foundry-ui",
+  "license": "MIT",
+  "keywords": ["foundry-ui", "ag-ui", "agent-framework", "assistant-ui", "skills"]
+}
