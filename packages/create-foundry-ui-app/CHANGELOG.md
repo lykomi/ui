@@ -1,5 +1,12 @@
 # create-foundry-ui-app
 
+## 0.5.1
+
+### Patch Changes
+
+- 0d4f73b: Docs + packaging polish: restore the `__PROJECT_NAME__` sentinel in the scaffold template README (Prettier had normalized it to `**PROJECT_NAME**`, breaking every generated app's title) and guard it with a test + `.prettierignore`; bump template foundry pins to the current release and enforce parity in `pack:check`; add npm metadata (description, keywords, repository, homepage, bugs) to the four runtime packages; extend the open-core guard to ban `@ltwlf/*` downstream imports; sync web-shell/agent AGENTS.md with the actual public API; add CONTRIBUTING.md + SECURITY.md and README badges/prerequisites.
+- 0efb5c1: Scaffold the current package line: template pins move to the versions the workspace publishes, and `pnpm changeset:version` now syncs them automatically (`scripts/sync-template-versions.mjs`). The template isn't a workspace member, so Changesets can't bump it — previously it silently fell a release behind and new apps scaffolded stale packages.
+
 ## 0.5.0
 
 ### Minor Changes
