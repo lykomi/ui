@@ -23,8 +23,9 @@
     "build": "pnpm --filter @iloveagents/foundry-agent build && pnpm --filter @iloveagents/foundry-web-primitives build && pnpm --filter @iloveagents/foundry-web-ui build && pnpm --filter @iloveagents/foundry-web-shell build && pnpm --filter create-foundry-ui-app build",
     "changeset": "changeset",
     "changeset:status": "changeset status",
-    "changeset:version": "changeset version",
-    "changeset:publish": "changeset publish"
+    "changeset:version": "changeset version && node scripts/sync-template-versions.mjs",
+    "changeset:publish": "changeset publish",
+    "sync:template-versions": "node scripts/sync-template-versions.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.10",

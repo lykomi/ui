@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+
+import { foundryWorkspaceVersions, scaffoldPinSources } from "./scaffold-pins.mjs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -179,27 +181,28 @@ function assertDeclarationExtensions(dir) {
   }
 }
 
-// The scaffold template is not a workspace member (it ships its own
-// pnpm-workspace.yaml), so Changesets never bumps its foundry pins — check
-// they match the current workspace versions so new users don't scaffold
-// pre-1.0 minors behind (pre-1.0 minors are breaking).
-function assertTemplateVersionsCurrent() {
-  const templatePkg = readPackageJson("packages/create-foundry-ui-app/template");
-  const workspaceVersions = Object.fromEntries(
-    packages
-      .filter((entry) => entry.runtime)
-      .map((entry) => {
-        const pkg = readPackageJson(entry.dir);
-        return [pkg.name, pkg.version];
-      }),
-  );
-  for (const field of dependencyFields) {
-    for (const [name, range] of Object.entries(templatePkg[field] ?? {})) {
-      const current = workspaceVersions[name];
-      if (current && range !== current) {
-        fail(
-          `template pins ${name}@${range} but the workspace publishes ${current}; update packages/create-foundry-ui-app/template/package.json`,
-        );
+// The scaffold template and preset manifests are not workspace members (the
+// template ships its own pnpm-workspace.yaml), so Changesets never bumps their
+// foundry pins — check they match the current workspace versions so new users
+// don't scaffold pre-1.0 minors behind (pre-1.0 minors are breaking).
+// `pnpm changeset:version` runs scripts/sync-template-versions.mjs to keep
+// these in step; this guard is the backstop if that is ever bypassed.
+function assertScaffoldPinsCurrent() {
+  const versions = foundryWorkspaceVersions();
+
+  for (const { file, fields, label } of scaffoldPinSources({ existsSync, readdirSync })) {
+    const json = JSON.parse(readFileSync(file, "utf8"));
+    for (const field of fields) {
+      const container = field.includes(".")
+        ? field.split(".").reduce((node, key) => node?.[key], json)
+        : json[field];
+      for (const [name, range] of Object.entries(container ?? {})) {
+        const current = versions[name];
+        if (current && range !== current) {
+          fail(
+            `${label} pins ${name}@${range} but the workspace publishes ${current}; run \`pnpm sync:template-versions\` (${file})`,
+          );
+        }
       }
     }
   }
@@ -216,7 +219,7 @@ for (const entry of packages) {
   );
 }
 
-assertTemplateVersionsCurrent();
+assertScaffoldPinsCurrent();
 
 if (failed) {
   process.exit(1);
