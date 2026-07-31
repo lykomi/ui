@@ -9,7 +9,15 @@ const root = resolve(import.meta.dirname, "..");
 const workDir = mkdtempSync(join(tmpdir(), "foundry-ui-starter-"));
 const packDir = join(workDir, "packs");
 const appDir = join(workDir, "app");
-const runBrowserSmoke = process.argv.includes("--browser");
+// `--screenshot <path>` reuses the browser smoke end-to-end (same scaffold,
+// same mocked AG-UI stream) and captures the result. Sharing one code path
+// means the README screenshot can never drift from what CI actually verifies.
+const screenshotFlagIndex = process.argv.indexOf("--screenshot");
+const screenshotPath =
+  screenshotFlagIndex !== -1 && process.argv[screenshotFlagIndex + 1]
+    ? resolve(process.argv[screenshotFlagIndex + 1])
+    : null;
+const runBrowserSmoke = process.argv.includes("--browser") || screenshotPath !== null;
 const browserSmokeWatchdog = runBrowserSmoke
   ? setTimeout(() => {
       console.error("Starter browser smoke timed out.");
@@ -210,6 +218,41 @@ function createHelloWorldEvents(requestBody) {
   ];
 }
 
+// Screenshot-only variant of the hello-world stream: same event shapes, richer
+// copy so the captured frame shows off markdown rendering and the tool card.
+function createShowcaseEvents(requestBody) {
+  const threadId = typeof requestBody.threadId === "string" ? requestBody.threadId : "showcase";
+  const runId = typeof requestBody.runId === "string" ? requestBody.runId : "showcase-run";
+  const messageId = `${runId}-assistant`;
+  const toolCallId = `${runId}-hello-world`;
+  const answer = [
+    "Hello from the `hello_world` tool — your Foundry UI starter is rendering a live ",
+    "AG-UI stream.\n\nWhat just happened:\n",
+    "- The agent called a **server-side tool**, streamed over the AG-UI protocol\n",
+    "- The call rendered as a tool card above, with its arguments and result\n",
+    "- This text streamed token-by-token into the assistant message\n\n",
+    "Add your own tools in `agent/app/tools.py` and they show up here automatically.",
+  ].join("");
+
+  return [
+    { type: "RUN_STARTED", threadId, runId },
+    { type: "TOOL_CALL_START", toolCallId, toolCallName: "hello_world" },
+    { type: "TOOL_CALL_ARGS", toolCallId, delta: JSON.stringify({ name: "Foundry UI" }) },
+    { type: "TOOL_CALL_END", toolCallId },
+    {
+      type: "TOOL_CALL_RESULT",
+      messageId: `${toolCallId}-result`,
+      toolCallId,
+      content: JSON.stringify({ greeting: "Hello, Foundry UI.", source: "hello_world" }),
+      role: "tool",
+    },
+    { type: "TEXT_MESSAGE_START", messageId, role: "assistant" },
+    { type: "TEXT_MESSAGE_CONTENT", messageId, delta: answer },
+    { type: "TEXT_MESSAGE_END", messageId },
+    { type: "RUN_FINISHED", threadId, runId },
+  ];
+}
+
 async function runBrowserStarterSmoke() {
   const { chromium } = await import("playwright");
   const port = await getFreePort();
@@ -235,7 +278,11 @@ async function runBrowserStarterSmoke() {
   try {
     await waitForHttp(url, serverProcess, () => serverOutput);
 
-    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    const page = await browser.newPage(
+      screenshotPath
+        ? { viewport: { width: 1440, height: 700 }, deviceScaleFactor: 2 }
+        : { viewport: { width: 1280, height: 900 } },
+    );
     let sawAgentRequest = false;
 
     page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -252,7 +299,9 @@ async function runBrowserStarterSmoke() {
           "cache-control": "no-cache",
           "content-type": "text/event-stream",
         },
-        body: encodeSse(createHelloWorldEvents(requestBody)),
+        body: encodeSse(
+          screenshotPath ? createShowcaseEvents(requestBody) : createHelloWorldEvents(requestBody),
+        ),
       });
     });
 
@@ -265,9 +314,28 @@ async function runBrowserStarterSmoke() {
 
     await page.getByText("How can I help you today?").waitFor({ timeout: 10_000 });
     await page.getByRole("button", { name: "Say hello world using the hello_world tool" }).click();
-    await page
-      .getByText("Hello from the hello_world tool", { exact: false })
-      .waitFor({ timeout: 10_000 });
+    await page.getByText("Hello from the", { exact: false }).first().waitFor({ timeout: 10_000 });
+
+    if (screenshotPath) {
+      // Best-effort: expand the nav sidebar so the frame shows more of the
+      // shell. Never fatal — the capture is still valid collapsed.
+      try {
+        await page
+          .getByRole("button", { name: /sidebar/i })
+          .first()
+          .click({ timeout: 3_000 });
+        await page.waitForTimeout(600);
+      } catch {
+        // Sidebar toggle not found or not clickable; keep the default state.
+      }
+
+      // Let streaming settle and the composer lose focus so the capture has no
+      // caret or half-rendered markdown in it.
+      await page.locator("body").click({ position: { x: 5, y: 5 } });
+      await page.waitForTimeout(1_500);
+      await page.screenshot({ path: screenshotPath, scale: "device" });
+      console.log(`Starter screenshot written to ${screenshotPath}`);
+    }
 
     if (!sawAgentRequest) {
       throw new Error("The generated starter did not call /api/agent.");
