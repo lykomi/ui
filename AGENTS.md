@@ -76,7 +76,7 @@ pnpm changeset      # add a versioning changeset before committing
 
 # Open-core packaging (history)
 
-Foundry UI was extracted from `ltwlf/lastspace` (commercial product) on 2026-04-26 in the iloveagents/foundry-ui split. The four packages here were renamed:
+Foundry UI was extracted from a commercial product on 2026-04-26. The four packages here were renamed — useful if you are migrating off the old scope:
 
 | Origin                      | Now                                   |
 | --------------------------- | ------------------------------------- |
@@ -84,8 +84,6 @@ Foundry UI was extracted from `ltwlf/lastspace` (commercial product) on 2026-04-
 | `@lastspace/web-primitives` | `@iloveagents/foundry-web-primitives` |
 | `@lastspace/web-ui`         | `@iloveagents/foundry-web-ui`         |
 | `@lastspace/web-shell`      | `@iloveagents/foundry-web-shell`      |
-
-Cross-repo dev workflow lives in `ltwlf/lastspace-meta` (private) — sibling-checkout pattern with pnpm workspace globs spanning both repos.
 
 # Where to find more
 

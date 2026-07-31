@@ -48,7 +48,7 @@ export interface ServiceFetchOptions {
   recoverFromHardAuthFailure?: (reason: unknown) => Promise<never>;
 
   /**
-   * Router FQDN for production (e.g. `https://lastspace-prod.eastus2.example.com`).
+   * Router FQDN for production (e.g. `https://api.example.com`).
    * Empty / undefined leaves the URL untouched (Vite proxy handles routing
    * in dev).
    */
@@ -61,10 +61,7 @@ export interface ServiceFetchOptions {
   originResolver?: () => string;
 }
 
-export type ServiceFetch = (
-  input: string | URL | Request,
-  init?: RequestInit,
-) => Promise<Response>;
+export type ServiceFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 /**
  * Wrapper thrown when ``acquireToken`` rejects inside the fetch
