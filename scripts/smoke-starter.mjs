@@ -1,8 +1,8 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const root = resolve(import.meta.dirname, "..");
@@ -13,10 +13,17 @@ const appDir = join(workDir, "app");
 // same mocked AG-UI stream) and captures the result. Sharing one code path
 // means the README screenshot can never drift from what CI actually verifies.
 const screenshotFlagIndex = process.argv.indexOf("--screenshot");
-const screenshotPath =
-  screenshotFlagIndex !== -1 && process.argv[screenshotFlagIndex + 1]
-    ? resolve(process.argv[screenshotFlagIndex + 1])
-    : null;
+let screenshotPath = null;
+if (screenshotFlagIndex !== -1) {
+  const value = process.argv[screenshotFlagIndex + 1];
+  // Fail fast rather than silently no-op (missing value) or write a file
+  // literally named after the next flag (e.g. `--screenshot --browser`).
+  if (!value || value.startsWith("-")) {
+    console.error("Usage: node scripts/smoke-starter.mjs --screenshot <path>");
+    process.exit(1);
+  }
+  screenshotPath = resolve(value);
+}
 const runBrowserSmoke = process.argv.includes("--browser") || screenshotPath !== null;
 const browserSmokeWatchdog = runBrowserSmoke
   ? setTimeout(() => {
@@ -334,6 +341,8 @@ async function runBrowserStarterSmoke() {
       // caret or half-rendered markdown in it.
       await page.locator("body").click({ position: { x: 5, y: 5 } });
       await page.waitForTimeout(1_500);
+      // Playwright will not create missing parent directories.
+      mkdirSync(dirname(screenshotPath), { recursive: true });
       await page.screenshot({ path: screenshotPath, scale: "device" });
       console.log(`Starter screenshot written to ${screenshotPath}`);
     }
