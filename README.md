@@ -14,6 +14,10 @@ Foundry UI is an [iloveagents.ai](https://iloveagents.ai) project, not a Microso
 
 > **Status: alpha (0.x).** API surface is iterating. Pre-1.0 changes can break callers in minor bumps; expect lock-step updates.
 
+![The Foundry UI starter: an agent tool call streamed over AG-UI, rendered as a tool card above the assistant's markdown reply](docs/assets/starter.png)
+
+<sub>The generated starter after one prompt — a server-side tool call streamed over AG-UI and rendered as a tool card, with the reply streaming in below. Captured from the real app by `pnpm screenshot:starter`.</sub>
+
 ## Why Foundry UI
 
 - **AG-UI wiring that actually works.** There is no official assistant-ui ↔ AG-UI adapter — Foundry UI ships one: the `AGUIRunner` protocol engine plus an assistant-ui shim, with stream-integrity handling (silent-close detection, heartbeats, run-error surfacing) learned in production.
@@ -122,6 +126,8 @@ pnpm test           # build + lint + typecheck + unit tests
 pnpm pack:check     # inspect real npm tarballs before publishing
 pnpm smoke:starter  # scaffold, install, and build a generated starter
 pnpm typecheck
+
+pnpm screenshot:starter   # regenerate docs/assets/starter.png from the real app
 ```
 
 Packages publish built ESM JavaScript and `.d.ts` declarations. CI also runs
