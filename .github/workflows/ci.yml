@@ -34,7 +34,10 @@ jobs:
       - name: Scan commit messages for sensitive information
         if: github.event_name == 'pull_request'
         run: |
-          git fetch --no-tags --depth=0 origin "${{ github.base_ref }}"
+          # Explicit refspec: the PR checkout resolves refs/pull/N/merge, so the
+          # base branch is not guaranteed to exist as a remote-tracking ref.
+          git fetch --no-tags origin \
+            "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
           node scripts/check-sensitive-terms.mjs \
             --range "origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }}"
 
