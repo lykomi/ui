@@ -19,6 +19,7 @@ import type { Context, Message, Tool } from "@ag-ui/core";
 import type { ToolRegistry } from "../tools/registry.ts";
 import type { RunnerEvent } from "./runner-events.ts";
 import type { StreamingStatus } from "../store/streaming-status-store.ts";
+import { reasoningEffortStore } from "../store/reasoning-effort-store.ts";
 
 interface ToolCallState {
   id: string;
@@ -212,6 +213,14 @@ export class AGUIRunner {
         // Build the request input now, before runAgent fires — dev tooling
         // consumes this snapshot via the request-sent event. `runId` is
         // pre-generated so the snapshot matches what runAgent emits.
+        // The user's reasoning-effort choice rides on every turn as an
+        // AG-UI forwardedProp — read at request time so changing it
+        // mid-conversation takes effect on the next message. "default"
+        // sends nothing so the backend keeps its configured level.
+        const chosenEffort = reasoningEffortStore.getState().effort;
+        const forwardedProps: Record<string, unknown> =
+          chosenEffort === "default" ? {} : { reasoningEffort: chosenEffort };
+
         const runInputSnapshot: Record<string, unknown> = {
           threadId: this.httpAgent.threadId,
           runId,
@@ -219,6 +228,7 @@ export class AGUIRunner {
           messages: currentMessages,
           tools,
           context: context ?? [],
+          forwardedProps,
         };
 
         // --- Liveness + protocol-integrity bookkeeping (per turn) ---
@@ -279,6 +289,31 @@ export class AGUIRunner {
           },
           onTextMessageEndEvent: () => {
             push({ type: "text-message-end" });
+          },
+          // Reasoning/thinking. `@ag-ui/client` normalizes the deprecated
+          // THINKING_* events onto REASONING_* via its backward-compat
+          // middleware, so subscribing here covers both wire dialects.
+          onReasoningMessageStartEvent: () => {
+            push({ type: "streaming-status", status: { status: "reasoning" } });
+          },
+          onReasoningMessageContentEvent: ({ event }) => {
+            push({ type: "reasoning-delta", delta: event.delta });
+          },
+          onReasoningEndEvent: () => {
+            push({ type: "reasoning-end" });
+            // Reasoning ended but the answer hasn't started — back to the
+            // generic working state rather than leaving "reasoning" stuck.
+            push({ type: "streaming-status", status: { status: "thinking" } });
+          },
+          onStepStartedEvent: ({ event }) => {
+            push({ type: "step-started", name: event.stepName });
+            push({
+              type: "streaming-status",
+              status: { status: lastStatus.status, stepName: event.stepName },
+            });
+          },
+          onStepFinishedEvent: ({ event }) => {
+            push({ type: "step-finished", name: event.stepName });
           },
           onCustomEvent: ({ event }) => {
             // Server heartbeat: liveness proof during long tool calls /
@@ -388,7 +423,7 @@ export class AGUIRunner {
         //      the protocol violation here.
         //   2. Transport-level rejection (fetch failure, TLS reset).
         const runPromise = this.httpAgent
-          .runAgent({ runId, tools, context: context ?? [] }, subscriber)
+          .runAgent({ runId, tools, context: context ?? [], forwardedProps }, subscriber)
           .then(() => {
             if (!sawTerminal && !abortSignal?.aborted) {
               push({ type: "streaming-status", status: { status: "idle" } });
@@ -461,7 +496,9 @@ export class AGUIRunner {
 
         // Preserve any pre-tool text the model emitted in this turn so the
         // next-turn context matches what the user actually saw.
-        const unrecordedToolCalls = pendingClientTools.filter((tc) => !recordedToolCallIds.has(tc.id));
+        const unrecordedToolCalls = pendingClientTools.filter(
+          (tc) => !recordedToolCallIds.has(tc.id),
+        );
         if (unrecordedToolCalls.length > 0) {
           followUpMessages.push({
             id: crypto.randomUUID(),

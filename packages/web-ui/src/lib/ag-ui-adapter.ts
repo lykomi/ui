@@ -21,6 +21,7 @@ import type {
   ChatModelAdapter,
   ChatModelRunOptions,
   ChatModelRunResult,
+  ReasoningMessagePart,
   TextMessagePart,
   ToolCallMessagePart,
 } from "@assistant-ui/react";
@@ -71,6 +72,10 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     }
 
     let currentText = "";
+    // Reasoning accumulates across the WHOLE run, unlike `currentText` which
+    // is per-turn: the collapsed reasoning panel shouldn't lose what the model
+    // thought before a tool call just because the runner re-issued the turn.
+    let currentReasoning = "";
     const toolCalls = new Map<string, ToolCallSnapshot>();
     let runError: string | null = null;
 
@@ -90,7 +95,13 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
      * loading state if the last yield's status is `running`.
      */
     const buildResult = (statusOverride?: ChatModelRunResult["status"]): ChatModelRunResult => {
-      const content: (ToolCallMessagePart | TextMessagePart)[] = [];
+      const content: (ToolCallMessagePart | TextMessagePart | ReasoningMessagePart)[] = [];
+
+      // Reasoning first: it precedes the answer chronologically, and
+      // assistant-ui renders parts in array order.
+      if (currentReasoning) {
+        content.push({ type: "reasoning", text: currentReasoning });
+      }
 
       for (const [id, tc] of toolCalls) {
         let parsedArgs: unknown = {};
@@ -181,6 +192,21 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
           case "text-delta":
             currentText += event.delta;
             shouldYield = true;
+            break;
+
+          case "reasoning-delta":
+            currentReasoning += event.delta;
+            shouldYield = true;
+            break;
+
+          case "reasoning-end":
+            shouldYield = true;
+            break;
+
+          case "step-started":
+          case "step-finished":
+            // Progress only — the status store already carries the step name
+            // (pushed by the runner alongside these events).
             break;
 
           case "text-message-end":

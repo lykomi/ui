@@ -566,6 +566,85 @@ describe("stream integrity", () => {
     expect(toolResults).toHaveLength(1);
   });
 
+  it("surfaces reasoning deltas separately from the answer text", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onReasoningMessageStartEvent?.({
+          event: { type: "REASONING_MESSAGE_START", messageId: "r-1", role: "reasoning" } as never,
+        } as never);
+        await s.onReasoningMessageContentEvent?.({
+          event: { type: "REASONING_MESSAGE_CONTENT", messageId: "r-1", delta: "weighing options" } as never,
+        } as never);
+        await s.onReasoningEndEvent?.({
+          event: { type: "REASONING_END", messageId: "r-1" } as never,
+        } as never);
+        await s.onTextMessageContentEvent?.({
+          event: { type: "TEXT_MESSAGE_CONTENT", delta: "the answer" } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const reasoning = events.filter(
+      (e): e is Extract<RunnerEvent, { type: "reasoning-delta" }> => e.type === "reasoning-delta",
+    );
+    expect(reasoning.map((e) => e.delta)).toEqual(["weighing options"]);
+    expect(events.some((e) => e.type === "reasoning-end")).toBe(true);
+
+    // Reasoning must NOT leak into the answer stream.
+    const text = events
+      .filter((e): e is Extract<RunnerEvent, { type: "text-delta" }> => e.type === "text-delta")
+      .map((e) => e.delta)
+      .join("");
+    expect(text).toBe("the answer");
+
+    const statuses = events
+      .filter(
+        (e): e is Extract<RunnerEvent, { type: "streaming-status" }> =>
+          e.type === "streaming-status",
+      )
+      .map((e) => e.status.status);
+    expect(statuses).toContain("reasoning");
+    // ...and doesn't stay stuck there once reasoning ends.
+    expect(statuses[statuses.length - 1]).not.toBe("reasoning");
+  });
+
+  it("emits named steps and carries the step name on the status", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onStepStartedEvent?.({
+          event: { type: "STEP_STARTED", stepName: "search_corpus" } as never,
+        } as never);
+        await s.onStepFinishedEvent?.({
+          event: { type: "STEP_FINISHED", stepName: "search_corpus" } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    expect(
+      events.find(
+        (e): e is Extract<RunnerEvent, { type: "step-started" }> => e.type === "step-started",
+      )?.name,
+    ).toBe("search_corpus");
+    expect(
+      events.find(
+        (e): e is Extract<RunnerEvent, { type: "step-finished" }> => e.type === "step-finished",
+      )?.name,
+    ).toBe("search_corpus");
+    expect(
+      events.some((e) => e.type === "streaming-status" && e.status.stepName === "search_corpus"),
+    ).toBe(true);
+  });
+
   it("emits stalled status during a quiet stretch and recovers on the next event", async () => {
     nextScript = [
       async (s) => {
