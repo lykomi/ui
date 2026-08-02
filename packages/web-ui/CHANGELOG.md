@@ -1,5 +1,70 @@
 # @iloveagents/foundry-web-ui
 
+## 0.8.0
+
+### Minor Changes
+
+- afb1f2a: Handle AG-UI reasoning and step events, which the runner previously dropped.
+
+  The runner subscribed to 11 of the 33 protocol event types. Two of the gaps
+  were costing real UX:
+  - **Reasoning** (`REASONING_*`, plus the deprecated `THINKING_*` aliases that
+    `@ag-ui/client` normalizes onto them) now surfaces as a `reasoning-delta` /
+    `reasoning-end` `RunnerEvent`, and the adapter emits it as an assistant-ui
+    `reasoning` part rendered in a collapsed panel above the answer. Reasoning
+    models emit these today and the text was being thrown away. Reasoning
+    accumulates across the whole run rather than per turn, so a tool-call
+    follow-up doesn't erase what the model thought before it.
+  - **Steps** (`STEP_STARTED` / `STEP_FINISHED`) now emit `step-started` /
+    `step-finished` events, and `StreamingStatus` carries `stepName`. A long
+    agentic run otherwise shows one opaque "thinking" state for minutes.
+
+  `StreamingStatus.status` gains a `"reasoning"` member; it reverts to
+  `"thinking"` when reasoning ends so the indicator can't stick.
+
+- a33d66b: Upgrade @assistant-ui/react to 0.15.x. The 0.12-era pin existed because
+  0.12.28's store/tap dependency graph was internally inconsistent; 0.15's
+  graph (tap ^0.9, store ^0.3) is consistent again. Migration surface was the
+  two `useComposerRuntime()` call sites (removed in 0.15) — now `useAui().composer`.
+  Ships a pnpm patch for @assistant-ui/store 0.3.2 replicating the merged-but-
+  unreleased upstream StrictMode fix (assistant-ui#5411): without it the
+  composer silently drops all typed input under `<StrictMode>` in dev.
+- a33d66b: Fix two chat defects, both pre-existing:
+  - **Client-side tool results looked unanswered.** The AG-UI client folds the
+    streamed assistant message (tool calls included) into its own history, and
+    the runner appended a second copy — so the follow-up carried the same
+    `toolCallId` twice against one tool result. The model saw an unanswered call,
+    re-issued the tool (duplicate card in the UI) and then reported that it
+    "didn't complete", even though the tool had succeeded. The runner now only
+    synthesizes what the client hasn't already recorded.
+  - **Attached documents lost their contents.** `FileAttachmentAdapter` sent
+    PDFs/DOCX as a `[Attached file: ...]` text stub, so the model got a filename
+    and no bytes — it would then hunt for the document in the backend and report
+    that it couldn't read it. Documents are now sent as file parts like images.
+    Pass `{ documentMode: "metadata" }` to restore the old behaviour for models
+    that cannot accept file input.
+
+- afb1f2a: Let the user choose how hard the model thinks, per conversation.
+
+  Adds a `ReasoningEffortPicker` to the composer (Auto / Fast / Balanced /
+  Thorough) backed by a persisted `reasoningEffortStore`. The choice rides on
+  every turn as an AG-UI `forwardedProps.reasoningEffort` and is read at send
+  time, so switching mid-conversation applies from the next message. `Auto`
+  sends nothing, leaving whatever the backend is configured for.
+
+  Effort is worth exposing because it is not a free knob: on the deployment
+  this was measured against, low effort often produced no reasoning summary at
+  all, while high effort cost noticeably more latency and tokens. That is a
+  judgement only the person asking the question can make.
+
+### Patch Changes
+
+- Updated dependencies [afb1f2a]
+- Updated dependencies [a33d66b]
+- Updated dependencies [afb1f2a]
+  - @iloveagents/foundry-agent@0.8.0
+  - @iloveagents/foundry-web-primitives@0.8.0
+
 ## 0.7.1
 
 ### Patch Changes
