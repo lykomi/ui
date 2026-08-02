@@ -179,6 +179,7 @@ export { useNewConversation } from "./lib/use-new-conversation.ts";
 // --- Adapters ---
 export { AGUIAdapterSDK } from "./lib/ag-ui-adapter.ts";
 export { FileAttachmentAdapter } from "./lib/attachment-adapter.ts";
+export { ReasoningPart, ReasoningMessagePartComponent } from "./components/reasoning-part.tsx";
 
 // --- Auth ---
 // `AuthProvider` is the React MSAL bootstrap (uses `@azure/msal-react`).

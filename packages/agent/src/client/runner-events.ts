@@ -23,6 +23,22 @@ export type RunnerEvent =
   | { type: "tool-call-end"; id: string; args: string; result?: unknown; isError?: boolean }
   | { type: "tool-call-result"; id: string; result: unknown; isError: boolean }
   | { type: "streaming-status"; status: StreamingStatus }
+  /**
+   * Model reasoning/thinking text (AG-UI `REASONING_*`; the deprecated
+   * `THINKING_*` events are normalized onto these by `@ag-ui/client`'s
+   * backward-compatibility middleware). Kept separate from `text-delta`
+   * because reasoning is not the answer — consumers render it as its own
+   * collapsed part, never inline with the reply.
+   */
+  | { type: "reasoning-delta"; delta: string }
+  | { type: "reasoning-end" }
+  /**
+   * Named agent step (AG-UI `STEP_STARTED` / `STEP_FINISHED`). A long
+   * agentic run otherwise presents as one opaque "thinking" state for
+   * minutes; the step name is what makes the wait legible.
+   */
+  | { type: "step-started"; name: string }
+  | { type: "step-finished"; name: string }
   | { type: "run-finished" }
   | { type: "run-error"; message: string }
   /**

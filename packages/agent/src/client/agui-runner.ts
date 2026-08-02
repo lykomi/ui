@@ -280,6 +280,31 @@ export class AGUIRunner {
           onTextMessageEndEvent: () => {
             push({ type: "text-message-end" });
           },
+          // Reasoning/thinking. `@ag-ui/client` normalizes the deprecated
+          // THINKING_* events onto REASONING_* via its backward-compat
+          // middleware, so subscribing here covers both wire dialects.
+          onReasoningMessageStartEvent: () => {
+            push({ type: "streaming-status", status: { status: "reasoning" } });
+          },
+          onReasoningMessageContentEvent: ({ event }) => {
+            push({ type: "reasoning-delta", delta: event.delta });
+          },
+          onReasoningEndEvent: () => {
+            push({ type: "reasoning-end" });
+            // Reasoning ended but the answer hasn't started — back to the
+            // generic working state rather than leaving "reasoning" stuck.
+            push({ type: "streaming-status", status: { status: "thinking" } });
+          },
+          onStepStartedEvent: ({ event }) => {
+            push({ type: "step-started", name: event.stepName });
+            push({
+              type: "streaming-status",
+              status: { status: lastStatus.status, stepName: event.stepName },
+            });
+          },
+          onStepFinishedEvent: ({ event }) => {
+            push({ type: "step-finished", name: event.stepName });
+          },
           onCustomEvent: ({ event }) => {
             // Server heartbeat: liveness proof during long tool calls /
             // thinking phases (also keeps intermediary idle-timeouts at bay
@@ -461,7 +486,9 @@ export class AGUIRunner {
 
         // Preserve any pre-tool text the model emitted in this turn so the
         // next-turn context matches what the user actually saw.
-        const unrecordedToolCalls = pendingClientTools.filter((tc) => !recordedToolCallIds.has(tc.id));
+        const unrecordedToolCalls = pendingClientTools.filter(
+          (tc) => !recordedToolCallIds.has(tc.id),
+        );
         if (unrecordedToolCalls.length > 0) {
           followUpMessages.push({
             id: crypto.randomUUID(),

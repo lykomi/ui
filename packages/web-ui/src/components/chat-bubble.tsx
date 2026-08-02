@@ -27,6 +27,7 @@ import { ContextPins } from "./context-bar.tsx";
 import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import { ChatComposerBannerSlot, ChatLauncherBadgeSlot } from "./chat-slots.tsx";
+import { ReasoningMessagePartComponent } from "./reasoning-part.tsx";
 import { MarkdownText } from "./markdown-text.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
 import { MessageTimestamp } from "./message-timestamp.tsx";
@@ -45,6 +46,7 @@ function BubbleAssistantMessage() {
         <MessagePrimitive.Parts
           components={{
             Text: MarkdownText,
+            Reasoning: ReasoningMessagePartComponent,
           }}
         />
       </div>
