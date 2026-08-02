@@ -6,8 +6,8 @@ import {
   ActionBarPrimitive,
   BranchPickerPrimitive,
   ErrorPrimitive,
+  useAui,
   useAuiState,
-  useComposerRuntime,
   useThreadViewport,
 } from "@assistant-ui/react";
 import {
@@ -249,7 +249,7 @@ const ScrollToBottomButton: FC = () => {
 const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
-  const composerRuntime = useComposerRuntime();
+  const aui = useAui();
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -274,10 +274,10 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
       setIsDragging(false);
       const files = Array.from(e.dataTransfer.files);
       for (const file of files) {
-        await composerRuntime.addAttachment(file);
+        await aui.composer.addAttachment(file);
       }
     },
-    [composerRuntime],
+    [aui],
   );
 
   return (

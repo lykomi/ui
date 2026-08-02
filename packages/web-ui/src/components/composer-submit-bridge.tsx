@@ -1,18 +1,20 @@
 import { useEffect } from "react";
-import { useComposerRuntime } from "@assistant-ui/react";
+import { useAui } from "@assistant-ui/react";
 import { useComposerSubmitStore } from "../lib/composer-submit-store.ts";
 
 export function ComposerSubmitBridge() {
-  const composerRuntime = useComposerRuntime();
+  const aui = useAui();
   const pending = useComposerSubmitStore((s) => s.pending);
 
   useEffect(() => {
     if (!pending) return;
 
-    composerRuntime.setText(pending.text);
-    composerRuntime.send({ startRun: true });
+    // send() starts the run for the queued text; steering/queueing semantics
+    // are handled by the composer client (assistant-ui >= 0.15).
+    aui.composer.setText(pending.text);
+    aui.composer.send();
     useComposerSubmitStore.getState().consume(pending.id);
-  }, [composerRuntime, pending]);
+  }, [aui, pending]);
 
   return null;
 }
