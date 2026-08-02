@@ -45,9 +45,9 @@ SPACES and other feature modules plug in via these registries:
 # AG-UI Adapter
 
 - This package ships an `AGUIAdapterSDK` shim (`src/lib/ag-ui-adapter.ts`) that implements assistant-ui's `ChatModelAdapter` by wrapping `AGUIRunner` from `@iloveagents/foundry-agent`. The runner does the protocol; the shim translates `RunnerEvent`s into cumulative `ChatModelRunResult` yields.
-- `@assistant-ui/react` must stay on **0.12.x or newer** — 0.11.x has a `_getInitializePromise` runtime regression.
-- Tool UIs use `makeAssistantToolUI(...)` (the v0.12 canonical pattern). The legacy `useAssistantToolUI` hook is no longer used.
-- Hook renames per v0.12: `useAssistantApi → useAui`, `useAssistantState → useAuiState`, `useAssistantEvent → useAuiEvent`.
+- `@assistant-ui/react` is pinned to **0.15.x**. We do not use the official `@assistant-ui/react-ag-ui` provider — see the root `AGENTS.md` for the blockers (it drops CUSTOM/RAW events, so heartbeats and citations vanish).
+- Tool UIs use `makeAssistantToolUI(...)`. The legacy `useAssistantToolUI` hook is no longer used.
+- Runtime state is read through the `aui` client: `useAui()`, `useAuiState()`, `useAuiEvent()`. The per-scope runtime hooks (`useComposerRuntime`, `useThreadRuntime`, `useMessageRuntime`, …) were **removed in 0.15** — reach the composer via `useAui().composer` (`setText`, `send`, `addAttachment`).
 
 # Client-Side Tools
 
@@ -57,3 +57,9 @@ Tools live in `clientToolRegistry` (vanilla zustand store in `@iloveagents/found
 - **`page_*`** — page-specific tools registered via `usePageTools([{ name, description, parameters, execute }])`.
 
 Custom tool UIs are top-level `makeAssistantToolUI(...)` constants rendered as children inside the `AssistantRuntimeProvider` tree (see `client-tool-executor.tsx`).
+
+# Attachments
+
+`FileAttachmentAdapter` (`src/lib/attachment-adapter.ts`) base64-encodes **both images and documents** (PDF/DOCX) and emits file parts, which the AG-UI adapter converts to `binary` message parts (`mimeType` + `data` + `filename`). Documents used to degrade to a `[Attached file: …]` text stub; that silently discarded the bytes, so the model received a filename it could not read. Pass `{ documentMode: "metadata" }` to restore the stub for models that genuinely cannot accept file input.
+
+Hosts must bound persistence: the bytes ride along on every turn of the live conversation and reach whatever stores chat history. Elide them server-side (lastspace does this in `chat_message_store.py::_elide_inline_media`) or a single attached PDF can breach a document-size ceiling and wedge the thread.

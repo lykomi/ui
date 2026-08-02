@@ -20,7 +20,7 @@ Foundry UI is an [iloveagents.ai](https://iloveagents.ai) project, not a Microso
 
 ## Why Foundry UI
 
-- **AG-UI wiring that actually works.** There is no official assistant-ui ↔ AG-UI adapter — Foundry UI ships one: the `AGUIRunner` protocol engine plus an assistant-ui shim, with stream-integrity handling (silent-close detection, heartbeats, run-error surfacing) learned in production.
+- **AG-UI wiring hardened in production.** Foundry UI ships its own assistant-ui ↔ AG-UI layer: the `AGUIRunner` protocol engine plus an assistant-ui shim, with the stream-integrity handling long-running agents actually need — silent-close detection (a stream that dies mid-answer must not render as a clean, truncated completion), server heartbeats, a stalled-stream watchdog, and run errors surfaced in the message instead of an empty bubble. An official `@assistant-ui/react-ag-ui` provider now exists; at 0.0.x it drops AG-UI `CUSTOM`/`RAW` events and has no watchdog, so this stack keeps its own layer for now.
 - **Chat as a control surface, not a widget.** Tool calls stream into real UI — tool cards, panels, context pins, client-side tools that modify shared app state.
 - **Composable by design.** Features plug in as `ChatModule`s (pages, tool UIs, theme layers, providers, chat persistence) — the shell stays generic.
 - **Auth included.** MSAL/Entra sign-in wired through the transport layer (`@iloveagents/foundry-agent/msal`), overridable for local dev or non-MSAL deployments.

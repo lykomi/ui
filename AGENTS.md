@@ -14,10 +14,10 @@ packages/create-foundry-ui-app/ → create-foundry-ui-app (scaffolding CLI — `
 
 # Stack & Versions
 
-| Layer    | Stack                                                                | Versions / pins                               |
-| -------- | -------------------------------------------------------------------- | --------------------------------------------- |
-| Frontend | TypeScript strict, React 19, Vite, Tailwind v4, shadcn over Radix UI | `@assistant-ui/react` ≥0.12.x, AG-UI protocol |
-| Tooling  | pnpm workspaces, Vitest, Prettier, Changesets                        | Node 22+                                      |
+| Layer    | Stack                                                                | Versions / pins                              |
+| -------- | -------------------------------------------------------------------- | -------------------------------------------- |
+| Frontend | TypeScript strict, React 19, Vite, Tailwind v4, shadcn over Radix UI | `@assistant-ui/react` 0.15.x, AG-UI protocol |
+| Tooling  | pnpm workspaces, Vitest, Prettier, Changesets                        | Node 22+                                     |
 
 # Grounding (mandatory)
 
@@ -31,12 +31,21 @@ Fast-moving stack. Training data is stale. Before writing code, verify the curre
 Rules:
 
 - Do NOT rely on training-data knowledge of `@assistant-ui/*`, `@ag-ui/*`, or Foundry APIs.
-- `@assistant-ui/react` must stay on **0.12.x or newer** (0.11.x has a `_getInitializePromise` runtime regression).
-- Tool UIs use `makeAssistantToolUI(...)` (the v0.12 canonical pattern).
+- `@assistant-ui/react` is pinned to **0.15.x** in `pnpm-workspace.yaml` — it carries React context plus zustand stores, so a version split silently duplicates them.
+- Tool UIs use `makeAssistantToolUI(...)`. The legacy `useAssistantToolUI` hook is gone.
+- **`@assistant-ui/store` carries a pnpm patch** (`patches/`) replicating upstream PR #5411 — merged 2026-08-01, still unreleased at 0.3.2. Without it the compiled `NotificationManager` is rebuilt on StrictMode's replay render, every `useAuiState` subscriber binds a dead manager, and **the composer silently ignores all typed input in dev** (production is unaffected — no double-render, which is why this looks like a bundler bug and isn't). Drop the patch once `@assistant-ui/store` > 0.3.2 ships; `packages/web-ui/src/__tests__/composer-input-strictmode.test.tsx` holds the line either way.
 
 # Critical conventions
 
-- **AG-UI adapter** — there is no official `@assistant-ui/ag-ui` adapter. The protocol engine (`AGUIRunner` in `packages/agent/`) drives `HttpAgent.runAgent()` with an `AgentSubscriber` and yields a normalized `RunnerEvent` stream. The assistant-ui shim in `packages/web-ui/` translates those into cumulative `ChatModelRunResult` yields.
+- **AG-UI adapter — ours, deliberately.** The protocol engine (`AGUIRunner` in `packages/agent/`) drives `HttpAgent.runAgent()` with an `AgentSubscriber` and yields a normalized `RunnerEvent` stream; the assistant-ui shim in `packages/web-ui/` translates those into cumulative `ChatModelRunResult` yields.
+
+  An official `@assistant-ui/react-ag-ui` provider now exists (0.0.x). **We evaluated it in 2026-08 and are NOT adopting it yet** — do not "modernize" onto it without re-checking these blockers:
+  - It parses `CUSTOM` and `RAW` AG-UI events and then **drops them** (no callback, no extension point). That silently kills our server heartbeats and citation events — the mechanisms the chat-reliability work is built on.
+  - It has no stalled-stream watchdog and no silent-close detection, so a stream that dies mid-answer renders as a clean, truncated completion.
+  - Its thread-list and resume surfaces are still `@experimental` / `unstable_`, and the package has no peer range on `@assistant-ui/react` at all.
+
+  Revisit when it exposes a CUSTOM/RAW event hook, leaves 0.0.x, and stabilises resume/threadList. Its interrupt/HITL and A2UI machinery would then be a genuine upgrade over this adapter.
+
 - **Cross-runtime contract** — `@iloveagents/foundry-agent` has zero React, zero `@assistant-ui/*`, zero DOM. Enforced by `packages/web-ui/src/__tests__/open-core-guards.test.ts`. Future Outlook / Teams / native shells consume it directly.
 - **Zustand pattern** — `@iloveagents/foundry-agent` uses `zustand/vanilla`; React consumers bind via `useStore(store, selector)` from `"zustand"`.
 - **Built packages** — runtime packages publish `dist/` ESM JavaScript and `.d.ts` declarations. Keep package exports pointed at `dist`, and keep CI package checks green before merging.

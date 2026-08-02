@@ -47,6 +47,14 @@ Files under `packages/agent/src/msal/` MAY import `@azure/msal-browser` (dynamic
 - MSAL bits under the `/msal` subpath only.
 - Generic per-service fetch factory (`createServiceFetch`).
 
+# Multi-turn replay contract (read before touching `agui-runner.ts`)
+
+`HttpAgent` (from `@ag-ui/client`) is not a dumb transport: `AbstractAgent.processApplyEvents` applies the streamed events to **its own** `messages` array, so once a run finishes the client has already recorded the assistant message including its tool calls. The follow-up may therefore only add what is _missing_ — the tool results, plus an assistant message only for tool calls the client did not record.
+
+Appending an unconditional copy is what shipped before: the follow-up carried the same `toolCallId` twice against a single tool result, the model treated the call as unanswered, re-issued the tool (a duplicate card in the UI) and then told the user it "didn't complete" — while the tool had in fact succeeded.
+
+Any test here must have its mock emulate that accumulation (push the assistant message onto `agent.messages` during the scripted run). The original mock did not, which is why a fully green suite missed the bug; `agui-runner.test.ts` now covers it.
+
 # What does NOT go here
 
 - Anything implementing `@assistant-ui/*` interfaces (`ChatModelAdapter`, `AttachmentAdapter`, etc.) — those are React UI surface and live in `@iloveagents/foundry-web-ui`.

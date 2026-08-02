@@ -35,7 +35,7 @@ Then: `bootstrapShell({ modules: [myModule], pages, theme })`.
   `BrowserRouter → AuthProvider → wrappers → AGUIRuntimeProvider → toolUIs → Routes`.
 - Host-app `pages` beat module `pages` on path collision — never rely on a module owning `/`.
 - Chat persistence: provide `chatConversation` with `pathPattern` (regex capturing the conversation id), optional `useStickyConversationId()` (keeps the runtime alive across non-chat navigation), and `buildHistoryAdapter({ urlMatch, aguiThreadId })` returning an assistant-ui `ThreadHistoryAdapter`. Selection: URL match → first registered config → in-memory.
-- Tool UIs use `makeAssistantToolUI(...)` (assistant-ui ≥0.12) and are registered by rendering them inside `toolUIs`.
+- Tool UIs use `makeAssistantToolUI(...)` (assistant-ui 0.15.x) and are registered by rendering them inside `toolUIs`.
 
 ## Verify before writing
 

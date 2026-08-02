@@ -59,7 +59,9 @@ FOUNDRY_MODEL=gpt-5.4
 
 # Attachments
 
-Image attachments are sent as model-visible image content. Non-image documents are sent as attachment metadata by default so the starter does not pretend to parse documents. Add a document extraction tool when the app needs PDF/DOCX understanding.
+Images and documents (PDF/DOCX) are both sent to the model as file content — base64 bytes with their mime type and filename. If your model or gateway cannot accept file input, construct the adapter with `new FileAttachmentAdapter({ documentMode: "metadata" })` to send filename/type/size only; the agent then knows a file was attached but cannot read it.
+
+If your backend persists chat history, strip or elide attachment bytes before storing them — they ride along on every turn, and one large PDF can blow past a document-size limit.
 
 # Checks
 
