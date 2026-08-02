@@ -23,6 +23,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Full history so the scan can diff commit messages against the base.
+          fetch-depth: 0
+
+      # Cheapest gate, so it runs first.
+      - name: Scan for sensitive information
+        run: node scripts/check-sensitive-terms.mjs
+
+      - name: Scan commit messages for sensitive information
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=0 origin "${{ github.base_ref }}"
+          node scripts/check-sensitive-terms.mjs \
+            --range "origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }}"
 
       - uses: pnpm/action-setup@v5
 
