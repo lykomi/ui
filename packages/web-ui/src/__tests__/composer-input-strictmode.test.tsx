@@ -53,10 +53,9 @@ async function typeAndRead(withAdapters: boolean, strict = false): Promise<strin
   await act(async () => {
     root.render(strict ? <StrictMode>{tree}</StrictMode> : tree);
   });
-  // let history load() settle
-  await act(async () => {
-    await new Promise((r) => setTimeout(r, 50));
-  });
+  // Flush the history adapter's load() promise. It resolves immediately, so an
+  // extra act() tick is enough — a timer here would only add CI flake.
+  await act(async () => {});
 
   const input = container.querySelector("textarea") as HTMLTextAreaElement;
   expect(input).toBeTruthy();
