@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "license": "MIT",
-  "description": "Open-source agent UI starter \u2014 AG-UI protocol, Microsoft Agent Framework, Azure Foundry. Cross-runtime transport + React shell.",
+  "description": "Open-source agent UI starter — AG-UI protocol, Microsoft Agent Framework, Azure Foundry. Cross-runtime transport + React shell.",
   "type": "module",
   "engines": {
     "node": ">=22"
