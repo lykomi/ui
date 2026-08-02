@@ -48,7 +48,7 @@ describe("FileAttachmentAdapter.add", () => {
 });
 
 describe("FileAttachmentAdapter.send", () => {
-  it("sends non-image documents as text metadata", async () => {
+  it("sends documents as base64 file content so the model can read them", async () => {
     const file = new File(["hello"], "brief.docx", {
       type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
@@ -57,12 +57,25 @@ describe("FileAttachmentAdapter.send", () => {
 
     expect(complete.content).toEqual([
       {
-        type: "text",
-        text:
-          "[Attached file: brief.docx; type: " +
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document; size: 5 B]",
+        type: "file",
+        data: "aGVsbG8=",
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename: "brief.docx",
       },
     ]);
+  });
+
+  it("degrades documents to text metadata when documentMode is 'metadata'", async () => {
+    const metadataAdapter = new FileAttachmentAdapter({ documentMode: "metadata" });
+    const file = new File(["hello"], "brief.pdf", { type: "application/pdf" });
+    const pending = await metadataAdapter.add({ file });
+    const complete = await metadataAdapter.send(pending);
+
+    const part = complete.content[0] as { type: string; text: string };
+    expect(part.type).toBe("text");
+    expect(part.text).toContain("[Attached file: brief.pdf");
+    expect(part.text).toContain("Contents were not sent");
   });
 
   it("sends images as base64 file content", async () => {

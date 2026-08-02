@@ -1,13 +1,23 @@
 /**
  * File attachment adapter for assistant-ui.
  *
- * Reads image files client-side as base64 and produces FileMessagePart content.
- * Non-image documents are represented as text metadata so starter apps don't
- * send malformed multimodal payloads to providers that require a separate file
- * upload or document extraction pipeline.
+ * Reads attachments client-side as base64 and produces FileMessagePart content
+ * for both images and documents. The AG-UI adapter turns those into `binary`
+ * message parts (mimeType + data + filename), which the protocol carries
+ * natively and model providers accept as file input.
  *
- * Supported: images (PNG, JPEG, WEBP, GIF). PDFs/DOCX can be attached, but the
- * default starter only sends their metadata to the agent.
+ * Documents used to degrade to a text stub (`[Attached file: x.pdf; ...]`) so
+ * the starter wouldn't send payloads to providers lacking file input. That
+ * silently discarded the bytes: the user attaches a PDF, the model receives
+ * only its filename, and — having been told a file was attached — goes hunting
+ * for a matching document in the backend and reports that it can't read it.
+ * Losing user data silently is the worse failure, so documents are sent by
+ * default. Pass `{ documentMode: "metadata" }` to restore the stub for agents
+ * whose model genuinely can't accept file input.
+ *
+ * Note for hosts: the bytes ride along on every turn of the live conversation
+ * and land in persisted history unless the backend elides them — see
+ * lastspace's `_elide_inline_media` for the pattern.
  */
 
 import type {
@@ -49,9 +59,28 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+export interface FileAttachmentAdapterOptions {
+  /**
+   * How non-image documents (PDF, DOCX) are sent.
+   *
+   * - `"binary"` (default) — base64 bytes as a file part, so the model can
+   *   actually read the document.
+   * - `"metadata"` — filename/type/size as text only. For agents whose model
+   *   cannot accept file input; the agent sees that a file was attached but
+   *   never its contents.
+   */
+  documentMode?: "binary" | "metadata";
+}
+
 export class FileAttachmentAdapter implements AttachmentAdapter {
   accept =
     "image/*,application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+  private readonly documentMode: "binary" | "metadata";
+
+  constructor(options: FileAttachmentAdapterOptions = {}) {
+    this.documentMode = options.documentMode ?? "binary";
+  }
 
   async add({ file }: { file: File }): Promise<PendingAttachment> {
     if (file.size > MAX_FILE_SIZE) {
@@ -73,7 +102,7 @@ export class FileAttachmentAdapter implements AttachmentAdapter {
   async send(attachment: PendingAttachment): Promise<CompleteAttachment> {
     const mimeType = attachment.contentType ?? "application/octet-stream";
 
-    if (!mimeType.startsWith("image/")) {
+    if (!mimeType.startsWith("image/") && this.documentMode === "metadata") {
       return {
         ...attachment,
         status: { type: "complete" },
@@ -83,7 +112,9 @@ export class FileAttachmentAdapter implements AttachmentAdapter {
             text:
               `[Attached file: ${attachment.name}` +
               `; type: ${mimeType}` +
-              `; size: ${formatFileSize(attachment.file.size)}]`,
+              `; size: ${formatFileSize(attachment.file.size)}` +
+              `. Contents were not sent — this agent is configured for ` +
+              `metadata-only attachments, so tell the user you cannot read it.]`,
           },
         ],
       };
