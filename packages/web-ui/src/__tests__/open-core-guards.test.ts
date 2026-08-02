@@ -302,5 +302,33 @@ describe("open-core guards", () => {
         ).toEqual([]);
       });
     }
+
+    // 5. Sibling foundry-* packages must never be peerDependencies.
+    //
+    // The four packages ship together as a coordinated `fixed` changesets
+    // group, so they belong in `dependencies` with `workspace:*`. As peerDeps
+    // they trigger changesets' `shouldBumpMajor` cascade: one `minor` on any
+    // sibling exits the strict `^0.x.y` peer range, promotes every dependent
+    // to major, and the fixed group then syncs all four to that major.
+    //
+    // This has fired for real, which is why the published version line has a
+    // permanent hole in it. Encoded as a test rather than prose so it cannot
+    // quietly stop being true.
+    it("no @iloveagents/foundry-* sibling appears in peerDependencies", () => {
+      const violations: string[] = [];
+      for (const { dir, json } of workspacePackageJsons()) {
+        const peers = (json.peerDependencies ?? {}) as Record<string, string>;
+        for (const dep of Object.keys(peers)) {
+          if (dep.startsWith("@iloveagents/foundry-")) {
+            violations.push(`${relative(ROOT, dir)} peerDependencies.${dep}=${peers[dep]}`);
+          }
+        }
+      }
+      expect(
+        violations,
+        "sibling foundry-* packages must be `dependencies` (workspace:*), never peerDependencies — " +
+          "peerDeps trigger the changesets major-bump cascade across the whole fixed group",
+      ).toEqual([]);
+    });
   });
 });

@@ -23,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Full history so the scan can diff commit messages against the base.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v5
 
@@ -30,6 +33,22 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+
+      # Cheapest gate, so it runs as early as it can — but after Node is
+      # pinned, since the runner's default Node need not satisfy engines.node,
+      # and before the install/build, which are the slow steps.
+      - name: Scan for sensitive information
+        run: node scripts/check-sensitive-terms.mjs
+
+      - name: Scan commit messages for sensitive information
+        if: github.event_name == 'pull_request'
+        run: |
+          # Explicit refspec: the PR checkout resolves refs/pull/N/merge, so the
+          # base branch is not guaranteed to exist as a remote-tracking ref.
+          git fetch --no-tags origin \
+            "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+          node scripts/check-sensitive-terms.mjs \
+            --range "origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }}"
 
       - name: Install deps
         run: pnpm install --frozen-lockfile

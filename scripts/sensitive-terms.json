@@ -1,0 +1,19 @@
+{
+  "_comment": [
+    "Salted SHA-256 hashes of lowercased tokens that must not appear in this repository.",
+    "Plaintext is intentionally absent: a readable list would disclose the very terms it",
+    "guards. This is obfuscation, not secrecy — the salt is public, so a guess can be",
+    "confirmed; it prevents casual reading, grep and search-engine indexing.",
+    "Add an entry with:  node scripts/check-sensitive-terms.mjs --add \"Term\"",
+    "Enforced by scripts/check-sensitive-terms.mjs (pnpm check:sensitive)."
+  ],
+  "algorithm": "sha256(salt + \":\" + lowercasedToken)",
+  "minTokenLength": 4,
+  "salt": "f50b505616e1332e82d855db6aa61ad9",
+  "tokens": [
+    "089f4f39f7e50ab337250e53a1e85de488ede9212ce9147575b69bbfddd89fe8",
+    "4dc1b22901f36119263795e49fef98880848e189364677ee953231d79d9de056",
+    "8f199ed46bc093d04e0019e68d853d1072dea74ad97aa43368529a3da6f06546",
+    "e4fcda3b2d1125909d7bd6ed195e8a7d4bd01de04fae05252821598d97c17aec"
+  ]
+}
