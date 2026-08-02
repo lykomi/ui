@@ -27,7 +27,16 @@ jobs:
           # Full history so the scan can diff commit messages against the base.
           fetch-depth: 0
 
-      # Cheapest gate, so it runs first.
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Cheapest gate, so it runs as early as it can — but after Node is
+      # pinned, since the runner's default Node need not satisfy engines.node,
+      # and before the install/build, which are the slow steps.
       - name: Scan for sensitive information
         run: node scripts/check-sensitive-terms.mjs
 
@@ -40,13 +49,6 @@ jobs:
             "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
           node scripts/check-sensitive-terms.mjs \
             --range "origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }}"
-
-      - uses: pnpm/action-setup@v5
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: pnpm
 
       - name: Install deps
         run: pnpm install --frozen-lockfile

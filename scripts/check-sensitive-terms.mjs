@@ -52,12 +52,14 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const TERMS_FILE = "scripts/sensitive-terms.json";
 const TERMS_PATH = join(ROOT, TERMS_FILE);
 
-/** Tokens shorter than this are too collision-prone to be worth matching. */
-const MIN_TOKEN_LENGTH = 4;
-
-/** Binary/large assets where a text scan is meaningless or misleading. */
-const SKIP_EXT =
-  /\.(png|jpe?g|gif|webp|avif|ico|svg|woff2?|ttf|eot|pdf|zip|gz|tgz|mp4|webm|wasm)$/i;
+/**
+ * Binary/large assets where a text scan is meaningless.
+ *
+ * SVG is deliberately NOT here: it is a text format and can carry identifiers
+ * in `<title>`, `<desc>`, `<text>` or metadata. True binaries are also caught
+ * by the NUL-byte check in `readIfText`, so this list is only an optimisation.
+ */
+const SKIP_EXT = /\.(png|jpe?g|gif|webp|avif|ico|woff2?|ttf|eot|pdf|zip|gz|tgz|mp4|webm|wasm)$/i;
 
 /** Paths that are generated or vendored. */
 const SKIP_PATH = /(^|\/)(node_modules|dist|build|coverage|\.git)\//;
@@ -70,6 +72,13 @@ function git(args) {
   });
 }
 
+/**
+ * Tokens shorter than this are too collision-prone to be worth matching.
+ * Read from the term list rather than hardcoded, so the JSON field is real
+ * configuration instead of decoration that can silently drift from the code.
+ */
+let MIN_TOKEN_LENGTH;
+
 function loadTerms() {
   if (!existsSync(TERMS_PATH)) {
     console.error(`✗ missing term list: ${TERMS_PATH}`);
@@ -80,12 +89,20 @@ function loadTerms() {
     console.error(`✗ ${TERMS_FILE} must have { salt, tokens[] }`);
     process.exit(2);
   }
+  if (!Number.isInteger(raw.minTokenLength) || raw.minTokenLength < 1) {
+    console.error(`✗ ${TERMS_FILE}: minTokenLength must be a positive integer`);
+    process.exit(2);
+  }
+  MIN_TOKEN_LENGTH = raw.minTokenLength;
   return { salt: raw.salt, hashes: new Set(raw.tokens) };
 }
 
 const hashToken = (salt, token) => createHash("sha256").update(`${salt}:${token}`).digest("hex");
 
-/** Lowercase, split on non-alphanumerics, drop short tokens. */
+/**
+ * Lowercase, split on non-alphanumerics, drop short tokens.
+ * Only ever called after `loadTerms()` has set MIN_TOKEN_LENGTH.
+ */
 function tokenize(text) {
   const out = [];
   for (const t of text.toLowerCase().split(/[^a-z0-9]+/)) {
