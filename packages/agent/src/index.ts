@@ -13,6 +13,11 @@ export {
 export { clientToolRegistry, type ClientToolEntry, type ToolRegistry } from "./tools/registry.ts";
 
 // --- Stores (vanilla) ---
+export {
+  reasoningEffortStore,
+  REASONING_EFFORT_LABELS,
+  type ReasoningEffort,
+} from "./store/reasoning-effort-store.ts";
 export { streamingStatusStore, type StreamingStatus } from "./store/streaming-status-store.ts";
 export {
   citationStore,

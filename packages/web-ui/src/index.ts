@@ -77,17 +77,8 @@ export { SurfaceCard, surfaceCardVariants } from "./components/surface-card.tsx"
 // coupling to ThemeScope (theme-runtime-provider.tsx) — they need a
 // theme-system refactor before they can move to the leaf primitives
 // package. Tracked for a follow-up under #95/#96.
-export {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "./ui/tooltip.tsx";
-export {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "./ui/collapsible.tsx";
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./ui/tooltip.tsx";
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./ui/collapsible.tsx";
 export {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -180,6 +171,7 @@ export { useNewConversation } from "./lib/use-new-conversation.ts";
 export { AGUIAdapterSDK } from "./lib/ag-ui-adapter.ts";
 export { FileAttachmentAdapter } from "./lib/attachment-adapter.ts";
 export { ReasoningPart, ReasoningMessagePartComponent } from "./components/reasoning-part.tsx";
+export { ReasoningEffortPicker } from "./components/reasoning-effort-picker.tsx";
 
 // --- Auth ---
 // `AuthProvider` is the React MSAL bootstrap (uses `@azure/msal-react`).

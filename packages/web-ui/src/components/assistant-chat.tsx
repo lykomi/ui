@@ -37,6 +37,7 @@ import { ChatComposerBannerSlot } from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { MarkdownText } from "./markdown-text.tsx";
 import { ReasoningMessagePartComponent } from "./reasoning-part.tsx";
+import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
 import { ToolFallback } from "./tool-fallback.tsx";
 import { LoadingIndicator, LoadingBar } from "./loading-indicator.tsx";
 import { MessageTimestamp } from "./message-timestamp.tsx";
@@ -191,6 +192,9 @@ const EditComposer: FC = () => (
 const ComposerActionButton: FC = () => {
   return (
     <>
+      <ThreadPrimitive.If running={false}>
+        <ReasoningEffortPicker className="mr-1" />
+      </ThreadPrimitive.If>
       <ThreadPrimitive.If running>
         <ComposerPrimitive.Cancel asChild>
           <Button
