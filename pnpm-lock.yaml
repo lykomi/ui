@@ -12,7 +12,7 @@ overrides:
 
 patchedDependencies:
   '@assistant-ui/store@0.3.2':
-    hash: 45020b016763dc02a2085bc5d4f42d525056aa8b8957c446caf12ff9d6fff0be
+    hash: 6bac85c7b2258160bf60b3de2573cdbaa07d40982c39087b2d5384c1f4889c85
     path: patches/@assistant-ui__store@0.3.2.patch
 
 importers:
@@ -3581,9 +3581,9 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@assistant-ui/core@0.3.2(@assistant-ui/store@0.3.2(patch_hash=45020b016763dc02a2085bc5d4f42d525056aa8b8957c446caf12ff9d6fff0be)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5))(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(assistant-cloud@0.1.37)(react@19.2.5)(zustand@5.0.14(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))':
+  '@assistant-ui/core@0.3.2(@assistant-ui/store@0.3.2(patch_hash=6bac85c7b2258160bf60b3de2573cdbaa07d40982c39087b2d5384c1f4889c85)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5))(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(assistant-cloud@0.1.37)(react@19.2.5)(zustand@5.0.14(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))':
     dependencies:
-      '@assistant-ui/store': 0.3.2(patch_hash=45020b016763dc02a2085bc5d4f42d525056aa8b8957c446caf12ff9d6fff0be)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5)
+      '@assistant-ui/store': 0.3.2(patch_hash=6bac85c7b2258160bf60b3de2573cdbaa07d40982c39087b2d5384c1f4889c85)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5)
       '@assistant-ui/tap': 0.9.8(@types/react@19.2.14)(react@19.2.5)
       assistant-stream: 0.3.31
       nanoid: 6.0.0
@@ -3598,8 +3598,8 @@ snapshots:
 
   '@assistant-ui/react@0.15.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))':
     dependencies:
-      '@assistant-ui/core': 0.3.2(@assistant-ui/store@0.3.2(patch_hash=45020b016763dc02a2085bc5d4f42d525056aa8b8957c446caf12ff9d6fff0be)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5))(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(assistant-cloud@0.1.37)(react@19.2.5)(zustand@5.0.14(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))
-      '@assistant-ui/store': 0.3.2(patch_hash=45020b016763dc02a2085bc5d4f42d525056aa8b8957c446caf12ff9d6fff0be)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5)
+      '@assistant-ui/core': 0.3.2(@assistant-ui/store@0.3.2(patch_hash=6bac85c7b2258160bf60b3de2573cdbaa07d40982c39087b2d5384c1f4889c85)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5))(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(assistant-cloud@0.1.37)(react@19.2.5)(zustand@5.0.14(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)))
+      '@assistant-ui/store': 0.3.2(patch_hash=6bac85c7b2258160bf60b3de2573cdbaa07d40982c39087b2d5384c1f4889c85)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5)
       '@assistant-ui/tap': 0.9.8(@types/react@19.2.14)(react@19.2.5)
       '@radix-ui/primitive': 1.1.7
       '@radix-ui/react-collection': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -3628,7 +3628,7 @@ snapshots:
       - redis
       - use-sync-external-store
 
-  '@assistant-ui/store@0.3.2(patch_hash=45020b016763dc02a2085bc5d4f42d525056aa8b8957c446caf12ff9d6fff0be)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5)':
+  '@assistant-ui/store@0.3.2(patch_hash=6bac85c7b2258160bf60b3de2573cdbaa07d40982c39087b2d5384c1f4889c85)(@assistant-ui/tap@0.9.8(@types/react@19.2.14)(react@19.2.5))(@types/react@19.2.14)(react@19.2.5)':
     dependencies:
       '@assistant-ui/tap': 0.9.8(@types/react@19.2.14)(react@19.2.5)
       react: 19.2.5
