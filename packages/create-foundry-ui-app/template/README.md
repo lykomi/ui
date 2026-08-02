@@ -156,4 +156,4 @@ VITE_MSAL_API_SCOPE=api://<api-app-id>/access_as_user
 
 - `AGENTS.md` is the local coding-agent contract.
 - `CLAUDE.md` imports `AGENTS.md` for Claude Code.
-- Non-image attachments are sent as metadata by default. Add a document extraction tool when your app needs real document understanding.
+- Images and documents (PDF/DOCX) are sent to the model as file content. Use `new FileAttachmentAdapter({ documentMode: "metadata" })` if your model cannot accept file input, and elide attachment bytes before persisting chat history.

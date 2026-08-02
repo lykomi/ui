@@ -500,6 +500,72 @@ describe("stream integrity", () => {
     expect(beats[0].elapsedMs).toBe(1234);
   });
 
+  it("does not duplicate a tool call the AG-UI client already recorded", async () => {
+    // The real AbstractAgent folds the streamed assistant message — tool calls
+    // included — into `agent.messages` while the run is applied. The runner
+    // used to append its own copy unconditionally, so the follow-up carried
+    // the SAME toolCallId twice against a single tool result: the model saw an
+    // unanswered tool call, re-issued the tool, and then reported that it
+    // "didn't complete" even though it had succeeded.
+    nextScript = [
+      async (s, agent) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onToolCallStartEvent?.({
+          event: {
+            type: "TOOL_CALL_START",
+            toolCallId: "tc-dup",
+            toolCallName: "ui_get_context",
+          } as never,
+        } as never);
+        await s.onToolCallArgsEvent?.({
+          event: { type: "TOOL_CALL_ARGS", toolCallId: "tc-dup", delta: "{}" } as never,
+        } as never);
+        await s.onToolCallEndEvent?.({
+          event: { type: "TOOL_CALL_END", toolCallId: "tc-dup" } as never,
+        } as never);
+        // What defaultApplyEvents does on the real client:
+        agent.messages.push({
+          id: "srv-1",
+          role: "assistant",
+          content: "",
+          toolCalls: [
+            { id: "tc-dup", type: "function", function: { name: "ui_get_context", arguments: "{}" } },
+          ],
+        });
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onTextMessageContentEvent?.({
+          event: { type: "TEXT_MESSAGE_CONTENT", delta: "Here is your context." } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    await collect(
+      runner,
+      makeRegistry({
+        isRegistered: (name) => name === "ui_get_context",
+        executeTool: async () => '{"status":"success"}',
+      }),
+    );
+
+    const toolCallIds = lastMessages.flatMap((m) => {
+      const msg = m as { role?: string; toolCalls?: Array<{ id: string }> };
+      return msg.role === "assistant" && msg.toolCalls ? msg.toolCalls.map((t) => t.id) : [];
+    });
+    expect(toolCallIds.filter((id) => id === "tc-dup")).toHaveLength(1);
+
+    // ...and exactly one matching result, so the call is answered.
+    const toolResults = lastMessages.filter((m) => {
+      const msg = m as { role?: string; toolCallId?: string };
+      return msg.role === "tool" && msg.toolCallId === "tc-dup";
+    });
+    expect(toolResults).toHaveLength(1);
+  });
+
   it("emits stalled status during a quiet stretch and recovers on the next event", async () => {
     nextScript = [
       async (s) => {

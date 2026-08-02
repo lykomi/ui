@@ -437,31 +437,60 @@ export class AGUIRunner {
 
         // Build follow-up messages with the SAME toolCallId the agent emitted.
         // Tool results are appended to the agent's message history (AG-UI
-        // convention — append, never replace). Preserve any pre-tool text
-        // the model emitted in this turn so the next-turn context matches
-        // what the user actually saw.
-        const assistantMsg: Message = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: turnAssistantText,
-          toolCalls: pendingClientTools.map((tc) => ({
-            id: tc.id,
-            type: "function" as const,
-            function: { name: tc.name, arguments: tc.args },
-          })),
-        };
+        // convention — append, never replace).
+        //
+        // The AG-UI client folds the streamed assistant message — tool calls
+        // included — into `httpAgent.messages` itself (AbstractAgent applies
+        // the event stream to its own history). Appending an unconditional
+        // second copy put the SAME toolCallId in the history twice with only
+        // one matching tool result, so the model saw an unanswered tool call:
+        // it re-issued the tool (a duplicate card in the UI) and then reported
+        // that the call "didn't complete", even though the tool had succeeded.
+        // Only synthesize what the client hasn't already recorded.
+        const recordedToolCallIds = new Set<string>();
+        const recordedToolResultIds = new Set<string>();
+        for (const message of this.httpAgent.messages) {
+          if (message.role === "assistant" && message.toolCalls) {
+            for (const call of message.toolCalls) recordedToolCallIds.add(call.id);
+          } else if (message.role === "tool" && message.toolCallId) {
+            recordedToolResultIds.add(message.toolCallId);
+          }
+        }
 
-        const toolResultMsgs: Message[] = pendingClientTools.map((tc) => ({
-          id: crypto.randomUUID(),
-          role: "tool",
-          toolCallId: tc.id,
-          content: typeof tc.result === "string" ? tc.result : JSON.stringify(tc.result),
-        }));
+        const followUpMessages: Message[] = [];
 
-        currentMessages = [...currentMessages, assistantMsg, ...toolResultMsgs];
-        for (const m of [assistantMsg, ...toolResultMsgs]) {
+        // Preserve any pre-tool text the model emitted in this turn so the
+        // next-turn context matches what the user actually saw.
+        const unrecordedToolCalls = pendingClientTools.filter((tc) => !recordedToolCallIds.has(tc.id));
+        if (unrecordedToolCalls.length > 0) {
+          followUpMessages.push({
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: turnAssistantText,
+            toolCalls: unrecordedToolCalls.map((tc) => ({
+              id: tc.id,
+              type: "function" as const,
+              function: { name: tc.name, arguments: tc.args },
+            })),
+          });
+        }
+
+        for (const tc of pendingClientTools) {
+          if (recordedToolResultIds.has(tc.id)) continue;
+          followUpMessages.push({
+            id: crypto.randomUUID(),
+            role: "tool",
+            toolCallId: tc.id,
+            content: typeof tc.result === "string" ? tc.result : JSON.stringify(tc.result),
+          });
+        }
+
+        for (const m of followUpMessages) {
           this.httpAgent.addMessage(m);
         }
+        // Re-sync from the client's history: it is the authority on what the
+        // next request carries (`prepareRunAgentInput` reads it directly).
+        currentMessages = [...this.httpAgent.messages];
       }
     } finally {
       // Normalized terminal status — idempotent if onRunFinishedEvent already

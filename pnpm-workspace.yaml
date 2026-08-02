@@ -14,6 +14,14 @@ ignoredBuiltDependencies:
 # drift). The meta workspace (ltwlf/lastspace-meta) mirrors these.
 overrides:
   react-router: "^7.14.1"
-  '@assistant-ui/react': "^0.12.25"
+  '@assistant-ui/react': "^0.15.1"
   '@ag-ui/client': "^0.0.52"
   '@ag-ui/core': "^0.0.52"
+
+# Upstream StrictMode fix (assistant-ui/assistant-ui#5411, merged 2026-08-01,
+# unreleased as of store 0.3.2): the React-Compiler-compiled
+# NotificationManager is rebuilt on StrictMode's replay render, so useAuiState
+# subscribers bind a dead manager and the composer silently ignores typing.
+# Remove the patch (and this block) once @assistant-ui/store > 0.3.2 ships.
+patchedDependencies:
+  '@assistant-ui/store@0.3.2': patches/@assistant-ui__store@0.3.2.patch

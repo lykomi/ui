@@ -16,8 +16,8 @@ Training-data knowledge of this stack is unreliable. Before writing code, verify
 
 ## Non-negotiables for this stack (verify they still hold, then follow)
 
-- `@assistant-ui/react` must be **0.12.x or newer** (0.11.x has a `_getInitializePromise` runtime regression). Tool UIs use `makeAssistantToolUI(...)`.
-- There is **no official `@assistant-ui/ag-ui` adapter** — do not invent imports for one. The protocol engine is `AGUIRunner` (`@iloveagents/foundry-agent`): it drives `HttpAgent.runAgent()` with an `AgentSubscriber` and yields a normalized `RunnerEvent` stream; `@iloveagents/foundry-web-ui` ships the assistant-ui shim that turns those into cumulative `ChatModelRunResult` yields.
+- `@assistant-ui/react` is pinned to **0.15.x**. Tool UIs use `makeAssistantToolUI(...)`. The per-scope runtime hooks (`useComposerRuntime`, `useThreadRuntime`, `useMessageRuntime`, …) were removed in 0.15 — use `useAui()` / `useAuiState()`.
+- An official `@assistant-ui/react-ag-ui` provider exists, but **this stack deliberately does not use it** — do not import it or migrate onto it. It drops AG-UI `CUSTOM`/`RAW` events (killing heartbeats and citations) and has no stalled-stream watchdog. The protocol engine here is `AGUIRunner` (`@iloveagents/foundry-agent`): it drives `HttpAgent.runAgent()` with an `AgentSubscriber` and yields a normalized `RunnerEvent` stream; `@iloveagents/foundry-web-ui` ships the assistant-ui shim that turns those into cumulative `ChatModelRunResult` yields. See the root `AGENTS.md` for the rationale and the conditions for revisiting.
 - Agent Framework (Python): `from agent_framework import Agent, tool` — `Agent`, NOT `ChatAgent`; `@tool`, NOT `ai_function`; `Agent(client=..., ...)`, NOT `chat_client=`. AG-UI endpoint via `from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint`. Re-verify against the samples anyway — these have changed before.
 - `@iloveagents/foundry-agent` is cross-runtime: zero React, zero DOM, zero `@assistant-ui/*`. Never add those imports to transport-level code.
 
