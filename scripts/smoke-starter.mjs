@@ -297,6 +297,18 @@ async function runBrowserStarterSmoke() {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
 
+    // The shell asks the backend what the composer's `Auto` effort resolves
+    // to on boot. Part of the backend surface the shell touches, so the smoke
+    // models it like /api/agent below — an unstubbed call would 500 against
+    // the dev server and fail the console-error gate.
+    await page.route("**/api/chat/config", async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reasoning: { defaultEffort: "medium" } }),
+      });
+    });
+
     await page.route("**/api/agent", async (route) => {
       sawAgentRequest = true;
       const requestBody = JSON.parse(route.request().postData() || "{}");

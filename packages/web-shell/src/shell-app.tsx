@@ -36,11 +36,12 @@ export function ShellApp({
 }: ShellAppProps) {
   // Ask the backend what `Auto` currently resolves to, so the composer's
   // effort picker can name the level instead of leaving the user guessing.
-  // Runs inside ShellAuth's authenticated subtree, so a token is available;
-  // failure leaves the level unknown and the picker says so.
+  // Uses the same agentFetch seam as everything else (auth, base URL, test
+  // override); failure resets the level to unknown and the picker says so.
+  const resolvedAgentFetch = agentFetch ?? defaultAgentFetch;
   useEffect(() => {
-    void loadChatConfig();
-  }, []);
+    void loadChatConfig(resolvedAgentFetch);
+  }, [resolvedAgentFetch]);
 
   // Merge module pages with customer pages — customer wins on path collision
   // (last-wins). Stable order: customer pages first (they appear in Routes
