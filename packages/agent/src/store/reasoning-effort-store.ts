@@ -3,20 +3,31 @@ import { createStore } from "zustand/vanilla";
 /**
  * How hard the model should think before answering.
  *
- * `"default"` sends nothing and leaves the backend's configured level
- * alone — the user hasn't expressed a preference, so we don't override
- * one. The remaining levels map to the AG-UI/Responses reasoning effort.
+ * Every level maps to a real AG-UI/Responses reasoning effort and is always
+ * sent. There is deliberately no "let the app decide" member: it read as
+ * "the model picks per request" while actually meaning "send nothing", and
+ * a level the user cannot reason about is worse than no choice at all.
+ * `MEDIUM` below is what a user who has never opened the picker gets.
  */
-export type ReasoningEffort = "default" | "low" | "medium" | "high" | "xhigh";
+export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
+
+/**
+ * What an unset preference resolves to.
+ *
+ * Matches the backend's own fallback (`CHAT_REASONING_EFFORT`, itself
+ * defaulting to `medium`), so removing the deferral option changed no
+ * behaviour for anyone who never touched the picker. Below `medium` the
+ * model often does not reason enough to produce a summary, so the panel
+ * flickers between text and nothing — see the measurements in the
+ * web-api `_reasoning_options` docstring.
+ */
+export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium";
 
 /**
  * Level names follow the convention users already know from other assistants
- * (Instant / Medium / High / Extra High) rather than inventing a private
- * vocabulary. `Auto` is ours: it means "no preference — use whatever the app
- * is configured for", which the protocol enum has no member for.
+ * rather than inventing a private vocabulary.
  */
 export const REASONING_EFFORT_LABELS: Record<ReasoningEffort, string> = {
-  default: "Auto",
   low: "Instant",
   medium: "Medium",
   high: "High",
@@ -31,11 +42,14 @@ interface ReasoningEffortState {
 const STORAGE_KEY = "foundry:reasoning-effort";
 
 function readPersisted(): ReasoningEffort {
-  if (typeof localStorage === "undefined") return "default";
+  if (typeof localStorage === "undefined") return DEFAULT_REASONING_EFFORT;
   const raw = localStorage.getItem(STORAGE_KEY);
-  return raw === "low" || raw === "medium" || raw === "high" || raw === "xhigh" || raw === "default"
+  // `"default"` is the retired deferral option. Anyone still carrying it in
+  // localStorage lands on the level it used to resolve to, so the migration
+  // is invisible rather than a silent jump to some other effort.
+  return raw === "low" || raw === "medium" || raw === "high" || raw === "xhigh"
     ? raw
-    : "default";
+    : DEFAULT_REASONING_EFFORT;
 }
 
 /**
