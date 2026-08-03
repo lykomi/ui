@@ -1,4 +1,4 @@
-import { type ReactNode, Suspense, useCallback, useMemo, useRef } from "react";
+import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { AGUIRuntimeProvider } from "@iloveagents/foundry-web-ui";
 import type {
@@ -10,6 +10,7 @@ import type { ChatConversationConfig, ChatModule, AuthAdapter, ShellPage } from 
 import { ShellAuth } from "./auth-default.tsx";
 import { ShellLayout } from "./shell-layout.tsx";
 import { defaultAgentFetch } from "./service-fetch-default.ts";
+import { loadChatConfig } from "./load-chat-config.ts";
 
 interface ShellAppProps {
   modules: ChatModule[];
@@ -33,6 +34,14 @@ export function ShellApp({
   authProvider,
   agentFetch,
 }: ShellAppProps) {
+  // Ask the backend what `Auto` currently resolves to, so the composer's
+  // effort picker can name the level instead of leaving the user guessing.
+  // Runs inside ShellAuth's authenticated subtree, so a token is available;
+  // failure leaves the level unknown and the picker says so.
+  useEffect(() => {
+    void loadChatConfig();
+  }, []);
+
   // Merge module pages with customer pages — customer wins on path collision
   // (last-wins). Stable order: customer pages first (they appear in Routes
   // before module pages, and React Router matches the FIRST matching route).

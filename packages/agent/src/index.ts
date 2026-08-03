@@ -15,9 +15,11 @@ export { clientToolRegistry, type ClientToolEntry, type ToolRegistry } from "./t
 // --- Stores (vanilla) ---
 export { agentStateStore } from "./store/agent-state-store.ts";
 export {
+  reasoningDefaultStore,
   reasoningEffortStore,
   REASONING_EFFORT_LABELS,
   type ReasoningEffort,
+  type ResolvedReasoningEffort,
 } from "./store/reasoning-effort-store.ts";
 export { streamingStatusStore, type StreamingStatus } from "./store/streaming-status-store.ts";
 export {
