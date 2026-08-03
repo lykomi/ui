@@ -10,15 +10,16 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu.tsx";
 
 const OPTIONS: { value: ReasoningEffort; hint: string }[] = [
-  { value: "default", hint: "Let the app decide" },
+  { value: "default", hint: "Use the app's configured level" },
   { value: "low", hint: "Answers sooner, thinks less" },
   { value: "medium", hint: "Good default for most questions" },
-  { value: "high", hint: "Slower, best for hard problems" },
-  { value: "xhigh", hint: "Slowest — reserve it for the hardest questions" },
+  { value: "high", hint: "Slower, better on hard problems" },
+  { value: "xhigh", hint: "Slowest, for the hardest questions" },
 ];
 
 /**
@@ -51,14 +52,23 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          Intelligence
+        </DropdownMenuLabel>
         {OPTIONS.map((opt) => (
           <DropdownMenuItem
             key={opt.value}
             onSelect={() => setEffort(opt.value)}
             className="flex items-start gap-2"
           >
+            {/* shrink-0: without it the icon is compressed on rows whose hint
+                wraps to two lines (measured 11px instead of 16px), which
+                shifts those titles left and breaks the column. */}
             <Check
-              className={cn("size-4 mt-0.5", effort === opt.value ? "opacity-100" : "opacity-0")}
+              className={cn(
+                "size-4 mt-0.5 shrink-0",
+                effort === opt.value ? "opacity-100" : "opacity-0",
+              )}
             />
             <span className="flex flex-col">
               <span className="text-sm">{REASONING_EFFORT_LABELS[opt.value]}</span>
