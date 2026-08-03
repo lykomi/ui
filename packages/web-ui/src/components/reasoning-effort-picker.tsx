@@ -45,7 +45,7 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
             "transition-colors",
             className,
           )}
-          aria-label={`Thinking effort: ${REASONING_EFFORT_LABELS[effort]}`}
+          aria-label={`Intelligence: ${REASONING_EFFORT_LABELS[effort]}`}
         >
           <span>{REASONING_EFFORT_LABELS[effort]}</span>
           <ChevronDown className="size-3.5" />
