@@ -42,6 +42,17 @@ export interface AGUIRunnerOptions {
    * three missed 15s server heartbeats. Pass `Infinity` to disable.
    */
   stallAfterMs?: number;
+  /**
+   * When a run ends with a client-side tool call that never produced a
+   * result, synthesize an error result for it instead of leaving the call
+   * dangling. Defaults to `true`.
+   *
+   * Defence-in-depth for the failure this runner already had once: an
+   * unanswered tool call makes the model re-issue the tool and then report
+   * that it "didn't complete", while the Responses API rejects a replayed
+   * history whose `function_call` has no matching output.
+   */
+  autoCancelPendingToolCalls?: boolean;
 }
 
 export interface AGUIRunInput {
@@ -157,6 +168,7 @@ class EventQueue<T> {
 export class AGUIRunner {
   private readonly httpAgent: HttpAgent;
   private readonly stallAfterMs: number;
+  private readonly autoCancelPendingToolCalls: boolean;
 
   constructor(options: AGUIRunnerOptions = {}) {
     this.httpAgent = new HttpAgent({
@@ -165,6 +177,7 @@ export class AGUIRunner {
       ...(options.fetchFn ? { fetch: options.fetchFn } : {}),
     });
     this.stallAfterMs = options.stallAfterMs ?? 45_000;
+    this.autoCancelPendingToolCalls = options.autoCancelPendingToolCalls ?? true;
   }
 
   get threadId(): string {
@@ -315,6 +328,53 @@ export class AGUIRunner {
           onStepFinishedEvent: ({ event }) => {
             push({ type: "step-finished", name: event.stepName });
           },
+          // Reasoning block boundaries, for consumers that group by block.
+          onReasoningStartEvent: () => {
+            push({ type: "streaming-status", status: { status: "reasoning" } });
+          },
+          onReasoningMessageEndEvent: () => {
+            push({ type: "reasoning-end" });
+          },
+          // Server-published agent state. The AG-UI client has already
+          // applied the snapshot/patch to `httpAgent.state`; forward the
+          // result so consumers don't reach into the client.
+          onStateSnapshotEvent: () => {
+            push({ type: "agent-state", state: this.httpAgent.state });
+          },
+          onStateDeltaEvent: ({ event }) => {
+            push({
+              type: "agent-state",
+              state: this.httpAgent.state,
+              patch: event.delta as unknown[],
+            });
+          },
+          // Server-authoritative history (e.g. after backend compaction).
+          // Deliberately does NOT touch the in-flight turn: upstream saw
+          // mid-run snapshots truncate a streaming answer.
+          onMessagesSnapshotEvent: ({ event }) => {
+            push({ type: "messages-snapshot", messages: event.messages as unknown[] });
+          },
+          // Generative-UI surfaces (MCP apps / A2UI), passed through.
+          onActivitySnapshotEvent: ({ event }) => {
+            push({
+              type: "activity",
+              messageId: event.messageId,
+              activityType: event.activityType,
+              content: event.content,
+            });
+          },
+          onActivityDeltaEvent: ({ event }) => {
+            push({
+              type: "activity",
+              messageId: event.messageId,
+              activityType: event.activityType,
+              patch: event.patch as unknown[],
+            });
+          },
+          // Provider passthrough — never interpreted here.
+          onRawEvent: ({ event }) => {
+            push({ type: "raw", event: event.event, source: event.source });
+          },
           onCustomEvent: ({ event }) => {
             // Server heartbeat: liveness proof during long tool calls /
             // thinking phases (also keeps intermediary idle-timeouts at bay
@@ -459,6 +519,25 @@ export class AGUIRunner {
           if (stallTimer !== null) clearInterval(stallTimer);
           abortSignal?.removeEventListener("abort", onAbort);
           await runPromise; // ensure the run task is settled
+        }
+
+        // Any client-side tool that was STARTED but never produced a
+        // result leaves a `function_call` with no output. Settle it here so
+        // the replayed history stays valid and the model isn't left waiting
+        // on an answer that will never come.
+        if (this.autoCancelPendingToolCalls) {
+          for (const tc of toolCalls.values()) {
+            if (!registry.isRegistered(tc.name)) continue;
+            if (tc.result !== undefined || tc.followedUp) continue;
+            tc.result = { error: "Tool call did not complete before the run ended." };
+            tc.isError = true;
+            yield {
+              type: "tool-call-result",
+              id: tc.id,
+              result: tc.result,
+              isError: true,
+            };
+          }
         }
 
         // Decide whether to re-issue: any client-side tool that resolved

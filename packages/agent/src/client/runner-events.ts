@@ -39,6 +39,39 @@ export type RunnerEvent =
    */
   | { type: "step-started"; name: string }
   | { type: "step-finished"; name: string }
+  /**
+   * Agent state published by the server (`STATE_SNAPSHOT` / `STATE_DELTA`).
+   * The AG-UI client applies deltas (JSON Patch) to its own state; this
+   * event carries the RESULT so consumers can react without reaching into
+   * the client. `patch` is present only for deltas, for consumers that want
+   * to know what changed rather than just the new value.
+   */
+  | { type: "agent-state"; state: unknown; patch?: unknown[] }
+  /**
+   * Server-authoritative history replacement (`MESSAGES_SNAPSHOT`). Emitted
+   * when the backend rewrites the conversation — e.g. after compaction. The
+   * runner does NOT interrupt an in-flight message for this: upstream saw
+   * mid-run snapshots truncate streaming answers, so consumers should
+   * reconcile persisted history and leave the streaming turn alone.
+   */
+  | { type: "messages-snapshot"; messages: unknown[] }
+  /**
+   * Generative-UI surface (`ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA`) — MCP
+   * apps and A2UI. Passed through verbatim; hosts that don't render
+   * activities can ignore it.
+   */
+  | {
+      type: "activity";
+      messageId: string;
+      activityType: string;
+      content?: unknown;
+      patch?: unknown[];
+    }
+  /**
+   * Provider passthrough (`RAW`). Never interpreted here — hosts use it for
+   * provider-specific behaviour and debugging.
+   */
+  | { type: "raw"; event: unknown; source?: string }
   | { type: "run-finished" }
   | { type: "run-error"; message: string }
   /**

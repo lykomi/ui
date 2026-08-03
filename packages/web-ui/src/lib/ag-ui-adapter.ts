@@ -26,7 +26,12 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 import type { Context, Message as AGUIMessage } from "@ag-ui/core";
-import { AGUIRunner, clientToolRegistry, streamingStatusStore } from "@iloveagents/foundry-agent";
+import {
+  AGUIRunner,
+  agentStateStore,
+  clientToolRegistry,
+  streamingStatusStore,
+} from "@iloveagents/foundry-agent";
 import { tokenFetch } from "@iloveagents/foundry-agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
 import { useDevStore } from "./dev-store.ts";
@@ -201,6 +206,22 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
 
           case "reasoning-end":
             shouldYield = true;
+            break;
+
+          case "agent-state":
+            // Publish server state so pages can react to it. Not a chat
+            // message, so no yield.
+            agentStateStore.getState().setAgentState(event.state, event.patch);
+            break;
+
+          case "messages-snapshot":
+          case "activity":
+          case "raw":
+            // Protocol surfaces this adapter deliberately does not render:
+            // history reconciliation, generative-UI activities and provider
+            // passthrough belong to the host app, which can consume the
+            // RunnerEvent stream directly. Handled here so the switch stays
+            // exhaustive and they can never silently become "unknown".
             break;
 
           case "step-started":

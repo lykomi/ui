@@ -55,6 +55,21 @@ Appending an unconditional copy is what shipped before: the follow-up carried th
 
 Any test here must have its mock emulate that accumulation (push the assistant message onto `agent.messages` during the scripted run). The original mock did not, which is why a fully green suite missed the bug; `agui-runner.test.ts` now covers it.
 
+# Protocol coverage
+
+The runner subscribes to **every** AG-UI event type. Canonical events get a
+dedicated `AgentSubscriber` callback; the chunked and legacy variants
+(`TEXT_MESSAGE_CHUNK`, `TOOL_CALL_CHUNK`, `THINKING_*`) need none, because
+`@ag-ui/client` normalizes them onto the canonical events (`transformChunks`
+and the backward-compatibility middleware) before the subscriber runs.
+
+Coverage was audited once at 11 of 33 types, and the gaps were not harmless:
+reasoning text was being discarded, long runs showed one opaque "thinking"
+state because step names never arrived, and server-published state never
+reached React. When adding a protocol event, emit a `RunnerEvent` for it even
+if nothing renders it yet — a `default:` that silently drops is how those gaps
+survived. The adapter's switch is exhaustive for the same reason.
+
 # What does NOT go here
 
 - Anything implementing `@assistant-ui/*` interfaces (`ChatModelAdapter`, `AttachmentAdapter`, etc.) — those are React UI surface and live in `@iloveagents/foundry-web-ui`.
