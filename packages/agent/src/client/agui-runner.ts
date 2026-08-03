@@ -328,12 +328,15 @@ export class AGUIRunner {
           onStepFinishedEvent: ({ event }) => {
             push({ type: "step-finished", name: event.stepName });
           },
-          // Reasoning block boundaries, for consumers that group by block.
+          // Reasoning has two nested boundaries: a BLOCK
+          // (REASONING_START…REASONING_END) may contain several MESSAGES
+          // (REASONING_MESSAGE_START…REASONING_MESSAGE_END). `reasoning-end`
+          // means "the model stopped thinking", so it is emitted only for the
+          // block terminal in `onReasoningEndEvent`. Emitting it per message
+          // too would fire it repeatedly and let consumers treat reasoning as
+          // finished while it is still going.
           onReasoningStartEvent: () => {
             push({ type: "streaming-status", status: { status: "reasoning" } });
-          },
-          onReasoningMessageEndEvent: () => {
-            push({ type: "reasoning-end" });
           },
           // Server-published agent state. The AG-UI client has already
           // applied the snapshot/patch to `httpAgent.state`; forward the

@@ -756,6 +756,52 @@ describe("stream integrity", () => {
     expect(settled?.isError).toBe(true);
   });
 
+  it("emits reasoning-end once per block, not per reasoning message", async () => {
+    // A reasoning BLOCK (REASONING_START…REASONING_END) can contain several
+    // MESSAGES. reasoning-end means "the model stopped thinking", so firing it
+    // per message would let consumers close reasoning while it is still going.
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onReasoningStartEvent?.({
+          event: { type: "REASONING_START", messageId: "r1" } as never,
+        } as never);
+        for (const id of ["r1", "r2"]) {
+          await s.onReasoningMessageStartEvent?.({
+            event: { type: "REASONING_MESSAGE_START", messageId: id, role: "reasoning" } as never,
+          } as never);
+          await s.onReasoningMessageContentEvent?.({
+            event: {
+              type: "REASONING_MESSAGE_CONTENT",
+              messageId: id,
+              delta: "step " + id,
+            } as never,
+          } as never);
+          await s.onReasoningMessageEndEvent?.({
+            event: { type: "REASONING_MESSAGE_END", messageId: id } as never,
+          } as never);
+        }
+        await s.onReasoningEndEvent?.({
+          event: { type: "REASONING_END", messageId: "r1" } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+    expect(events.filter((e) => e.type === "reasoning-end")).toHaveLength(1);
+    // ...and both messages' text still arrives.
+    expect(
+      events
+        .filter(
+          (e): e is Extract<RunnerEvent, { type: "reasoning-delta" }> =>
+            e.type === "reasoning-delta",
+        )
+        .map((e) => e.delta),
+    ).toEqual(["step r1", "step r2"]);
+  });
+
   it("emits stalled status during a quiet stretch and recovers on the next event", async () => {
     nextScript = [
       async (s) => {

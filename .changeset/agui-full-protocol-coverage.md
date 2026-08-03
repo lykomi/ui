@@ -19,8 +19,10 @@ dropped the rest. It now handles every event type the spec defines:
 - `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` — generative-UI surfaces (MCP apps,
   A2UI), passed through verbatim for hosts that render them.
 - `RAW` — provider passthrough, never interpreted.
-- `REASONING_START` / `REASONING_MESSAGE_END` — the reasoning block boundaries
-  that were still missing.
+- `REASONING_START` — the block-open boundary that was still missing.
+  `reasoning-end` stays tied to the block terminal (`REASONING_END`): a block
+  can contain several reasoning messages, so emitting it per message would let
+  consumers close reasoning while the model is still thinking.
 
 The chunked and legacy variants (`TEXT_MESSAGE_CHUNK`, `TOOL_CALL_CHUNK`,
 `THINKING_*`) need no handlers: `@ag-ui/client` normalizes them onto the
