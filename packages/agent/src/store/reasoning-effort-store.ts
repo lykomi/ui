@@ -9,12 +9,18 @@ import { createStore } from "zustand/vanilla";
  */
 export type ReasoningEffort = "default" | "low" | "medium" | "high" | "xhigh";
 
+/**
+ * Level names follow the convention users already know from other assistants
+ * (Instant / Medium / High / Extra High) rather than inventing a private
+ * vocabulary. `Auto` is ours: it means "no preference — use whatever the app
+ * is configured for", which the protocol enum has no member for.
+ */
 export const REASONING_EFFORT_LABELS: Record<ReasoningEffort, string> = {
   default: "Auto",
-  low: "Fast",
-  medium: "Balanced",
-  high: "Thorough",
-  xhigh: "Max",
+  low: "Instant",
+  medium: "Medium",
+  high: "High",
+  xhigh: "Extra High",
 };
 
 interface ReasoningEffortState {
