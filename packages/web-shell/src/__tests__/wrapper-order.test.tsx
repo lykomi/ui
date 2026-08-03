@@ -92,6 +92,9 @@ vi.mock("@iloveagents/foundry-web-primitives", () => ({
 
 vi.mock("@iloveagents/foundry-agent", () => ({
   createServiceFetch: () => fetch,
+  // load-chat-config imports this on shell boot; a set-only stub keeps the
+  // mock honest without pulling zustand into the test graph.
+  reasoningDefaultStore: { getState: () => ({ setResolved: () => {} }) },
 }));
 
 vi.mock("@iloveagents/foundry-agent/msal", () => ({

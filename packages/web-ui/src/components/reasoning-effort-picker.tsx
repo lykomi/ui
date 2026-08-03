@@ -1,9 +1,11 @@
 import { useStore } from "zustand";
 import { Check, ChevronDown } from "lucide-react";
 import {
+  reasoningDefaultStore,
   reasoningEffortStore,
   REASONING_EFFORT_LABELS,
   type ReasoningEffort,
+  type ResolvedReasoningEffort,
 } from "@iloveagents/foundry-agent";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -15,6 +17,7 @@ import {
 } from "../ui/dropdown-menu.tsx";
 
 const OPTIONS: { value: ReasoningEffort; hint: string }[] = [
+  { value: "default", hint: "" }, // hint is resolved at render — see autoHint
   { value: "low", hint: "Answers sooner, thinks less" },
   { value: "medium", hint: "Good default for most questions" },
   { value: "high", hint: "Slower, better on hard problems" },
@@ -22,17 +25,42 @@ const OPTIONS: { value: ReasoningEffort; hint: string }[] = [
 ];
 
 /**
+ * What `Auto` is currently doing, in words.
+ *
+ * Never guesses. If the app has not told us what the backend resolves to,
+ * the hint says so rather than naming a level — an `Auto` that claims the
+ * wrong level is the exact failure this option is meant to avoid.
+ */
+function autoHint(resolved: ResolvedReasoningEffort | null, scope: string | null): string {
+  if (!resolved) return "Uses the app's configured level";
+  const where = scope ? ` for ${scope}` : "";
+  return `Currently ${REASONING_EFFORT_LABELS[resolved]}${where}`;
+}
+
+/**
  * Lets the user choose how hard the model thinks, per conversation.
  *
  * Sits in the composer next to Send. The choice rides on every request as
  * an AG-UI forwarded prop and is read at send time, so switching it
- * mid-conversation applies from the next message on. Every option is a real
- * effort level; an unset preference resolves to `DEFAULT_REASONING_EFFORT`,
- * so there is nothing here that defers the decision to the deployment.
+ * mid-conversation applies from the next message on.
+ *
+ * `Auto` follows the backend's configured level and names it, so the user
+ * can always tell what they are actually running. An explicit level is a
+ * pin — nothing moves it, including a change of context.
  */
 export function ReasoningEffortPicker({ className }: { className?: string }) {
   const effort = useStore(reasoningEffortStore, (s) => s.effort);
   const setEffort = useStore(reasoningEffortStore, (s) => s.setEffort);
+  const resolved = useStore(reasoningDefaultStore, (s) => s.resolved);
+  const scope = useStore(reasoningDefaultStore, (s) => s.scope);
+
+  // The trigger is the only thing visible without opening the menu, so it
+  // carries the resolved level too — "Auto · Medium" rather than a bare
+  // "Auto" that leaves the active level a mystery.
+  const triggerLabel =
+    effort === "default" && resolved
+      ? `${REASONING_EFFORT_LABELS.default} · ${REASONING_EFFORT_LABELS[resolved]}`
+      : REASONING_EFFORT_LABELS[effort];
 
   return (
     <DropdownMenu>
@@ -45,9 +73,9 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
             "transition-colors",
             className,
           )}
-          aria-label={`Intelligence: ${REASONING_EFFORT_LABELS[effort]}`}
+          aria-label={`Intelligence: ${triggerLabel}`}
         >
-          <span>{REASONING_EFFORT_LABELS[effort]}</span>
+          <span>{triggerLabel}</span>
           <ChevronDown className="size-3.5" />
         </button>
       </DropdownMenuTrigger>
@@ -72,7 +100,9 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
             />
             <span className="flex flex-col">
               <span className="text-sm">{REASONING_EFFORT_LABELS[opt.value]}</span>
-              <span className="text-xs text-muted-foreground">{opt.hint}</span>
+              <span className="text-xs text-muted-foreground">
+                {opt.value === "default" ? autoHint(resolved, scope) : opt.hint}
+              </span>
             </span>
           </DropdownMenuItem>
         ))}

@@ -3,36 +3,69 @@ import { createStore } from "zustand/vanilla";
 /**
  * How hard the model should think before answering.
  *
- * Every level maps to a real AG-UI/Responses reasoning effort and is always
- * sent. There is deliberately no "let the app decide" member: it read as
- * "the model picks per request" while actually meaning "send nothing", and
- * a level the user cannot reason about is worse than no choice at all.
- * `MEDIUM` below is what a user who has never opened the picker gets.
- */
-export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
-
-/**
- * What an unset preference resolves to.
+ * `"default"` is a deferral, not a level: it sends nothing, so whatever the
+ * backend is configured for applies. Every other member maps to a real
+ * AG-UI/Responses reasoning effort and is sent verbatim.
  *
- * Matches the backend's own fallback (`CHAT_REASONING_EFFORT`, itself
- * defaulting to `medium`), so removing the deferral option changed no
- * behaviour for anyone who never touched the picker. Below `medium` the
- * model often does not reason enough to produce a summary, so the panel
- * flickers between text and nothing — see the measurements in the
- * web-api `_reasoning_options` docstring.
+ * A deferral is only honest if the user can see what it currently resolves
+ * to — otherwise you believe you are on Extra High and are quietly running
+ * Instant, and the control silently decides cost and latency. That is what
+ * {@link reasoningDefaultStore} is for.
  */
-export const DEFAULT_REASONING_EFFORT: ReasoningEffort = "medium";
+export type ReasoningEffort = "default" | "low" | "medium" | "high" | "xhigh";
+
+/** A real effort level — everything except the deferral. */
+export type ResolvedReasoningEffort = Exclude<ReasoningEffort, "default">;
 
 /**
  * Level names follow the convention users already know from other assistants
- * rather than inventing a private vocabulary.
+ * (Instant / Medium / High / Extra High) rather than inventing a private
+ * vocabulary. `Auto` is ours, for the case the protocol enum has no member
+ * for: follow whatever the app is configured for.
  */
 export const REASONING_EFFORT_LABELS: Record<ReasoningEffort, string> = {
+  default: "Auto",
   low: "Instant",
   medium: "Medium",
   high: "High",
   xhigh: "Extra High",
 };
+
+interface ReasoningDefaultState {
+  /**
+   * What `"default"` resolves to right now, or `null` while unknown.
+   *
+   * `null` also covers a backend with reasoning switched off entirely, where
+   * there is no level to name.
+   */
+  resolved: ResolvedReasoningEffort | null;
+  /**
+   * Where that came from, for the picker's hint — e.g. `"this workspace"`.
+   * `null` means unattributed, and the hint stays generic.
+   */
+  scope: string | null;
+  setResolved: (resolved: ResolvedReasoningEffort | null, scope?: string | null) => void;
+}
+
+/**
+ * What the backend will actually do when the client sends no effort.
+ *
+ * Populated by the host app, never derived here. Re-deriving the backend's
+ * fallback chain client-side is exactly how a label goes stale and starts
+ * lying: the backend changes its default and the UI keeps claiming the old
+ * one. The app fetches this from the server and sets it, and updates it
+ * when the context it depends on changes — switching workspace, say — so
+ * `Auto` always names the level that will really be used.
+ *
+ * Left unset, the picker says it does not know rather than guessing.
+ *
+ * Vanilla store — this package stays zero-React.
+ */
+export const reasoningDefaultStore = createStore<ReasoningDefaultState>((set) => ({
+  resolved: null,
+  scope: null,
+  setResolved: (resolved, scope) => set({ resolved, scope: scope ?? null }),
+}));
 
 interface ReasoningEffortState {
   effort: ReasoningEffort;
@@ -42,14 +75,11 @@ interface ReasoningEffortState {
 const STORAGE_KEY = "foundry:reasoning-effort";
 
 function readPersisted(): ReasoningEffort {
-  if (typeof localStorage === "undefined") return DEFAULT_REASONING_EFFORT;
+  if (typeof localStorage === "undefined") return "default";
   const raw = localStorage.getItem(STORAGE_KEY);
-  // `"default"` is the retired deferral option. Anyone still carrying it in
-  // localStorage lands on the level it used to resolve to, so the migration
-  // is invisible rather than a silent jump to some other effort.
-  return raw === "low" || raw === "medium" || raw === "high" || raw === "xhigh"
+  return raw === "low" || raw === "medium" || raw === "high" || raw === "xhigh" || raw === "default"
     ? raw
-    : DEFAULT_REASONING_EFFORT;
+    : "default";
 }
 
 /**
@@ -58,6 +88,9 @@ function readPersisted(): ReasoningEffort {
  * Vanilla store (this package is zero-React); the runner reads it when
  * building each request so the choice applies per turn — change it
  * mid-conversation and the next message uses the new level.
+ *
+ * An explicit level is a pin: nothing moves it, including a change of
+ * context. Only `"default"` follows.
  */
 export const reasoningEffortStore = createStore<ReasoningEffortState>((set) => ({
   effort: readPersisted(),
