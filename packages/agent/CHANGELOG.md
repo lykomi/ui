@@ -1,5 +1,62 @@
 # @iloveagents/foundry-agent
 
+## 0.9.0
+
+### Minor Changes
+
+- ef98785: Complete AG-UI protocol coverage in the runner.
+
+  The runner previously subscribed to a subset of the protocol and silently
+  dropped the rest. It now handles every event type the spec defines:
+  - `STATE_SNAPSHOT` / `STATE_DELTA` — published as an `agent-state` runner event
+    and exposed through a new `agentStateStore`, so pages can react to
+    server-driven state instead of reaching into the transport. The AG-UI client
+    already applied the JSON Patch; this forwards the result plus the patch.
+  - `MESSAGES_SNAPSHOT` — server-authoritative history (e.g. after backend
+    compaction), forwarded without disturbing the in-flight turn. Upstream saw
+    mid-run snapshots truncate a streaming answer, so the streaming message is
+    deliberately left alone.
+  - `ACTIVITY_SNAPSHOT` / `ACTIVITY_DELTA` — generative-UI surfaces (MCP apps,
+    A2UI), passed through verbatim for hosts that render them.
+  - `RAW` — provider passthrough, never interpreted.
+  - `REASONING_START` — the block-open boundary that was still missing.
+    `reasoning-end` stays tied to the block terminal (`REASONING_END`): a block
+    can contain several reasoning messages, so emitting it per message would let
+    consumers close reasoning while the model is still thinking.
+
+  The chunked and legacy variants (`TEXT_MESSAGE_CHUNK`, `TOOL_CALL_CHUNK`,
+  `THINKING_*`) need no handlers: `@ag-ui/client` normalizes them onto the
+  canonical events before the subscriber sees them.
+
+  Also adds `autoCancelPendingToolCalls` (default on): a client-side tool that
+  starts but never produces a result is settled with an error instead of being
+  left dangling. An unanswered call makes the model re-issue the tool and then
+  report that it "didn't complete", and the Responses API rejects a replayed
+  history whose `function_call` has no matching output.
+
+### Patch Changes
+
+- fca0ede: Rename the reasoning levels and fix the picker's alignment.
+
+  Levels now read **Auto / Instant / Medium / High / Extra High** under an
+  "Intelligence" heading, matching the vocabulary users already know from other
+  assistants instead of inventing a private one (Fast / Balanced / Thorough /
+  Max). `Auto` stays ours — it means "no preference, use the app's configured
+  level", which the protocol enum has no member for.
+
+  Alignment: the check icon had no `shrink-0`, so on rows whose hint wrapped to
+  two lines flexbox compressed it to 11px instead of 16px and shifted those
+  titles left out of the column. Measured in the browser before and after — all
+  five rows now sit at the same x.
+
+- ef98785: Expose the `xhigh` reasoning level in the effort picker as **Max**.
+
+  The protocol's effort enum runs `low | medium | high | xhigh`, but the picker
+  stopped at `high`. That made "Thorough" the top choice while a higher level
+  existed, so a user asking for the model's best effort could not get it.
+  `xhigh` is confirmed working on the reference deployment (83 reasoning events,
+  no run errors). Labelling `high` itself "Max" would have been inaccurate.
+
 ## 0.8.0
 
 ### Minor Changes
