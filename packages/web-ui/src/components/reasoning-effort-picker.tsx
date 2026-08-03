@@ -18,6 +18,7 @@ const OPTIONS: { value: ReasoningEffort; hint: string }[] = [
   { value: "low", hint: "Answers sooner, thinks less" },
   { value: "medium", hint: "Good default for most questions" },
   { value: "high", hint: "Slower, best for hard problems" },
+  { value: "xhigh", hint: "Slowest — reserve it for the hardest questions" },
 ];
 
 /**

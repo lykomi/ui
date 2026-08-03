@@ -7,13 +7,14 @@ import { createStore } from "zustand/vanilla";
  * alone — the user hasn't expressed a preference, so we don't override
  * one. The remaining levels map to the AG-UI/Responses reasoning effort.
  */
-export type ReasoningEffort = "default" | "low" | "medium" | "high";
+export type ReasoningEffort = "default" | "low" | "medium" | "high" | "xhigh";
 
 export const REASONING_EFFORT_LABELS: Record<ReasoningEffort, string> = {
   default: "Auto",
   low: "Fast",
   medium: "Balanced",
   high: "Thorough",
+  xhigh: "Max",
 };
 
 interface ReasoningEffortState {
@@ -26,7 +27,9 @@ const STORAGE_KEY = "foundry:reasoning-effort";
 function readPersisted(): ReasoningEffort {
   if (typeof localStorage === "undefined") return "default";
   const raw = localStorage.getItem(STORAGE_KEY);
-  return raw === "low" || raw === "medium" || raw === "high" || raw === "default" ? raw : "default";
+  return raw === "low" || raw === "medium" || raw === "high" || raw === "xhigh" || raw === "default"
+    ? raw
+    : "default";
 }
 
 /**

@@ -6,7 +6,10 @@ import type { AgentSubscriber } from "@ag-ui/client";
 // runAgent fires them in order, synchronously yielding the loop between
 // each one so the runner's queue can drain.
 
-type ScriptedRun = (subscriber: AgentSubscriber, agent: { messages: unknown[] }) => Promise<void>;
+type ScriptedRun = (
+  subscriber: AgentSubscriber,
+  agent: { messages: unknown[]; state: Record<string, unknown> },
+) => Promise<void>;
 
 let nextScript: ScriptedRun[] = [];
 let runCount = 0;
@@ -438,8 +441,7 @@ describe("stream integrity", () => {
     expect(events.some((e) => e.type === "run-finished")).toBe(false);
     // terminal idle status still emitted so consumers reset their spinners
     const statuses = events.filter(
-      (e): e is Extract<RunnerEvent, { type: "streaming-status" }> =>
-        e.type === "streaming-status",
+      (e): e is Extract<RunnerEvent, { type: "streaming-status" }> => e.type === "streaming-status",
     );
     expect(statuses[statuses.length - 1]?.status.status).toBe("idle");
   });
@@ -529,7 +531,11 @@ describe("stream integrity", () => {
           role: "assistant",
           content: "",
           toolCalls: [
-            { id: "tc-dup", type: "function", function: { name: "ui_get_context", arguments: "{}" } },
+            {
+              id: "tc-dup",
+              type: "function",
+              function: { name: "ui_get_context", arguments: "{}" },
+            },
           ],
         });
         await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
@@ -574,7 +580,11 @@ describe("stream integrity", () => {
           event: { type: "REASONING_MESSAGE_START", messageId: "r-1", role: "reasoning" } as never,
         } as never);
         await s.onReasoningMessageContentEvent?.({
-          event: { type: "REASONING_MESSAGE_CONTENT", messageId: "r-1", delta: "weighing options" } as never,
+          event: {
+            type: "REASONING_MESSAGE_CONTENT",
+            messageId: "r-1",
+            delta: "weighing options",
+          } as never,
         } as never);
         await s.onReasoningEndEvent?.({
           event: { type: "REASONING_END", messageId: "r-1" } as never,
@@ -643,6 +653,153 @@ describe("stream integrity", () => {
     expect(
       events.some((e) => e.type === "streaming-status" && e.status.stepName === "search_corpus"),
     ).toBe(true);
+  });
+
+  it("publishes agent state from snapshots and deltas", async () => {
+    nextScript = [
+      async (s, agent) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        agent.state = { phase: "searching" };
+        await s.onStateSnapshotEvent?.({
+          event: { type: "STATE_SNAPSHOT", snapshot: { phase: "searching" } } as never,
+        } as never);
+        agent.state = { phase: "answering" };
+        await s.onStateDeltaEvent?.({
+          event: {
+            type: "STATE_DELTA",
+            delta: [{ op: "replace", path: "/phase", value: "answering" }],
+          } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+    const states = events.filter(
+      (e): e is Extract<RunnerEvent, { type: "agent-state" }> => e.type === "agent-state",
+    );
+    expect(states).toHaveLength(2);
+    expect(states[1].state).toEqual({ phase: "answering" });
+    expect(states[1].patch).toEqual([{ op: "replace", path: "/phase", value: "answering" }]);
+  });
+
+  it("forwards messages snapshots, activities and raw events without rendering them", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onMessagesSnapshotEvent?.({
+          event: { type: "MESSAGES_SNAPSHOT", messages: [{ id: "m1", role: "user" }] } as never,
+        } as never);
+        await s.onActivitySnapshotEvent?.({
+          event: {
+            type: "ACTIVITY_SNAPSHOT",
+            messageId: "m1",
+            activityType: "mcp-app",
+            content: { url: "x" },
+          } as never,
+        } as never);
+        await s.onRawEvent?.({
+          event: { type: "RAW", event: { provider: "thing" }, source: "azure" } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+    expect(
+      events.find(
+        (e): e is Extract<RunnerEvent, { type: "messages-snapshot" }> =>
+          e.type === "messages-snapshot",
+      )?.messages,
+    ).toEqual([{ id: "m1", role: "user" }]);
+    const activity = events.find(
+      (e): e is Extract<RunnerEvent, { type: "activity" }> => e.type === "activity",
+    );
+    expect(activity?.activityType).toBe("mcp-app");
+    const raw = events.find((e): e is Extract<RunnerEvent, { type: "raw" }> => e.type === "raw");
+    expect(raw?.source).toBe("azure");
+  });
+
+  it("settles a client tool call that never produced a result", async () => {
+    // A started-but-unanswered client tool leaves a function_call with no
+    // output: the model re-issues the tool and then claims it "didn't
+    // complete", and the Responses API rejects the replayed history.
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onToolCallStartEvent?.({
+          event: {
+            type: "TOOL_CALL_START",
+            toolCallId: "tc-x",
+            toolCallName: "ui_navigate",
+          } as never,
+        } as never);
+        await s.onToolCallArgsEvent?.({
+          event: { type: "TOOL_CALL_ARGS", toolCallId: "tc-x", delta: "{}" } as never,
+        } as never);
+        // No TOOL_CALL_END — the run just finishes.
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(
+      runner,
+      makeRegistry({ isRegistered: (n) => n === "ui_navigate" }),
+    );
+    const settled = events.find(
+      (e): e is Extract<RunnerEvent, { type: "tool-call-result" }> =>
+        e.type === "tool-call-result" && e.id === "tc-x",
+    );
+    expect(settled?.isError).toBe(true);
+  });
+
+  it("emits reasoning-end once per block, not per reasoning message", async () => {
+    // A reasoning BLOCK (REASONING_START…REASONING_END) can contain several
+    // MESSAGES. reasoning-end means "the model stopped thinking", so firing it
+    // per message would let consumers close reasoning while it is still going.
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onReasoningStartEvent?.({
+          event: { type: "REASONING_START", messageId: "r1" } as never,
+        } as never);
+        for (const id of ["r1", "r2"]) {
+          await s.onReasoningMessageStartEvent?.({
+            event: { type: "REASONING_MESSAGE_START", messageId: id, role: "reasoning" } as never,
+          } as never);
+          await s.onReasoningMessageContentEvent?.({
+            event: {
+              type: "REASONING_MESSAGE_CONTENT",
+              messageId: id,
+              delta: "step " + id,
+            } as never,
+          } as never);
+          await s.onReasoningMessageEndEvent?.({
+            event: { type: "REASONING_MESSAGE_END", messageId: id } as never,
+          } as never);
+        }
+        await s.onReasoningEndEvent?.({
+          event: { type: "REASONING_END", messageId: "r1" } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+    expect(events.filter((e) => e.type === "reasoning-end")).toHaveLength(1);
+    // ...and both messages' text still arrives.
+    expect(
+      events
+        .filter(
+          (e): e is Extract<RunnerEvent, { type: "reasoning-delta" }> =>
+            e.type === "reasoning-delta",
+        )
+        .map((e) => e.delta),
+    ).toEqual(["step r1", "step r2"]);
   });
 
   it("emits stalled status during a quiet stretch and recovers on the next event", async () => {
