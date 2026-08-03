@@ -228,11 +228,12 @@ export class AGUIRunner {
         // pre-generated so the snapshot matches what runAgent emits.
         // The user's reasoning-effort choice rides on every turn as an
         // AG-UI forwardedProp — read at request time so changing it
-        // mid-conversation takes effect on the next message. "default"
-        // sends nothing so the backend keeps its configured level.
-        const chosenEffort = reasoningEffortStore.getState().effort;
-        const forwardedProps: Record<string, unknown> =
-          chosenEffort === "default" ? {} : { reasoningEffort: chosenEffort };
+        // mid-conversation takes effect on the next message. Always sent:
+        // every level is a real effort, and an unset preference already
+        // resolved to DEFAULT_REASONING_EFFORT when the store was read.
+        const forwardedProps: Record<string, unknown> = {
+          reasoningEffort: reasoningEffortStore.getState().effort,
+        };
 
         const runInputSnapshot: Record<string, unknown> = {
           threadId: this.httpAgent.threadId,

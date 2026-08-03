@@ -15,7 +15,6 @@ import {
 } from "../ui/dropdown-menu.tsx";
 
 const OPTIONS: { value: ReasoningEffort; hint: string }[] = [
-  { value: "default", hint: "Use the app's configured level" },
   { value: "low", hint: "Answers sooner, thinks less" },
   { value: "medium", hint: "Good default for most questions" },
   { value: "high", hint: "Slower, better on hard problems" },
@@ -27,8 +26,9 @@ const OPTIONS: { value: ReasoningEffort; hint: string }[] = [
  *
  * Sits in the composer next to Send. The choice rides on every request as
  * an AG-UI forwarded prop and is read at send time, so switching it
- * mid-conversation applies from the next message on. `Auto` sends nothing
- * and leaves the backend's configured level in place.
+ * mid-conversation applies from the next message on. Every option is a real
+ * effort level; an unset preference resolves to `DEFAULT_REASONING_EFFORT`,
+ * so there is nothing here that defers the decision to the deployment.
  */
 export function ReasoningEffortPicker({ className }: { className?: string }) {
   const effort = useStore(reasoningEffortStore, (s) => s.effort);
