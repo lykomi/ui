@@ -193,7 +193,7 @@ const ComposerActionButton: FC = () => {
   return (
     <>
       <ThreadPrimitive.If running={false}>
-        <ReasoningEffortPicker className="mr-1" />
+        <ReasoningEffortPicker />
       </ThreadPrimitive.If>
       <ThreadPrimitive.If running>
         <ComposerPrimitive.Cancel asChild>
@@ -437,7 +437,26 @@ export function ChatContent({
               <ComposerSubmitBridge />
               <ComposerContextBadges />
               <ComposerPrimitive.Attachments components={composerAttachmentComponents} />
-              <div className="flex items-center gap-2">
+              {/* Text on its own row, controls in a dedicated bottom row.
+                  With everything in ONE row, the trailing controls sit
+                  vertically centered beside the input — fine for one line,
+                  but wrapped text in a narrow window turns into a tall block
+                  with the picker and Send floating mid-height next to it.
+                  Splitting rows means text wraps freely across the full
+                  width and the controls keep one stable, predictable line. */}
+              <ComposerPrimitive.Input
+                autoFocus
+                placeholder="Message Assistant..."
+                rows={1}
+                className={cn(
+                  "w-full bg-transparent",
+                  "pt-2 text-base",
+                  "text-foreground outline-none",
+                  "placeholder:text-muted-foreground",
+                  "resize-none max-h-32",
+                )}
+              />
+              <div className="flex items-center gap-2 pb-1">
                 <div className="flex items-center -space-x-1 shrink-0">
                   <ComposerPrimitive.AddAttachment asChild>
                     <TooltipIconButton tooltip="Attach file" variant="ghost" className="shrink-0">
@@ -446,18 +465,7 @@ export function ChatContent({
                   </ComposerPrimitive.AddAttachment>
                   <ContextPins showPinButton={showPinButton} />
                 </div>
-                <ComposerPrimitive.Input
-                  autoFocus
-                  placeholder="Message Assistant..."
-                  rows={1}
-                  className={cn(
-                    "flex-1 bg-transparent",
-                    "py-2 text-base",
-                    "text-foreground outline-none",
-                    "placeholder:text-muted-foreground",
-                    "resize-none max-h-32",
-                  )}
-                />
+                <div className="flex-1" />
                 <ComposerActionButton />
               </div>
             </ComposerPrimitive.Root>
