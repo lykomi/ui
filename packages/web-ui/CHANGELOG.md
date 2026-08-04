@@ -1,5 +1,12 @@
 # @iloveagents/foundry-web-ui
 
+## 0.11.1
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.11.1
+- @iloveagents/foundry-web-primitives@0.11.1
+
 ## 0.11.0
 
 ### Patch Changes
