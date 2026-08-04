@@ -20,26 +20,65 @@ const VALID: readonly string[] = ["low", "medium", "high", "xhigh"];
  * shells inject their own via the same `agentFetch` seam as the rest of the
  * shell.
  */
-export async function loadChatConfig(fetchImpl: typeof fetch): Promise<void> {
+export async function loadChatConfig(
+  fetchImpl: typeof fetch,
+  params?: Record<string, string>,
+): Promise<void> {
   const reset = () => reasoningDefaultStore.getState().setResolved(null);
   try {
-    const response = await fetchImpl("/api/chat/config");
+    const query = params && Object.keys(params).length > 0
+      ? `?${new URLSearchParams(params)}`
+      : "";
+    const response = await fetchImpl(`/api/chat/config${query}`);
     if (!response.ok) {
       reset();
       return;
     }
     const body = (await response.json()) as {
-      reasoning?: { defaultEffort?: unknown };
+      reasoning?: { defaultEffort?: unknown; scope?: unknown };
     };
     const effort = body?.reasoning?.defaultEffort;
+    const scope = body?.reasoning?.scope;
     // `null` is meaningful (reasoning switched off) and anything unrecognised
-    // is treated the same as unknown — neither is coerced into a level.
+    // is treated the same as unknown — neither is coerced into a level. The
+    // scope is the backend's phrase for WHERE the level came from ("for this
+    // workspace"); non-string scopes are dropped, never rendered.
     if (typeof effort === "string" && VALID.includes(effort)) {
-      reasoningDefaultStore.getState().setResolved(effort as ResolvedReasoningEffort);
+      reasoningDefaultStore
+        .getState()
+        .setResolved(
+          effort as ResolvedReasoningEffort,
+          typeof scope === "string" && scope ? scope : null,
+        );
     } else {
       reset();
     }
   } catch {
     reset();
   }
+}
+
+// --- context-aware refresh -------------------------------------------------
+
+let bootFetch: typeof fetch | null = null;
+
+/** Wired by ShellApp at boot; refreshChatConfig is a no-op before that. */
+export function _setChatConfigFetch(fetchImpl: typeof fetch): void {
+  bootFetch = fetchImpl;
+}
+
+/**
+ * Re-ask the backend what `Auto` resolves to, optionally for a context.
+ *
+ * Host apps call this when the user's context changes (e.g. switching
+ * workspace) with opaque query params the backend understands — this
+ * package deliberately knows nothing about what the params mean. Before
+ * the shell has booted there is no fetch client yet; calling then is a
+ * safe no-op and the boot-time load will run anyway.
+ */
+export async function refreshChatConfig(
+  params?: Record<string, string>,
+): Promise<void> {
+  if (!bootFetch) return;
+  await loadChatConfig(bootFetch, params);
 }

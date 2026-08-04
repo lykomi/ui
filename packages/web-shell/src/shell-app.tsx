@@ -10,7 +10,7 @@ import type { ChatConversationConfig, ChatModule, AuthAdapter, ShellPage } from 
 import { ShellAuth } from "./auth-default.tsx";
 import { ShellLayout } from "./shell-layout.tsx";
 import { defaultAgentFetch } from "./service-fetch-default.ts";
-import { loadChatConfig } from "./load-chat-config.ts";
+import { _setChatConfigFetch, loadChatConfig } from "./load-chat-config.ts";
 
 interface ShellAppProps {
   modules: ChatModule[];
@@ -40,6 +40,9 @@ export function ShellApp({
   // override); failure resets the level to unknown and the picker says so.
   const resolvedAgentFetch = agentFetch ?? defaultAgentFetch;
   useEffect(() => {
+    // Bind the refresh seam first so a host-app context refresh that races
+    // shell boot still uses the same fetch client.
+    _setChatConfigFetch(resolvedAgentFetch);
     void loadChatConfig(resolvedAgentFetch);
   }, [resolvedAgentFetch]);
 
