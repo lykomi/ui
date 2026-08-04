@@ -27,6 +27,24 @@ interface ShellAppProps {
  *
  * Wrapper ordering is contractual; see `wrapper-order.test.tsx`.
  */
+
+/**
+ * Loads the chat config once, from INSIDE the authenticated subtree.
+ *
+ * This must not run in `ShellApp`'s own body: `ShellAuth` is its CHILD, so
+ * an effect there fires before sign-in completes. The agent fetch would
+ * then 401, exhaust its refresh retry, and call
+ * `recoverFromHardAuthFailure` -> `loginRedirect` -> remount -> repeat: an
+ * infinite login loop on any session that isn't already cached. Rendering
+ * the load here means there is a token by the time it runs.
+ */
+function ChatConfigBoot({ fetchImpl }: { fetchImpl: typeof fetch }) {
+  useEffect(() => {
+    void loadChatConfig(fetchImpl);
+  }, [fetchImpl]);
+  return null;
+}
+
 export function ShellApp({
   modules,
   pages,
@@ -34,16 +52,12 @@ export function ShellApp({
   authProvider,
   agentFetch,
 }: ShellAppProps) {
-  // Ask the backend what `Auto` currently resolves to, so the composer's
-  // effort picker can name the level instead of leaving the user guessing.
-  // Uses the same agentFetch seam as everything else (auth, base URL, test
-  // override); failure resets the level to unknown and the picker says so.
   const resolvedAgentFetch = agentFetch ?? defaultAgentFetch;
+  // Bind the refresh seam here (cheap, no I/O) so a host-app context
+  // refresh that races boot uses the same fetch client. The actual load
+  // happens in <ChatConfigBoot> INSIDE ShellAuth — see the note there.
   useEffect(() => {
-    // Bind the refresh seam first so a host-app context refresh that races
-    // shell boot still uses the same fetch client.
     _setChatConfigFetch(resolvedAgentFetch);
-    void loadChatConfig(resolvedAgentFetch);
   }, [resolvedAgentFetch]);
 
   // Merge module pages with customer pages — customer wins on path collision
@@ -92,6 +106,7 @@ export function ShellApp({
   return (
     <BrowserRouter>
       <ShellAuth adapter={authProvider}>
+        <ChatConfigBoot fetchImpl={resolvedAgentFetch} />
         <ComposedWrappers wrappers={wrappers}>
           <ChatConversationAwareRuntime
             fetchFn={fetchFn}
