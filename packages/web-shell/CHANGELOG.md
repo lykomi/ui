@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-shell
 
+## 0.11.1
+
+### Patch Changes
+
+- 2307d5b: Fix an infinite login loop: load the chat config inside the auth boundary
+
+  `ShellAuth` is `ShellApp`'s child, so the boot-time `loadChatConfig` effect added in 0.11.0 ran _before_ sign-in. With no cached session the agent fetch 401s, exhausts its refresh retry, and calls `recoverFromHardAuthFailure` → `loginRedirect` → remount → repeat. The load now happens in a component rendered inside `ShellAuth`, so a token exists by the time it runs.
+  - @iloveagents/foundry-agent@0.11.1
+  - @iloveagents/foundry-web-primitives@0.11.1
+  - @iloveagents/foundry-web-ui@0.11.1
+
 ## 0.11.0
 
 ### Minor Changes
