@@ -1,5 +1,17 @@
 # @iloveagents/foundry-web-shell
 
+## 0.11.0
+
+### Minor Changes
+
+- ae0221e: `loadChatConfig` accepts opaque query params and forwards the backend's `scope`; new `refreshChatConfig(params?)` lets host apps re-resolve the `Auto` reasoning level when the user's context changes (e.g. switching workspace). The params are opaque to this package — the backend defines what they mean. Before shell boot `refreshChatConfig` is a safe no-op.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.11.0
+- @iloveagents/foundry-web-primitives@0.11.0
+- @iloveagents/foundry-web-ui@0.11.0
+
 ## 0.10.1
 
 ### Patch Changes
