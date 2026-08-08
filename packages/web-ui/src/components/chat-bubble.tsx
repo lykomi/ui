@@ -9,6 +9,7 @@ import {
 } from "@assistant-ui/react";
 import {
   MessageSquare,
+  Sparkles,
   X,
   Maximize2,
   SquarePen,
@@ -208,15 +209,19 @@ export function ChatBubble() {
             type="button"
             onClick={openBubble}
             className={cn(
-              "size-10 rounded-full",
-              "bg-primary text-primary-foreground shadow-lg",
+              "size-11 rounded-full",
+              "bg-primary text-primary-foreground",
+              "ring-1 ring-primary/20 shadow-md hover:shadow-xl",
               "flex items-center justify-center",
-              "hover:bg-primary/90 transition-all duration-200",
+              "hover:bg-primary/90 hover:scale-105 active:scale-95",
+              "transition-all duration-200 ease-out",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             )}
-            aria-label="Open chat"
+            aria-label="Open assistant"
           >
-            <MessageSquare className="size-4" />
+            {/* Sparkles, not a speech bubble: this opens an AI assistant, and
+                the speech bubble reads as a human support widget. */}
+            <Sparkles className="size-[18px]" strokeWidth={2} />
           </button>
           <ChatLauncherBadgeSlot />
         </div>
