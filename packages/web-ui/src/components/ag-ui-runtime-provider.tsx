@@ -4,6 +4,7 @@ import type { ThreadHistoryAdapter } from "@assistant-ui/react";
 import { TooltipProvider } from "../ui/tooltip.tsx";
 import { AGUIAdapterSDK } from "../lib/ag-ui-adapter.ts";
 import { FileAttachmentAdapter } from "../lib/attachment-adapter.ts";
+import { useAttachmentAdapterStore } from "../lib/attachment-registry.ts";
 import { ShowDocumentToolUI } from "./show-document-tool-ui.tsx";
 import { ClientToolExecutor } from "./client-tool-executor.tsx";
 
@@ -120,7 +121,13 @@ function AGUIRuntimeInner({
     [fetchFn, threadId],
   );
 
-  const attachmentAdapter = useMemo(() => new FileAttachmentAdapter(), []);
+  // Hosts may register a custom adapter (see ``registerAttachmentAdapter``);
+  // the shell's inline-base64 adapter is the default.
+  const registeredAdapter = useAttachmentAdapterStore((s) => s.adapter);
+  const attachmentAdapter = useMemo(
+    () => registeredAdapter ?? new FileAttachmentAdapter(),
+    [registeredAdapter],
+  );
 
   // Build the history adapter ONCE per inner mount, after the AG-UI
   // adapter exists so we know its thread id. The keyed-remount in the

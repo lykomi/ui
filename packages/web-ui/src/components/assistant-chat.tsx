@@ -1,4 +1,4 @@
-import { type FC, useState, useRef, useCallback } from "react";
+import { type FC, useState, useRef, useCallback, useEffect } from "react";
 import {
   ThreadPrimitive,
   ComposerPrimitive,
@@ -254,8 +254,22 @@ const ScrollToBottomButton: FC = () => {
 
 const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [dropError, setDropError] = useState<string | null>(null);
+  const dropErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragCounter = useRef(0);
   const aui = useAui();
+
+  const showDropError = useCallback((message: string) => {
+    setDropError(message);
+    if (dropErrorTimer.current) clearTimeout(dropErrorTimer.current);
+    dropErrorTimer.current = setTimeout(() => setDropError(null), 4000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (dropErrorTimer.current) clearTimeout(dropErrorTimer.current);
+    };
+  }, []);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -279,11 +293,28 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
       dragCounter.current = 0;
       setIsDragging(false);
       const files = Array.from(e.dataTransfer.files);
+      // Drops bypass the file picker's ``accept`` filter, so the adapter's
+      // add() is the real gate here — surface its rejections instead of
+      // leaving an unhandled promise rejection and a silently missing chip.
+      const rejected: string[] = [];
       for (const file of files) {
-        await aui.composer.addAttachment(file);
+        try {
+          await aui.composer.addAttachment(file);
+        } catch (err) {
+          rejected.push(
+            `${file.name}: ${err instanceof Error ? err.message : "unsupported file type"}`,
+          );
+        }
+      }
+      if (rejected.length > 0) {
+        showDropError(
+          rejected.length === 1
+            ? `Couldn't attach ${rejected[0]}`
+            : `Couldn't attach ${rejected.length} files (${rejected.join("; ")})`,
+        );
       }
     },
-    [aui],
+    [aui, showDropError],
   );
 
   return (
@@ -304,6 +335,18 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
           )}
         >
           <p className="text-lg text-primary font-medium">Drop files here</p>
+        </div>
+      )}
+      {dropError && (
+        <div
+          role="alert"
+          className={cn(
+            "absolute bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-[90%]",
+            "rounded-md border border-destructive/50 bg-background px-3 py-2",
+            "text-sm text-destructive shadow-md pointer-events-none truncate",
+          )}
+        >
+          {dropError}
         </div>
       )}
     </div>

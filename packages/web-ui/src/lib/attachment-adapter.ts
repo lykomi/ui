@@ -29,10 +29,12 @@ import type {
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
-/** Infer MIME type from extension when browser reports empty file.type (common for .docx) */
+/** Infer MIME type from extension when browser reports empty file.type (common for Office files) */
 const EXTENSION_MIME: Record<string, string> = {
   ".pdf": "application/pdf",
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
@@ -40,7 +42,10 @@ const EXTENSION_MIME: Record<string, string> = {
   ".webp": "image/webp",
 };
 
-function resolveMimeType(file: File): string {
+/** Resolve a file's MIME type, falling back to extension inference when
+ * the browser reports an empty ``file.type`` (common for Office files).
+ * Exported for host attachment adapters that need the same resolution. */
+export function resolveMimeType(file: File): string {
   if (file.type) return file.type;
   const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
   return EXTENSION_MIME[ext] ?? "application/octet-stream";
