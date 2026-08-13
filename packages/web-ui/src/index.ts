@@ -169,7 +169,11 @@ export { useNewConversation } from "./lib/use-new-conversation.ts";
 
 // --- Adapters ---
 export { AGUIAdapterSDK } from "./lib/ag-ui-adapter.ts";
-export { FileAttachmentAdapter } from "./lib/attachment-adapter.ts";
+export { FileAttachmentAdapter, resolveMimeType } from "./lib/attachment-adapter.ts";
+export {
+  registerAttachmentAdapter,
+  useAttachmentAdapterStore,
+} from "./lib/attachment-registry.ts";
 export { ReasoningPart, ReasoningMessagePartComponent } from "./components/reasoning-part.tsx";
 export { ReasoningEffortPicker } from "./components/reasoning-effort-picker.tsx";
 
