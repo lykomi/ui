@@ -122,65 +122,87 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <Sidebar />
 
-          {isExpanded ? (
-            <ToolPanelLayout>
-              <div className="flex h-full min-w-0 flex-1 overflow-hidden">
+          {/*
+            ONE tree, ONE slot for ``page`` — never two branches.
+
+            Expanding the chat used to swap between two different JSX
+            trees, each rendering ``{page}`` at a different position. React
+            cannot reconcile across that: it unmounted the whole page
+            subtree and mounted a fresh one on every expand/collapse. Pages
+            holding live sessions lost them — the embedded Office editor
+            tore down its WOPI session and the user's text selection
+            vanished on every chat interaction.
+
+            Now the page column is always rendered at a fixed slot and only
+            its CLASSES change. The conditional siblings collapse to
+            ``false`` in fixed JSX slots, so the page's fiber position is
+            stable and its state survives every layout change.
+          */}
+          <ToolPanelLayout>
+            <div
+              className={cn(
+                "flex min-h-0 flex-1 overflow-hidden",
+                isExpanded ? "h-full min-w-0" : "flex-col",
+              )}
+            >
+              {isExpanded && (
                 <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                   <ChatHeader />
                   <ChatContent />
                 </div>
+              )}
 
-                {showPagePanel && (
-                  <div
-                    role="separator"
-                    aria-orientation="vertical"
-                    aria-label="Resize content panel"
-                    aria-valuemin={MIN_PAGE_PANEL_WIDTH}
-                    aria-valuemax={pagePanelMaxWidth}
-                    aria-valuenow={Math.round(pagePanelWidth)}
-                    tabIndex={0}
-                    onPointerDown={(event) => {
-                      event.preventDefault();
-                      startPagePanelDrag(event.pointerId);
-                    }}
-                    onKeyDown={(event) => {
-                      const step = event.shiftKey ? 80 : 24;
-                      if (event.key === "ArrowLeft") nudgePagePanelWidth(step);
-                      else if (event.key === "ArrowRight") nudgePagePanelWidth(-step);
-                      else if (event.key === "Home") setPagePanelWidth(pagePanelMaxWidth);
-                      else if (event.key === "End") setPagePanelWidth(MIN_PAGE_PANEL_WIDTH);
-                      else return;
-                      event.preventDefault();
-                    }}
-                    className={cn(
-                      "hidden w-1.5 shrink-0 cursor-col-resize touch-none xl:block",
-                      "bg-transparent hover:bg-primary/30 focus-visible:bg-primary",
-                      "focus:outline-none",
-                    )}
-                  />
-                )}
+              {isExpanded && showPagePanel && (
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize content panel"
+                  aria-valuemin={MIN_PAGE_PANEL_WIDTH}
+                  aria-valuemax={pagePanelMaxWidth}
+                  aria-valuenow={Math.round(pagePanelWidth)}
+                  tabIndex={0}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    startPagePanelDrag(event.pointerId);
+                  }}
+                  onKeyDown={(event) => {
+                    const step = event.shiftKey ? 80 : 24;
+                    if (event.key === "ArrowLeft") nudgePagePanelWidth(step);
+                    else if (event.key === "ArrowRight") nudgePagePanelWidth(-step);
+                    else if (event.key === "Home") setPagePanelWidth(pagePanelMaxWidth);
+                    else if (event.key === "End") setPagePanelWidth(MIN_PAGE_PANEL_WIDTH);
+                    else return;
+                    event.preventDefault();
+                  }}
+                  className={cn(
+                    "hidden w-1.5 shrink-0 cursor-col-resize touch-none xl:block",
+                    "bg-transparent hover:bg-primary/30 focus-visible:bg-primary",
+                    "focus:outline-none",
+                  )}
+                />
+              )}
 
-                {showPagePanel && (
-                  <div
-                    className={cn(
-                      "hidden h-full shrink-0 border-l border-border bg-background xl:flex xl:flex-col",
-                    )}
-                    style={{ width: pagePanelWidth }}
-                  >
-                    <PagePanelActions />
-                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">{page}</div>
-                  </div>
+              {!isExpanded && <ChatHeader />}
+
+              {/* The page column: ALWAYS this slot, ALWAYS this wrapper. */}
+              <div
+                className={cn(
+                  isExpanded
+                    ? cn(
+                        "h-full shrink-0 border-l border-border bg-background xl:flex xl:flex-col",
+                        // Below xl (or with the panel off) the chat owns the
+                        // full width: keep the page mounted, just hidden.
+                        showPagePanel ? "hidden" : "hidden xl:hidden",
+                      )
+                    : "flex min-h-0 flex-1 flex-col overflow-hidden",
                 )}
+                style={isExpanded && showPagePanel ? { width: pagePanelWidth } : undefined}
+              >
+                {isExpanded && showPagePanel && <PagePanelActions />}
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">{page}</div>
               </div>
-            </ToolPanelLayout>
-          ) : (
-            <ToolPanelLayout>
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <ChatHeader />
-                {page}
-              </div>
-            </ToolPanelLayout>
-          )}
+            </div>
+          </ToolPanelLayout>
         </div>
 
         <ChatBubble />
