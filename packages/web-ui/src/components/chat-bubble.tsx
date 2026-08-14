@@ -8,7 +8,7 @@ import {
   useThreadViewport,
 } from "@assistant-ui/react";
 import {
-  MessageSquare,
+  Sparkles,
   X,
   Maximize2,
   SquarePen,
@@ -214,9 +214,9 @@ export function ChatBubble() {
               "hover:bg-primary/90 transition-all duration-200",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             )}
-            aria-label="Open chat"
+            aria-label="Ask the AI"
           >
-            <MessageSquare className="size-4" />
+            <Sparkles className="size-4" />
           </button>
           <ChatLauncherBadgeSlot />
         </div>
@@ -253,7 +253,7 @@ export function ChatBubble() {
           >
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5 text-sm">
-                <MessageSquare className="size-3.5 text-primary shrink-0" />
+                <Sparkles className="size-3.5 text-primary shrink-0" />
                 <span className="font-semibold text-foreground truncate">{pageLabel}</span>
               </div>
               <span className="text-xs text-muted-foreground">
