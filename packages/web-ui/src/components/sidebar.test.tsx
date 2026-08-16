@@ -13,6 +13,46 @@ vi.mock("../lib/use-new-conversation.ts", () => ({
   useNewConversation: () => () => {},
 }));
 
+/**
+ * The desktop sidebar. ``Sidebar`` mounts the mobile drawer AND the desktop
+ * rail, each with its own expand/collapse state, so every structural query
+ * below has to say which surface it means — an unscoped query would silently
+ * read the off-canvas mobile copy (it renders first).
+ */
+function desktopSidebar(container: HTMLElement) {
+  const aside = container.querySelector<HTMLElement>('[data-sidebar-surface="desktop"]');
+  if (!aside) throw new Error("desktop sidebar surface not rendered");
+  return aside;
+}
+
+/** The row element for a nav label — the element carrying the depth indent. */
+function navRow(container: HTMLElement, label: string) {
+  return Array.from(
+    desktopSidebar(container).querySelectorAll<HTMLElement>("[data-nav-depth]"),
+  ).find((element) => element.textContent?.includes(label));
+}
+
+/** The disclosure cell of a row — the absolutely positioned chevron/dot column. */
+function twistyCell(container: HTMLElement, label: string) {
+  return navRow(container, label)?.querySelector<HTMLElement>("[data-nav-twisty-cell]");
+}
+
+/**
+ * Which x a nav element sits at, in Tailwind rem-quarters.
+ *
+ * Rows position their disclosure cell with `left-*` while the group header
+ * pads to the same x with `pl-*` — two spellings of one number, so the
+ * alignment assertions have to compare the NUMBER, not the class.
+ */
+function columnOf(element: HTMLElement | null | undefined) {
+  return element?.className.match(/\b(?:left|pl)-([\d.]+)\b/)?.[1];
+}
+
+/** The leading chevron button of a row, or undefined when the row is a leaf. */
+function twisty(container: HTMLElement, label: string) {
+  return navRow(container, label)?.querySelector<HTMLButtonElement>("[data-nav-twisty]") ?? undefined;
+}
+
 describe("Sidebar active state", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -166,18 +206,244 @@ describe("Sidebar active state", () => {
       );
     });
 
-    const documentsButton = Array.from(container.querySelectorAll("button")).find((element) =>
-      element.textContent?.includes("Documents"),
-    );
-    const viewsButton = Array.from(container.querySelectorAll("button")).find((element) =>
-      element.textContent?.includes("Views"),
-    );
+    // Depth is what the two share — a leaf and a folder at the same level
+    // put their disclosure cell in the same column, so the tree reads as
+    // one ladder rather than two.
+    const documentsRow = navRow(container, "Documents");
+    const viewsRow = navRow(container, "Views");
 
-    expect(documentsButton).toBeTruthy();
-    expect(viewsButton).toBeTruthy();
-    expect(documentsButton?.className).toContain("pl-7");
-    expect(viewsButton?.className).toContain("pl-7");
-    expect(documentsButton?.className).not.toContain("pl-5");
+    expect(documentsRow).toBeTruthy();
+    expect(viewsRow).toBeTruthy();
+    expect(documentsRow?.dataset.navDepth).toBe("1");
+    expect(viewsRow?.dataset.navDepth).toBe("1");
+    expect(columnOf(twistyCell(container, "Documents"))).toBe("5");
+    expect(columnOf(twistyCell(container, "Views"))).toBe("5");
+  });
+
+  it("marks branches with a chevron and leaves with a dot (Confluence page-tree)", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            children: [
+              { to: "/spaces/demo/readme", label: "Readme", icon: MessageSquare },
+              {
+                to: "/spaces/demo/views",
+                label: "Views",
+                icon: FolderOpen,
+                children: [
+                  { to: "/spaces/demo/views/current", label: "Current", icon: MessageSquare },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo/views/current"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // Branch rows own a twisty button; leaf rows own a non-interactive dot.
+    expect(twisty(container, "Demo Workspace")).toBeTruthy();
+    expect(twisty(container, "Views")).toBeTruthy();
+    expect(twisty(container, "Readme")).toBeFalsy();
+    expect(twisty(container, "Current")).toBeFalsy();
+
+    // The affordance is visible at rest, not gated behind :hover — that is
+    // the whole point of moving it out of the hover-only row controls.
+    expect(twisty(container, "Views")?.className).not.toContain("opacity-0");
+
+    // Route-derived expansion: both ancestors of the active page are open.
+    expect(twisty(container, "Demo Workspace")?.getAttribute("aria-expanded")).toBe("true");
+    expect(twisty(container, "Views")?.getAttribute("aria-expanded")).toBe("true");
+
+    // One indent rung per level, so the twisty column tracks the depth.
+    expect(columnOf(twistyCell(container, "Demo Workspace"))).toBe("3");
+    expect(columnOf(twistyCell(container, "Views"))).toBe("5");
+    expect(columnOf(twistyCell(container, "Current"))).toBe("7");
+  });
+
+  it("leaves the whole row clickable — the disclosure cell is not a dead zone", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            children: [
+              {
+                to: "/spaces/demo/readme",
+                label: "Readme",
+                icon: MessageSquare,
+                // A leaf WITH actions renders as wrapper + button rather than
+                // one button, which is where a dead disclosure cell would show
+                // up first.
+                actions: [{ icon: FolderOpen, label: "Rename", handler: () => {} }],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo/readme"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // The indent belongs to the navigate button, and the leaf dot floats over
+    // it without taking clicks. Put the indent on the wrapper instead and
+    // every pixel left of the icon silently stops navigating — jsdom has no
+    // hit-testing, so only this structural check catches it here (the browser
+    // pass clicks the cell for real).
+    const row = navRow(container, "Readme");
+    const cell = twistyCell(container, "Readme");
+    const body = row?.querySelector<HTMLElement>("button:not([data-nav-twisty])");
+
+    expect(cell?.className).toContain("pointer-events-none");
+    expect(cell?.className).toContain("absolute");
+    expect(columnOf(row)).toBeUndefined();
+    expect(body?.className).toContain("pl-10");
+  });
+
+  it("keeps the group-header chevron in the same column as depth-0 twisties", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        collapsible: true,
+        items: [{ to: "/spaces/demo", label: "Demo Workspace", icon: FolderOpen }],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // One vertical line for every chevron in the sidebar. The header derives
+    // its left padding from the same depth-0 rung the rows use, so retuning
+    // the indent ladder can never desync the two columns unnoticed.
+    const header = desktopSidebar(container).querySelector<HTMLElement>(
+      "[data-nav-group-label] > div",
+    );
+    expect(columnOf(header)).toBe("3");
+    expect(columnOf(twistyCell(container, "Demo Workspace"))).toBe("3");
+  });
+
+  it("reserves hover clearance only on rows that actually have an actions menu", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/plain",
+            label: "Plain Folder",
+            icon: FolderOpen,
+            children: [{ to: "/spaces/plain/a", label: "Plain Child", icon: MessageSquare }],
+          },
+          {
+            to: "/spaces/acted",
+            label: "Folder With Actions",
+            icon: FolderOpen,
+            actions: [{ icon: FolderOpen, label: "Rename", handler: () => {} }],
+            children: [{ to: "/spaces/acted/a", label: "Acted Child", icon: MessageSquare }],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/plain"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // Padding reserved for a control that never appears makes the label
+    // truncate and un-truncate on every hover, for nothing.
+    const navigateButton = (label: string) =>
+      navRow(container, label)?.querySelector<HTMLElement>("button:not([data-nav-twisty])");
+
+    expect(navigateButton("Plain Folder")?.className).not.toContain("group-hover:pr-");
+    expect(navigateButton("Folder With Actions")?.className).toContain("group-hover:pr-11");
+  });
+
+  it("clicking a twisty collapses the branch without navigating", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            children: [{ to: "/spaces/demo/readme", label: "Readme", icon: MessageSquare }],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo/readme"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(navRow(container, "Readme")).toBeTruthy();
+
+    await act(async () => {
+      twisty(container, "Demo Workspace")?.click();
+    });
+
+    expect(twisty(container, "Demo Workspace")?.getAttribute("aria-expanded")).toBe("false");
+    expect(navRow(container, "Readme")).toBeFalsy();
+
+    await act(async () => {
+      twisty(container, "Demo Workspace")?.click();
+    });
+
+    expect(navRow(container, "Readme")).toBeTruthy();
   });
 
   it("collapsed rail wraps each nav group and adds a top border between groups", async () => {
