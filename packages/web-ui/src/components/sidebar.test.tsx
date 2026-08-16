@@ -13,6 +13,25 @@ vi.mock("../lib/use-new-conversation.ts", () => ({
   useNewConversation: () => () => {},
 }));
 
+/**
+ * The row element for a nav label — the element carrying the depth indent.
+ *
+ * Scoped to the FIRST ``<nav>``: the Sidebar mounts a desktop and a mobile
+ * instance (one hidden by CSS), each with its own expand/collapse state, so
+ * an unscoped query silently mixes the two.
+ */
+function navRow(container: HTMLElement, label: string) {
+  const nav = container.querySelector<HTMLElement>("nav") ?? container;
+  return Array.from(nav.querySelectorAll<HTMLElement>("[data-nav-depth]")).find((element) =>
+    element.textContent?.includes(label),
+  );
+}
+
+/** The leading chevron button of a row, or undefined when the row is a leaf. */
+function twisty(container: HTMLElement, label: string) {
+  return navRow(container, label)?.querySelector<HTMLButtonElement>("[data-nav-twisty]") ?? undefined;
+}
+
 describe("Sidebar active state", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -173,11 +192,118 @@ describe("Sidebar active state", () => {
       element.textContent?.includes("Views"),
     );
 
-    expect(documentsButton).toBeTruthy();
-    expect(viewsButton).toBeTruthy();
-    expect(documentsButton?.className).toContain("pl-7");
-    expect(viewsButton?.className).toContain("pl-7");
-    expect(documentsButton?.className).not.toContain("pl-5");
+    // The indent lives on the ROW (``data-nav-depth``), not on the inner
+    // navigate button — the leading twisty cell is a sibling of that
+    // button, so the row is what positions the whole cluster.
+    const documentsRow = navRow(container, "Documents");
+    const viewsRow = navRow(container, "Views");
+
+    expect(documentsRow).toBeTruthy();
+    expect(viewsRow).toBeTruthy();
+    expect(documentsRow?.dataset.navDepth).toBe("1");
+    expect(viewsRow?.dataset.navDepth).toBe("1");
+    expect(documentsRow?.className).toContain("pl-5");
+    expect(viewsRow?.className).toContain("pl-5");
+  });
+
+  it("marks branches with a chevron and leaves with a dot (Confluence page-tree)", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            children: [
+              { to: "/spaces/demo/readme", label: "Readme", icon: MessageSquare },
+              {
+                to: "/spaces/demo/views",
+                label: "Views",
+                icon: FolderOpen,
+                children: [
+                  { to: "/spaces/demo/views/current", label: "Current", icon: MessageSquare },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo/views/current"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // Branch rows own a twisty button; leaf rows own a non-interactive dot.
+    expect(twisty(container, "Demo Workspace")).toBeTruthy();
+    expect(twisty(container, "Views")).toBeTruthy();
+    expect(twisty(container, "Readme")).toBeFalsy();
+    expect(twisty(container, "Current")).toBeFalsy();
+
+    // The affordance is visible at rest, not gated behind :hover — that is
+    // the whole point of moving it out of the hover-only row controls.
+    expect(twisty(container, "Views")?.className).not.toContain("opacity-0");
+
+    // Route-derived expansion: both ancestors of the active page are open.
+    expect(twisty(container, "Demo Workspace")?.getAttribute("aria-expanded")).toBe("true");
+    expect(twisty(container, "Views")?.getAttribute("aria-expanded")).toBe("true");
+
+    // One indent rung per level, so the twisty column tracks the depth.
+    expect(navRow(container, "Demo Workspace")?.className).toContain("pl-3");
+    expect(navRow(container, "Views")?.className).toContain("pl-5");
+    expect(navRow(container, "Current")?.className).toContain("pl-7");
+  });
+
+  it("clicking a twisty collapses the branch without navigating", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            children: [{ to: "/spaces/demo/readme", label: "Readme", icon: MessageSquare }],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo/readme"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(navRow(container, "Readme")).toBeTruthy();
+
+    await act(async () => {
+      twisty(container, "Demo Workspace")?.click();
+    });
+
+    expect(twisty(container, "Demo Workspace")?.getAttribute("aria-expanded")).toBe("false");
+    expect(navRow(container, "Readme")).toBeFalsy();
+
+    await act(async () => {
+      twisty(container, "Demo Workspace")?.click();
+    });
+
+    expect(navRow(container, "Readme")).toBeTruthy();
   });
 
   it("collapsed rail wraps each nav group and adds a top border between groups", async () => {
