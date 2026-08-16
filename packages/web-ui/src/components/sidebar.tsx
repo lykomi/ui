@@ -26,26 +26,40 @@ const ACTIVE_NAV_ICON_CLASS = "text-primary";
 const ACTIVE_NAV_BADGE_CLASS =
   "border border-sidebar-border bg-background/60 text-sidebar-foreground";
 // Indent ladder for the nav tree, indexed by depth (0 = top-level item).
-// The value is the padding-left of the ROW WRAPPER, which is what puts the
-// twisty column (see ``NavTwisty``) at the right x for that depth — the
-// label position follows from it. Depth 0 is ``pl-3`` so the twisty lands
-// in the SAME column as the group-header chevron; every further level adds
-// 8px, which keeps deep Spaces trees readable inside a ~260px sidebar.
-const NESTED_NAV_INDENTS = ["pl-3", "pl-5", "pl-7", "pl-9", "pl-11", "pl-13"] as const;
-// Gap between the twisty column and the row body (icon + label). Tighter
-// than the icon→label ``gap-2`` on purpose: the disclosure marker reads as
-// part of the icon cluster, not as a third independent column.
-const NAV_ROW_GAP_CLASS = "gap-1";
+//
+// ONE array of PAIRS rather than two parallel arrays, because the two
+// numbers are not independent: ``body`` is always ``column`` plus the 20px
+// disclosure cluster (16px cell + 4px gap). Split into separate lists they
+// drift apart, and the tree stops looking like a tree.
+//
+// ``column`` is a LEFT OFFSET, not padding, because the twisty is absolutely
+// positioned: it floats over the row body's own left padding instead of
+// occupying a flex cell. That is what keeps the entire row — indent strip
+// and disclosure cell included — a live click target for navigation, while
+// the branch chevron still catches its own clicks on top. Laying the twisty
+// out in flow instead makes every pixel left of the icon dead.
+//
+// Depth 0 sits at 12px so the twisty shares a column with the group-header
+// chevron; every further level adds 8px, which keeps deep trees readable
+// inside a ~260px sidebar.
+const NAV_DEPTH_OFFSETS = [
+  { column: "left-3", body: "pl-8" },
+  { column: "left-5", body: "pl-10" },
+  { column: "left-7", body: "pl-12" },
+  { column: "left-9", body: "pl-14" },
+  { column: "left-11", body: "pl-16" },
+  { column: "left-13", body: "pl-18" },
+] as const;
 // Fixed-width cell every nav row leads with, holding either a chevron
 // (branch) or a dot (leaf). Same width as ``SIDEBAR_ITEM_ICON_CLASS`` so
 // the disclosure column and the group-header chevron share one x.
-const NAV_TWISTY_CLASS = "size-4 shrink-0";
-// The chevron is a real control, so it needs a real touch target. It draws
-// in the 16px cell above but CLICKS in 24px (WCAG 2.2 target-size minimum):
-// ``size-6`` with ``-m-1`` cancels the extra 4px per side back out of the
-// flex layout, so the hit area grows without moving the icon column. The
-// leaf dot stays a plain 16px span — it is decorative, nothing to hit.
-const NAV_TWISTY_HIT_CLASS = "size-6 -m-1 shrink-0";
+const NAV_TWISTY_CLASS = "absolute inset-y-0 flex w-4 items-center justify-center";
+// The chevron is a real control, so it needs a real touch target: it draws
+// at ``size-3.5`` but CLICKS in 24px (WCAG 2.2 target-size minimum). It can
+// simply overflow the 16px cell — the cell is absolutely positioned, so
+// nothing downstream moves. The leaf dot needs no target at all; it is
+// decorative and passes its clicks through to the row.
+const NAV_TWISTY_HIT_CLASS = "size-6 shrink-0";
 // Hover-reveal clearance for the right-hand actions menu. That control is a
 // 28px button inside ``right-1`` + ``px-1`` (4 + 4 + 28 + 4 = 40px), so 44px
 // keeps the label from butting straight into it. Applied ONLY to rows that
@@ -55,8 +69,8 @@ const NAV_ROW_ACTIONS_CLEARANCE = "group-hover:pr-11 group-focus-within:pr-11";
 
 // Shared icon-column geometry. The group-header chevron and the
 // per-row disclosure cell (``NavTwisty``) are the SAME width, and the
-// header wrapper below derives its left padding from
-// ``NESTED_NAV_INDENTS[0]`` — the depth-0 rung the rows use — so
+// header wrapper below pads to the same x as
+// ``NAV_DEPTH_OFFSETS[0].column`` — the depth-0 rung the rows use — so
 // every chevron in the sidebar (section headers and tree rows
 // alike) stacks on one vertical line. That single line is what makes
 // the tree scan as a tree; when the columns drift the sidebar looks
@@ -66,18 +80,24 @@ const NAV_ROW_ACTIONS_CLEARANCE = "group-hover:pr-11 group-focus-within:pr-11";
 // group headers carry only the chevron.
 const SIDEBAR_ITEM_ICON_CLASS = "size-4 shrink-0";
 const SIDEBAR_ITEM_GAP_CLASS = "gap-2";
-// Outer padding for the group-header wrapper. The left padding is TAKEN
-// FROM the depth-0 rung rather than restated, because that is the whole
-// alignment invariant: header chevron and depth-0 twisty must share an x.
-// Restating it as a literal ``px-3`` is how the two columns silently
-// desync the next time the indent ladder is retuned — the group-header
-// alignment test in ``sidebar.test.tsx`` holds this line too.
+// Outer padding for the group-header wrapper. The group header lays its
+// chevron out in normal flow, so it needs the depth-0 column expressed as
+// a PADDING where rows express it as an offset — the same number, two
+// spellings, which is exactly how columns silently desync when the indent
+// ladder is retuned. The group-header alignment test in
+// ``sidebar.test.tsx`` parses both numbers back out and fails if they
+// ever diverge.
 // Vertical is asymmetric: ``pt-4`` above gives breathing room between
 // sections, ``pb-0`` below bonds the header to its first child — the
 // ChatGPT / Linear / Notion "header sits on its children" pattern.
 // Symmetric ``py-2`` made the header float midway between sections
 // instead of belonging to the group below it.
-const SIDEBAR_GROUP_HEADER_PADDING = `${NESTED_NAV_INDENTS[0]} pr-3 pt-4 pb-0`;
+const SIDEBAR_GROUP_HEADER_PADDING =
+  // ``border border-transparent`` for the same reason every item row
+  // carries one: the border is part of the box model that decides where
+  // the padding box starts. Without it the header chevron lands 1px left
+  // of every row's disclosure cell and the column is visibly ragged.
+  "border border-transparent pl-3 pr-3 pt-4 pb-0";
 // Typography for the group-header LABEL text (CHATS / WORKSPACES /
 // ADMIN / …). Stays at ``text-xs`` (12px) — same size as before —
 // but bumps weight from ``font-medium`` to ``font-semibold``. The
@@ -93,8 +113,8 @@ const SIDEBAR_GROUP_HEADER_LABEL_CLASS =
 type NavStatusDot = NonNullable<NavItem["statusDot"]>;
 type NavStatusIcon = NonNullable<NavItem["statusIcon"]>;
 
-function getNestedNavIndent(depth: number) {
-  return NESTED_NAV_INDENTS[depth] ?? NESTED_NAV_INDENTS[NESTED_NAV_INDENTS.length - 1];
+function getNavDepthOffsets(depth: number) {
+  return NAV_DEPTH_OFFSETS[depth] ?? NAV_DEPTH_OFFSETS[NAV_DEPTH_OFFSETS.length - 1];
 }
 
 function scrollNavRowIntoView(nav: HTMLElement, row: HTMLElement) {
@@ -489,15 +509,22 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
  *
  * A BRANCH (item with children) gets a chevron that is always visible and
  * rotates on expand; a LEAF gets a small dot. Both occupy the identical
- * ``NAV_TWISTY_CLASS`` cell, so the whole tree shares one disclosure column
- * and "does this row go deeper?" is answerable without hovering. That was
- * the flaw in the previous design: the chevron lived in the hover-only
- * right-hand controls, so a static screenshot of the sidebar carried no
- * branch/leaf information at all.
+ * cell, so the whole tree shares one disclosure column and "does this row
+ * go deeper?" is answerable without hovering. That was the flaw in the
+ * previous design: the chevron lived in the hover-only right-hand controls,
+ * so a sidebar at rest carried no branch/leaf information at all.
  *
- * Rendered as a SIBLING of the row's navigate button, never inside it —
- * a <button> may not nest, and the two actions are genuinely separate:
- * the chevron toggles, the row navigates.
+ * ABSOLUTELY POSITIONED over the row's own left padding, for two reasons:
+ *
+ *  - The row stays clickable edge to edge. In flow the cell would be a dead
+ *    strip — a <button> may not nest, so the twisty cannot live inside the
+ *    navigate button, and everything left of the icon would stop navigating.
+ *  - The chevron can take a 24px hit area out of a 16px cell without
+ *    pushing the icon column right.
+ *
+ * The leaf dot is ``pointer-events-none`` so its clicks fall through to the
+ * row underneath; the branch chevron keeps its own, since positioned
+ * elements paint above the static button and win the hit test.
  */
 function NavTwisty({
   hasChildren,
@@ -505,19 +532,20 @@ function NavTwisty({
   onToggle,
   label,
   isActive,
+  depth,
 }: {
   hasChildren: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
   label: string;
   isActive?: boolean;
+  depth: number;
 }) {
+  const cell = cn(NAV_TWISTY_CLASS, getNavDepthOffsets(depth).column);
+
   if (!hasChildren) {
     return (
-      <span
-        aria-hidden="true"
-        className={cn("flex items-center justify-center", NAV_TWISTY_CLASS)}
-      >
+      <span data-nav-twisty-cell aria-hidden="true" className={cn(cell, "pointer-events-none")}>
         <span
           className={cn(
             "size-1 rounded-full",
@@ -529,28 +557,28 @@ function NavTwisty({
   }
 
   return (
-    <button
-      type="button"
-      data-nav-twisty
-      aria-expanded={isExpanded}
-      aria-label={isExpanded ? `Collapse ${label}` : `Expand ${label}`}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onToggle?.();
-      }}
-      className={cn(
-        "flex items-center justify-center rounded",
-        NAV_TWISTY_HIT_CLASS,
-        isActive
-          ? "text-primary"
-          : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
-      )}
-    >
-      <ChevronRight
-        className={cn("size-3.5 transition-transform duration-150", isExpanded && "rotate-90")}
-      />
-    </button>
+    <span data-nav-twisty-cell className={cell}>
+      <button
+        type="button"
+        data-nav-twisty
+        aria-expanded={isExpanded}
+        aria-label={isExpanded ? `Collapse ${label}` : `Expand ${label}`}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggle?.();
+        }}
+        className={cn(
+          "flex items-center justify-center rounded",
+          NAV_TWISTY_HIT_CLASS,
+          isActive ? "text-primary" : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
+        )}
+      >
+        <ChevronRight
+          className={cn("size-3.5 transition-transform duration-150", isExpanded && "rotate-90")}
+        />
+      </button>
+    </span>
   );
 }
 
@@ -624,7 +652,7 @@ function NavLeafItem({
   onClick: () => void;
   depth?: number;
 }) {
-  const depthPl = getNestedNavIndent(depth);
+  const bodyPl = getNavDepthOffsets(depth).body;
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
@@ -642,8 +670,6 @@ function NavLeafItem({
         {...(isDisabled ? {} : draggableProps)}
         className={cn(
           "group relative flex items-center w-full rounded-xl border border-transparent transition-colors",
-          NAV_ROW_GAP_CLASS,
-          depthPl,
           isDisabled
             ? "opacity-40"
             : isActive
@@ -659,13 +685,19 @@ function NavLeafItem({
           item.dimmed && !isDisabled && "opacity-50",
         )}
       >
-        <NavTwisty hasChildren={false} label={item.label} isActive={isActive && !isDisabled} />
+        <NavTwisty
+          hasChildren={false}
+          label={item.label}
+          isActive={isActive && !isDisabled}
+          depth={depth}
+        />
         <button
           type="button"
           disabled={isDisabled}
           onClick={isDisabled ? undefined : onClick}
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-sm text-left",
+            bodyPl,
             "pr-3 transition-[padding] duration-150",
             NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
@@ -720,10 +752,9 @@ function NavLeafItem({
       {...(isDisabled ? {} : draggableProps)}
       {...(isDisabled ? {} : dropTargetProps)}
       className={cn(
-        "flex items-center w-full",
-        NAV_ROW_GAP_CLASS,
+        "relative flex items-center gap-2 w-full",
         "rounded-lg border border-transparent pr-3 py-1.5 text-sm text-left",
-        depthPl,
+        bodyPl,
         isDisabled
           ? "opacity-40 cursor-default"
           : "text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/70",
@@ -738,34 +769,37 @@ function NavLeafItem({
         item.dimmed && !isDisabled && "opacity-50",
       )}
     >
-      <NavTwisty hasChildren={false} label={item.label} isActive={isActive && !isDisabled} />
-      <span className="flex min-w-0 flex-1 items-center gap-2">
-        <item.icon
+      <NavTwisty
+        hasChildren={false}
+        label={item.label}
+        isActive={isActive && !isDisabled}
+        depth={depth}
+      />
+      <item.icon
+        className={cn(
+          "size-3.5 shrink-0",
+          isActive && !isDisabled ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-foreground/60",
+        )}
+      />
+      <span className={cn("truncate", isActive && !isDisabled && ACTIVE_NAV_TEXT_CLASS)}>{item.label}</span>
+      {item.badge && (
+        <span
           className={cn(
-            "size-3.5 shrink-0",
-            isActive && !isDisabled ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-foreground/60",
+            "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
+            isActive ? ACTIVE_NAV_BADGE_CLASS : "bg-sidebar-accent text-sidebar-accent-foreground",
           )}
+        >
+          {item.badge}
+        </span>
+      )}
+      <NavStatusIcon statusIcon={item.statusIcon} />
+      <NavStatusDot statusDot={item.statusDot} />
+      {isFileDragOver && !isDisabled && (
+        <Upload
+          aria-hidden="true"
+          className="ml-auto size-3.5 shrink-0 text-primary pointer-events-none"
         />
-        <span className={cn("truncate", isActive && !isDisabled && ACTIVE_NAV_TEXT_CLASS)}>{item.label}</span>
-        {item.badge && (
-          <span
-            className={cn(
-              "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
-              isActive ? ACTIVE_NAV_BADGE_CLASS : "bg-sidebar-accent text-sidebar-accent-foreground",
-            )}
-          >
-            {item.badge}
-          </span>
-        )}
-        <NavStatusIcon statusIcon={item.statusIcon} />
-        <NavStatusDot statusDot={item.statusDot} />
-        {isFileDragOver && !isDisabled && (
-          <Upload
-            aria-hidden="true"
-            className="ml-auto size-3.5 shrink-0 text-primary pointer-events-none"
-          />
-        )}
-      </span>
+      )}
     </button>
   );
 }
@@ -851,7 +885,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const [manualOverride, setManualOverride] = useState<boolean | null>(null);
   const isExpanded = manualOverride ?? isInsideSubtree;
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
-  const depthPl = getNestedNavIndent(depth);
+  const bodyPl = getNavDepthOffsets(depth).body;
 
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
@@ -867,8 +901,6 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         className={cn(
           "group relative flex items-center w-full",
           "rounded-xl border border-transparent transition-colors",
-          NAV_ROW_GAP_CLASS,
-          depthPl,
           isDisabled
             ? "opacity-40"
             : isActive
@@ -890,6 +922,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           onToggle={() => setManualOverride(!isExpanded)}
           label={item.label}
           isActive={(isActive || isAncestorActive) && !isDisabled}
+          depth={depth}
         />
         <button
           type="button"
@@ -911,6 +944,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           }}
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0",
+            bodyPl,
             "pr-3 py-1.5 text-sm text-left transition-[padding] duration-150",
             hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
@@ -1021,8 +1055,6 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
         data-nav-depth={0}
         className={cn(
           "group relative flex items-center w-full rounded-xl border border-transparent transition-colors",
-          NAV_ROW_GAP_CLASS,
-          getNestedNavIndent(0),
           isDisabled
             ? "opacity-40"
             : selected
@@ -1044,6 +1076,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
           onToggle={hasChildren ? () => setManualOverride(!isExpanded) : undefined}
           label={item.label}
           isActive={(selected || ancestor) && !isDisabled}
+          depth={0}
         />
         <button
           type="button"
@@ -1064,6 +1097,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
           }}
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0 py-2 text-sm text-left",
+            getNavDepthOffsets(0).body,
             "pr-3 transition-[padding] duration-150",
             hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
@@ -1130,17 +1164,15 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
       <div
         data-nav-depth={0}
         className={cn(
-          "flex items-center w-full opacity-40",
-          NAV_ROW_GAP_CLASS,
-          getNestedNavIndent(0),
-          "rounded-lg pr-3 py-2 text-left text-sm text-sidebar-foreground/45",
+          "relative flex items-center gap-2 w-full opacity-40",
+          getNavDepthOffsets(0).body,
+          // Transparent border for box-model parity — see the NavLink variant.
+          "rounded-lg border border-transparent pr-3 py-2 text-left text-sm text-sidebar-foreground/45",
         )}
       >
-        <NavTwisty hasChildren={false} label={item.label} />
-        <span className="flex min-w-0 flex-1 items-center gap-2">
-          <item.icon className="size-4 shrink-0 text-sidebar-foreground/45" />
-          <span className="truncate">{item.label}</span>
-        </span>
+        <NavTwisty hasChildren={false} label={item.label} depth={0} />
+        <item.icon className="size-4 shrink-0 text-sidebar-foreground/45" />
+        <span className="truncate">{item.label}</span>
       </div>
     );
   }
@@ -1155,10 +1187,14 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
       {...dropTargetProps}
       className={({ isActive }) =>
         cn(
-          "flex items-center w-full",
-          NAV_ROW_GAP_CLASS,
-          getNestedNavIndent(0),
-          "rounded-xl pr-3 py-2 text-sm text-left",
+          "relative flex items-center gap-2 w-full",
+          getNavDepthOffsets(0).body,
+          // The transparent border is NOT decoration: it is what makes this
+          // row's box model match every other variant. An absolutely
+          // positioned twisty resolves against the PADDING box, so a row
+          // without the border puts its disclosure cell 1px left of its
+          // siblings' and the column goes ragged.
+          "rounded-xl border border-transparent pr-3 py-2 text-sm text-left",
           "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
           isActive && cn(ACTIVE_NAV_ROW_CLASS, ACTIVE_NAV_TEXT_CLASS),
           isDragOver &&
@@ -1171,36 +1207,34 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
     >
       {({ isActive }) => (
         <>
-          <NavTwisty hasChildren={false} label={item.label} isActive={isActive} />
-          <span className="flex min-w-0 flex-1 items-center gap-2">
-            <item.icon
+          <NavTwisty hasChildren={false} label={item.label} isActive={isActive} depth={0} />
+          <item.icon
+            className={cn(
+              "size-4 shrink-0",
+              isActive ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-foreground/60",
+            )}
+          />
+          <span className="truncate">{item.label}</span>
+          {item.badge && (
+            <span
               className={cn(
-                "size-4 shrink-0",
-                isActive ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-foreground/60",
+                "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
+                isActive
+                  ? ACTIVE_NAV_BADGE_CLASS
+                  : "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
+            >
+              {item.badge}
+            </span>
+          )}
+          <NavStatusIcon statusIcon={item.statusIcon} />
+          <NavStatusDot statusDot={item.statusDot} />
+          {isFileDragOver && (
+            <Upload
+              aria-hidden="true"
+              className="ml-auto size-3.5 shrink-0 text-primary pointer-events-none"
             />
-            <span className="truncate">{item.label}</span>
-            {item.badge && (
-              <span
-                className={cn(
-                  "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
-                  isActive
-                    ? ACTIVE_NAV_BADGE_CLASS
-                    : "bg-sidebar-accent text-sidebar-accent-foreground",
-                )}
-              >
-                {item.badge}
-              </span>
-            )}
-            <NavStatusIcon statusIcon={item.statusIcon} />
-            <NavStatusDot statusDot={item.statusDot} />
-            {isFileDragOver && (
-              <Upload
-                aria-hidden="true"
-                className="ml-auto size-3.5 shrink-0 text-primary pointer-events-none"
-              />
-            )}
-          </span>
+          )}
         </>
       )}
     </NavLink>

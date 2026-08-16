@@ -24,3 +24,6 @@ now holds the item's actions menu only.
 - The chevron draws in a 16px cell but takes clicks in 24px (WCAG 2.2 target
   size), and rows expose `data-sidebar-surface` so a test or E2E selector can
   address the desktop rail and the mobile drawer separately.
+- The disclosure cell is absolutely positioned over the row's own padding, so
+  the entire row — indent strip and cell included — stays a live navigation
+  target while the branch chevron still catches its own clicks.

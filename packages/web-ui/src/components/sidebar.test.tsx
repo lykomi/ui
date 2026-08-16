@@ -32,9 +32,20 @@ function navRow(container: HTMLElement, label: string) {
   ).find((element) => element.textContent?.includes(label));
 }
 
-/** The `pl-*` utility an element carries, i.e. which indent column it sits in. */
-function indentClass(element: HTMLElement | null | undefined) {
-  return element?.className.match(/\bpl-[\d.]+\b/)?.[0];
+/** The disclosure cell of a row — the absolutely positioned chevron/dot column. */
+function twistyCell(container: HTMLElement, label: string) {
+  return navRow(container, label)?.querySelector<HTMLElement>("[data-nav-twisty-cell]");
+}
+
+/**
+ * Which x a nav element sits at, in Tailwind rem-quarters.
+ *
+ * Rows position their disclosure cell with `left-*` while the group header
+ * pads to the same x with `pl-*` — two spellings of one number, so the
+ * alignment assertions have to compare the NUMBER, not the class.
+ */
+function columnOf(element: HTMLElement | null | undefined) {
+  return element?.className.match(/\b(?:left|pl)-([\d.]+)\b/)?.[1];
 }
 
 /** The leading chevron button of a row, or undefined when the row is a leaf. */
@@ -195,9 +206,9 @@ describe("Sidebar active state", () => {
       );
     });
 
-    // The indent lives on the ROW (``data-nav-depth``), not on the inner
-    // navigate button — the leading twisty cell is a sibling of that
-    // button, so the row is what positions the whole cluster.
+    // Depth is what the two share — a leaf and a folder at the same level
+    // put their disclosure cell in the same column, so the tree reads as
+    // one ladder rather than two.
     const documentsRow = navRow(container, "Documents");
     const viewsRow = navRow(container, "Views");
 
@@ -205,8 +216,8 @@ describe("Sidebar active state", () => {
     expect(viewsRow).toBeTruthy();
     expect(documentsRow?.dataset.navDepth).toBe("1");
     expect(viewsRow?.dataset.navDepth).toBe("1");
-    expect(documentsRow?.className).toContain("pl-5");
-    expect(viewsRow?.className).toContain("pl-5");
+    expect(columnOf(twistyCell(container, "Documents"))).toBe("5");
+    expect(columnOf(twistyCell(container, "Views"))).toBe("5");
   });
 
   it("marks branches with a chevron and leaves with a dot (Confluence page-tree)", async () => {
@@ -261,9 +272,61 @@ describe("Sidebar active state", () => {
     expect(twisty(container, "Views")?.getAttribute("aria-expanded")).toBe("true");
 
     // One indent rung per level, so the twisty column tracks the depth.
-    expect(navRow(container, "Demo Workspace")?.className).toContain("pl-3");
-    expect(navRow(container, "Views")?.className).toContain("pl-5");
-    expect(navRow(container, "Current")?.className).toContain("pl-7");
+    expect(columnOf(twistyCell(container, "Demo Workspace"))).toBe("3");
+    expect(columnOf(twistyCell(container, "Views"))).toBe("5");
+    expect(columnOf(twistyCell(container, "Current"))).toBe("7");
+  });
+
+  it("leaves the whole row clickable — the disclosure cell is not a dead zone", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            children: [
+              {
+                to: "/spaces/demo/readme",
+                label: "Readme",
+                icon: MessageSquare,
+                // A leaf WITH actions renders as wrapper + button rather than
+                // one button, which is where a dead disclosure cell would show
+                // up first.
+                actions: [{ icon: FolderOpen, label: "Rename", handler: () => {} }],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo/readme"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // The indent belongs to the navigate button, and the leaf dot floats over
+    // it without taking clicks. Put the indent on the wrapper instead and
+    // every pixel left of the icon silently stops navigating — jsdom has no
+    // hit-testing, so only this structural check catches it here (the browser
+    // pass clicks the cell for real).
+    const row = navRow(container, "Readme");
+    const cell = twistyCell(container, "Readme");
+    const body = row?.querySelector<HTMLElement>("button:not([data-nav-twisty])");
+
+    expect(cell?.className).toContain("pointer-events-none");
+    expect(cell?.className).toContain("absolute");
+    expect(columnOf(row)).toBeUndefined();
+    expect(body?.className).toContain("pl-10");
   });
 
   it("keeps the group-header chevron in the same column as depth-0 twisties", async () => {
@@ -293,8 +356,8 @@ describe("Sidebar active state", () => {
     const header = desktopSidebar(container).querySelector<HTMLElement>(
       "[data-nav-group-label] > div",
     );
-    expect(indentClass(header)).toBe("pl-3");
-    expect(indentClass(navRow(container, "Demo Workspace"))).toBe("pl-3");
+    expect(columnOf(header)).toBe("3");
+    expect(columnOf(twistyCell(container, "Demo Workspace"))).toBe("3");
   });
 
   it("reserves hover clearance only on rows that actually have an actions menu", async () => {
