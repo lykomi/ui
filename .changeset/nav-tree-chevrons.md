@@ -21,3 +21,6 @@ now holds the item's actions menu only.
   tree structure.
 - Clicking a chevron toggles without navigating; clicking the row still
   navigates and expands as before.
+- The chevron draws in a 16px cell but takes clicks in 24px (WCAG 2.2 target
+  size), and rows expose `data-sidebar-surface` so a test or E2E selector can
+  address the desktop rail and the mobile drawer separately.

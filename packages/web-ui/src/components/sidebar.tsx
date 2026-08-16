@@ -40,12 +40,25 @@ const NAV_ROW_GAP_CLASS = "gap-1";
 // (branch) or a dot (leaf). Same width as ``SIDEBAR_ITEM_ICON_CLASS`` so
 // the disclosure column and the group-header chevron share one x.
 const NAV_TWISTY_CLASS = "size-4 shrink-0";
+// The chevron is a real control, so it needs a real touch target. It draws
+// in the 16px cell above but CLICKS in 24px (WCAG 2.2 target-size minimum):
+// ``size-6`` with ``-m-1`` cancels the extra 4px per side back out of the
+// flex layout, so the hit area grows without moving the icon column. The
+// leaf dot stays a plain 16px span — it is decorative, nothing to hit.
+const NAV_TWISTY_HIT_CLASS = "size-6 -m-1 shrink-0";
+// Hover-reveal clearance for the right-hand actions menu. That control is a
+// 28px button inside ``right-1`` + ``px-1`` (4 + 4 + 28 + 4 = 40px), so 44px
+// keeps the label from butting straight into it. Applied ONLY to rows that
+// actually have an actions menu — on a row without one the reserved padding
+// buys nothing and just re-truncates the label on every hover.
+const NAV_ROW_ACTIONS_CLEARANCE = "group-hover:pr-11 group-focus-within:pr-11";
 
 // Shared icon-column geometry. The group-header chevron and the
-// per-row disclosure cell (``NavTwisty``) are the SAME width and both
-// sit at the depth-0 padding (``NESTED_NAV_INDENTS[0]`` = ``pl-3``),
-// so every chevron in the sidebar — section headers and tree rows
-// alike — stacks on one vertical line. That single line is what makes
+// per-row disclosure cell (``NavTwisty``) are the SAME width, and the
+// header wrapper below derives its left padding from
+// ``NESTED_NAV_INDENTS[0]`` — the depth-0 rung the rows use — so
+// every chevron in the sidebar (section headers and tree rows
+// alike) stacks on one vertical line. That single line is what makes
 // the tree scan as a tree; when the columns drift the sidebar looks
 // ragged (an earlier regression had the header chevron defaulting to
 // ``size-6`` = 24px). Item labels now sit one cell further right than
@@ -53,15 +66,18 @@ const NAV_TWISTY_CLASS = "size-4 shrink-0";
 // group headers carry only the chevron.
 const SIDEBAR_ITEM_ICON_CLASS = "size-4 shrink-0";
 const SIDEBAR_ITEM_GAP_CLASS = "gap-2";
-// Outer padding for the group-header wrapper. Horizontal matches
-// ``px-3`` on item buttons so the chevron column lines up with the
-// item icon column. Vertical is asymmetric: ``pt-3`` (12px) above
-// gives breathing room between sections, ``pb-1`` (4px) below bonds
-// the header to its first child — the ChatGPT / Linear / Notion
-// "header sits on its children" pattern. Symmetric ``py-2`` made
-// the header float midway between sections instead of belonging
-// to the group below it.
-const SIDEBAR_GROUP_HEADER_PADDING = "px-3 pt-4 pb-0";
+// Outer padding for the group-header wrapper. The left padding is TAKEN
+// FROM the depth-0 rung rather than restated, because that is the whole
+// alignment invariant: header chevron and depth-0 twisty must share an x.
+// Restating it as a literal ``px-3`` is how the two columns silently
+// desync the next time the indent ladder is retuned — the group-header
+// alignment test in ``sidebar.test.tsx`` holds this line too.
+// Vertical is asymmetric: ``pt-4`` above gives breathing room between
+// sections, ``pb-0`` below bonds the header to its first child — the
+// ChatGPT / Linear / Notion "header sits on its children" pattern.
+// Symmetric ``py-2`` made the header float midway between sections
+// instead of belonging to the group below it.
+const SIDEBAR_GROUP_HEADER_PADDING = `${NESTED_NAV_INDENTS[0]} pr-3 pt-4 pb-0`;
 // Typography for the group-header LABEL text (CHATS / WORKSPACES /
 // ADMIN / …). Stays at ``text-xs`` (12px) — same size as before —
 // but bumps weight from ``font-medium`` to ``font-semibold``. The
@@ -525,7 +541,7 @@ function NavTwisty({
       }}
       className={cn(
         "flex items-center justify-center rounded",
-        NAV_TWISTY_CLASS,
+        NAV_TWISTY_HIT_CLASS,
         isActive
           ? "text-primary"
           : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
@@ -650,7 +666,8 @@ function NavLeafItem({
           onClick={isDisabled ? undefined : onClick}
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-sm text-left",
-            "pr-3 transition-[padding] duration-150 group-hover:pr-10 group-focus-within:pr-10",
+            "pr-3 transition-[padding] duration-150",
+            NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
               ? "text-sidebar-foreground/45 cursor-default"
               : isActive
@@ -837,6 +854,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const depthPl = getNestedNavIndent(depth);
 
   const isDisabled = item.disabled === true;
+  const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive);
 
   return (
@@ -893,7 +911,8 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           }}
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0",
-            "pr-3 py-1.5 text-sm text-left transition-[padding] duration-150 group-hover:pr-10 group-focus-within:pr-10",
+            "pr-3 py-1.5 text-sm text-left transition-[padding] duration-150",
+            hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
               ? "text-sidebar-foreground/45 cursor-default"
               : isActive
@@ -1045,7 +1064,8 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
           }}
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0 py-2 text-sm text-left",
-            "pr-3 transition-[padding] duration-150 group-hover:pr-10 group-focus-within:pr-10",
+            "pr-3 transition-[padding] duration-150",
+            hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
               ? "text-sidebar-foreground/45 cursor-default"
               : selected
@@ -1826,6 +1846,12 @@ function MobileDrawer() {
 
       {/* Drawer */}
       <aside
+        // Both surfaces mount at once (one hidden by CSS). This attribute is
+        // the only stable way for a test or an E2E selector to say WHICH one
+        // it means — they carry identical roles, labels and inner markup, and
+        // each keeps its own expand/collapse state, so an unscoped query
+        // silently mixes the two.
+        data-sidebar-surface="mobile"
         className={cn(
           "fixed top-0 left-0 z-50 h-dvh",
           "flex flex-col",
@@ -1850,6 +1876,7 @@ function DesktopSidebar() {
 
   return (
     <aside
+      data-sidebar-surface="desktop"
       className={cn(
         "group/sidebar relative hidden md:flex flex-col shrink-0",
         "h-full",

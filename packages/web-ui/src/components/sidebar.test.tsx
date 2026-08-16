@@ -14,17 +14,27 @@ vi.mock("../lib/use-new-conversation.ts", () => ({
 }));
 
 /**
- * The row element for a nav label — the element carrying the depth indent.
- *
- * Scoped to the FIRST ``<nav>``: the Sidebar mounts a desktop and a mobile
- * instance (one hidden by CSS), each with its own expand/collapse state, so
- * an unscoped query silently mixes the two.
+ * The desktop sidebar. ``Sidebar`` mounts the mobile drawer AND the desktop
+ * rail, each with its own expand/collapse state, so every structural query
+ * below has to say which surface it means — an unscoped query would silently
+ * read the off-canvas mobile copy (it renders first).
  */
+function desktopSidebar(container: HTMLElement) {
+  const aside = container.querySelector<HTMLElement>('[data-sidebar-surface="desktop"]');
+  if (!aside) throw new Error("desktop sidebar surface not rendered");
+  return aside;
+}
+
+/** The row element for a nav label — the element carrying the depth indent. */
 function navRow(container: HTMLElement, label: string) {
-  const nav = container.querySelector<HTMLElement>("nav") ?? container;
-  return Array.from(nav.querySelectorAll<HTMLElement>("[data-nav-depth]")).find((element) =>
-    element.textContent?.includes(label),
-  );
+  return Array.from(
+    desktopSidebar(container).querySelectorAll<HTMLElement>("[data-nav-depth]"),
+  ).find((element) => element.textContent?.includes(label));
+}
+
+/** The `pl-*` utility an element carries, i.e. which indent column it sits in. */
+function indentClass(element: HTMLElement | null | undefined) {
+  return element?.className.match(/\bpl-[\d.]+\b/)?.[0];
 }
 
 /** The leading chevron button of a row, or undefined when the row is a leaf. */
@@ -185,13 +195,6 @@ describe("Sidebar active state", () => {
       );
     });
 
-    const documentsButton = Array.from(container.querySelectorAll("button")).find((element) =>
-      element.textContent?.includes("Documents"),
-    );
-    const viewsButton = Array.from(container.querySelectorAll("button")).find((element) =>
-      element.textContent?.includes("Views"),
-    );
-
     // The indent lives on the ROW (``data-nav-depth``), not on the inner
     // navigate button — the leading twisty cell is a sibling of that
     // button, so the row is what positions the whole cluster.
@@ -261,6 +264,80 @@ describe("Sidebar active state", () => {
     expect(navRow(container, "Demo Workspace")?.className).toContain("pl-3");
     expect(navRow(container, "Views")?.className).toContain("pl-5");
     expect(navRow(container, "Current")?.className).toContain("pl-7");
+  });
+
+  it("keeps the group-header chevron in the same column as depth-0 twisties", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        collapsible: true,
+        items: [{ to: "/spaces/demo", label: "Demo Workspace", icon: FolderOpen }],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // One vertical line for every chevron in the sidebar. The header derives
+    // its left padding from the same depth-0 rung the rows use, so retuning
+    // the indent ladder can never desync the two columns unnoticed.
+    const header = desktopSidebar(container).querySelector<HTMLElement>(
+      "[data-nav-group-label] > div",
+    );
+    expect(indentClass(header)).toBe("pl-3");
+    expect(indentClass(navRow(container, "Demo Workspace"))).toBe("pl-3");
+  });
+
+  it("reserves hover clearance only on rows that actually have an actions menu", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          {
+            to: "/spaces/plain",
+            label: "Plain Folder",
+            icon: FolderOpen,
+            children: [{ to: "/spaces/plain/a", label: "Plain Child", icon: MessageSquare }],
+          },
+          {
+            to: "/spaces/acted",
+            label: "Folder With Actions",
+            icon: FolderOpen,
+            actions: [{ icon: FolderOpen, label: "Rename", handler: () => {} }],
+            children: [{ to: "/spaces/acted/a", label: "Acted Child", icon: MessageSquare }],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/plain"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // Padding reserved for a control that never appears makes the label
+    // truncate and un-truncate on every hover, for nothing.
+    const navigateButton = (label: string) =>
+      navRow(container, label)?.querySelector<HTMLElement>("button:not([data-nav-twisty])");
+
+    expect(navigateButton("Plain Folder")?.className).not.toContain("group-hover:pr-");
+    expect(navigateButton("Folder With Actions")?.className).toContain("group-hover:pr-11");
   });
 
   it("clicking a twisty collapses the branch without navigating", async () => {
