@@ -175,7 +175,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
                     event.preventDefault();
                   }}
                   className={cn(
-                    "hidden w-1.5 shrink-0 cursor-col-resize touch-none xl:block",
+                    "hidden w-1.5 shrink-0 cursor-col-resize touch-none min-[780px]:block",
                     "bg-transparent hover:bg-primary/30 focus-visible:bg-primary",
                     "focus:outline-none",
                   )}
@@ -189,10 +189,21 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
                 className={cn(
                   isExpanded
                     ? cn(
-                        "h-full shrink-0 border-l border-border bg-background xl:flex xl:flex-col",
-                        // Below xl (or with the panel off) the chat owns the
-                        // full width: keep the page mounted, just hidden.
-                        showPagePanel ? "hidden" : "hidden xl:hidden",
+                        "h-full shrink-0 border-l border-border bg-background",
+                        // 780px === SIDE_BY_SIDE_BREAKPOINT_PX, which a
+                        // test pins to MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH.
+                        // The literal cannot be interpolated — Tailwind only
+                        // sees static class strings — so the two are tied by
+                        // that test rather than by the compiler.
+                        // 780px = MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH, the
+                        // narrowest viewport where both columns fit. This was
+                        // `xl` (1280px), which hid the document on every
+                        // window between the two — expanding the chat beside
+                        // an open editor made the editor disappear.
+                        "min-[780px]:flex min-[780px]:flex-col",
+                        // Genuinely too narrow (or panel off): chat owns the
+                        // width and the page stays mounted, just hidden.
+                        showPagePanel ? "hidden" : "hidden min-[780px]:hidden",
                       )
                     : "flex min-h-0 flex-1 flex-col overflow-hidden",
                 )}
@@ -222,7 +233,10 @@ function PagePanelActions() {
   return (
     <div className="shrink-0 flex items-center justify-end px-4 py-3 border-b border-border">
       <div className="flex items-center gap-0.5">
-        <ContextPins compact flyoutDirection="down" />
+        {/* This bar sits directly above the document or view in the page
+            panel — the one place the user is unambiguously looking at the
+            thing they might want to pin. */}
+        <ContextPins compact flyoutDirection="down" showPinButton />
         <TooltipIconButton tooltip="Close panel" size="icon" onClick={togglePagePanel}>
           <X className="size-4" />
         </TooltipIconButton>

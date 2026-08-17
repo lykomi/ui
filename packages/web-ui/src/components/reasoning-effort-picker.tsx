@@ -67,6 +67,7 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
+          data-reasoning-effort-trigger
           className={cn(
             "flex items-center gap-1 rounded-md px-2 py-1",
             "text-xs text-muted-foreground hover:text-foreground hover:bg-muted",
@@ -75,8 +76,8 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
           )}
           aria-label={`Intelligence: ${triggerLabel}`}
         >
-          <span>{triggerLabel}</span>
-          <ChevronDown className="size-3.5" />
+          <span className="whitespace-nowrap">{triggerLabel}</span>
+          <ChevronDown className="size-3.5 shrink-0" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

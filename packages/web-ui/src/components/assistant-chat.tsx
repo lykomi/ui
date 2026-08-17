@@ -35,10 +35,8 @@ import { ContextPins } from "./context-bar.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import { ChatComposerBannerSlot } from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
-import { MarkdownText } from "./markdown-text.tsx";
-import { ReasoningMessagePartComponent } from "./reasoning-part.tsx";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
-import { ToolFallback } from "./tool-fallback.tsx";
+import { ChatMessageParts } from "./chat-message-parts.tsx";
 import { LoadingIndicator, LoadingBar } from "./loading-indicator.tsx";
 import { MessageTimestamp } from "./message-timestamp.tsx";
 import { MessageError } from "./message-error.tsx";
@@ -104,13 +102,7 @@ const AssistantMessage: FC = () => (
   <MessagePrimitive.Root className="w-full mb-2 group">
     <div className="mx-auto max-w-3xl px-4">
       <div className="text-foreground leading-relaxed flex flex-col gap-4">
-        <MessagePrimitive.Parts
-          components={{
-            Text: MarkdownText,
-            Reasoning: ReasoningMessagePartComponent,
-            tools: { Fallback: ToolFallback },
-          }}
-        />
+        <ChatMessageParts />
       </div>
       <MessageError />
 
@@ -362,9 +354,14 @@ export interface ChatContentProps {
    */
   starterSuggestions?: string[];
   /**
-   * Show the page pin button in the composer. Defaults to false so generic
-   * starter apps only show attachment, input, and send controls. Apps with
-   * page-aware workflows can opt in explicitly.
+   * Show the page pin button in the composer.
+   *
+   * Defaults to TRUE. It defaulted to false, and nothing in the shell ever
+   * passed it, so the affordance shipped switched off everywhere: on a
+   * document or a view there was no way to put the thing you were looking
+   * at into the conversation. Pinning the current page is the core gesture
+   * of a page-aware chat, not an opt-in extra — an app that genuinely wants
+   * a bare composer opts OUT.
    */
   showPinButton?: boolean;
 }
@@ -375,7 +372,7 @@ export interface ChatContentProps {
  */
 export function ChatContent({
   starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
-  showPinButton = false,
+  showPinButton = true,
 }: ChatContentProps = {}) {
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const collapseChat = useChatBubbleStore((s) => s.collapse);

@@ -27,8 +27,8 @@ import { ContextPins } from "./context-bar.tsx";
 import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import { ChatComposerBannerSlot, ChatLauncherBadgeSlot } from "./chat-slots.tsx";
-import { ReasoningMessagePartComponent } from "./reasoning-part.tsx";
-import { MarkdownText } from "./markdown-text.tsx";
+import { ChatMessageParts } from "./chat-message-parts.tsx";
+import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
 import { MessageTimestamp } from "./message-timestamp.tsx";
 import { MessageError } from "./message-error.tsx";
@@ -43,12 +43,7 @@ function BubbleAssistantMessage() {
   return (
     <MessagePrimitive.Root className="w-full mb-2 group">
       <div className="text-foreground text-sm leading-relaxed flex flex-col gap-2">
-        <MessagePrimitive.Parts
-          components={{
-            Text: MarkdownText,
-            Reasoning: ReasoningMessagePartComponent,
-          }}
-        />
+        <ChatMessageParts />
       </div>
       <MessageError compact />
       <div className="flex h-7 items-center gap-2 mt-1">
@@ -226,6 +221,7 @@ export function ChatBubble() {
       {isOpen && (
         <div
           ref={panelRef}
+          data-chat-surface="bubble"
           className={cn(
             "fixed z-50",
             "rounded-2xl border border-border",
@@ -346,7 +342,10 @@ export function ChatBubble() {
                         <Paperclip className="size-3.5" />
                       </TooltipIconButton>
                     </ComposerPrimitive.AddAttachment>
-                    <ContextPins compact />
+                    {/* The bubble is the chat you use WHILE reading a
+                        document, so it needs the pin at least as much as
+                        the expanded composer does. */}
+                    <ContextPins compact showPinButton />
                   </div>
                   <ComposerPrimitive.Input
                     autoFocus
@@ -360,6 +359,12 @@ export function ChatBubble() {
                       "resize-none max-h-20",
                     )}
                   />
+                  {/* Right-hand slot, mirroring the expanded composer:
+                      settings sit beside Send, not among the attachment
+                      icons. Hidden while running, like the expanded one. */}
+                  <ThreadPrimitive.If running={false}>
+                    <ReasoningEffortPicker />
+                  </ThreadPrimitive.If>
                   <ThreadPrimitive.If running>
                     <ComposerPrimitive.Cancel asChild>
                       <Button

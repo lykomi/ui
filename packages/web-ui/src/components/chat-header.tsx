@@ -8,9 +8,18 @@ import { ThemeToggle } from "./theme-toggle.tsx";
 import { UserMenu } from "./user-menu.tsx";
 import { useSidebarStore } from "../lib/sidebar-store.ts";
 import { useNewConversation } from "../lib/use-new-conversation.ts";
+import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 
 export const ChatHeader: FC = () => {
-  const handleNewConversation = useNewConversation();
+  const isExpanded = useChatBubbleStore((s) => s.isExpanded);
+  // In expanded mode the default "navigate to /" would land on the chat
+  // route, and the shell collapses expanded chat there — so New Thread
+  // silently threw the user out of the mode they were working in AND off
+  // the page they were reading. Expanded starts the thread in place, the
+  // same contract the bubble already uses.
+  const handleNewConversation = useNewConversation(
+    isExpanded ? { navigateToChat: false, preserveNavigation: true } : undefined,
+  );
   const toggleMobile = useSidebarStore((s) => s.toggleMobile);
   const isSidebarOpen = useSidebarStore((s) => s.isOpen);
 

@@ -25,8 +25,7 @@
     "@iloveagents/foundry-web-primitives": "0.13.0",
     "@iloveagents/foundry-web-shell": "0.13.0",
     "@iloveagents/foundry-web-ui": "0.13.0",
-    "@assistant-ui/react": "^0.12.25",
-    "@assistant-ui/tap": "0.5.16",
+    "@assistant-ui/react": "^0.15.1",
     "@ag-ui/client": "^0.0.52",
     "@ag-ui/core": "^0.0.52",
     "@azure/msal-browser": "^5.6.3",
@@ -57,8 +56,5 @@
     "typescript-eslint": "^8.58.2",
     "vite": "^7.2.2"
   },
-  "overrides": {
-    "@assistant-ui/store": "0.2.10",
-    "@assistant-ui/tap": "0.5.16"
-  }
+  "_comment_assistant_ui": "@assistant-ui/react is here only to satisfy the peer @iloveagents/foundry-web-ui declares — the app's own code never imports it. Keep the range in step with that peer (a guard test enforces it), and do NOT pin @assistant-ui/store / core / tap: those pins are what let this template fall a major line behind the packages it scaffolds, so a generated app failed to build on an API the packages had already adopted. assistant-ui's own ranges resolve a consistent graph on their own."
 }
