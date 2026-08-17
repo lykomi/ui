@@ -39,7 +39,9 @@ export function CollectionFilterBar({
   onClearAll?: () => void;
   className?: string;
 }) {
-  const hasActiveFilters = filters.some((filter) => activeCount(values[filter.key], filter.type) > 0);
+  const hasActiveFilters = filters.some(
+    (filter) => activeCount(values[filter.key], filter.type) > 0,
+  );
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -66,7 +68,10 @@ export function CollectionFilterBar({
                 ) : null}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-64 rounded-2xl border-border/45 bg-popover/95 p-2 shadow-lg">
+            <PopoverContent
+              align="start"
+              className="w-64 rounded-2xl border-border/45 bg-popover/95 p-2 shadow-lg"
+            >
               <div className="px-2 pb-2 pt-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {filter.label}
               </div>

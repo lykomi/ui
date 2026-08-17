@@ -33,10 +33,7 @@ export function ChatMessageParts() {
         switch (part.type) {
           case "group-tool":
             return (
-              <ToolRunGroup
-                indices={part.indices}
-                isRunning={part.status?.type === "running"}
-              >
+              <ToolRunGroup indices={part.indices} isRunning={part.status?.type === "running"}>
                 {children}
               </ToolRunGroup>
             );

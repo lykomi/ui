@@ -11,10 +11,7 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 import { useAppStore } from "../lib/app-store.ts";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { submitComposerText } from "../lib/composer-submit-store.ts";
-import {
-  resolveSelectionContext,
-  type SelectionContextResult,
-} from "../lib/selection-context.ts";
+import { resolveSelectionContext, type SelectionContextResult } from "../lib/selection-context.ts";
 
 const ACTION_POPOVER_HEIGHT = 38;
 const SIMPLE_POPOVER_WIDTH = 126;

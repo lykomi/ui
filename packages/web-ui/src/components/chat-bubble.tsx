@@ -320,75 +320,75 @@ export function ChatBubble() {
               <ChatComposerBannerSlot />
               <div className="px-3 py-3">
                 <ComposerPrimitive.Root
-                className={cn(
-                  "flex flex-col gap-1",
-                  "rounded-2xl border border-input",
-                  "bg-background shadow-sm",
-                  "px-3 py-2",
-                  "focus-within:border-primary/50",
-                  "transition-all duration-200",
-                )}
-              >
-                <ComposerSubmitBridge />
-                <ComposerContextBadges />
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center -space-x-1 shrink-0">
-                    <ComposerPrimitive.AddAttachment asChild>
-                      <TooltipIconButton
-                        tooltip="Attach file"
-                        size="icon"
-                        className="size-7 shrink-0"
-                      >
-                        <Paperclip className="size-3.5" />
-                      </TooltipIconButton>
-                    </ComposerPrimitive.AddAttachment>
-                    {/* The bubble is the chat you use WHILE reading a
+                  className={cn(
+                    "flex flex-col gap-1",
+                    "rounded-2xl border border-input",
+                    "bg-background shadow-sm",
+                    "px-3 py-2",
+                    "focus-within:border-primary/50",
+                    "transition-all duration-200",
+                  )}
+                >
+                  <ComposerSubmitBridge />
+                  <ComposerContextBadges />
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center -space-x-1 shrink-0">
+                      <ComposerPrimitive.AddAttachment asChild>
+                        <TooltipIconButton
+                          tooltip="Attach file"
+                          size="icon"
+                          className="size-7 shrink-0"
+                        >
+                          <Paperclip className="size-3.5" />
+                        </TooltipIconButton>
+                      </ComposerPrimitive.AddAttachment>
+                      {/* The bubble is the chat you use WHILE reading a
                         document, so it needs the pin at least as much as
                         the expanded composer does. */}
-                    <ContextPins compact showPinButton />
-                  </div>
-                  <ComposerPrimitive.Input
-                    autoFocus
-                    placeholder="Message..."
-                    rows={1}
-                    className={cn(
-                      "flex-1 bg-transparent",
-                      "py-1 text-sm",
-                      "text-foreground outline-none",
-                      "placeholder:text-muted-foreground",
-                      "resize-none max-h-20",
-                    )}
-                  />
-                  {/* Right-hand slot, mirroring the expanded composer:
+                      <ContextPins compact showPinButton />
+                    </div>
+                    <ComposerPrimitive.Input
+                      autoFocus
+                      placeholder="Message..."
+                      rows={1}
+                      className={cn(
+                        "flex-1 bg-transparent",
+                        "py-1 text-sm",
+                        "text-foreground outline-none",
+                        "placeholder:text-muted-foreground",
+                        "resize-none max-h-20",
+                      )}
+                    />
+                    {/* Right-hand slot, mirroring the expanded composer:
                       settings sit beside Send, not among the attachment
                       icons. Hidden while running, like the expanded one. */}
-                  <ThreadPrimitive.If running={false}>
-                    <ReasoningEffortPicker />
-                  </ThreadPrimitive.If>
-                  <ThreadPrimitive.If running>
-                    <ComposerPrimitive.Cancel asChild>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="rounded-full size-8 shrink-0"
-                        aria-label="Stop"
-                      >
-                        <Square className="size-3" />
-                      </Button>
-                    </ComposerPrimitive.Cancel>
-                  </ThreadPrimitive.If>
-                  <ThreadPrimitive.If running={false}>
-                    <ComposerPrimitive.Send asChild>
-                      <Button
-                        size="icon"
-                        className="rounded-full size-8 shrink-0"
-                        aria-label="Send"
-                      >
-                        <ArrowUp className="size-4" />
-                      </Button>
-                    </ComposerPrimitive.Send>
-                  </ThreadPrimitive.If>
-                </div>
+                    <ThreadPrimitive.If running={false}>
+                      <ReasoningEffortPicker />
+                    </ThreadPrimitive.If>
+                    <ThreadPrimitive.If running>
+                      <ComposerPrimitive.Cancel asChild>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="rounded-full size-8 shrink-0"
+                          aria-label="Stop"
+                        >
+                          <Square className="size-3" />
+                        </Button>
+                      </ComposerPrimitive.Cancel>
+                    </ThreadPrimitive.If>
+                    <ThreadPrimitive.If running={false}>
+                      <ComposerPrimitive.Send asChild>
+                        <Button
+                          size="icon"
+                          className="rounded-full size-8 shrink-0"
+                          aria-label="Send"
+                        >
+                          <ArrowUp className="size-4" />
+                        </Button>
+                      </ComposerPrimitive.Send>
+                    </ThreadPrimitive.If>
+                  </div>
                 </ComposerPrimitive.Root>
               </div>
             </div>

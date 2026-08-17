@@ -38,22 +38,21 @@ export function LoadingIndicator() {
   }
 
   return (
-    <div className="h-10 px-4">
-      <div className="flex items-center gap-2 py-2 text-foreground leading-relaxed animate-in fade-in duration-300">
+    // `px-4` keeps the label on the same left edge as the message parts
+    // above it — measured, not guessed: the rows sit at x=469 and so does
+    // this. The old `h-10` did NOT belong: a fixed 40px block on top of the
+    // parts' own gap-4 left a visible hole under the last tool row.
+    <div className="min-h-6 px-4">
+      <div className="flex items-center gap-2 py-0.5 text-foreground leading-relaxed animate-in fade-in duration-300">
         <span className={stalled ? "text-sm text-warning" : "text-sm text-muted-foreground"}>
           {label}
         </span>
-        <div className="flex gap-1">
-          <span
-            className={`size-1.5 rounded-full ${stalled ? "bg-warning/70" : "bg-primary/60"} animate-[pulse_1.4s_ease-in-out_infinite]`}
-          />
-          <span
-            className={`size-1.5 rounded-full ${stalled ? "bg-warning/70" : "bg-primary/60"} animate-[pulse_1.4s_ease-in-out_0.2s_infinite]`}
-          />
-          <span
-            className={`size-1.5 rounded-full ${stalled ? "bg-warning/70" : "bg-primary/60"} animate-[pulse_1.4s_ease-in-out_0.4s_infinite]`}
-          />
-        </div>
+        {/* One pulsing dot. Three read as a typing indicator borrowed from a
+            messaging app; a single beat says "working" without the mimicry. */}
+        <span
+          aria-hidden="true"
+          className={`size-1.5 rounded-full ${stalled ? "bg-warning/70" : "bg-primary/60"} animate-[pulse_1.4s_ease-in-out_infinite]`}
+        />
       </div>
     </div>
   );

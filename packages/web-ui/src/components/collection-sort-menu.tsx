@@ -43,7 +43,10 @@ export function CollectionSortMenu({
           <span>{active?.label ?? "Sort"}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 rounded-xl border-border/45 bg-popover/95 shadow-lg">
+      <DropdownMenuContent
+        align="end"
+        className="w-56 rounded-xl border-border/45 bg-popover/95 shadow-lg"
+      >
         {options.map((option) => (
           <DropdownMenuItem
             key={option.value}
@@ -52,7 +55,10 @@ export function CollectionSortMenu({
           >
             <span>{option.label}</span>
             <Check
-              className={cn("size-4 text-primary", value === option.value ? "opacity-100" : "opacity-0")}
+              className={cn(
+                "size-4 text-primary",
+                value === option.value ? "opacity-100" : "opacity-0",
+              )}
             />
           </DropdownMenuItem>
         ))}
