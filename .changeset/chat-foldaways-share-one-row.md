@@ -25,3 +25,9 @@ Reading order is fixed rather than chronological: tool runs, then the reasoning
 that explains them, then the answer. A model normally emits its thinking first,
 which put the least important row at the top of every message and pushed the
 answer down.
+
+The "Thinking" line also sits with the message it belongs to. An assistant
+message with no parts yet still rendered the row reserving its copy/retry
+buttons — `hideWhenRunning` hid the buttons but not their 32px of height — so
+an empty 36px block sat between the question and the indicator.
+
