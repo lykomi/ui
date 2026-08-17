@@ -113,6 +113,12 @@ const SIDEBAR_GROUP_HEADER_LABEL_CLASS =
 type NavStatusDot = NonNullable<NavItem["statusDot"]>;
 type NavStatusIcon = NonNullable<NavItem["statusIcon"]>;
 
+/** Body padding for a row that is NOT in a tree. Flat rows render no
+ *  disclosure cell, so reserving its column just pushes them right of the
+ *  sidebar's other flat chrome — which is what made Activity look indented
+ *  under New Thread. */
+const NAV_FLAT_BODY_CLASS = "pl-3";
+
 function getNavDepthOffsets(depth: number) {
   return NAV_DEPTH_OFFSETS[depth] ?? NAV_DEPTH_OFFSETS[NAV_DEPTH_OFFSETS.length - 1];
 }
@@ -533,6 +539,7 @@ function NavTwisty({
   label,
   isActive,
   depth,
+  inTree = true,
 }: {
   hasChildren: boolean;
   isExpanded?: boolean;
@@ -540,18 +547,27 @@ function NavTwisty({
   label: string;
   isActive?: boolean;
   depth: number;
+  /** Is this row part of a tree — a list where something can branch?
+   *  The leaf dot says "this one has nothing under it", which is only
+   *  information where a sibling might. In a flat list (New Thread,
+   *  Activity, a chat) nothing branches, so a dot on every row states a
+   *  fact no one asked and reads as a bullet. The cell still renders, so
+   *  flat rows keep the same label column as tree rows. */
+  inTree?: boolean;
 }) {
   const cell = cn(NAV_TWISTY_CLASS, getNavDepthOffsets(depth).column);
 
   if (!hasChildren) {
     return (
       <span data-nav-twisty-cell aria-hidden="true" className={cn(cell, "pointer-events-none")}>
-        <span
-          className={cn(
-            "size-1 rounded-full",
-            isActive ? "bg-primary/70" : "bg-sidebar-foreground/30",
-          )}
-        />
+        {inTree && (
+          <span
+            className={cn(
+              "size-1 rounded-full",
+              isActive ? "bg-primary/70" : "bg-sidebar-foreground/30",
+            )}
+          />
+        )}
       </span>
     );
   }
@@ -1029,7 +1045,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   );
 }
 
-function CollapsibleNavItem({ item }: { item: NavItem }) {
+function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: boolean }) {
   const navigate = useNavigate();
   const currentPath = useLocation().pathname;
   const setNavContext = useAppStore((s) => s.setNavContext);
@@ -1072,6 +1088,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
       >
         <NavTwisty
           hasChildren={hasChildren}
+          inTree={inTree}
           isExpanded={isExpanded}
           onToggle={hasChildren ? () => setManualOverride(!isExpanded) : undefined}
           label={item.label}
@@ -1097,7 +1114,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
           }}
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0 py-2 text-sm text-left",
-            getNavDepthOffsets(0).body,
+            inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
             "pr-3 transition-[padding] duration-150",
             hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
@@ -1165,12 +1182,12 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
         data-nav-depth={0}
         className={cn(
           "relative flex items-center gap-2 w-full opacity-40",
-          getNavDepthOffsets(0).body,
+          inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
           // Transparent border for box-model parity — see the NavLink variant.
           "rounded-lg border border-transparent pr-3 py-2 text-left text-sm text-sidebar-foreground/45",
         )}
       >
-        <NavTwisty hasChildren={false} label={item.label} depth={0} />
+        <NavTwisty hasChildren={false} inTree={inTree} label={item.label} depth={0} />
         <item.icon className="size-4 shrink-0 text-sidebar-foreground/45" />
         <span className="truncate">{item.label}</span>
       </div>
@@ -1188,7 +1205,7 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
       className={({ isActive }) =>
         cn(
           "relative flex items-center gap-2 w-full",
-          getNavDepthOffsets(0).body,
+          inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
           // The transparent border is NOT decoration: it is what makes this
           // row's box model match every other variant. An absolutely
           // positioned twisty resolves against the PADDING box, so a row
@@ -1207,7 +1224,13 @@ function CollapsibleNavItem({ item }: { item: NavItem }) {
     >
       {({ isActive }) => (
         <>
-          <NavTwisty hasChildren={false} label={item.label} isActive={isActive} depth={0} />
+          <NavTwisty
+            hasChildren={false}
+            inTree={inTree}
+            label={item.label}
+            isActive={isActive}
+            depth={0}
+          />
           <item.icon
             className={cn(
               "size-4 shrink-0",
@@ -1444,6 +1467,16 @@ function findFirstStatusDot(items: readonly NavItem[]): NavStatusDot | undefined
  * — toggling one doesn't re-render siblings.
  */
 function NavGroupSection({ group }: { group: NavGroup }) {
+  // Does anything in THIS group branch? The leaf dot exists to say "this
+  // row has nothing under it", which is only information where a sibling
+  // might — a tree. In a flat group (New Thread, Activity, a list of
+  // chats) nothing branches, so a dot on every row marks a distinction
+  // that does not exist and reads as a bullet. The disclosure cell still
+  // renders either way, so flat rows keep the same label column as tree
+  // rows and the sidebar stays on one grid.
+  const groupHasBranches = group.items.some(
+    (item) => Boolean(item.children && item.children.length > 0),
+  );
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy
   // groups stay uncollapsable so behaviour is unchanged.
@@ -1600,7 +1633,15 @@ function NavGroupSection({ group }: { group: NavGroup }) {
       )}
       {!collapsed &&
         group.items.map((item) => (
-          <CollapsibleNavItem key={item.to + item.label} item={item} />
+          <CollapsibleNavItem
+            key={item.to + item.label}
+            item={item}
+            // A leaf dot distinguishes "nothing under this" from a sibling
+            // that branches. Decided per GROUP: Workspaces has branches, so
+            // its leaves are marked; Chats has none, so a dot on every row
+            // would mark a distinction that does not exist.
+            inTree={groupHasBranches}
+          />
         ))}
     </div>
   );

@@ -220,6 +220,71 @@ describe("Sidebar active state", () => {
     expect(columnOf(twistyCell(container, "Views"))).toBe("5");
   });
 
+  it("gives a flat list no leaf dots — nothing there can branch", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    // No item here has children, so a dot on every row would mark a
+    // distinction that does not exist and read as a bullet list.
+    useNavStore.getState().setConfig([
+      {
+        label: "Chats",
+        items: [
+          { to: "/activity", label: "Activity", icon: MessageSquare },
+          { to: "/threads/1", label: "A chat", icon: MessageSquare },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/activity"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // The cell still renders — flat rows keep the same label column as
+    // tree rows — but it is empty.
+    expect(twistyCell(container, "Activity")).toBeTruthy();
+    expect(twistyCell(container, "Activity")?.children.length).toBe(0);
+    expect(twistyCell(container, "A chat")?.children.length).toBe(0);
+  });
+
+  it("keeps leaf dots in a group that does branch", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    // One sibling has children, so "no children" is now a real
+    // distinction and the leaves say so.
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        items: [
+          { to: "/flat", label: "Flat item", icon: MessageSquare },
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            children: [{ to: "/spaces/demo/readme", label: "Readme", icon: MessageSquare }],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(twistyCell(container, "Flat item")?.children.length).toBe(1);
+  });
+
   it("marks branches with a chevron and leaves with a dot (Confluence page-tree)", async () => {
     const { Sidebar } = await import("./sidebar.tsx");
 
