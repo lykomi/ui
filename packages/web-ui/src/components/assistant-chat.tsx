@@ -35,10 +35,8 @@ import { ContextPins } from "./context-bar.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import { ChatComposerBannerSlot } from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
-import { MarkdownText } from "./markdown-text.tsx";
-import { ReasoningMessagePartComponent } from "./reasoning-part.tsx";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
-import { ToolFallback } from "./tool-fallback.tsx";
+import { ChatMessageParts } from "./chat-message-parts.tsx";
 import { LoadingIndicator, LoadingBar } from "./loading-indicator.tsx";
 import { MessageTimestamp } from "./message-timestamp.tsx";
 import { MessageError } from "./message-error.tsx";
@@ -104,13 +102,7 @@ const AssistantMessage: FC = () => (
   <MessagePrimitive.Root className="w-full mb-2 group">
     <div className="mx-auto max-w-3xl px-4">
       <div className="text-foreground leading-relaxed flex flex-col gap-4">
-        <MessagePrimitive.Parts
-          components={{
-            Text: MarkdownText,
-            Reasoning: ReasoningMessagePartComponent,
-            tools: { Fallback: ToolFallback },
-          }}
-        />
+        <ChatMessageParts />
       </div>
       <MessageError />
 

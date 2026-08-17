@@ -1,5 +1,5 @@
 import { useStore } from "zustand";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Gauge } from "lucide-react";
 import {
   reasoningDefaultStore,
   reasoningEffortStore,
@@ -48,7 +48,13 @@ function autoHint(resolved: ResolvedReasoningEffort | null, scope: string | null
  * can always tell what they are actually running. An explicit level is a
  * pin — nothing moves it, including a change of context.
  */
-export function ReasoningEffortPicker({ className }: { className?: string }) {
+export function ReasoningEffortPicker({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   const effort = useStore(reasoningEffortStore, (s) => s.effort);
   const setEffort = useStore(reasoningEffortStore, (s) => s.setEffort);
   const resolved = useStore(reasoningDefaultStore, (s) => s.resolved);
@@ -67,15 +73,29 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
+          data-reasoning-effort-trigger
           className={cn(
-            "flex items-center gap-1 rounded-md px-2 py-1",
+            "flex items-center rounded-md py-1",
             "text-xs text-muted-foreground hover:text-foreground hover:bg-muted",
             "transition-colors",
+            // Compact sits inside the composer's `-space-x-1` icon cluster,
+            // where the roomy label padding would make it read as a wider
+            // control than the attachment and pin buttons beside it.
+            compact ? "gap-0.5 px-1.5" : "gap-1 px-2",
             className,
           )}
+          // The label is the accessible name in BOTH modes — compact drops
+          // the visible text, not the information.
           aria-label={`Intelligence: ${triggerLabel}`}
         >
-          <span>{triggerLabel}</span>
+          {/* Compact keeps the gauge + chevron only. In a 380px bubble the
+              full label competes with the message input for the same row;
+              the level is still one click (or one screen-reader stop) away. */}
+          {compact ? (
+            <Gauge className="size-3.5" aria-hidden="true" />
+          ) : (
+            <span>{triggerLabel}</span>
+          )}
           <ChevronDown className="size-3.5" />
         </button>
       </DropdownMenuTrigger>
