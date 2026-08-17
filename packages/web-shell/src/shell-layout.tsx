@@ -190,6 +190,11 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
                   isExpanded
                     ? cn(
                         "h-full shrink-0 border-l border-border bg-background",
+                        // 780px === SIDE_BY_SIDE_BREAKPOINT_PX, which a
+                        // test pins to MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH.
+                        // The literal cannot be interpolated — Tailwind only
+                        // sees static class strings — so the two are tied by
+                        // that test rather than by the compiler.
                         // 780px = MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH, the
                         // narrowest viewport where both columns fit. This was
                         // `xl` (1280px), which hid the document on every
