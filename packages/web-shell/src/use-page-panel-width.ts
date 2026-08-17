@@ -11,6 +11,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export const MIN_PAGE_PANEL_WIDTH = 360;
 /** The chat column must stay usable too. */
 const MIN_CHAT_WIDTH = 420;
+
+/**
+ * Narrowest viewport that can show chat and page side by side.
+ *
+ * Both minimums have to fit, so this IS the breakpoint — the layout used a
+ * hand-picked `xl` (1280px) instead, which hid the page on every window
+ * between 780 and 1280. Expanding the chat next to an open document made the
+ * document vanish, on a perfectly ordinary laptop width.
+ *
+ * `shell-layout.tsx` cannot interpolate this into a Tailwind class (they must
+ * be static strings), so it hardcodes `min-[780px]:` and a unit test asserts
+ * the two agree.
+ */
+export const SIDE_BY_SIDE_MIN_VIEWPORT = MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH;
 const DEFAULT_PAGE_PANEL_WIDTH = 600;
 const STORAGE_KEY = "foundry.pagePanel.width";
 
