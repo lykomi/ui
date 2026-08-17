@@ -5,11 +5,15 @@
 feat(chat): collapse tool runs to a status line, and give every chat surface the same controls
 
 **Tool calls no longer flood the transcript.** A run of adjacent tool calls
-collapses to one row — "3 tools · done" — with the cards one click behind it.
-A turn that called eight tools used to render eight bordered cards and push the
-answer off screen; the answer now sits directly under a single quiet line. Runs
-containing a failure open themselves and say how many failed, because a red
-summary the reader has to click to understand is worse than no summary.
+folds into one row — "3 tools · done" — with the cards under it, one click from
+being folded away. A turn that called eight tools used to render eight bordered
+cards with no way to hide them; the run is now a single quiet line you can
+collapse when the machinery is in the way.
+
+The cards stay open by default: watching an agent work is the reason to look at
+them, and a transcript that hides every step reads as though nothing happened.
+The summary says how many calls failed, and turns red only when *every* call
+failed — one failure among successes is a run that recovered, not a broken turn.
 
 **One renderer for every chat surface.** The bubble and the expanded chat each
 configured `MessagePrimitive.Parts` separately and had drifted — the expanded

@@ -22,8 +22,9 @@ const groupBy = groupPartByType({ "tool-call": ["group-tool"] });
  * hand-rolling a parts config is what keeps them honest — there is now only
  * one place to drift from.
  *
- * Tool calls collapse behind {@link ToolRunGroup}; see that component for why
- * the details are hidden by default.
+ * Adjacent tool calls fold into one {@link ToolRunGroup} — a single summary row
+ * over the cards, open by default; see that component for why collapsing is the
+ * deliberate act rather than the default.
  */
 export function ChatMessageParts() {
   return (

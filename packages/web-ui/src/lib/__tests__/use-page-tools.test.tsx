@@ -71,8 +71,7 @@ describe("usePageTools", () => {
 
   it("does not re-register when only the array identity changed", async () => {
     let registrations = 0;
-    const store = clientToolRegistry.getState();
-    const original = store.registerPageTools;
+    const original = clientToolRegistry.getState().registerPageTools;
     clientToolRegistry.setState({
       registerPageTools: (tools) => {
         registrations++;
@@ -85,8 +84,14 @@ describe("usePageTools", () => {
       usePageTools([tool("page_info", async () => String(tick))]);
       return null;
     }
-    await act(async () => root.render(<Page tick={1} />));
-    await act(async () => root.render(<Page tick={2} />));
-    expect(registrations).toBe(1);
+    try {
+      await act(async () => root.render(<Page tick={1} />));
+      await act(async () => root.render(<Page tick={2} />));
+      expect(registrations).toBe(1);
+    } finally {
+      // The store is module-scoped: a counting stub left in place would
+      // follow every later test in the file, and the next file too.
+      clientToolRegistry.setState({ registerPageTools: original });
+    }
   });
 });
