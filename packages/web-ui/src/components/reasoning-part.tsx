@@ -24,6 +24,10 @@ export function ReasoningPart({ text }: { text: string }) {
       label="Reasoning"
       open={isOpen}
       onOpenChange={setIsOpen}
+      // Under the work, above the conclusion: the model usually emits its
+      // thinking first, but a reader wants "what it did", then "why", and
+      // the answer last — the message should end on its point.
+      placement="after-tools"
       ariaLabel={isOpen ? "Hide reasoning" : "Show reasoning"}
     >
       <div className="whitespace-pre-wrap text-xs text-muted-foreground">{text}</div>

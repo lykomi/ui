@@ -81,9 +81,34 @@ describe("message foldaways share one row shape", () => {
     parts.current = [{ status: { type: "complete" } }];
     await renderBoth();
 
-    const roots = [...container.querySelectorAll("[data-message-disclosure]")];
-    expect(roots).toHaveLength(2);
-    expect(roots[1].className).toContain("[[data-message-disclosure]_+_&]:-mt-3");
+    // Every in-flow row carries the rule; a trailing row deliberately does not.
+    const inFlow = [...container.querySelectorAll("[data-message-disclosure]")];
+    expect(inFlow.length).toBeGreaterThan(0);
+    for (const row of inFlow) {
+      expect(row.className).toContain("[[data-message-disclosure]_+_&]:-mt-3");
+    }
+  });
+
+  it("puts reasoning under the tools and above the answer", async () => {
+    // The model usually emits its thinking FIRST, so reasoning arrives above
+    // the tool run in the DOM. A reader wants "what it did" before "why",
+    // so the row moves visually — and, because the compaction is a
+    // DOM-sibling rule, it must NOT carry the attribute that rule chains on.
+    parts.current = [{ status: { type: "complete" } }];
+    await renderBoth();
+
+    const reasoningRoot = container.querySelector("[data-message-disclosure-reordered]");
+    expect(reasoningRoot).toBeTruthy();
+    // order-1 sits it after the tool runs (order-0) and before the answer
+    // text (order-2) — not after the answer, which would end the message on
+    // its machinery instead of its point.
+    expect(reasoningRoot?.className).toContain("order-1");
+    expect(reasoningRoot?.className).not.toContain("order-last");
+
+    // The tool run stays in flow and keeps the attribute the gap rule uses.
+    const toolRoot = container.querySelector("[data-message-disclosure]");
+    expect(toolRoot).toBeTruthy();
+    expect(toolRoot?.className).not.toContain("order-1");
   });
 
   it("starts both rows folded, so the answer is what the reader sees", async () => {

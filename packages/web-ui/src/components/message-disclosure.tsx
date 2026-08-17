@@ -30,6 +30,7 @@ export function MessageDisclosure({
   open,
   onOpenChange,
   tone = "muted",
+  placement = "inline",
   ariaLabel,
   children,
   ...rest
@@ -41,6 +42,19 @@ export function MessageDisclosure({
   onOpenChange: (open: boolean) => void;
   /** ``destructive`` is for a run where everything failed; nothing else. */
   tone?: "muted" | "destructive";
+  /**
+   * ``after-tools`` sits the row between the tool runs and the answer,
+   * wherever the model actually emitted it — reasoning belongs under the
+   * work it explains and above the conclusion it produced. (The message
+   * text is ordered after it; see `ChatMessageParts`.)
+   *
+   * It is a flex `order`, so the row moves VISUALLY while staying put in the
+   * DOM. That is exactly why such a row carries a different attribute: the
+   * compaction below is a DOM-sibling rule, and a row that is first in the
+   * DOM but second on screen would otherwise hand its negative margin to
+   * whichever row really is on top.
+   */
+  placement?: "inline" | "after-tools";
   ariaLabel?: string;
   children: ReactNode;
 } & Record<`data-${string}`, unknown>) {
@@ -53,8 +67,13 @@ export function MessageDisclosure({
       // rows — two foldaways alone put 64px of chrome above a one-line
       // answer. A row that directly follows another closes the gap to 4px,
       // so the machinery reads as one compact strip rather than a stack.
-      data-message-disclosure
-      className="w-full [[data-message-disclosure]_+_&]:-mt-3"
+      {...(placement === "after-tools"
+        ? { "data-message-disclosure-reordered": true }
+        : { "data-message-disclosure": true })}
+      className={cn(
+        "w-full [[data-message-disclosure]_+_&]:-mt-3",
+        placement === "after-tools" && "order-1",
+      )}
       {...rest}
     >
       <CollapsibleTrigger asChild>
