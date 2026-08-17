@@ -1,5 +1,67 @@
 # @iloveagents/foundry-web-ui
 
+## 0.14.0
+
+### Minor Changes
+
+- d9e66ea: feat(chat): collapse tool runs to a status line, and give every chat surface the same controls
+
+  **Tool calls no longer flood the transcript.** A run of adjacent tool calls
+  folds into one row — "3 tools · done" — with the cards under it, one click from
+  being folded away. A turn that called eight tools used to render eight bordered
+  cards with no way to hide them; the run is now a single quiet line you can
+  collapse when the machinery is in the way.
+
+  The cards stay open by default: watching an agent work is the reason to look at
+  them, and a transcript that hides every step reads as though nothing happened.
+  The summary says how many calls failed, and turns red only when _every_ call
+  failed — one failure among successes is a run that recovered, not a broken turn.
+
+  **One renderer for every chat surface.** The bubble and the expanded chat each
+  configured `MessagePrimitive.Parts` separately and had drifted — the expanded
+  chat rendered full tool cards, the bubble rendered assistant-ui's default. Both
+  now compose `ChatMessageParts`, so there is one place to drift from.
+
+  **The bubble composer gets the reasoning-effort picker**, in the same slot the
+  expanded composer uses — between the input and Send, the placement the rest of
+  the industry has settled on. It carries the same label, so the two surfaces
+  read identically.
+
+  **New Thread no longer throws you out of the expanded chat.** In expanded mode
+  the button navigated to `/`, which the shell treats as "collapse expanded
+  chat" — so it dropped the mode and the page the user was reading. Expanded now
+  starts the thread in place, the contract the bubble already used.
+
+  Rows expose `data-tool-run-group` / `data-tool-run-trigger`, the bubble panel
+  exposes `data-chat-surface`, and the effort trigger exposes
+  `data-reasoning-effort-trigger` — stable handles for tests and downstream E2E.
+
+- d9e66ea: fix(tools): let a page withdraw a tool it can no longer perform
+
+  `usePageTools` registered once on mount and never looked again, so the tool
+  catalogue described the page as it was at mount rather than as it is. A page
+  whose capabilities are state — a document open read-only, a form with nothing
+  to submit — advertised tools that could only fail, and the model, correctly
+  trusting the catalogue, spent turns calling them and reporting the error back
+  to the user.
+
+  The set is now re-registered when the schema the model sees changes (names,
+  descriptions, parameters), so conditional tools work:
+
+  ```tsx
+  usePageTools([infoTool, ...(canEdit ? [editTool] : [])]);
+  ```
+
+  A fresh array literal with identical schemas does not re-register, and
+  `execute` always dispatches to the current render's closure — so tool bodies
+  read live state directly instead of through the refs the mount-time
+  registration used to force.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.14.0
+- @iloveagents/foundry-web-primitives@0.14.0
+
 ## 0.13.0
 
 ### Minor Changes
