@@ -16,9 +16,10 @@ configured `MessagePrimitive.Parts` separately and had drifted — the expanded
 chat rendered full tool cards, the bubble rendered assistant-ui's default. Both
 now compose `ChatMessageParts`, so there is one place to drift from.
 
-**The bubble composer gets the reasoning-effort picker**, icon-only so it fits
-a 380px panel without crowding the input. The full label is still its
-accessible name.
+**The bubble composer gets the reasoning-effort picker**, in the same slot the
+expanded composer uses — between the input and Send, the placement the rest of
+the industry has settled on. It carries the same label, so the two surfaces
+read identically.
 
 **New Thread no longer throws you out of the expanded chat.** In expanded mode
 the button navigated to `/`, which the shell treats as "collapse expanded

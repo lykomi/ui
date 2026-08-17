@@ -343,10 +343,6 @@ export function ChatBubble() {
                       </TooltipIconButton>
                     </ComposerPrimitive.AddAttachment>
                     <ContextPins compact />
-                    {/* Same control as the expanded chat, icon-only: the
-                        bubble is 380px wide and the full "Auto · Medium"
-                        label would crowd out the input. */}
-                    <ReasoningEffortPicker compact />
                   </div>
                   <ComposerPrimitive.Input
                     autoFocus
@@ -360,6 +356,12 @@ export function ChatBubble() {
                       "resize-none max-h-20",
                     )}
                   />
+                  {/* Right-hand slot, mirroring the expanded composer:
+                      settings sit beside Send, not among the attachment
+                      icons. Hidden while running, like the expanded one. */}
+                  <ThreadPrimitive.If running={false}>
+                    <ReasoningEffortPicker />
+                  </ThreadPrimitive.If>
                   <ThreadPrimitive.If running>
                     <ComposerPrimitive.Cancel asChild>
                       <Button
