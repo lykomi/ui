@@ -1,17 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router";
-import {
-  Ellipsis,
-  Layers,
-  PanelLeft,
-  PanelLeftOpen,
-  SquarePen,
-  ChevronDown,
-  ChevronRight,
-  GripVertical,
-  Plus,
-  Upload,
-} from "lucide-react";
+import { Ellipsis, Layers, PanelLeft, PanelLeftOpen, SquarePen, ChevronDown, ChevronRight, GripVertical, Plus, Upload } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   useSidebarStore,
@@ -24,23 +13,14 @@ import { useNewConversation } from "../lib/use-new-conversation.ts";
 import { useNavStore } from "../lib/nav-store.ts";
 import { useAppStore } from "../lib/app-store.ts";
 import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
-import {
-  getContainerDropZoneLabel,
-  hasAnyDropTarget,
-  hasExternalFilesData,
-} from "../lib/nav-dnd.ts";
+import { getContainerDropZoneLabel, hasAnyDropTarget, hasExternalFilesData } from "../lib/nav-dnd.ts";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { Button } from "@iloveagents/foundry-web-primitives";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu.tsx";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu.tsx";
 import { AppBrand } from "./app-brand.tsx";
 
-const ACTIVE_NAV_ROW_CLASS = "border border-transparent bg-sidebar-selected shadow-none";
+const ACTIVE_NAV_ROW_CLASS =
+  "border border-transparent bg-sidebar-selected shadow-none";
 const ACTIVE_NAV_TEXT_CLASS = "font-semibold text-sidebar-foreground";
 const ACTIVE_NAV_ICON_CLASS = "text-primary";
 const ACTIVE_NAV_BADGE_CLASS =
@@ -127,7 +107,8 @@ const SIDEBAR_GROUP_HEADER_PADDING =
 // ChatGPT / Linear / Notion small-caps section-label rhythm.
 // Bumping size AND weight together stacked too much visual mass
 // against the already-wide uppercase tracking — felt shouty.
-const SIDEBAR_GROUP_HEADER_LABEL_CLASS = "text-xs font-semibold uppercase tracking-wider";
+const SIDEBAR_GROUP_HEADER_LABEL_CLASS =
+  "text-xs font-semibold uppercase tracking-wider";
 
 type NavStatusDot = NonNullable<NavItem["statusDot"]>;
 type NavStatusIcon = NonNullable<NavItem["statusIcon"]>;
@@ -164,7 +145,10 @@ function useActiveNavRowScroll<T extends HTMLElement>(isActive: boolean) {
       const rect = element.getBoundingClientRect();
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
       const isOnScreen =
-        rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.left < viewportWidth;
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.right > 0 &&
+        rect.left < viewportWidth;
       if (!isOnScreen) return;
       const nav = element.closest<HTMLElement>("nav");
       if (!nav) return;
@@ -243,7 +227,10 @@ function NavStatusDot({ statusDot }: { statusDot?: NavStatusDot }) {
       data-nav-status-tone={statusDot.tone}
       aria-label={statusDot.label}
       title={statusDot.label}
-      className={cn("size-1.5 shrink-0 rounded-full opacity-90", pulse && "animate-pulse")}
+      className={cn(
+        "size-1.5 shrink-0 rounded-full opacity-90",
+        pulse && "animate-pulse",
+      )}
       style={{ backgroundColor: statusDotColor(statusDot.tone) }}
     />
   );
@@ -305,16 +292,13 @@ function useNavItemDnd(dnd?: NavItemDnd) {
   const isFileDropTarget = dnd?.canDropFiles?.() ?? false;
   const dndType = dnd?.type;
 
-  const hasExternalFiles = useCallback(
-    (e: React.DragEvent) => hasExternalFilesData(e.dataTransfer),
-    [],
-  );
+  const hasExternalFiles = useCallback((e: React.DragEvent) => hasExternalFilesData(e.dataTransfer), []);
 
   const hasMatchingDragData = useCallback(
     (e: React.DragEvent) =>
       Boolean(
         (isDropTarget && dndType && e.dataTransfer.types.includes(dndType)) ||
-        (isFileDropTarget && hasExternalFiles(e)),
+          (isFileDropTarget && hasExternalFiles(e)),
       ),
     [isDropTarget, dndType, isFileDropTarget, hasExternalFiles],
   );
@@ -410,7 +394,8 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       if (!dnd) return;
       const files = Array.from(e.dataTransfer.files ?? []);
       const hasFiles = isFileDropTarget && files.length > 0 && dnd.onFileDrop;
-      const draggedData = isDropTarget && dndType ? e.dataTransfer.getData(dndType) : "";
+      const draggedData =
+        isDropTarget && dndType ? e.dataTransfer.getData(dndType) : "";
       const hasEntityDrop = Boolean(isDropTarget && draggedData);
       if (!hasFiles && !hasEntityDrop) return;
       e.preventDefault();
@@ -458,7 +443,7 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   const hasMatchingDragData = (e: React.DragEvent) =>
     Boolean(
       (acceptsEntities && e.dataTransfer.types.includes(dnd.type)) ||
-      (acceptsFiles && hasExternalFiles(e)),
+        (acceptsFiles && hasExternalFiles(e)),
     );
 
   return (
@@ -640,17 +625,9 @@ function NavItemActions({ actions }: { actions: NonNullable<NavItem["actions"]> 
                 e.preventDefault();
                 void action.handler();
               }}
-              className={cn(
-                "gap-2",
-                action.destructive && "text-destructive focus:text-destructive",
-              )}
+              className={cn("gap-2", action.destructive && "text-destructive focus:text-destructive")}
             >
-              <action.icon
-                className={cn(
-                  "size-3.5",
-                  action.destructive ? "text-destructive" : "text-muted-foreground",
-                )}
-              />
+              <action.icon className={cn("size-3.5", action.destructive ? "text-destructive" : "text-muted-foreground")} />
               <span>{action.label}</span>
             </DropdownMenuItem>
           </span>
@@ -757,9 +734,7 @@ function NavLeafItem({
             <span
               className={cn(
                 "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
-                isActive
-                  ? ACTIVE_NAV_BADGE_CLASS
-                  : "bg-sidebar-accent text-sidebar-accent-foreground",
+                isActive ? ACTIVE_NAV_BADGE_CLASS : "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
               {item.badge}
@@ -822,9 +797,7 @@ function NavLeafItem({
           isActive && !isDisabled ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-foreground/60",
         )}
       />
-      <span className={cn("truncate", isActive && !isDisabled && ACTIVE_NAV_TEXT_CLASS)}>
-        {item.label}
-      </span>
+      <span className={cn("truncate", isActive && !isDisabled && ACTIVE_NAV_TEXT_CLASS)}>{item.label}</span>
       {item.badge && (
         <span
           className={cn(
@@ -1014,9 +987,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
             <span
               className={cn(
                 "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
-                isActive
-                  ? ACTIVE_NAV_BADGE_CLASS
-                  : "bg-sidebar-accent text-sidebar-accent-foreground",
+                isActive ? ACTIVE_NAV_BADGE_CLASS : "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
               {item.badge}
@@ -1171,9 +1142,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
             <span
               className={cn(
                 "shrink-0 rounded px-1 py-0.5 text-[10px] font-medium",
-                selected
-                  ? ACTIVE_NAV_BADGE_CLASS
-                  : "bg-sidebar-accent text-sidebar-accent-foreground",
+                selected ? ACTIVE_NAV_BADGE_CLASS : "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
               {item.badge}
@@ -1248,8 +1217,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
           isDragOver &&
             !isFileDragOver &&
             "bg-sidebar-selected ring-2 ring-inset ring-sidebar-ring/50",
-          isFileDragOver &&
-            "outline-dashed outline-2 -outline-offset-2 outline-primary bg-primary/10",
+          isFileDragOver && "outline-dashed outline-2 -outline-offset-2 outline-primary bg-primary/10",
           item.dimmed && "opacity-50",
         )
       }
@@ -1394,9 +1362,7 @@ function CollapsedNavShortcut({
       <TooltipIconButton
         tooltip={label}
         side="right"
-        className={cn(
-          isActive && "border border-transparent bg-sidebar-selected text-sidebar-foreground",
-        )}
+        className={cn(isActive && "border border-transparent bg-sidebar-selected text-sidebar-foreground")}
       >
         <Icon className={cn("size-4", isActive && "text-primary")} />
       </TooltipIconButton>
@@ -1468,7 +1434,9 @@ function useGroupCollapsed(label: string, defaultCollapsed: boolean | undefined)
   // that happens to collide with a prototype key (e.g. ``toString``,
   // ``__proto__``, ``constructor``) is not treated as a persisted
   // entry. ``map`` is parsed JSON so its prototype is ``Object``'s.
-  return Object.prototype.hasOwnProperty.call(map, label) ? map[label] : Boolean(defaultCollapsed);
+  return Object.prototype.hasOwnProperty.call(map, label)
+    ? map[label]
+    : Boolean(defaultCollapsed);
 }
 
 function toggleGroupCollapsed(label: string, current: boolean): void {
@@ -1506,8 +1474,8 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   // that does not exist and reads as a bullet. The disclosure cell still
   // renders either way, so flat rows keep the same label column as tree
   // rows and the sidebar stays on one grid.
-  const groupHasBranches = group.items.some((item) =>
-    Boolean(item.children && item.children.length > 0),
+  const groupHasBranches = group.items.some(
+    (item) => Boolean(item.children && item.children.length > 0),
   );
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy
@@ -1578,11 +1546,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                 )}
               </button>
               {group.to ? (
-                <NavLink
-                  to={group.to}
-                  end
-                  className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5"
-                >
+                <NavLink to={group.to} end className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5">
                   {({ isActive }) => (
                     <>
                       <span
@@ -1655,7 +1619,12 @@ function NavGroupSection({ group }: { group: NavGroup }) {
           ) : (
             <div className={cn("flex items-center", SIDEBAR_ITEM_GAP_CLASS)}>
               <span aria-hidden="true" className={SIDEBAR_ITEM_ICON_CLASS} />
-              <span className={cn("text-sidebar-foreground/65", SIDEBAR_GROUP_HEADER_LABEL_CLASS)}>
+              <span
+                className={cn(
+                  "text-sidebar-foreground/65",
+                  SIDEBAR_GROUP_HEADER_LABEL_CLASS,
+                )}
+              >
                 {group.label}
               </span>
             </div>
@@ -1870,7 +1839,10 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         {showNavSkeleton && (
           <div className="space-y-1 px-1 pt-2" aria-hidden="true">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="h-7 mx-1 rounded-lg animate-pulse bg-sidebar-accent/40" />
+              <div
+                key={index}
+                className="h-7 mx-1 rounded-lg animate-pulse bg-sidebar-accent/40"
+              />
             ))}
           </div>
         )}
@@ -1919,10 +1891,7 @@ function MobileDrawer() {
   const closeMobile = useSidebarStore((s) => s.closeMobile);
   const isToolPanelOpen = useToolPanelStore((s) => s.isOpen);
   const width = useSidebarStore((s) => s.width);
-  const drawerWidth = Math.min(
-    width,
-    typeof window !== "undefined" ? window.innerWidth - 24 : width,
-  );
+  const drawerWidth = Math.min(width, typeof window !== "undefined" ? window.innerWidth - 24 : width);
 
   // Close on Escape — but only if ToolPanel is not open (it has its own Escape handler)
   useEffect(() => {

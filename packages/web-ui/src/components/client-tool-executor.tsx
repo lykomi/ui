@@ -160,14 +160,19 @@ const HighlightUI = makeAssistantToolUI<{ entityId?: string }, unknown>({
     <ToolCallCard
       icon={<Highlighter className="size-3.5" />}
       title="Highlight"
-      description={status.type === "running" ? "Highlighting..." : `Highlighted: ${args?.entityId}`}
+      description={
+        status.type === "running" ? "Highlighting..." : `Highlighted: ${args?.entityId}`
+      }
       status={status}
       className="w-full"
     />
   ),
 });
 
-const ConfirmUI = makeAssistantToolUI<{ action?: string; details?: string }, { status?: string }>({
+const ConfirmUI = makeAssistantToolUI<
+  { action?: string; details?: string },
+  { status?: string }
+>({
   toolName: "ui_confirm",
   render: ({ args, result, status }) => {
     if (result?.status === "pending") {

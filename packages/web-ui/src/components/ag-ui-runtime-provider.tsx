@@ -97,7 +97,9 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
 
   const innerKey = `${props.threadId ?? "fresh"}:${resetKey}`;
 
-  return <AGUIRuntimeInner key={innerKey} {...props} resetThread={resetThread} />;
+  return (
+    <AGUIRuntimeInner key={innerKey} {...props} resetThread={resetThread} />
+  );
 }
 
 function AGUIRuntimeInner({

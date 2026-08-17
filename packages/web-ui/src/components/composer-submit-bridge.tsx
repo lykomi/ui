@@ -18,3 +18,4 @@ export function ComposerSubmitBridge() {
 
   return null;
 }
+

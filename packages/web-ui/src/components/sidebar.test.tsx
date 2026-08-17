@@ -50,9 +50,7 @@ function columnOf(element: HTMLElement | null | undefined) {
 
 /** The leading chevron button of a row, or undefined when the row is a leaf. */
 function twisty(container: HTMLElement, label: string) {
-  return (
-    navRow(container, label)?.querySelector<HTMLButtonElement>("[data-nav-twisty]") ?? undefined
-  );
+  return navRow(container, label)?.querySelector<HTMLButtonElement>("[data-nav-twisty]") ?? undefined;
 }
 
 describe("Sidebar active state", () => {
@@ -796,16 +794,17 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
       writable: true,
       value:
         originalMatchMedia ||
-        ((query: string) => ({
-          matches: false,
-          media: query,
-          onchange: null,
-          addListener: () => {},
-          removeListener: () => {},
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          dispatchEvent: () => false,
-        })),
+        ((query: string) =>
+          ({
+            matches: false,
+            media: query,
+            onchange: null,
+            addListener: () => {},
+            removeListener: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            dispatchEvent: () => false,
+          })),
     });
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -813,7 +812,9 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
       root = createRoot(container);
     });
     useSidebarStore.setState({ collapsed: false, width: SIDEBAR_WIDTH });
-    useNavStore.setState({ groups: [], config: [] } as Parameters<typeof useNavStore.setState>[0]);
+    useNavStore.setState({ groups: [], config: [] } as Parameters<
+      typeof useNavStore.setState
+    >[0]);
   });
 
   afterEach(() => {
@@ -836,8 +837,12 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
   });
 
   function indexOfLabel(label: string): number {
-    const headers = Array.from(container.querySelectorAll<HTMLElement>("[data-nav-group-label]"));
-    return headers.findIndex((el) => el.getAttribute("data-nav-group-label") === label);
+    const headers = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-nav-group-label]"),
+    );
+    return headers.findIndex(
+      (el) => el.getAttribute("data-nav-group-label") === label,
+    );
   }
 
   it("sorts groups by NavGroup.priority desc (higher priority first)", async () => {
@@ -926,7 +931,9 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
     expect(childTextAfter).not.toContain("Second chat");
 
     // Persisted to localStorage under the generic package-scoped key.
-    const persisted = JSON.parse(localStorage.getItem("sidebar-nav-collapsed") ?? "{}");
+    const persisted = JSON.parse(
+      localStorage.getItem("sidebar-nav-collapsed") ?? "{}",
+    );
     expect(persisted.Recents).toBe(true);
   });
 
@@ -960,7 +967,9 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
       );
     });
 
-    const header = container.querySelector<HTMLElement>('[data-nav-group-label="Recents"]');
+    const header = container.querySelector<HTMLElement>(
+      '[data-nav-group-label="Recents"]',
+    );
     expect(header).toBeTruthy();
     // The bubbled-up dot is rendered with the same status-dot marker
     // as a child status dot; scope the lookup to the header.

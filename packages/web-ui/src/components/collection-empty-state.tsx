@@ -30,9 +30,7 @@ export function CollectionEmptyState({
         </div>
       ) : null}
       <div className="text-base font-semibold text-foreground">{title}</div>
-      {description ? (
-        <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{description}</p>
-      ) : null}
+      {description ? <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{description}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );

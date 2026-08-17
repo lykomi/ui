@@ -13,12 +13,7 @@ export function CollectionSkeleton({
 }) {
   if (view === "table") {
     return (
-      <div
-        className={cn(
-          "overflow-hidden rounded-[1.5rem] bg-background/65 ring-1 ring-border/35",
-          className,
-        )}
-      >
+      <div className={cn("overflow-hidden rounded-[1.5rem] bg-background/65 ring-1 ring-border/35", className)}>
         <div className="grid grid-cols-4 gap-4 border-b border-border/40 bg-muted/28 px-5 py-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="h-3.5 animate-pulse rounded bg-muted" />
