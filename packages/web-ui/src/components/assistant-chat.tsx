@@ -98,24 +98,37 @@ const UserActionBar: FC = () => (
   </ActionBarPrimitive.Root>
 );
 
-const AssistantMessage: FC = () => (
-  <MessagePrimitive.Root className="w-full mb-2 group">
-    <div className="mx-auto max-w-3xl px-4">
-      <div className="text-foreground leading-relaxed flex flex-col gap-4">
-        <ChatMessageParts />
-      </div>
-      <MessageError />
+const AssistantMessage: FC = () => {
+  // Until the message has parts there is nothing to copy, retry or branch.
+  // `AssistantActionBar` already hides its BUTTONS while running, but the
+  // row reserving their height did not — so an empty assistant message put
+  // a 36px hole between the question and the "Thinking" line, which read as
+  // the indicator floating far away from the message it belongs to.
+  const hasParts = useAuiState(
+    (s) => ((s.message.parts as unknown[] | undefined)?.length ?? 0) > 0,
+  );
 
-      <div className="flex items-center gap-2 mt-1">
-        <div className="flex h-8 w-[4.25rem] items-center">
-          <AssistantActionBar />
+  return (
+    <MessagePrimitive.Root className="w-full mb-2 group">
+      <div className="mx-auto max-w-3xl px-4">
+        <div className="text-foreground leading-relaxed flex flex-col gap-4">
+          <ChatMessageParts />
         </div>
-        <BranchPicker />
-        <MessageTimestamp />
+        <MessageError />
+
+        {hasParts && (
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex h-8 w-[4.25rem] items-center">
+              <AssistantActionBar />
+            </div>
+            <BranchPicker />
+            <MessageTimestamp />
+          </div>
+        )}
       </div>
-    </div>
-  </MessagePrimitive.Root>
-);
+    </MessagePrimitive.Root>
+  );
+};
 
 const AssistantActionBar: FC = () => (
   <ActionBarPrimitive.Root

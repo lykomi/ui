@@ -23,8 +23,13 @@ const groupBy = groupPartByType({ "tool-call": ["group-tool"] });
  * one place to drift from.
  *
  * Adjacent tool calls fold into one {@link ToolRunGroup} — a single summary row
- * over the cards, open by default; see that component for why collapsing is the
- * deliberate act rather than the default.
+ * over the cards, collapsed; see that component for why.
+ *
+ * Reading order is fixed rather than chronological: tool runs, then the
+ * reasoning that explains them, then the answer. A model normally emits its
+ * thinking FIRST, which put the least important row at the top of every
+ * message and pushed the answer down. Flex `order` does the moving, so the
+ * parts stay where the runtime put them in the DOM.
  */
 export function ChatMessageParts() {
   return (
@@ -33,15 +38,19 @@ export function ChatMessageParts() {
         switch (part.type) {
           case "group-tool":
             return (
-              <ToolRunGroup
-                indices={part.indices}
-                isRunning={part.status?.type === "running"}
-              >
+              <ToolRunGroup indices={part.indices} isRunning={part.status?.type === "running"}>
                 {children}
               </ToolRunGroup>
             );
           case "text":
-            return <MarkdownText />;
+            // The answer is ordered LAST so the message ends on its point,
+            // with the reasoning row (order-1) sitting between the tool runs
+            // and it. Tool groups keep the default order-0.
+            return (
+              <div className="order-2">
+                <MarkdownText />
+              </div>
+            );
           case "reasoning":
             return <ReasoningMessagePartComponent text={part.text} />;
           case "tool-call":

@@ -37,17 +37,18 @@ describe("ToolRunGroup", () => {
       );
     });
 
-  const trigger = () => container.querySelector<HTMLElement>("[data-tool-run-trigger]");
+  const trigger = () => container.querySelector<HTMLElement>("[data-disclosure-trigger]");
   const detailsShown = () => container.querySelectorAll('[data-testid="details"]').length > 0;
 
-  it("summarises a succeeded run and shows the details by default", async () => {
+  it("summarises a succeeded run and keeps the details folded away", async () => {
     parts.current = [{ status: { type: "complete" } }, { status: { type: "complete" } }];
     await render([0, 1]);
 
     expect(trigger()?.textContent).toContain("2 tools · done");
-    // Open by default: hiding every step makes the transcript read as
-    // though the agent did nothing.
-    expect(detailsShown()).toBe(true);
+    // Collapsed by default: the summary already says how many calls ran and
+    // whether they worked, and the cards otherwise bury the answer they were
+    // meant to support.
+    expect(detailsShown()).toBe(false);
   });
 
   it("counts a failure reported in the payload, not just in the status", async () => {
@@ -94,19 +95,19 @@ describe("ToolRunGroup", () => {
     expect(trigger()?.textContent).toContain("Using 2 tools");
   });
 
-  it("collapses and re-expands on click", async () => {
+  it("expands and re-collapses on click", async () => {
     parts.current = [{ status: { type: "complete" } }];
     await render([0]);
-    expect(detailsShown()).toBe(true);
-
-    await act(async () => {
-      trigger()?.click();
-    });
     expect(detailsShown()).toBe(false);
 
     await act(async () => {
       trigger()?.click();
     });
     expect(detailsShown()).toBe(true);
+
+    await act(async () => {
+      trigger()?.click();
+    });
+    expect(detailsShown()).toBe(false);
   });
 });
