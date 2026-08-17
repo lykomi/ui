@@ -1,24 +1,27 @@
 import { useState } from "react";
 import { useAuiState } from "@assistant-ui/react";
-import { ChevronRight, Loader2, CheckCircle2, XCircle, Wrench } from "lucide-react";
+import { ChevronRight, Loader2, CheckCircle2, XCircle, AlertCircle, Wrench } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible.tsx";
 import { _detectErrorResult } from "./tool-fallback.tsx";
 import type { ReactNode } from "react";
 
 /**
- * One collapsed row standing in for a run of adjacent tool calls.
+ * One row standing in for a run of adjacent tool calls, with the cards under
+ * it behind a disclosure.
  *
- * A turn that calls eight tools used to render eight bordered cards, pushing
- * the answer off-screen and burying it in machinery most readers do not want.
- * The transcript now shows what happened — "8 tools · done", or the failure
- * count when something broke — and keeps the cards themselves one click away
- * for whoever is debugging.
+ * A turn that calls eight tools used to render eight bordered cards with no
+ * way to fold them away. The run is now one summary line — "8 tools · done" —
+ * over a group the reader can collapse when the machinery is in the way.
  *
- * Collapsed is the default even for a single call, so the transcript reads the
- * same whether a turn used one tool or ten. Failures are the exception: a run
- * containing an error opens itself, because a red summary the reader has to
- * click to understand is worse than no summary at all.
+ * OPEN by default: the detail is what a developer watching an agent work
+ * actually wants, and a transcript that hides every step by default reads as
+ * though nothing happened. Collapsing is the deliberate act, not expanding.
+ *
+ * RED only when the whole run failed. One failure among eight successful
+ * calls is not a red turn — the agent recovered, and painting the summary red
+ * would report a broken run where there was a working one. A partial failure
+ * still says so, in the count, without the alarm.
  */
 export function ToolRunGroup({
   indices,
@@ -30,10 +33,9 @@ export function ToolRunGroup({
   children: ReactNode;
 }) {
   const { total, failed } = useToolRunOutcome(indices);
-  // `useState` initialiser, not an effect: opening on failure is the row's
-  // starting state, not a correction applied after a frame of showing the
-  // wrong one. Once open, the reader's own toggling wins.
-  const [isOpen, setIsOpen] = useState(failed > 0);
+  // Every call in the run failed — the only state that earns the alarm colour.
+  const allFailed = total > 0 && failed === total;
+  const [isOpen, setIsOpen] = useState(true);
 
   const label = isRunning
     ? `Using ${total === 1 ? "1 tool" : `${total} tools`}…`
@@ -50,7 +52,7 @@ export function ToolRunGroup({
           className={cn(
             "flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-xs",
             "text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            failed > 0 && "text-destructive hover:text-destructive",
+            allFailed && "text-destructive hover:text-destructive",
           )}
         >
           <ChevronRight
@@ -58,8 +60,11 @@ export function ToolRunGroup({
           />
           {isRunning ? (
             <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" />
-          ) : failed > 0 ? (
+          ) : allFailed ? (
             <XCircle className="size-3.5 shrink-0 text-destructive" />
+          ) : failed > 0 ? (
+            // Partial: the run produced a result, some of it the hard way.
+            <AlertCircle className="size-3.5 shrink-0 text-muted-foreground" />
           ) : (
             <CheckCircle2 className="size-3.5 shrink-0 text-primary" />
           )}

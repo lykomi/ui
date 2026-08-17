@@ -222,7 +222,10 @@ function PagePanelActions() {
   return (
     <div className="shrink-0 flex items-center justify-end px-4 py-3 border-b border-border">
       <div className="flex items-center gap-0.5">
-        <ContextPins compact flyoutDirection="down" />
+        {/* This bar sits directly above the document or view in the page
+            panel — the one place the user is unambiguously looking at the
+            thing they might want to pin. */}
+        <ContextPins compact flyoutDirection="down" showPinButton />
         <TooltipIconButton tooltip="Close panel" size="icon" onClick={togglePagePanel}>
           <X className="size-4" />
         </TooltipIconButton>

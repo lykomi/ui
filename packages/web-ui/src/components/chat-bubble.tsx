@@ -342,7 +342,10 @@ export function ChatBubble() {
                         <Paperclip className="size-3.5" />
                       </TooltipIconButton>
                     </ComposerPrimitive.AddAttachment>
-                    <ContextPins compact />
+                    {/* The bubble is the chat you use WHILE reading a
+                        document, so it needs the pin at least as much as
+                        the expanded composer does. */}
+                    <ContextPins compact showPinButton />
                   </div>
                   <ComposerPrimitive.Input
                     autoFocus

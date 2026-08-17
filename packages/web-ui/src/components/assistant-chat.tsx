@@ -354,9 +354,14 @@ export interface ChatContentProps {
    */
   starterSuggestions?: string[];
   /**
-   * Show the page pin button in the composer. Defaults to false so generic
-   * starter apps only show attachment, input, and send controls. Apps with
-   * page-aware workflows can opt in explicitly.
+   * Show the page pin button in the composer.
+   *
+   * Defaults to TRUE. It defaulted to false, and nothing in the shell ever
+   * passed it, so the affordance shipped switched off everywhere: on a
+   * document or a view there was no way to put the thing you were looking
+   * at into the conversation. Pinning the current page is the core gesture
+   * of a page-aware chat, not an opt-in extra — an app that genuinely wants
+   * a bare composer opts OUT.
    */
   showPinButton?: boolean;
 }
@@ -367,7 +372,7 @@ export interface ChatContentProps {
  */
 export function ChatContent({
   starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
-  showPinButton = false,
+  showPinButton = true,
 }: ChatContentProps = {}) {
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const collapseChat = useChatBubbleStore((s) => s.collapse);

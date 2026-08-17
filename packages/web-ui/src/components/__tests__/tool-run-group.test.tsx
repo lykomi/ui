@@ -40,12 +40,14 @@ describe("ToolRunGroup", () => {
   const trigger = () => container.querySelector<HTMLElement>("[data-tool-run-trigger]");
   const detailsShown = () => container.querySelectorAll('[data-testid="details"]').length > 0;
 
-  it("summarises a succeeded run and keeps the details collapsed", async () => {
+  it("summarises a succeeded run and shows the details by default", async () => {
     parts.current = [{ status: { type: "complete" } }, { status: { type: "complete" } }];
     await render([0, 1]);
 
     expect(trigger()?.textContent).toContain("2 tools · done");
-    expect(detailsShown()).toBe(false);
+    // Open by default: hiding every step makes the transcript read as
+    // though the agent did nothing.
+    expect(detailsShown()).toBe(true);
   });
 
   it("counts a failure reported in the payload, not just in the status", async () => {
@@ -67,11 +69,22 @@ describe("ToolRunGroup", () => {
     expect(trigger()?.textContent).toContain("1 tool · 1 failed");
   });
 
-  it("opens itself when the run contains a failure", async () => {
-    parts.current = [{ status: { type: "complete" }, result: { isError: true } }];
-    await render([0]);
+  it("reserves the alarm colour for a run where EVERY call failed", async () => {
+    // One failure among successes is a run that recovered, not a broken
+    // turn — painting it red reports a failure that did not happen.
+    parts.current = [
+      { status: { type: "complete" } },
+      { status: { type: "complete" }, result: "Error: nope" },
+    ];
+    await render([0, 1]);
+    expect(trigger()?.className).not.toContain("text-destructive");
 
-    expect(detailsShown()).toBe(true);
+    parts.current = [
+      { status: { type: "complete" }, result: "Error: nope" },
+      { status: { type: "incomplete", reason: "error" } },
+    ];
+    await render([0, 1]);
+    expect(trigger()?.className).toContain("text-destructive");
   });
 
   it("reports progress while the run is still going", async () => {
@@ -81,19 +94,19 @@ describe("ToolRunGroup", () => {
     expect(trigger()?.textContent).toContain("Using 2 tools");
   });
 
-  it("expands and collapses on click", async () => {
+  it("collapses and re-expands on click", async () => {
     parts.current = [{ status: { type: "complete" } }];
     await render([0]);
-    expect(detailsShown()).toBe(false);
-
-    await act(async () => {
-      trigger()?.click();
-    });
     expect(detailsShown()).toBe(true);
 
     await act(async () => {
       trigger()?.click();
     });
     expect(detailsShown()).toBe(false);
+
+    await act(async () => {
+      trigger()?.click();
+    });
+    expect(detailsShown()).toBe(true);
   });
 });
