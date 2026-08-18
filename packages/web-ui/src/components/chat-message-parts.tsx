@@ -2,13 +2,19 @@ import { MessagePrimitive, groupPartByType } from "@assistant-ui/react";
 import { MarkdownText } from "./markdown-text.tsx";
 import { ReasoningMessagePartComponent } from "./reasoning-part.tsx";
 import { ToolFallback } from "./tool-fallback.tsx";
-import { ToolRunGroup } from "./tool-run-group.tsx";
+import { TurnActivity } from "./turn-activity.tsx";
 
 /**
- * Coalesce adjacent tool calls into one `group-tool` node. Everything else
- * stays ungrouped and renders as its own leaf.
+ * Everything a turn did before answering nests under ONE `group-activity`
+ * node; inside it, adjacent tool calls still coalesce into `group-tool`.
+ *
+ * Text is deliberately absent from this map: the answer stays ungrouped, so
+ * it can never end up inside the fold.
  */
-const groupBy = groupPartByType({ "tool-call": ["group-tool"] });
+const groupBy = groupPartByType({
+  "tool-call": ["group-activity", "group-tool"],
+  reasoning: ["group-activity"],
+});
 
 /**
  * The parts of an assistant message — ONE renderer, used by every chat
@@ -22,37 +28,45 @@ const groupBy = groupPartByType({ "tool-call": ["group-tool"] });
  * hand-rolling a parts config is what keeps them honest — there is now only
  * one place to drift from.
  *
- * Adjacent tool calls fold into one {@link ToolRunGroup} — a single summary row
- * over the cards, collapsed; see that component for why.
+ * Everything the turn did folds into one {@link TurnActivity} — a single
+ * summary row over the cards and the thinking, collapsed; see that component
+ * for why.
  *
- * Reading order is fixed rather than chronological: tool runs, then the
- * reasoning that explains them, then the answer. A model normally emits its
- * thinking FIRST, which put the least important row at the top of every
- * message and pushed the answer down. Flex `order` does the moving, so the
- * parts stay where the runtime put them in the DOM.
+ * The work folds into ONE row per turn — see {@link TurnActivity} — with the
+ * answer outside it. Reading order at the message level is still fixed
+ * rather than chronological (machinery, then the answer, so a message ends
+ * on its point); INSIDE the fold order is chronological, because reasoning
+ * explains the calls that follow it.
  */
 export function ChatMessageParts() {
   return (
     <MessagePrimitive.GroupedParts groupBy={groupBy} indicator="never">
       {({ part, children }) => {
         switch (part.type) {
-          case "group-tool":
+          case "group-activity":
             return (
-              <ToolRunGroup indices={part.indices} isRunning={part.status?.type === "running"}>
+              <TurnActivity indices={part.indices} isRunning={part.status?.type === "running"}>
                 {children}
-              </ToolRunGroup>
+              </TurnActivity>
             );
+          case "group-tool":
+            // Inside the activity fold, so NOT another collapsed row —
+            // opening one disclosure only to meet a second is a maze. The
+            // cards render directly; the count already showed on the row
+            // above.
+            return <div className="flex flex-col gap-2">{children}</div>;
           case "text":
             // The answer is ordered LAST so the message ends on its point,
-            // with the reasoning row (order-1) sitting between the tool runs
-            // and it. Tool groups keep the default order-0.
+            // below the single activity row (order-1).
             return (
               <div className="order-2">
                 <MarkdownText />
               </div>
             );
           case "reasoning":
-            return <ReasoningMessagePartComponent text={part.text} />;
+            // Same reason: plain inside the fold, in the chronological slot
+            // where the model produced it.
+            return <ReasoningMessagePartComponent text={part.text} nested />;
           case "tool-call":
             return part.toolUI ?? <ToolFallback {...part} />;
           default:
