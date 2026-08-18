@@ -36,8 +36,12 @@ const { ReasoningEffortPicker } = await import("../reasoning-effort-picker.tsx")
 describe("ReasoningEffortPicker trigger", () => {
   let container: HTMLDivElement;
   let root: Root;
+  // Saved and restored: this flag is global, and leaving it set changes
+  // React's act warnings for every file that runs after this one.
+  let priorActEnvironment: unknown;
 
   beforeEach(() => {
+    priorActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -50,6 +54,11 @@ describe("ReasoningEffortPicker trigger", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+    if (priorActEnvironment === undefined) {
+      delete (globalThis as { IS_REACT_ACT_ENVIRONMENT?: unknown }).IS_REACT_ACT_ENVIRONMENT;
+    } else {
+      globalThis.IS_REACT_ACT_ENVIRONMENT = priorActEnvironment;
+    }
   });
 
   const render = () =>
