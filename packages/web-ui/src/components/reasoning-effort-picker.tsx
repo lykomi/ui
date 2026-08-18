@@ -57,10 +57,17 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
   // The trigger is the only thing visible without opening the menu, so it
   // carries the resolved level too — "Auto · Medium" rather than a bare
   // "Auto" that leaves the active level a mystery.
-  const triggerLabel =
-    effort === "default" && resolved
-      ? `${REASONING_EFFORT_LABELS.default} · ${REASONING_EFFORT_LABELS[resolved]}`
-      : REASONING_EFFORT_LABELS[effort];
+  //
+  // Split into MODE and LEVEL because a narrow composer cannot afford
+  // both. The level is the half worth keeping: it is what changes cost
+  // and latency, and "which mode" is nearly always the default. See the
+  // render below.
+  const showsMode = effort === "default" && resolved !== null;
+  const modeLabel = REASONING_EFFORT_LABELS.default;
+  const levelLabel = showsMode
+    ? REASONING_EFFORT_LABELS[resolved]
+    : REASONING_EFFORT_LABELS[effort];
+  const triggerLabel = showsMode ? `${modeLabel} · ${levelLabel}` : levelLabel;
 
   return (
     <DropdownMenu>
@@ -75,8 +82,25 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
             className,
           )}
           aria-label={`Intelligence: ${triggerLabel}`}
+          title={`Intelligence: ${triggerLabel}`}
         >
-          <span className="whitespace-nowrap">{triggerLabel}</span>
+          {/* In a narrow composer the mode drops and the level stays.
+              "Auto · High" costs real width in the chat bubble, where it
+              competes with the message input; "High" costs almost none
+              and still answers the only question the trigger exists to
+              answer. The full text stays in aria-label and title.
+
+              A CONTAINER query, not a breakpoint: the bubble is a narrow
+              panel inside a wide window, so viewport width says nothing
+              about the space this button actually has. Polarity is
+              deliberate — visible by default, hidden only when a
+              container proves itself narrow, so a consumer that declares
+              no container keeps the full label rather than silently
+              losing it. */}
+          <span className="whitespace-nowrap">
+            {showsMode && <span className="@max-[24rem]:hidden">{modeLabel} · </span>}
+            {levelLabel}
+          </span>
           <ChevronDown className="size-3.5 shrink-0" />
         </button>
       </DropdownMenuTrigger>

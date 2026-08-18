@@ -297,7 +297,10 @@ export function ChatBubble() {
                 </ThreadPrimitive.Empty>
 
                 <ThreadPrimitive.If empty={false}>
-                  <div className="px-4 pt-4">
+                  {/* pb: the last thing in the scroller is often the running
+                      status ("Thinking"), and with no bottom padding it sat
+                      directly on the composer's top border. */}
+                  <div className="px-4 pt-4 pb-3">
                     <ThreadPrimitive.Messages
                       components={{
                         UserMessage: BubbleUserMessage,
@@ -321,6 +324,10 @@ export function ChatBubble() {
               <div className="px-3 py-3">
                 <ComposerPrimitive.Root
                 className={cn(
+                  // Query container for the controls inside: the bubble is
+                  // a narrow panel in a wide window, so they have to size
+                  // against THIS box, not the viewport.
+                  "@container",
                   "flex flex-col gap-1",
                   "rounded-2xl border border-input",
                   "bg-background shadow-sm",

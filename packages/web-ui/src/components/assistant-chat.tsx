@@ -479,6 +479,10 @@ export function ChatContent({
           <div className="mx-auto max-w-3xl px-4 py-4">
             <ComposerPrimitive.Root
               className={cn(
+                // Query container for the controls inside, so they size
+                // against the composer rather than the viewport. This one
+                // is wide, so the effort picker keeps its full label.
+                "@container",
                 "flex flex-col gap-2",
                 "rounded-3xl border border-input",
                 "bg-background shadow-sm",
