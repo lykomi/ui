@@ -1,5 +1,18 @@
 # @iloveagents/foundry-web-ui
 
+## 0.14.2
+
+### Patch Changes
+
+- c12e3bc: Composer: the reasoning-effort picker stops crowding the message input in
+  narrow composers. The trigger keeps the level ("High") and drops the mode
+  prefix ("Auto · ") when its container is narrow, via a container query —
+  the full label stays in `aria-label` and `title`. Also gives the running
+  status ("Thinking") bottom padding in the chat bubble, where it sat on the
+  composer's border.
+  - @iloveagents/foundry-agent@0.14.2
+  - @iloveagents/foundry-web-primitives@0.14.2
+
 ## 0.14.1
 
 ### Patch Changes
