@@ -10,9 +10,10 @@ import { MessageDisclosure } from "./message-disclosure.tsx";
  * a curious reader, not the response. It stays visible after the run so a
  * reader can check *why* an answer came out the way it did.
  *
- * The row shape comes from `MessageDisclosure`, shared with the tool run
- * group — these two sit next to each other in a message and used to be built
- * separately, which is how they ended up with their carets on opposite sides.
+ * The row shape comes from `MessageDisclosure`, shared with the turn's
+ * activity row — these sit next to each other in a message and used to be
+ * built separately, which is how they ended up with their carets on opposite
+ * sides.
  */
 export function ReasoningPart({ text, nested = false }: { text: string; nested?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,10 +41,6 @@ export function ReasoningPart({ text, nested = false }: { text: string; nested?:
       label="Reasoning"
       open={isOpen}
       onOpenChange={setIsOpen}
-      // Under the work, above the conclusion: the model usually emits its
-      // thinking first, but a reader wants "what it did", then "why", and
-      // the answer last — the message should end on its point.
-      placement="after-tools"
       ariaLabel={isOpen ? "Hide reasoning" : "Show reasoning"}
     >
       <div className="whitespace-pre-wrap text-xs text-muted-foreground">{text}</div>

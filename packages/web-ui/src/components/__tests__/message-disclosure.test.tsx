@@ -98,27 +98,19 @@ describe("message foldaways share one row shape", () => {
     }
   });
 
-  it("puts a reordered row under the in-flow ones and above the answer", async () => {
-    // A standalone reasoning row arrives above the work in the DOM, because
-    // the model emits its thinking FIRST. A reader wants "what it did" before
-    // "why", so the row moves visually — and, because the compaction is a
-    // DOM-sibling rule, it must NOT carry the attribute that rule chains on.
+  it("leaves every row where the model put it", async () => {
+    // Rows used to be moved with flex `order` so a reasoning row would not sit
+    // above a short answer. In a multi-step turn that hoist stripped the
+    // model's prose out from between the work and stacked the bare rows into
+    // a ladder — the exact thing the activity row exists to prevent. Nothing
+    // reorders now, and no row may quietly reintroduce it.
     parts.current = [{ status: { type: "complete" } }];
     await renderBoth();
 
-    const reasoningRoot = container.querySelector("[data-message-disclosure-reordered]");
-    expect(reasoningRoot).toBeTruthy();
-    // order-1 sits it after the in-flow rows (order-0) and before the answer
-    // text (order-2) — not after the answer, which would end the message on
-    // its machinery instead of its point.
-    expect(reasoningRoot?.className).toContain("order-1");
-    expect(reasoningRoot?.className).not.toContain("order-last");
-
-    // The activity row stays in flow and keeps the attribute the gap rule
-    // uses, so two turns' worth of machinery compact together.
-    const activityRoot = container.querySelector("[data-message-disclosure]");
-    expect(activityRoot).toBeTruthy();
-    expect(activityRoot?.className).not.toContain("order-1");
+    expect(container.querySelector("[data-message-disclosure-reordered]")).toBeNull();
+    for (const row of container.querySelectorAll("[data-message-disclosure]")) {
+      expect(row.className).not.toContain("order-");
+    }
   });
 
   it("starts both rows folded, so the answer is what the reader sees", async () => {

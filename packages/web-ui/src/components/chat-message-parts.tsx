@@ -5,11 +5,14 @@ import { ToolFallback } from "./tool-fallback.tsx";
 import { TurnActivity } from "./turn-activity.tsx";
 
 /**
- * Everything a turn did before answering nests under ONE `group-activity`
- * node; inside it, adjacent tool calls still coalesce into `group-tool`.
+ * A turn's machinery nests under a `group-activity` node; inside it, adjacent
+ * tool calls still coalesce into `group-tool`.
  *
- * Text is deliberately absent from this map: the answer stays ungrouped, so
- * it can never end up inside the fold.
+ * Text is deliberately absent from this map. The model's prose stays
+ * ungrouped, so it can never end up inside the fold — and because grouping
+ * coalesces ADJACENT parts, each stretch of prose also ends one activity node
+ * and starts the next. That is the intent: a multi-step turn reads as work,
+ * what it learned, work, what it learned, answer.
  */
 const groupBy = groupPartByType({
   "tool-call": ["group-activity", "group-tool"],
@@ -28,15 +31,19 @@ const groupBy = groupPartByType({
  * hand-rolling a parts config is what keeps them honest — there is now only
  * one place to drift from.
  *
- * Everything the turn did folds into one {@link TurnActivity} — a single
+ * Each stretch of machinery folds into one {@link TurnActivity} — a single
  * summary row over the cards and the thinking, collapsed; see that component
  * for why.
  *
- * The work folds into ONE row per turn — see {@link TurnActivity} — with the
- * answer outside it. Reading order at the message level is still fixed
- * rather than chronological (machinery, then the answer, so a message ends
- * on its point); INSIDE the fold order is chronological, because reasoning
- * explains the calls that follow it.
+ * Reading order is CHRONOLOGICAL, throughout. It briefly was not: text
+ * carried a flex `order` that floated every prose part to the bottom of the
+ * message, to keep a reasoning row from sitting above a one-line answer.
+ * With the machinery folded into a quiet 20px row that argument is spent,
+ * and the hoist actively hurt — in a multi-step turn it stripped the
+ * narration out from between the work and stacked the bare rows into the
+ * ladder this component exists to prevent. It also glued consecutive prose
+ * parts into one run-on paragraph. Parts now render where the model put
+ * them.
  */
 export function ChatMessageParts() {
   return (
@@ -56,16 +63,9 @@ export function ChatMessageParts() {
             // above.
             return <div className="flex flex-col gap-2">{children}</div>;
           case "text":
-            // The answer is ordered LAST so the message ends on its point,
-            // below the single activity row (order-1).
-            return (
-              <div className="order-2">
-                <MarkdownText />
-              </div>
-            );
+            return <MarkdownText />;
           case "reasoning":
-            // Same reason: plain inside the fold, in the chronological slot
-            // where the model produced it.
+            // Plain inside the fold, in the slot the model produced it in.
             return <ReasoningMessagePartComponent text={part.text} nested />;
           case "tool-call":
             return part.toolUI ?? <ToolFallback {...part} />;

@@ -14,17 +14,19 @@ import type { ReactNode } from "react";
  * reasonable; stacked, they were a ladder the reader had to climb past to
  * reach the point.
  *
- * So the machinery folds once, at the turn: "Worked · 20 tools · reasoning".
- * The ANSWER never goes inside — it is what the reader came for and it stays
- * in the open, below.
+ * So the machinery folds: "Worked · 20 tools · reasoning". The model's PROSE
+ * never goes inside — it is what the reader came for and it stays in the
+ * open, which also means each stretch of it ends one of these rows and
+ * starts the next. A turn that narrates its steps gets one row per step
+ * rather than one per tool run; a turn that just works and answers gets
+ * exactly one.
  *
- * Order inside the fold is CHRONOLOGICAL, deliberately. Reasoning explains
+ * Order is CHRONOLOGICAL, inside the fold and outside it. Reasoning explains
  * why the next call happened ("I need the termination clause from both
- * agreements" → three searches); reordering it away from the calls it
- * explains turns a narrative into a pile. Outside the fold the old ordering
- * argument still holds — machinery first, answer last — and that is the
- * ANSWER's doing: the text part is ordered last, so this row needs no
- * reordering of its own.
+ * agreements" → three searches); moving it away from the calls it explains
+ * turns a narrative into a pile. Outside, a multi-step turn reads as work,
+ * what it learned, work, what it learned, answer — the model's prose ends
+ * one of these rows and starts the next.
  *
  * Collapsed by default, for the reason the per-run fold this replaces had
  * already found: in a real transcript the machinery dominates the answer it
@@ -65,12 +67,6 @@ export function TurnActivity({
         )
       }
       label={summarise({ tools, failed, hasReasoning, isRunning })}
-      // Deliberately the DEFAULT placement, not `after-tools`. That placement
-      // exists to move a reasoning row below the tool runs it explains — a
-      // reordering that is now internal to this fold, so claiming it here
-      // would only opt the row out of the rule that compacts adjacent rows.
-      // The answer still lands last because the text part is ordered, not
-      // because this row is.
       ariaLabel={isOpen ? "Hide what this turn did" : "Show what this turn did"}
       data-turn-activity
     >
