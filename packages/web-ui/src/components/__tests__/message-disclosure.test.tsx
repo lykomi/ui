@@ -75,12 +75,14 @@ describe("message foldaways share one row shape", () => {
       expect(activity.className).toContain(cls);
     }
 
-    // The caret is the FIRST child of both rows — never trailing on one and
-    // leading on the other.
+    // The caret is the LAST child of both rows — never trailing on one and
+    // leading on the other, which is how these two drifted apart originally.
     for (const row of [reasoning, activity]) {
-      const first = row.firstElementChild;
-      expect(first?.tagName.toLowerCase()).toBe("svg");
-      expect(first?.getAttribute("class")).toContain("size-3.5");
+      const last = row.lastElementChild;
+      expect(last?.tagName.toLowerCase()).toBe("svg");
+      expect(last?.getAttribute("class")).toContain("size-3.5");
+      // ...and the row still LEADS with its meaning-carrying icon.
+      expect(row.firstElementChild?.tagName.toLowerCase()).toBe("span");
     }
   });
 
@@ -128,12 +130,29 @@ describe("message foldaways share one row shape", () => {
     parts.current = [{ status: { type: "complete" } }];
     await renderBoth();
 
-    const caret = () => triggers()[1].firstElementChild?.getAttribute("class") ?? "";
-    expect(caret()).not.toContain("rotate-90");
+    // A TRAILING caret rests pointing down ("opens downward") and flips to
+    // point up when open — the opposite rest position from a leading one,
+    // which points right and turns 90° to point at the content. Moving the
+    // caret without changing the rotation would leave it pointing sideways
+    // at nothing.
+    const caret = () => triggers()[1].lastElementChild?.getAttribute("class") ?? "";
+    expect(caret()).not.toContain("rotate-180");
 
     await act(async () => {
       triggers()[1].click();
     });
-    expect(caret()).toContain("rotate-90");
+    expect(caret()).toContain("rotate-180");
+  });
+
+  it("lines the row up with the message text instead of 6px inside it", async () => {
+    // The row is a pill with its own padding; without cancelling that
+    // padding the icon sits indented from the prose above and below it.
+    parts.current = [{ status: { type: "complete" } }];
+    await renderBoth();
+
+    for (const row of triggers()) {
+      expect(row.className).toContain("-ml-1.5");
+      expect(row.className).toContain("px-1.5");
+    }
   });
 });

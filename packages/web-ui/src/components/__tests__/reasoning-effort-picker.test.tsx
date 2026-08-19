@@ -66,6 +66,9 @@ describe("ReasoningEffortPicker trigger", () => {
       root.render(<ReasoningEffortPicker />);
     });
 
+  /** The bar gauge: the only aria-hidden group of bars in the trigger. */
+  const gauge = (trigger: Element) => trigger.querySelector('[aria-hidden="true"].items-end');
+
   it("shows mode and level when there is room", () => {
     state.resolved = "high";
     render();
@@ -75,16 +78,49 @@ describe("ReasoningEffortPicker trigger", () => {
     expect(trigger?.textContent).toContain("High");
   });
 
-  it("drops only the MODE when the container is narrow, never the level", () => {
+  it("drops the WORDS when the container is narrow and lets the gauge answer", () => {
     state.resolved = "high";
     render();
 
     const trigger = container.querySelector("[data-reasoning-effort-trigger]")!;
-    // The mode is the half that hides; the level has no hiding class, so a
-    // narrow composer still answers "what am I running?".
+    // Dropping only the mode was not enough — "Medium" still cost more width
+    // than a chat bubble's composer could spare. The whole label hides now.
     const hidden = trigger.querySelector(".\\@max-\\[24rem\\]\\:hidden");
     expect(hidden?.textContent).toContain("Auto");
-    expect(hidden?.textContent).not.toContain("High");
+    expect(hidden?.textContent).toContain("High");
+
+    // ...and the gauge is NOT inside the hidden span, so the level survives.
+    expect(gauge(trigger)).not.toBeNull();
+    expect(hidden!.contains(gauge(trigger)!)).toBe(false);
+  });
+
+  it("lights one bar per level, on a track that shows the ceiling", () => {
+    for (const [level, lit] of [
+      ["low", 1],
+      ["medium", 2],
+      ["high", 3],
+      ["xhigh", 4],
+    ] as const) {
+      state.effort = level;
+      render();
+
+      const bars = [
+        ...gauge(container.querySelector("[data-reasoning-effort-trigger]")!)!.children,
+      ];
+      expect(bars.length).toBe(4);
+      expect(bars.filter((b) => b.className.includes("opacity-100")).length).toBe(lit);
+      // The unlit bars stay drawn: "2 of 4" is the reading, not "two marks".
+      expect(bars.filter((b) => b.className.includes("opacity-25")).length).toBe(4 - lit);
+    }
+  });
+
+  it("draws an empty track rather than guessing a level it was not told", () => {
+    state.effort = "default";
+    state.resolved = null;
+    render();
+
+    const bars = [...gauge(container.querySelector("[data-reasoning-effort-trigger]")!)!.children];
+    expect(bars.filter((b) => b.className.includes("opacity-100")).length).toBe(0);
   });
 
   it("keeps the full label reachable when the mode is hidden", () => {
@@ -97,13 +133,13 @@ describe("ReasoningEffortPicker trigger", () => {
     expect(trigger.getAttribute("title")).toBe("Intelligence: Auto · High");
   });
 
-  it("renders a pinned level with nothing to hide", () => {
+  it("renders a pinned level without a mode to prefix it", () => {
     state.effort = "low";
     render();
 
     const trigger = container.querySelector("[data-reasoning-effort-trigger]")!;
     expect(trigger.textContent).toContain("Low");
-    expect(trigger.querySelector(".\\@max-\\[24rem\\]\\:hidden")).toBeNull();
+    expect(trigger.textContent).not.toContain("Auto");
     expect(trigger.getAttribute("aria-label")).toBe("Intelligence: Low");
   });
 

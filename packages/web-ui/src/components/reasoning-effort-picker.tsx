@@ -24,6 +24,57 @@ const OPTIONS: { value: ReasoningEffort; hint: string }[] = [
   { value: "xhigh", hint: "Slowest, for the hardest questions" },
 ];
 
+/** Bar count per level, lowest to highest. */
+const EFFORT_RANK: Record<ResolvedReasoningEffort, number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  xhigh: 4,
+};
+
+/**
+ * The level as four rising bars.
+ *
+ * The trigger's job is to answer "how hard is it thinking?" at a glance, and
+ * in a narrow composer — the chat bubble, a side panel — the words cost more
+ * width than that question is worth. Bars cost ~14px and answer it without
+ * reading. So the gauge is always shown and the label is what drops.
+ *
+ * `null` means the app has not told us what `Auto` resolves to. The gauge
+ * then shows an empty track rather than a guess, for the same reason the
+ * `Auto` hint refuses to name a level it does not know: a trigger that
+ * confidently shows the wrong level is worse than one that shows none.
+ *
+ * Deliberately shows LEVEL only, never whether the level is pinned or
+ * inherited from `Auto`. The level is what changes cost and latency; the mode
+ * is the half this trigger already drops first when space runs short.
+ *
+ * `bg-current` throughout, so the bars inherit the button's own muted →
+ * foreground hover transition instead of needing their own colour states.
+ */
+function EffortGauge({ level }: { level: ResolvedReasoningEffort | null }) {
+  const rank = level ? EFFORT_RANK[level] : 0;
+  return (
+    <span aria-hidden="true" className="flex h-3.5 shrink-0 items-end gap-px">
+      {([1, 2, 3, 4] as const).map((step) => (
+        <span
+          key={step}
+          className={cn(
+            "w-0.5 rounded-full bg-current transition-opacity",
+            step === 1 && "h-1",
+            step === 2 && "h-1.5",
+            step === 3 && "h-2",
+            step === 4 && "h-2.5",
+            // The unlit bars stay visible: the gauge has to read as "2 of 4",
+            // not as a bare pair of marks whose ceiling you cannot see.
+            step <= rank ? "opacity-100" : "opacity-25",
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
 /**
  * What `Auto` is currently doing, in words.
  *
@@ -68,6 +119,9 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
     ? REASONING_EFFORT_LABELS[resolved]
     : REASONING_EFFORT_LABELS[effort];
   const triggerLabel = showsMode ? `${modeLabel} · ${levelLabel}` : levelLabel;
+  // `default` with nothing resolved is the one case with no level to draw —
+  // the gauge shows an empty track rather than inventing one.
+  const gaugeLevel: ResolvedReasoningEffort | null = effort === "default" ? resolved : effort;
 
   return (
     <DropdownMenu>
@@ -84,11 +138,13 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
           aria-label={`Intelligence: ${triggerLabel}`}
           title={`Intelligence: ${triggerLabel}`}
         >
-          {/* In a narrow composer the mode drops and the level stays.
-              "Auto · High" costs real width in the chat bubble, where it
-              competes with the message input; "High" costs almost none
-              and still answers the only question the trigger exists to
-              answer. The full text stays in aria-label and title.
+          <EffortGauge level={gaugeLevel} />
+          {/* In a narrow composer the WORDS drop and the gauge carries the
+              level on its own. Dropping only the mode was not enough —
+              "Medium" still cost more width than the message input could
+              spare in a chat bubble, which is where this sits next to Send.
+              The bars answer the same question in ~14px, and the full text
+              stays in aria-label and title.
 
               A CONTAINER query, not a breakpoint: the bubble is a narrow
               panel inside a wide window, so viewport width says nothing
@@ -97,8 +153,8 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
               container proves itself narrow, so a consumer that declares
               no container keeps the full label rather than silently
               losing it. */}
-          <span className="whitespace-nowrap">
-            {showsMode && <span className="@max-[24rem]:hidden">{modeLabel} · </span>}
+          <span className="whitespace-nowrap @max-[24rem]:hidden">
+            {showsMode && `${modeLabel} · `}
             {levelLabel}
           </span>
           <ChevronDown className="size-3.5 shrink-0" />
