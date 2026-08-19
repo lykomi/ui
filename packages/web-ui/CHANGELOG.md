@@ -1,5 +1,100 @@
 # @iloveagents/foundry-web-ui
 
+## 0.15.0
+
+### Minor Changes
+
+- 2737557: Fold everything an assistant turn did into ONE activity row.
+
+  A turn that searched a corpus eleven times rendered eleven "2 tools · done"
+  rows — one per adjacent run of tool calls — plus a reasoning row of its own,
+  with the answer somewhere underneath. Each row was individually reasonable;
+  stacked, they were a ladder the reader had to climb past to reach the point.
+
+  The machinery now folds once, at the turn: `Worked · 20 tools · reasoning`.
+  Inside the fold, order is chronological — reasoning explains the calls that
+  follow it, so it renders in place, captioned rather than behind a second
+  disclosure. The answer never goes inside the fold and still comes last.
+
+  `ToolRunGroup` (internal, never exported) is superseded by `TurnActivity`.
+
+### Patch Changes
+
+- 2737557: Two fixes to the running state of a chat turn.
+
+  The activity row said "Thinking…" while the status indicator two lines below
+  said "Thinking" — the same word twice on one screen, reading as a stutter
+  rather than as two facts. The row now names its CONTENTS ("Reasoning") and
+  leaves the run phase to the indicator, which knows things the row cannot:
+  which tool is in flight, and whether the stream has stalled. Ellipses dropped
+  with it; the row's spinner already carries "still going".
+
+  The message column had `pt-8` and no bottom padding, so whatever came last in
+  the thread sat flush against the composer. Most visible on the running status
+  line, which read as part of the input rather than part of the conversation —
+  but the last message had the same problem, quietly.
+
+- 2737557: Stop hoisting the model's prose to the bottom of an assistant message.
+
+  Text carried a flex `order-2` so every prose part floated below the
+  machinery — added when the only machinery was a reasoning row, to keep it
+  from sitting above a one-line answer.
+
+  Multi-step agent turns emit prose BETWEEN steps, and the hoist stripped it
+  out from between the work and stacked the bare summary rows into a column:
+  the exact ladder the activity row removes. It also glued consecutive prose
+  parts into one run-on paragraph.
+
+  Nothing reorders now. Parts render where the model put them, so a multi-step
+  turn reads as work, what it learned, work, what it learned, answer. The
+  `placement`/`after-tools` option on `MessageDisclosure` is removed with it.
+
+- 2737557: Four fixes from review of the turn-activity work.
+
+  Markdown parts get a wrapper element again. `MarkdownText` renders
+  `<ReactMarkdown>` directly, which emits its top-level blocks into a fragment —
+  without an element to hold them, every paragraph and list became a direct
+  child of the message's `gap-4` flex container and picked up 16px of
+  message-part spacing on top of its own margins.
+
+  The activity row's summary is now its accessible name. An `aria-label`
+  replaces the name a button derives from its contents, so a generic one
+  announced the row while hiding the call count, the failure count, and whether
+  there was reasoning to read.
+
+  The all-failed alarm waits for the turn to settle. A run whose only calls so
+  far had failed went red mid-turn, while the model was still working toward one
+  that succeeds.
+
+  The effort gauge only replaces the words when it has a level to show. With no
+  resolved level a narrow composer showed four faint bars and a caret, with the
+  explaining tooltip out of reach on touch.
+
+- 2737557: Message foldaway rows and the reasoning-effort trigger, tightened.
+
+  Rows now line up with the message text instead of sitting 6px inside it — the
+  pill's own padding was shifting its contents right of the prose above and
+  below it. A negative margin cancels it, so the hover pill keeps its padding
+  and the icon still starts on the text's left edge. The pill also hugs its
+  label now rather than spanning the whole message width.
+
+  The disclosure caret moved from the head of the row to the tail. Leading it
+  put two glyphs in front of every row and pushed the status icon — the one
+  that carries meaning — into second place. A trailing caret rests pointing
+  DOWN and flips up when open, the opposite of the leading convention, so the
+  glyph changed with the position.
+
+  The effort trigger shows the level as four rising bars when — and only when —
+  there is no room for the words. They are the same fact, so exactly one of them
+  renders: wide, the words name the level outright and need no decoding; narrow,
+  they drop entirely and the bars carry it in 45px instead of ~75px. Dropping
+  just the mode was not enough, since "Medium" still cost more width than a chat
+  bubble's input could spare next to Send. The gauge shows an empty track when
+  the app has not said what `Auto` resolves to, for the same reason the menu
+  hint refuses to name a level it does not know.
+  - @iloveagents/foundry-agent@0.15.0
+  - @iloveagents/foundry-web-primitives@0.15.0
+
 ## 0.14.2
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @iloveagents/foundry-web-shell
 
+## 0.15.0
+
+### Patch Changes
+
+- Updated dependencies [2737557]
+- Updated dependencies [2737557]
+- Updated dependencies [2737557]
+- Updated dependencies [2737557]
+- Updated dependencies [2737557]
+  - @iloveagents/foundry-web-ui@0.15.0
+  - @iloveagents/foundry-agent@0.15.0
+  - @iloveagents/foundry-web-primitives@0.15.0
+
 ## 0.14.2
 
 ### Patch Changes
