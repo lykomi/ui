@@ -138,21 +138,24 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
           aria-label={`Intelligence: ${triggerLabel}`}
           title={`Intelligence: ${triggerLabel}`}
         >
-          <EffortGauge level={gaugeLevel} />
-          {/* In a narrow composer the WORDS drop and the gauge carries the
-              level on its own. Dropping only the mode was not enough —
-              "Medium" still cost more width than the message input could
-              spare in a chat bubble, which is where this sits next to Send.
-              The bars answer the same question in ~14px, and the full text
-              stays in aria-label and title.
+          {/* The gauge and the words are the SAME fact, so exactly one of
+              them shows. Wide, the words win: they name the level outright
+              and need no decoding. Narrow, the words drop — "Medium" costs
+              more width than a chat bubble's input can spare next to Send —
+              and the bars carry the level in ~14px instead.
 
               A CONTAINER query, not a breakpoint: the bubble is a narrow
               panel inside a wide window, so viewport width says nothing
               about the space this button actually has. Polarity is
-              deliberate — visible by default, hidden only when a
-              container proves itself narrow, so a consumer that declares
-              no container keeps the full label rather than silently
-              losing it. */}
+              deliberate — the words are visible by default and hide only
+              when a container proves itself narrow, so a consumer that
+              declares no container keeps the full label rather than
+              silently falling back to bars it never asked for. The gauge
+              takes the mirrored condition for the same reason. Either way
+              the full text stays in aria-label and title. */}
+          <span className="hidden @max-[24rem]:flex">
+            <EffortGauge level={gaugeLevel} />
+          </span>
           <span className="whitespace-nowrap @max-[24rem]:hidden">
             {showsMode && `${modeLabel} · `}
             {levelLabel}

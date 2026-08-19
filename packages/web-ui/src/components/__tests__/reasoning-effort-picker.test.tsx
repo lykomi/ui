@@ -94,6 +94,22 @@ describe("ReasoningEffortPicker trigger", () => {
     expect(hidden!.contains(gauge(trigger)!)).toBe(false);
   });
 
+  it("shows the gauge and the words on mutually exclusive conditions", () => {
+    // They are the same fact. Wide, the words name the level outright and
+    // the bars would just be a second copy of it; narrow, the bars are all
+    // there is room for. Exactly one shows, never both.
+    state.resolved = "high";
+    render();
+
+    const trigger = container.querySelector("[data-reasoning-effort-trigger]")!;
+    const words = trigger.querySelector(".\\@max-\\[24rem\\]\\:hidden")!;
+    const bars = gauge(trigger)!.parentElement!;
+
+    expect(words.className).toContain("@max-[24rem]:hidden");
+    expect(bars.className).toContain("hidden");
+    expect(bars.className).toContain("@max-[24rem]:flex");
+  });
+
   it("lights one bar per level, on a track that shows the ceiling", () => {
     for (const [level, lit] of [
       ["low", 1],
