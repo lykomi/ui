@@ -107,6 +107,17 @@ describe("TurnActivity — one row for what a turn did", () => {
     expect(label()).toContain("2 tools");
   });
 
+  it("names its contents rather than echoing the run-status indicator", () => {
+    // A turn that has only reasoning so far renders two lines below the
+    // status indicator, which already says "Thinking". Saying it again here
+    // reads as a stutter rather than as two facts.
+    parts.current = [reasoning()];
+    render([0], true);
+
+    expect(label()).toContain("Reasoning");
+    expect(label()).not.toContain("Thinking");
+  });
+
   it("is collapsed until asked — the answer is what the reader came for", () => {
     parts.current = [tool()];
     render([0]);

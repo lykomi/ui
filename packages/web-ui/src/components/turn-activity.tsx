@@ -83,6 +83,17 @@ export function TurnActivity({
  * "Worked" alone when a turn only thought — claiming tools it never called
  * would be a lie in the summary line, which is the one part nobody expands
  * to check.
+ *
+ * This row describes its CONTENTS; it does not narrate the run. The phase a
+ * run is in belongs to the status indicator above the composer, which knows
+ * things this row cannot — which tool is in flight, whether the stream has
+ * stalled. A turn with reasoning and no calls yet therefore says "Reasoning"
+ * rather than "Thinking…", which is what the indicator is already saying two
+ * lines below; the same word twice on one screen reads as a stutter, not as
+ * two facts.
+ *
+ * No ellipses either: the spinner in the row's own icon slot carries "still
+ * going", and it does it without competing for the label.
  */
 function summarise({
   tools,
@@ -96,7 +107,10 @@ function summarise({
   isRunning: boolean;
 }): string {
   const toolText = tools === 1 ? "1 tool" : `${tools} tools`;
-  if (isRunning) return tools > 0 ? `Working · ${toolText}…` : "Thinking…";
+  // 0 tools while running means the group holds nothing but reasoning —
+  // `useTurnOutcome` counts every non-reasoning part as a call — so naming it
+  // is accurate, not a guess.
+  if (isRunning) return tools > 0 ? `Working · ${toolText}` : "Reasoning";
 
   const parts = ["Worked"];
   if (tools > 0) parts.push(failed > 0 ? `${toolText} · ${failed} failed` : toolText);
