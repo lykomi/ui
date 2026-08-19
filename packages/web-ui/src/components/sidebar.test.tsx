@@ -50,7 +50,9 @@ function columnOf(element: HTMLElement | null | undefined) {
 
 /** The leading chevron button of a row, or undefined when the row is a leaf. */
 function twisty(container: HTMLElement, label: string) {
-  return navRow(container, label)?.querySelector<HTMLButtonElement>("[data-nav-twisty]") ?? undefined;
+  return (
+    navRow(container, label)?.querySelector<HTMLButtonElement>("[data-nav-twisty]") ?? undefined
+  );
 }
 
 describe("Sidebar active state", () => {
@@ -132,6 +134,82 @@ describe("Sidebar active state", () => {
       // @ts-expect-error deleting configurable test override
       delete window.matchMedia;
     }
+  });
+
+  /**
+   * A tree row shows a chevron when it branches and a dot when it is a leaf.
+   * That is two markers for a question with THREE answers, the third being
+   * "nobody has looked" — which is the normal state of every unvisited row in
+   * a nav that fetches subtrees lazily.
+   */
+  const renderWithItems = async (items: NavGroup["items"]) => {
+    const { Sidebar } = await import("./sidebar.tsx");
+    useNavStore.getState().setConfig([{ label: "Workspaces", items }]);
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+  };
+
+  it("marks the unvisited workspace as unknown, not as a leaf", async () => {
+    // Chris's case: one workspace selected (tree fetched, so it branches),
+    // the other never opened. `groupHasBranches` turns the whole group into a
+    // tree because of the FIRST one, and the second then drew the leaf dot —
+    // "nothing under this one" — on the strength of a fetch that never
+    // happened. Select it and the dot became a chevron.
+    await renderWithItems([
+      {
+        to: "/spaces/active",
+        label: "Active Workspace",
+        icon: FolderOpen,
+        children: [{ to: "/spaces/active/docs", label: "Documents", icon: FolderOpen }],
+      },
+      {
+        to: "/spaces/unvisited",
+        label: "Unvisited Workspace",
+        icon: FolderOpen,
+        childrenUnloaded: true,
+      },
+      { to: "/spaces/known-empty", label: "Known Empty", icon: FolderOpen },
+    ]);
+
+    // The loaded one branches.
+    expect(
+      twistyCell(container, "Active Workspace")?.querySelector("[data-nav-twisty]"),
+    ).toBeTruthy();
+
+    // The unvisited one says nothing at all — no dot, no chevron — while
+    // still holding its column so the labels stay on one grid.
+    const unvisited = twistyCell(container, "Unvisited Workspace");
+    expect(unvisited).toBeTruthy();
+    expect(unvisited?.querySelector("[data-nav-leaf-dot]")).toBeNull();
+    expect(unvisited?.querySelector("[data-nav-twisty]")).toBeNull();
+
+    // A row genuinely known to be empty still earns the leaf dot — the fix
+    // must not simply delete the marker everywhere.
+    expect(twistyCell(container, "Known Empty")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
+  });
+
+  it("prefers the chevron when children are present despite the flag", async () => {
+    // Loaded children win — the flag describes ignorance, not a display mode.
+    await renderWithItems([
+      {
+        to: "/spaces/full",
+        label: "Loaded Workspace",
+        icon: FolderOpen,
+        childrenUnloaded: true,
+        children: [{ to: "/spaces/full/docs", label: "Documents", icon: FolderOpen }],
+      },
+    ]);
+
+    const cell = twistyCell(container, "Loaded Workspace");
+    expect(cell?.querySelector("[data-nav-twisty]")).toBeTruthy();
+    expect(cell?.querySelector("[data-nav-leaf-dot]")).toBeNull();
   });
 
   it("uses the neutral selected-row styling for the current nav item", async () => {
@@ -794,17 +872,16 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
       writable: true,
       value:
         originalMatchMedia ||
-        ((query: string) =>
-          ({
-            matches: false,
-            media: query,
-            onchange: null,
-            addListener: () => {},
-            removeListener: () => {},
-            addEventListener: () => {},
-            removeEventListener: () => {},
-            dispatchEvent: () => false,
-          })),
+        ((query: string) => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+        })),
     });
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -812,9 +889,7 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
       root = createRoot(container);
     });
     useSidebarStore.setState({ collapsed: false, width: SIDEBAR_WIDTH });
-    useNavStore.setState({ groups: [], config: [] } as Parameters<
-      typeof useNavStore.setState
-    >[0]);
+    useNavStore.setState({ groups: [], config: [] } as Parameters<typeof useNavStore.setState>[0]);
   });
 
   afterEach(() => {
@@ -837,12 +912,8 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
   });
 
   function indexOfLabel(label: string): number {
-    const headers = Array.from(
-      container.querySelectorAll<HTMLElement>("[data-nav-group-label]"),
-    );
-    return headers.findIndex(
-      (el) => el.getAttribute("data-nav-group-label") === label,
-    );
+    const headers = Array.from(container.querySelectorAll<HTMLElement>("[data-nav-group-label]"));
+    return headers.findIndex((el) => el.getAttribute("data-nav-group-label") === label);
   }
 
   it("sorts groups by NavGroup.priority desc (higher priority first)", async () => {
@@ -931,9 +1002,7 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
     expect(childTextAfter).not.toContain("Second chat");
 
     // Persisted to localStorage under the generic package-scoped key.
-    const persisted = JSON.parse(
-      localStorage.getItem("sidebar-nav-collapsed") ?? "{}",
-    );
+    const persisted = JSON.parse(localStorage.getItem("sidebar-nav-collapsed") ?? "{}");
     expect(persisted.Recents).toBe(true);
   });
 
@@ -967,9 +1036,7 @@ describe("Sidebar group priority + collapse + status bubble-up", () => {
       );
     });
 
-    const header = container.querySelector<HTMLElement>(
-      '[data-nav-group-label="Recents"]',
-    );
+    const header = container.querySelector<HTMLElement>('[data-nav-group-label="Recents"]');
     expect(header).toBeTruthy();
     // The bubbled-up dot is rendered with the same status-dot marker
     // as a child status dot; scope the lookup to the header.
