@@ -156,14 +156,6 @@ describe("Sidebar active state", () => {
     });
   };
 
-  /** The twisty cell belonging to the row with this label. */
-  const twistyFor = (label: string) => {
-    const row = Array.from(container.querySelectorAll<HTMLElement>("[data-nav-depth]")).find((el) =>
-      el.textContent?.includes(label),
-    );
-    return row?.querySelector("[data-nav-twisty-cell]") ?? null;
-  };
-
   it("marks the unvisited workspace as unknown, not as a leaf", async () => {
     // Chris's case: one workspace selected (tree fetched, so it branches),
     // the other never opened. `groupHasBranches` turns the whole group into a
@@ -187,18 +179,20 @@ describe("Sidebar active state", () => {
     ]);
 
     // The loaded one branches.
-    expect(twistyFor("Active Workspace")?.querySelector("[data-nav-twisty]")).toBeTruthy();
+    expect(
+      twistyCell(container, "Active Workspace")?.querySelector("[data-nav-twisty]"),
+    ).toBeTruthy();
 
     // The unvisited one says nothing at all — no dot, no chevron — while
     // still holding its column so the labels stay on one grid.
-    const unvisited = twistyFor("Unvisited Workspace");
+    const unvisited = twistyCell(container, "Unvisited Workspace");
     expect(unvisited).toBeTruthy();
-    expect(unvisited?.querySelector("span.rounded-full")).toBeNull();
+    expect(unvisited?.querySelector("[data-nav-leaf-dot]")).toBeNull();
     expect(unvisited?.querySelector("[data-nav-twisty]")).toBeNull();
 
     // A row genuinely known to be empty still earns the leaf dot — the fix
     // must not simply delete the marker everywhere.
-    expect(twistyFor("Known Empty")?.querySelector("span.rounded-full")).toBeTruthy();
+    expect(twistyCell(container, "Known Empty")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
   });
 
   it("prefers the chevron when children are present despite the flag", async () => {
@@ -213,9 +207,9 @@ describe("Sidebar active state", () => {
       },
     ]);
 
-    const cell = twistyFor("Loaded Workspace");
+    const cell = twistyCell(container, "Loaded Workspace");
     expect(cell?.querySelector("[data-nav-twisty]")).toBeTruthy();
-    expect(cell?.querySelector("span.rounded-full")).toBeNull();
+    expect(cell?.querySelector("[data-nav-leaf-dot]")).toBeNull();
   });
 
   it("uses the neutral selected-row styling for the current nav item", async () => {

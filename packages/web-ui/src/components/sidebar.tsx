@@ -586,6 +586,7 @@ function NavTwisty({
             sideways when the answer arrives. */}
         {inTree && !childrenUnloaded && (
           <span
+            data-nav-leaf-dot
             className={cn(
               "size-1 rounded-full",
               isActive ? "bg-primary/70" : "bg-sidebar-foreground/30",
