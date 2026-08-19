@@ -99,6 +99,29 @@ describe("TurnActivity — one row for what a turn did", () => {
     expect(container.querySelector(".text-destructive")).not.toBeNull();
   });
 
+  it("holds the alarm until the turn settles", () => {
+    // Every call SO FAR failed, but the model is still going and may well
+    // recover on the next one. Going red now reports a broken answer for a
+    // turn that has not produced one yet.
+    parts.current = [tool(false), tool(false)];
+    render([0, 1], true);
+
+    expect(container.querySelector(".text-destructive")).toBeNull();
+  });
+
+  it("puts the summary in the accessible name, not just the visible one", () => {
+    // aria-label REPLACES the name derived from the button's contents, so a
+    // generic one would announce the row while hiding what it summarises.
+    parts.current = [reasoning(), tool(), tool(false)];
+    render([0, 1, 2]);
+
+    const name = container.querySelector("button")!.getAttribute("aria-label")!;
+    expect(name).toContain("2 tools");
+    expect(name).toContain("1 failed");
+    expect(name).toContain("reasoning");
+    expect(name).toContain("show");
+  });
+
   it("says what it is doing while the turn runs", () => {
     parts.current = [tool(), tool()];
     render([0, 1], true);

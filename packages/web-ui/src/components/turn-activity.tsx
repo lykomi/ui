@@ -43,12 +43,15 @@ export function TurnActivity({
 }) {
   const { tools, failed, hasReasoning } = useTurnOutcome(indices);
   const [isOpen, setIsOpen] = useState(false);
+  const summary = summarise({ tools, failed, hasReasoning, isRunning });
 
-  // Red only when EVERY call failed. One failure among twenty is a turn that
-  // recovered, and painting it red would report a broken answer where there
-  // is a working one. A partial failure still says so, in the count, without
-  // the alarm.
-  const allFailed = tools > 0 && failed === tools;
+  // Red only when EVERY call failed AND the turn has SETTLED. One failure
+  // among twenty is a turn that recovered, and painting it red would report a
+  // broken answer where there is a working one — but so would painting it red
+  // mid-run, when the only calls so far happen to have failed and the model is
+  // still reasoning its way to one that works. A partial failure still says
+  // so, in the count, without the alarm.
+  const allFailed = !isRunning && tools > 0 && failed === tools;
 
   return (
     <MessageDisclosure
@@ -66,8 +69,14 @@ export function TurnActivity({
           <CheckCircle2 className="size-3.5 text-primary" />
         )
       }
-      label={summarise({ tools, failed, hasReasoning, isRunning })}
-      ariaLabel={isOpen ? "Hide what this turn did" : "Show what this turn did"}
+      label={summary}
+      // The summary goes in the accessible name, not just the visible one.
+      // An `aria-label` REPLACES the name a button would otherwise derive
+      // from its contents, so a bare "Show what this turn did" would have
+      // announced the row while hiding the very thing it summarises — the
+      // call count, whether anything failed, whether there is thinking to
+      // read. A screen-reader user got strictly less than a sighted one.
+      ariaLabel={`${summary} — ${isOpen ? "hide" : "show"} details`}
       data-turn-activity
     >
       <div className="flex flex-col gap-2">{children}</div>

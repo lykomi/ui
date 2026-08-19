@@ -38,12 +38,12 @@ const EFFORT_RANK: Record<ResolvedReasoningEffort, number> = {
  * The trigger's job is to answer "how hard is it thinking?" at a glance, and
  * in a narrow composer — the chat bubble, a side panel — the words cost more
  * width than that question is worth. Bars cost ~14px and answer it without
- * reading. So the gauge is always shown and the label is what drops.
+ * reading, so in that case the words drop and this stands in for them.
  *
- * `null` means the app has not told us what `Auto` resolves to. The gauge
- * then shows an empty track rather than a guess, for the same reason the
- * `Auto` hint refuses to name a level it does not know: a trigger that
- * confidently shows the wrong level is worse than one that shows none.
+ * Takes a CONCRETE level, never `null`. A gauge with nothing lit is not a
+ * gauge, it is four faint marks; the caller keeps the words instead when
+ * there is no level to encode, which makes the empty state unrepresentable
+ * here rather than something this has to render politely.
  *
  * Deliberately shows LEVEL only, never whether the level is pinned or
  * inherited from `Auto`. The level is what changes cost and latency; the mode
@@ -52,8 +52,8 @@ const EFFORT_RANK: Record<ResolvedReasoningEffort, number> = {
  * `bg-current` throughout, so the bars inherit the button's own muted →
  * foreground hover transition instead of needing their own colour states.
  */
-function EffortGauge({ level }: { level: ResolvedReasoningEffort | null }) {
-  const rank = level ? EFFORT_RANK[level] : 0;
+function EffortGauge({ level }: { level: ResolvedReasoningEffort }) {
+  const rank = EFFORT_RANK[level];
   return (
     <span aria-hidden="true" className="flex h-3.5 shrink-0 items-end gap-px">
       {([1, 2, 3, 4] as const).map((step) => (
@@ -119,8 +119,7 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
     ? REASONING_EFFORT_LABELS[resolved]
     : REASONING_EFFORT_LABELS[effort];
   const triggerLabel = showsMode ? `${modeLabel} · ${levelLabel}` : levelLabel;
-  // `default` with nothing resolved is the one case with no level to draw —
-  // the gauge shows an empty track rather than inventing one.
+  // `default` with nothing resolved is the one case with no level to draw.
   const gaugeLevel: ResolvedReasoningEffort | null = effort === "default" ? resolved : effort;
 
   return (
@@ -153,10 +152,19 @@ export function ReasoningEffortPicker({ className }: { className?: string }) {
               silently falling back to bars it never asked for. The gauge
               takes the mirrored condition for the same reason. Either way
               the full text stays in aria-label and title. */}
-          <span className="hidden @max-[24rem]:flex">
-            <EffortGauge level={gaugeLevel} />
-          </span>
-          <span className="whitespace-nowrap @max-[24rem]:hidden">
+          {/* Only swap when there is something to swap TO. With no resolved
+              level the gauge is an empty track, and hiding the words behind
+              it would leave a narrow composer showing four faint bars and a
+              caret — unlabelled, and on a touch device the title tooltip
+              that would explain it is unreachable. `null` here is not just a
+              startup flicker: it is also how a host that supplies no default,
+              a failed config load, and disabled backend reasoning all look. */}
+          {gaugeLevel !== null && (
+            <span className="hidden @max-[24rem]:flex">
+              <EffortGauge level={gaugeLevel} />
+            </span>
+          )}
+          <span className={cn("whitespace-nowrap", gaugeLevel !== null && "@max-[24rem]:hidden")}>
             {showsMode && `${modeLabel} · `}
             {levelLabel}
           </span>

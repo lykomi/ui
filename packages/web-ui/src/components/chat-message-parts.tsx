@@ -63,9 +63,30 @@ export function ChatMessageParts() {
             // above.
             return <div className="flex flex-col gap-2">{children}</div>;
           case "text":
-            return <MarkdownText />;
+            // The wrapper is load-bearing, though it carries no classes.
+            // `MarkdownText` renders `<ReactMarkdown>` directly, which emits
+            // its top-level blocks into a FRAGMENT — without an element to
+            // hold them, every paragraph, list and code block becomes a
+            // direct child of the message's `gap-4` flex container and picks
+            // up 16px of message-part spacing between them, on top of their
+            // own margins. It used to be the `order-2` div; the ordering went
+            // away, the wrapper must not.
+            return (
+              <div>
+                <MarkdownText />
+              </div>
+            );
           case "reasoning":
-            // Plain inside the fold, in the slot the model produced it in.
+            // Plain inside the fold, rather than behind a second disclosure.
+            //
+            // Its POSITION is only as chronological as the parts array it is
+            // given. Replayed history preserves the model's interleaving;
+            // the live adapter does not — it accumulates all reasoning into a
+            // single part emitted ahead of every tool call, so a live
+            // reasoning A → tool A → reasoning B → tool B arrives as
+            // reasoning A+B → tool A → tool B. That is the adapter's to fix,
+            // and rendering in place is right either way; this note is here
+            // so the next reader does not take the ordering on faith.
             return <ReasoningMessagePartComponent text={part.text} nested />;
           case "tool-call":
             return part.toolUI ?? <ToolFallback {...part} />;

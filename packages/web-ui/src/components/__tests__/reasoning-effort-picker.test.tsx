@@ -130,13 +130,19 @@ describe("ReasoningEffortPicker trigger", () => {
     }
   });
 
-  it("draws an empty track rather than guessing a level it was not told", () => {
+  it("keeps the words when there is no level for the gauge to carry", () => {
+    // An empty track behind hidden words leaves a narrow composer showing
+    // four faint bars and a caret, with the explaining tooltip out of reach
+    // on touch. `null` is not only a startup flicker — it is also a host that
+    // supplies no default, a failed config load, and reasoning turned off.
     state.effort = "default";
     state.resolved = null;
     render();
 
-    const bars = [...gauge(container.querySelector("[data-reasoning-effort-trigger]")!)!.children];
-    expect(bars.filter((b) => b.className.includes("opacity-100")).length).toBe(0);
+    const trigger = container.querySelector("[data-reasoning-effort-trigger]")!;
+    expect(gauge(trigger)).toBeNull();
+    expect(trigger.querySelector(".\\@max-\\[24rem\\]\\:hidden")).toBeNull();
+    expect(trigger.textContent).toContain("Auto");
   });
 
   it("keeps the full label reachable when the mode is hidden", () => {
