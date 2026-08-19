@@ -1,5 +1,7 @@
 # @iloveagents/foundry-agent
 
+## 0.15.0
+
 ## 0.14.2
 
 ## 0.14.1
