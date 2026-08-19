@@ -10,13 +10,30 @@ import { MessageDisclosure } from "./message-disclosure.tsx";
  * a curious reader, not the response. It stays visible after the run so a
  * reader can check *why* an answer came out the way it did.
  *
- * The row shape comes from `MessageDisclosure`, shared with the tool run
- * group — these two sit next to each other in a message and used to be built
- * separately, which is how they ended up with their carets on opposite sides.
+ * The row shape comes from `MessageDisclosure`, shared with the turn's
+ * activity row — these sit next to each other in a message and used to be
+ * built separately, which is how they ended up with their carets on opposite
+ * sides.
  */
-export function ReasoningPart({ text }: { text: string }) {
+export function ReasoningPart({ text, nested = false }: { text: string; nested?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   if (!text.trim()) return null;
+
+  // Inside the turn's activity fold there is no second fold: the reader
+  // already opened one to get here, and a disclosure containing disclosures
+  // is a maze. Just the thinking, captioned, in the slot the model produced
+  // it in.
+  if (nested) {
+    return (
+      <div className="flex flex-col gap-1" data-reasoning-part>
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Brain className="size-3.5" />
+          Reasoning
+        </span>
+        <div className="whitespace-pre-wrap text-xs text-muted-foreground">{text}</div>
+      </div>
+    );
+  }
 
   return (
     <MessageDisclosure
@@ -24,10 +41,6 @@ export function ReasoningPart({ text }: { text: string }) {
       label="Reasoning"
       open={isOpen}
       onOpenChange={setIsOpen}
-      // Under the work, above the conclusion: the model usually emits its
-      // thinking first, but a reader wants "what it did", then "why", and
-      // the answer last — the message should end on its point.
-      placement="after-tools"
       ariaLabel={isOpen ? "Hide reasoning" : "Show reasoning"}
     >
       <div className="whitespace-pre-wrap text-xs text-muted-foreground">{text}</div>
@@ -36,6 +49,10 @@ export function ReasoningPart({ text }: { text: string }) {
 }
 
 /** Adapter for assistant-ui's `Reasoning` part slot. */
-export const ReasoningMessagePartComponent = ({ text }: { text: string }) => (
-  <ReasoningPart text={text} />
-);
+export const ReasoningMessagePartComponent = ({
+  text,
+  nested = false,
+}: {
+  text: string;
+  nested?: boolean;
+}) => <ReasoningPart text={text} nested={nested} />;

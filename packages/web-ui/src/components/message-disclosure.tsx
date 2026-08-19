@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible.tsx";
 import type { ReactNode } from "react";
@@ -13,10 +13,11 @@ import type { ReactNode } from "react";
  * different paddings, different hover treatments, different default states.
  * Read together in a transcript they looked like two unrelated widgets.
  *
- * So the shape lives here once. A row is: disclosure caret, the part's own
- * icon, its label — left-aligned in that order, on a single baseline, with
- * identical metrics. The caret is the FIRST thing in the row because it is
- * the control; the icon that follows says what kind of thing is folded away.
+ * So the shape lives here once. A row is: the part's own icon, its label,
+ * then the disclosure caret — on a single baseline, with identical metrics.
+ * The icon leads because it is the glyph that carries meaning (what kind of
+ * thing is folded away, and whether it went well); the caret trails, where
+ * the eye lands after the words and where every chat client puts it.
  *
  * Everything is understated on purpose. These rows sit between the user's
  * question and the answer, and they are machinery, not content: muted until
@@ -30,7 +31,6 @@ export function MessageDisclosure({
   open,
   onOpenChange,
   tone = "muted",
-  placement = "inline",
   ariaLabel,
   children,
   ...rest
@@ -42,19 +42,6 @@ export function MessageDisclosure({
   onOpenChange: (open: boolean) => void;
   /** ``destructive`` is for a run where everything failed; nothing else. */
   tone?: "muted" | "destructive";
-  /**
-   * ``after-tools`` sits the row between the tool runs and the answer,
-   * wherever the model actually emitted it — reasoning belongs under the
-   * work it explains and above the conclusion it produced. (The message
-   * text is ordered after it; see `ChatMessageParts`.)
-   *
-   * It is a flex `order`, so the row moves VISUALLY while staying put in the
-   * DOM. That is exactly why such a row carries a different attribute: the
-   * compaction below is a DOM-sibling rule, and a row that is first in the
-   * DOM but second on screen would otherwise hand its negative margin to
-   * whichever row really is on top.
-   */
-  placement?: "inline" | "after-tools";
   ariaLabel?: string;
   children: ReactNode;
 } & Record<`data-${string}`, unknown>) {
@@ -67,13 +54,16 @@ export function MessageDisclosure({
       // rows — two foldaways alone put 64px of chrome above a one-line
       // answer. A row that directly follows another closes the gap to 4px,
       // so the machinery reads as one compact strip rather than a stack.
-      {...(placement === "after-tools"
-        ? { "data-message-disclosure-reordered": true }
-        : { "data-message-disclosure": true })}
-      className={cn(
-        "w-full [[data-message-disclosure]_+_&]:-mt-3",
-        placement === "after-tools" && "order-1",
-      )}
+      data-message-disclosure
+      // Rows render where the model put them. There was once an
+      // ``after-tools`` placement that moved a row with flex `order` — and a
+      // separate data attribute, because the compaction below is a
+      // DOM-SIBLING rule and a row that is first in the DOM but second on
+      // screen would hand its negative margin to the wrong neighbour. Both
+      // are gone: the reordering existed to keep a reasoning row from sitting
+      // above a short answer, which folding the machinery into one quiet row
+      // already solves.
+      className="w-full [[data-message-disclosure]_+_&]:-mt-3"
       {...rest}
     >
       <CollapsibleTrigger asChild>
@@ -84,28 +74,45 @@ export function MessageDisclosure({
           data-disclosure-trigger
           aria-label={ariaLabel}
           className={cn(
-            "group/disclosure flex w-full items-center gap-1.5 rounded-md",
+            // `w-fit` with `-ml-1.5`: the row is a pill that hugs its own
+            // words, and the negative margin cancels the padding so the
+            // ICON lines up with the message text's left edge rather than
+            // sitting 6px inside it. Full-width was worse on both counts —
+            // it made a hover target the width of the message, and it left
+            // the caret stranded at the far right once the caret moved.
+            "group/disclosure -ml-1.5 flex w-fit max-w-full items-center gap-1.5 rounded-md",
             "px-1.5 py-0.5 text-left text-xs transition-colors",
             "text-muted-foreground hover:bg-muted hover:text-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             tone === "destructive" && "text-destructive hover:text-destructive",
           )}
         >
-          <ChevronRight
+          <span className="flex size-3.5 shrink-0 items-center justify-center">{icon}</span>
+          <span className="truncate">{label}</span>
+          {/* The caret TRAILS the label. It led for a while, on the reasoning
+              that the caret is the control and controls come first — but that
+              put two glyphs in front of every row and left the status icon,
+              which is the one that carries meaning, in second place. Reading
+              order is now icon, words, control.
+              Trailing carets point DOWN when closed ("opens downward") and up
+              when open, which is the opposite of the leading convention: a
+              leading caret points right and rotates 90° to point at the
+              content. Same rotation trick, different rest position — swapping
+              the position without swapping the glyph would have left it
+              pointing sideways at nothing. */}
+          <ChevronDown
             aria-hidden="true"
             className={cn(
               "size-3.5 shrink-0 opacity-60 transition-transform duration-150",
               "group-hover/disclosure:opacity-100",
-              open && "rotate-90",
+              open && "rotate-180",
             )}
           />
-          <span className="flex size-3.5 shrink-0 items-center justify-center">{icon}</span>
-          <span className="truncate">{label}</span>
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        {/* Indented to the label column (caret + icon + both gaps), so the body
-            hangs under the words rather than under the control. */}
+        {/* Indented under the label, so the body hangs beneath the words
+            rather than beneath the row's left edge. */}
         <div className="mt-1.5 ml-3 border-l border-border pl-3">{children}</div>
       </CollapsibleContent>
     </Collapsible>

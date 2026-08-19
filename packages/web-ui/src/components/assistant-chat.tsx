@@ -448,7 +448,13 @@ export function ChatContent({
             </ThreadPrimitive.Empty>
 
             <ThreadPrimitive.If empty={false}>
-              <div className="mx-auto max-w-3xl px-4 pt-8">
+              {/* `pb-4`: the column had padding at the top and none at the
+                  bottom, so whatever came last in the thread sat flush against
+                  the composer's edge. Most visible on the running status line,
+                  which is a single short row and read as if it were part of
+                  the input rather than part of the conversation — but the last
+                  message had the same problem, quietly. */}
+              <div className="mx-auto max-w-3xl px-4 pt-8 pb-4">
                 <ThreadPrimitive.Messages
                   components={{
                     UserMessage,
