@@ -79,6 +79,22 @@ export interface NavItem {
   contextInstructions?: string;
   /** Sub-navigation items (rendered indented under parent) */
   children?: NavItem[];
+  /**
+   * The row's children have not been fetched yet, so `children` being empty
+   * says nothing about whether it has any.
+   *
+   * A tree row normally shows one of two markers: a chevron if it branches, a
+   * dot if it is a leaf. That is two states for a question with THREE answers
+   * — has children, has none, and nobody has looked. A caller that loads
+   * subtrees lazily (only the active one, say) leaves every other row with an
+   * empty `children`, and the row then claims to be a leaf on the strength of
+   * a fetch that never happened.
+   *
+   * Set this while the answer is unknown and the row shows neither marker: no
+   * chevron to click into nothing, no dot asserting an emptiness no one
+   * checked. Clear it once the children are known, empty or not.
+   */
+  childrenUnloaded?: boolean;
   /** Inline action buttons rendered next to the nav item (e.g., + document, + folder) */
   actions?: NavItemAction[];
   /** Optional drag-and-drop behavior (provided by feature modules) */
