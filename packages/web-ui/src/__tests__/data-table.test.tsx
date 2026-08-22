@@ -9,7 +9,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ColumnDef, Table } from "@tanstack/react-table";
 import { DataTable } from "../components/data-table/data-table.tsx";
-import { DataTableToolbar } from "../components/data-table/data-table-toolbar.tsx";
+import { DataTableFrame } from "../components/data-table/data-table-frame.tsx";
+import { DataTableToolbar, visibleFacets } from "../components/data-table/data-table-toolbar.tsx";
 import {
   FACET_EMPTY,
   facetFilterFn,
@@ -68,11 +69,12 @@ function Harness(
   props: Partial<UseDataTableOptions<Task>> & {
     onTable: (table: Table<Task>) => void;
     facets?: string[];
+    pinnedFacets?: number;
     groupOrder?: string[];
     activeRowId?: string;
   },
 ) {
-  const { onTable, facets = [], groupOrder, activeRowId, ...options } = props;
+  const { onTable, facets = [], pinnedFacets, groupOrder, activeRowId, ...options } = props;
   const table = useDataTable<Task>({
     data: TASKS,
     columns: COLUMNS,
@@ -82,7 +84,11 @@ function Harness(
   onTable(table);
   return (
     <>
-      <DataTableToolbar table={table} facets={facets.map((columnId) => ({ columnId }))} />
+      <DataTableToolbar
+        table={table}
+        facets={facets.map((columnId) => ({ columnId }))}
+        pinnedFacets={pinnedFacets}
+      />
       <DataTable
         table={table}
         groupOrder={groupOrder}
@@ -208,6 +214,83 @@ describe("useDataTable + DataTable", () => {
     act(() => reset()!.click());
     expect(renderedIds()).toEqual(["t1", "t2", "t3", "t4"]);
     expect(reset()).toBeUndefined();
+  });
+
+  it("pins the first facets, parks the rest behind + Filter, and surfaces a hidden facet once it has a value", () => {
+    const h = mount({ facets: ["status", "priority", "tags"], pinnedFacets: 1 });
+    const facetButtons = () =>
+      Array.from(container!.querySelectorAll("button[data-facet]")).map((b) =>
+        b.getAttribute("data-facet"),
+      );
+    expect(facetButtons()).toEqual(["status"]);
+    expect(container!.querySelector("button[data-facet-menu]")).not.toBeNull();
+    act(() => h.table.getColumn("tags")!.setFilterValue(["b"]));
+    expect(facetButtons()).toEqual(["status", "tags"]);
+    const split = visibleFacets(
+      h.table,
+      [{ columnId: "status" }, { columnId: "priority", pinned: true }, { columnId: "tags" }],
+      new Set(["status"]),
+      0,
+    );
+    expect(split.shown.map((f) => f.columnId)).toEqual(["status", "priority", "tags"]);
+    expect(split.hidden).toEqual([]);
+    const split2 = visibleFacets(
+      h.table,
+      [{ columnId: "status" }, { columnId: "priority" }],
+      new Set(),
+      1,
+    );
+    expect(split2.shown.map((f) => f.columnId)).toEqual(["status"]);
+    expect(split2.hidden.map((f) => f.columnId)).toEqual(["priority"]);
+    act(() => h.table.resetColumnFilters());
+    expect(facetButtons()).toEqual(["status"]);
+    // a facet with more than two values announces the count to assistive tech
+    act(() => h.table.getColumn("status")!.setFilterValue(["open", "done", "x"]));
+    expect(container!.querySelector("button[data-facet='status'] .sr-only")?.textContent).toBe(
+      "3 selected",
+    );
+  });
+
+  it("hides a column below its breakpoint with a literal responsive class", () => {
+    mount({
+      columns: [
+        { ...COLUMNS[0]! },
+        { ...COLUMNS[1]!, meta: { breakpoint: "lg" } },
+        ...COLUMNS.slice(2),
+      ],
+    });
+    const statusHeader = Array.from(container!.querySelectorAll("thead th"))[1]!;
+    expect(statusHeader.className).toContain("max-lg:hidden");
+    expect(
+      container!.querySelector("tbody tr[data-row-id='t1'] td:nth-child(2)")?.className,
+    ).toContain("max-lg:hidden");
+  });
+
+  it("a frame adds a focus button to the toolbar and Escape leaves focus mode", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <DataTableFrame className="plain">
+          <Harness onTable={() => {}} />
+        </DataTableFrame>,
+      );
+    });
+    const button = () =>
+      container!.querySelector<HTMLButtonElement>(
+        "button[aria-label='Focus on the list'], button[aria-label='Leave focus mode']",
+      )!;
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+    expect(container!.querySelector("[data-focused]")).toBeNull();
+    act(() => button().click());
+    expect(container!.querySelector("[data-focused]")).not.toBeNull();
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    expect(container!.querySelector("[data-focused]")).toBeNull();
+    expect(container!.querySelector(".plain")).not.toBeNull();
   });
 
   it("groups rows in the declared group order with a header per group", () => {

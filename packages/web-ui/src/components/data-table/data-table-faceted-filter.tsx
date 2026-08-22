@@ -21,6 +21,8 @@ export interface DataTableFacetedFilterProps<T> {
   options?: DataTableFacetOption[];
   /** Show a search box inside the list once there are more options than this (default 7). */
   searchableFrom?: number;
+  /** Called when the popover closes with nothing selected (a revealed facet goes back into the menu). */
+  onEmptyClose?: () => void;
   className?: string;
 }
 
@@ -29,6 +31,7 @@ export function DataTableFacetedFilter<T>({
   title,
   options: declared,
   searchableFrom = 7,
+  onEmptyClose,
   className,
 }: DataTableFacetedFilterProps<T>) {
   const [query, setQuery] = useState("");
@@ -49,7 +52,13 @@ export function DataTableFacetedFilter<T>({
   };
 
   return (
-    <Popover onOpenChange={(open) => !open && setQuery("")}>
+    <Popover
+      onOpenChange={(open) => {
+        if (open) return;
+        setQuery("");
+        if (normalizeFacetValue(column.getFilterValue()).length === 0) onEmptyClose?.();
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -68,27 +77,24 @@ export function DataTableFacetedFilter<T>({
           {selected.length > 0 ? (
             <>
               <span className="mx-0.5 h-4 w-px bg-border/60" aria-hidden="true" />
-              <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal lg:hidden">
-                {selected.length}
-              </span>
-              <span className="hidden gap-1 lg:flex">
-                {selected.length > 2 ? (
-                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal">
-                    {selected.length} selected
-                  </span>
-                ) : (
-                  options
-                    .filter((option) => selectedSet.has(option.value))
-                    .map((option) => (
-                      <span
-                        key={option.value}
-                        className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal"
-                      >
-                        {option.label}
-                      </span>
-                    ))
-                )}
-              </span>
+              {selected.length > 2 ? (
+                <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal tabular-nums">
+                  <span aria-hidden="true">{selected.length}</span>
+                  <span className="sr-only">{selected.length} selected</span>
+                </span>
+              ) : (
+                options
+                  .filter((option) => selectedSet.has(option.value))
+                  .map((option) => (
+                    <span
+                      key={option.value}
+                      title={option.label}
+                      className="max-w-[8rem] truncate rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal"
+                    >
+                      {option.label}
+                    </span>
+                  ))
+              )}
             </>
           ) : null}
         </Button>
