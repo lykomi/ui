@@ -178,7 +178,9 @@ interface AppState {
   // Context items
   contextItems: ContextItem[];
   sentContext: Record<string, ContextItem[]>;
-  addContextItem: (item: Omit<ContextItem, "id" | "createdAt">) => void;
+  /** Context the user pinned. Keyed (UI-tracked) items go through
+   *  `setContextItem`, which is the only thing that replaces by key. */
+  addContextItem: (item: Omit<ContextItem, "id" | "createdAt" | "key">) => void;
   /**
    * Context that tracks a piece of UI rather than a user's pin — the rows
    * selected in a list, say. One item per `key`: setting replaces, `null`

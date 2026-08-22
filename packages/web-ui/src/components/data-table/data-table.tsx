@@ -111,6 +111,10 @@ const INTERACTIVE = [
   "[role='menu']",
   "[role='menubar']",
   "[role='radiogroup']",
+  // The plain ones: a div acting as a button or a link is still a control,
+  // and its click must not also open the row behind it.
+  "[role='button']",
+  "[role='link']",
   "[data-no-row-click]",
 ].join(", ");
 
@@ -184,6 +188,22 @@ export function DataTable<T>({
   const renderedColumns = table
     .getVisibleLeafColumns()
     .filter((column) => fits(column.columnDef.meta));
+  // Width of the leaves that survive the gates; `undefined` when none of them
+  // declares one, so the column keeps its natural width.
+  const fittingLeafWidth = (header: Header<T, unknown>): number | undefined => {
+    // Walk `subHeaders` rather than `getLeafHeaders()`: the latter includes
+    // this header's own entry, whose size already sums the descendants, and
+    // the total would count everything twice.
+    const collect = (node: Header<T, unknown>): Array<Header<T, unknown>> =>
+      node.subHeaders.length
+        ? node.subHeaders.flatMap(collect)
+        : fits(node.column.columnDef.meta)
+          ? [node]
+          : [];
+    const sizes = collect(header).map((leaf) => leaf.getSize());
+    if (!sizes.length) return undefined;
+    return sizes.every((size) => size === 150) ? undefined : sizes.reduce((a, b) => a + b, 0);
+  };
   const fittingLeafCount = (header: Header<T, unknown>): number =>
     header.subHeaders.length === 0
       ? fits(header.column.columnDef.meta)
@@ -349,6 +369,13 @@ export function DataTable<T>({
                   // of them the group header goes too.
                   const span = fittingLeafCount(header);
                   if (span === 0) return null;
+                  // `getSize()` sums EVERY descendant, including the ones the
+                  // width gate just dropped, so a half-gated group would hold
+                  // space for a column that is not there and push the table
+                  // wider than its own columns.
+                  const sized = header.subHeaders.length
+                    ? fittingLeafWidth(header)
+                    : header.getSize();
                   return (
                     <th
                       key={header.id}
@@ -363,7 +390,7 @@ export function DataTable<T>({
                       }
                       {...pinnedProps(header.column.id, "header")}
                       style={{
-                        ...(header.getSize() !== 150 ? { width: header.getSize() } : {}),
+                        ...(sized !== undefined && sized !== 150 ? { width: sized } : {}),
                         ...pinnedStyle(header.column.id),
                       }}
                       className={cn(

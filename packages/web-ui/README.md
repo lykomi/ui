@@ -64,13 +64,17 @@ state in the URL.
 ### A column says where it earns its place
 
 ```tsx
-meta: {
-  breakpoint: "lg",        // the narrowest LIST width it needs (not the window)
-  showIn: "focus",         // only when the list has the screen to itself
-  pinned: "left",          // frozen against the left edge while the rest scrolls
-  defaultHidden: true,     // in the Columns menu, off until asked for*
-  align: "right",
-}
+const column: ColumnDef<Risk> = {
+  id: "worst_case",
+  accessorKey: "worst_case",
+  meta: {
+    breakpoint: "lg", // the narrowest LIST width it needs (not the window)
+    showIn: "focus", // only when the list has the screen to itself
+    pinned: "left", // frozen against the left edge while the rest scrolls
+    defaultHidden: true, // in the Columns menu, off until asked for*
+    align: "right",
+  },
+};
 ```
 
 Widths are measured on the table itself, so a list beside an open detail pane
@@ -100,9 +104,15 @@ by; counts, OR-within, AND-across, the URL and the agent tools work on those
 keys unchanged.
 
 ```tsx
-meta: {
-  facetBuckets: (value) => [Number(value) >= 0.5 ? "high" : "low"];
-}
+const probability: ColumnDef<Risk> = {
+  id: "probability",
+  accessorKey: "probability",
+  filterFn: facetFilterFn,
+  meta: {
+    facetBuckets: (value) => [Number(value) >= 0.5 ? "high" : "low"],
+    facetLabels: { high: "50 % or more", low: "under 50 %" },
+  },
+};
 ```
 
 Dates get the buckets every list wants: `ageBucket` (`today` · `week` ·

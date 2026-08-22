@@ -387,6 +387,32 @@ describe("what the table actually draws", () => {
     expect(table.getColumn("title")!.getIsVisible()).toBe(true);
   });
 
+  it("sizes a half-gated group by the leaves that survived", () => {
+    // `getSize()` sums every descendant, so a group that lost a leaf to the
+    // width gate would hold space for a column that is not drawn.
+    const columns: ColumnDef<Task, unknown>[] = [
+      {
+        id: "pair",
+        header: "Pair",
+        columns: [
+          { id: "a", accessorKey: "title", header: "A", size: 200 },
+          { id: "b", accessorKey: "status", header: "B", size: 200, meta: { showIn: "focus" } },
+        ],
+      },
+    ];
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    function Grouped() {
+      const table = useDataTable<Task>({ data: TASKS, columns, getRowId: (row) => row.id });
+      return <DataTable table={table} />;
+    }
+    act(() => root!.render(<Grouped />));
+    const group = container!.querySelector("thead th[scope='col']") as HTMLElement;
+    expect(group.getAttribute("colspan")).toBe("1");
+    expect(group.style.width).toBe("200px");
+  });
+
   it("reports a column id that contains a comma intact", () => {
     const columns: ColumnDef<Task, unknown>[] = [
       { id: "risk,score", accessorKey: "title", header: "Risk, score" },
