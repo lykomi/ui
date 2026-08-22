@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.19.0
+
+### Minor Changes
+
+- a7dcd3d: `DataTableToolbar` reads as two bands instead of one ragged wrap: row 1 is search plus a fixed right group (Filters toggle · actions · View · focus), row 2 is the filter row (facets · + Filter · Reset). The filter row collapses behind the "Filters" toggle — which keeps the active count visible — for dense, spreadsheet-like screens. `layout="inline"` restores the single wrapping row.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.19.0
+- @iloveagents/foundry-web-primitives@0.19.0
+
 ## 0.18.0
 
 ### Minor Changes
