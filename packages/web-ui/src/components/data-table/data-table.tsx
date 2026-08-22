@@ -15,7 +15,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import type { DataTableBreakpoint } from "./facets.ts";
+import { DATA_TABLE_MIN_WIDTH, type DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { usePinnedOffsets } from "./use-pinned-offsets.ts";
 import { useElementWidth } from "./use-element-width.ts";
@@ -78,14 +78,6 @@ const INTERACTIVE = "a, button, input, select, textarea, [role='menuitem'], [dat
  * table itself, not the window: a list beside an open detail pane is narrower
  * than the page, and focus mode is wider — only the table knows.
  */
-const MIN_WIDTH: Record<DataTableBreakpoint, number> = {
-  sm: 448,
-  md: 672,
-  lg: 896,
-  xl: 1024,
-  "2xl": 1280,
-};
-
 function orderedRows<T>(table: Table<T>, groupOrder?: string[]): Row<T>[] {
   const rows = table.getRowModel().rows;
   if (!table.getState().grouping.length) return rows;
@@ -141,7 +133,7 @@ export function DataTable<T>({
   const fits = (meta?: { breakpoint?: DataTableBreakpoint; showIn?: "always" | "focus" }) => {
     if (meta?.showIn === "focus" && !filling) return false;
     const breakpoint = meta?.breakpoint;
-    return !breakpoint || width === undefined || width >= MIN_WIDTH[breakpoint];
+    return !breakpoint || width === undefined || width >= DATA_TABLE_MIN_WIDTH[breakpoint];
   };
   // Pinned columns: frozen against the left edge so a row keeps its identity
   // while the rest of a wide table scrolls sideways.

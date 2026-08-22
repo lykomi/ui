@@ -58,6 +58,20 @@ declare module "@tanstack/react-table" {
  */
 export type DataTableBreakpoint = "sm" | "md" | "lg" | "xl" | "2xl";
 
+/**
+ * The list width at which each band starts earning its columns. Measured on
+ * the list itself, not the viewport — a list in a side pane is narrow even on
+ * a wide screen. Exported so a host that derives breakpoints from a schema
+ * measures against the same numbers the table renders by.
+ */
+export const DATA_TABLE_MIN_WIDTH: Record<DataTableBreakpoint, number> = {
+  sm: 448,
+  md: 672,
+  lg: 896,
+  xl: 1024,
+  "2xl": 1280,
+};
+
 /** Facet key for empty cells (`null`, `undefined`, `""`, `[]`). */
 export const FACET_EMPTY = "__none__";
 

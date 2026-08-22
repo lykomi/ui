@@ -115,6 +115,7 @@ export {
   type DataTableUrlOptions,
 } from "./components/data-table/state.ts";
 export {
+  DATA_TABLE_MIN_WIDTH,
   FACET_EMPTY,
   cellText,
   columnFacetKeys,
