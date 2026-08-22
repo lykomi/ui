@@ -52,14 +52,15 @@ const PAGE_RESET_KEYS = new Set<keyof DataTableState>(["globalFilter", "columnFi
 /**
  * TanStack's own rule for a column's id, mirrored so `meta.defaultHidden` can
  * be resolved before the table exists: an explicit `id`, else the
- * `accessorKey` with its FIRST dot turned into an underscore, else a string
- * header. Anything else has no stable id to key visibility by.
+ * `accessorKey` with EVERY dot turned into an underscore (`user.profile.name`
+ * → `user_profile_name`), else a string header. Anything else has no stable
+ * id to key visibility by.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function columnId<T>(column: ColumnDef<T, any>): string | undefined {
   if (column.id) return column.id;
   const accessorKey = "accessorKey" in column ? column.accessorKey : undefined;
-  if (accessorKey != null) return String(accessorKey).replace(".", "_");
+  if (accessorKey != null) return String(accessorKey).replace(/\./g, "_");
   return typeof column.header === "string" ? column.header : undefined;
 }
 

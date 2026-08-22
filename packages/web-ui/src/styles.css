@@ -215,8 +215,8 @@
 tr[data-clickable]:hover > [data-pinned="cell"] {
   background-color: color-mix(in srgb, var(--muted) 30%, var(--background));
 }
-tr[data-clickable]:focus-visible > [data-pinned="cell"],
-tr[data-clickable]:has(:focus-visible) > [data-pinned="cell"] {
+tr[data-focusable]:focus-visible > [data-pinned="cell"],
+tr[data-focusable]:has(:focus-visible) > [data-pinned="cell"] {
   background-color: color-mix(in srgb, var(--muted) 30%, var(--background));
 }
 tr[data-state="selected"] > [data-pinned="cell"] {

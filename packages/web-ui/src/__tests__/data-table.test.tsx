@@ -226,16 +226,28 @@ describe("promises the metadata makes", () => {
     expect(table.getColumn("notes")!.getIsVisible()).toBe(true);
   });
 
+  it("gives a row the keyboard can reach a visible focus state", () => {
+    // A list navigated with the arrows is focusable without being clickable;
+    // silent focus leaves a keyboard user guessing which row is theirs.
+    const h = mount({ activeRowId: "t1", onActiveRowChange: () => {} });
+    expect(h.table).toBeTruthy();
+    const row = container!.querySelector("tbody tr[data-row-id='t1']") as HTMLElement;
+    expect(row.getAttribute("tabindex")).toBe("0");
+    expect(row.hasAttribute("data-focusable")).toBe(true);
+    expect(row.className).toContain("focus-visible:");
+  });
+
   it("resolves ids the way TanStack does", () => {
     // A dotted accessorKey becomes `user_name`, and an accessorFn column can
     // take its id from a string header. Writing visibility under the raw key
     // would leave the metadata inert.
     expect(
       defaultHiddenColumns<Task>([
-        { accessorKey: "user.name", header: "Who", meta: { defaultHidden: true } },
+        // every dot, the way TanStack's `replaceAll` does it
+        { accessorKey: "user.profile.name", header: "Who", meta: { defaultHidden: true } },
         { accessorFn: (row) => row.title, header: "Title", meta: { defaultHidden: true } },
       ] as ColumnDef<Task, unknown>[]),
-    ).toEqual({ user_name: false, Title: false });
+    ).toEqual({ user_profile_name: false, Title: false });
   });
 
   it("counts a row once even when its buckets overlap", () => {

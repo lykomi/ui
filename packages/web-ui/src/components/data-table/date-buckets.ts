@@ -34,16 +34,38 @@ const ISO =
 const DOTTED = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/;
 const YEAR_FIRST = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/;
 
-/** The day itself must exist: 2026-02-31 is a typo, not a date. */
-function utcDay(year: number, month: number, day: number): number | null {
+/**
+ * Midnight at the start of that date, in the reader's own zone — and `null`
+ * if the date does not exist (2026-02-31 is a typo).
+ *
+ * Local, not UTC: a date somebody typed into a form means that day where
+ * they are. Reading it as UTC makes "22 August" start at 17:00 on the 21st
+ * for a reader in UTC−7, which then puts the row in the wrong bucket and
+ * marks a deadline overdue most of a day early.
+ */
+function localDay(year: number, month: number, day: number): number | null {
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  const at = Date.UTC(year, month - 1, day);
+  const at = new Date(year, month - 1, day).getTime();
   const check = new Date(at);
-  return check.getUTCFullYear() === year &&
-    check.getUTCMonth() === month - 1 &&
-    check.getUTCDate() === day
+  return check.getFullYear() === year && check.getMonth() === month - 1 && check.getDate() === day
     ? at
     : null;
+}
+
+/** Midnight of the local calendar day an instant falls in. */
+function startOfDay(at: number): number {
+  const date = new Date(at);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+/**
+ * Whole calendar days between two instants — 23:30 and 00:30 the next
+ * morning are ONE day apart even though barely an hour passed. Everything
+ * a person calls "today" or "yesterday" is a calendar question, so counting
+ * elapsed milliseconds gets it wrong twice a night.
+ */
+function calendarDaysBetween(from: number, to: number): number {
+  return Math.round((startOfDay(to) - startOfDay(from)) / DAY);
 }
 
 interface DateParts {
@@ -65,19 +87,22 @@ function parseParts(value: unknown): DateParts | null {
   if (iso) {
     // The calendar day has to be real; the clock and zone are `Date.parse`'s
     // job, and it handles ISO without guessing.
-    if (utcDay(Number(iso[1]), Number(iso[2]), Number(iso[3])) === null) return null;
+    const day = localDay(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+    if (day === null) return null;
+    // A bare date is that day where the reader is; one carrying a clock (and
+    // possibly a zone) is the instant it names.
+    if (text.length === 10) return { at: day, dateOnly: true };
     const parsed = Date.parse(text);
-    if (Number.isNaN(parsed)) return null;
-    return { at: parsed, dateOnly: text.length === 10 };
+    return Number.isNaN(parsed) ? null : { at: parsed, dateOnly: false };
   }
   const dotted = DOTTED.exec(text);
   if (dotted) {
-    const at = utcDay(Number(dotted[3]), Number(dotted[2]), Number(dotted[1]));
+    const at = localDay(Number(dotted[3]), Number(dotted[2]), Number(dotted[1]));
     return at === null ? null : { at, dateOnly: true };
   }
   const yearFirst = YEAR_FIRST.exec(text);
   if (yearFirst) {
-    const at = utcDay(Number(yearFirst[1]), Number(yearFirst[2]), Number(yearFirst[3]));
+    const at = localDay(Number(yearFirst[1]), Number(yearFirst[2]), Number(yearFirst[3]));
     return at === null ? null : { at, dateOnly: true };
   }
   return null;
@@ -93,10 +118,10 @@ export type AgeBucket = "today" | "week" | "month" | "older" | "never";
 export function ageBucket(value: unknown, options: DateBucketOptions = {}): AgeBucket {
   const at = parseDateish(value);
   if (at === null) return "never";
-  const age = (options.now ?? Date.now()) - at;
-  if (age < DAY) return "today";
-  if (age < 7 * DAY) return "week";
-  if (age < 30 * DAY) return "month";
+  const days = calendarDaysBetween(at, options.now ?? Date.now());
+  if (days <= 0) return "today";
+  if (days < 7) return "week";
+  if (days < 30) return "month";
   return "older";
 }
 
@@ -137,9 +162,9 @@ export function dueState(value: unknown, options: DueStateOptions = {}): DueStat
   if (parts === null) return "undated";
   const now = options.now ?? Date.now();
   // A date with no clock is a whole day, and someone with until Friday is not
-  // late on Friday morning — so it runs out at the END of its day. A real
-  // timestamp is compared as the instant it is.
-  const deadline = parts.dateOnly ? parts.at + DAY - 1 : parts.at;
+  // late on Friday morning — so it runs out at the end of that day where
+  // they are. A real timestamp is compared as the instant it is.
+  const deadline = parts.dateOnly ? startOfDay(parts.at) + DAY - 1 : parts.at;
   if (deadline < now) return "overdue";
   return deadline - now <= (options.soonDays ?? 30) * DAY ? "soon" : "later";
 }
@@ -148,9 +173,11 @@ export function dueState(value: unknown, options: DueStateOptions = {}): DueStat
 export function relativeAge(value: unknown, options: DateBucketOptions = {}): string {
   const at = parseDateish(value);
   if (at === null) return "—";
-  const days = Math.floor(((options.now ?? Date.now()) - at) / DAY);
+  const days = calendarDaysBetween(at, options.now ?? Date.now());
   if (days <= 0) return "today";
   if (days === 1) return "yesterday";
   if (days < 30) return `${days} d ago`;
-  return new Date(at).toISOString().slice(0, 10);
+  const date = new Date(at);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

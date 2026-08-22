@@ -402,6 +402,7 @@ export function DataTable<T>({
                     }
                     aria-selected={row.getIsSelected() || undefined}
                     data-clickable={onRowClick || onRowOpen ? "" : undefined}
+                    data-focusable={onRowClick || onRowOpen || onActiveRowChange ? "" : undefined}
                     tabIndex={onRowClick || onRowOpen || onActiveRowChange ? 0 : undefined}
                     // `detail` counts the clicks in the sequence: the second
                     // one belongs to the double-click that follows, and
@@ -425,8 +426,13 @@ export function DataTable<T>({
                     }}
                     className={cn(
                       "group/row border-t border-border/35 transition-colors",
-                      (onRowClick || onRowOpen) &&
-                        "cursor-pointer hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none",
+                      (onRowClick || onRowOpen) && "cursor-pointer hover:bg-muted/30",
+                      // Anything focusable has to SHOW where the keyboard is —
+                      // a list navigated with the arrows is focusable without
+                      // being clickable, and silent focus leaves a keyboard
+                      // user guessing which row the next key belongs to.
+                      (onRowClick || onRowOpen || onActiveRowChange) &&
+                        "focus-visible:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
                       "data-[state=selected]:bg-primary/6 data-[active]:bg-primary/8",
                       rowClassName?.(row),
                     )}
