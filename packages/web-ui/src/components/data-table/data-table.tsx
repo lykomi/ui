@@ -45,6 +45,13 @@ export interface DataTableProps<T> {
    * `DataTableFrame`.
    */
   fill?: boolean;
+  /**
+   * Give the list its own viewport of at most this height (e.g. `"70vh"`),
+   * so the rows scroll under a sticky header instead of running down the
+   * page — the way a spreadsheet-like list is expected to behave. Ignored
+   * while `fill` is on, which already bounds the height.
+   */
+  maxHeight?: string | number;
   dense?: boolean;
   className?: string;
   "aria-label"?: string;
@@ -93,6 +100,7 @@ export function DataTable<T>({
   emptyState = "No results.",
   stickyHeader = false,
   fill,
+  maxHeight,
   dense = false,
   className,
   "aria-label": ariaLabel,
@@ -102,7 +110,10 @@ export function DataTable<T>({
   // remaining height (`min-h-0` lets a flex item shrink below its content)
   // and scrolls in both directions, so the toolbar above stays put.
   const filling = fill ?? frame?.focused ?? false;
-  const sticky = stickyHeader || filling;
+  const bounded = !filling && maxHeight !== undefined;
+  // A header only sticks inside a scroll container — which is exactly what
+  // `fill` and `maxHeight` create.
+  const sticky = stickyHeader || filling || bounded;
   const rows = orderedRows(table, groupOrder);
   const dataRows = rows.filter((row) => !row.getIsGrouped());
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -188,7 +199,12 @@ export function DataTable<T>({
         className,
       )}
     >
-      <div className={cn(filling ? "min-h-0 flex-1 overflow-auto" : "overflow-x-auto")}>
+      <div
+        style={bounded ? { maxHeight } : undefined}
+        className={cn(
+          filling ? "min-h-0 flex-1 overflow-auto" : bounded ? "overflow-auto" : "overflow-x-auto",
+        )}
+      >
         <table
           className="w-full caption-bottom text-sm"
           aria-label={ariaLabel}

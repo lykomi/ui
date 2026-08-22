@@ -72,6 +72,7 @@ function Harness(
     pinnedFacets?: number;
     onActiveRowChange?: (row: Row<Task> | null) => void;
     toolbarProps?: Partial<React.ComponentProps<typeof DataTableToolbar>>;
+    tableProps?: Partial<React.ComponentProps<typeof DataTable>>;
     groupOrder?: string[];
     activeRowId?: string;
   },
@@ -81,6 +82,7 @@ function Harness(
     facets = [],
     pinnedFacets,
     toolbarProps,
+    tableProps,
     groupOrder,
     activeRowId,
     onActiveRowChange,
@@ -107,6 +109,7 @@ function Harness(
         activeRowId={activeRowId}
         onActiveRowChange={onActiveRowChange}
         emptyState="Nothing here"
+        {...tableProps}
       />
     </>
   );
@@ -518,6 +521,19 @@ describe("useDataTable + DataTable", () => {
       Object.defineProperty(window, "ResizeObserver", { writable: true, value: previousRO });
       Element.prototype.getBoundingClientRect = previousRect;
     }
+  });
+
+  it("maxHeight gives the list its own scroll viewport with a sticky header", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(<Harness tableProps={{ maxHeight: "60vh" }} onTable={() => {}} />);
+    });
+    const scroller = container!.querySelector("table")!.parentElement as HTMLElement;
+    expect(scroller.className).toContain("overflow-auto");
+    expect(scroller.style.maxHeight).toBe("60vh");
+    expect(container!.querySelector("thead")!.className).toContain("sticky");
   });
 
   it("groups rows in the declared group order with a header per group", () => {
