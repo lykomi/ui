@@ -327,6 +327,23 @@ describe("useDataTable + DataTable", () => {
     expect(filterRow()).not.toBeNull();
   });
 
+  it("children alone do not open a filter row", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <Harness
+          toolbarProps={{ children: <span data-extra="">extra</span> }}
+          onTable={() => {}}
+        />,
+      );
+    });
+    expect(container!.querySelector("[data-extra]")).not.toBeNull();
+    expect(container!.querySelector("[data-filter-row]")).toBeNull();
+    expect(container!.querySelector("button[data-filters-toggle]")).toBeNull();
+  });
+
   it("layout=inline keeps one wrapping row", () => {
     container = document.createElement("div");
     document.body.appendChild(container);

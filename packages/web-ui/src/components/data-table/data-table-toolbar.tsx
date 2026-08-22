@@ -44,11 +44,14 @@ export type DataTableToolbarLayout = "auto" | "inline" | "stacked";
 export interface DataTableToolbarProps<T> {
   table: Table<T>;
   facets?: DataTableFacet[];
-  /** "auto" (default): a filter row as soon as there are facets; "inline": one wrapping row. */
+  /**
+   * "auto" (default): filters get their own row as soon as there are facets;
+   * "stacked": always; "inline": one wrapping row.
+   */
   layout?: DataTableToolbarLayout;
   /** Show the Filters toggle that hides the filter row (default true when stacked). */
   collapsibleFilters?: boolean;
-  /** Start with the filter row hidden (the toggle still shows the active count). */
+  /** Whether the filter row starts open (default `true`; when closed the toggle still shows the active count). */
   defaultFiltersOpen?: boolean;
   /** Facets always visible when none declares `pinned` (default 3; `Infinity` shows all). */
   pinnedFacets?: number;
@@ -123,8 +126,9 @@ export function DataTableToolbar<T>({
   const isFiltered =
     state.columnFilters.length > 0 || Boolean(state.globalFilter) || revealed.size > 0;
   const { shown, hidden } = visibleFacets(table, facets, revealed, pinnedFacets);
-  const hasFilterRow = facets.length > 0 || Boolean(children);
-  const stacked = layout === "stacked" || (layout === "auto" && hasFilterRow);
+  // `children` alone (extra controls, no facets) is not a reason to open a
+  // second band — it rides in the filter row only when there is one.
+  const stacked = layout === "stacked" || (layout === "auto" && facets.length > 0);
   const canCollapse = stacked && (collapsibleFilters ?? true);
   const activeFilters = state.columnFilters.length;
   const showFilters = !canCollapse || filtersOpen;
