@@ -8,7 +8,7 @@
  * filter the user added reads as a chip in the same row.
  */
 import type { Table } from "@tanstack/react-table";
-import { ListFilter, Maximize2, Minimize2, Search, X } from "lucide-react";
+import { Maximize2, Minimize2, Plus, Search, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button, Input, cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -101,7 +101,8 @@ export function DataTableToolbar<T>({
       </Button>
     ) : null;
   const state = table.getState();
-  const isFiltered = state.columnFilters.length > 0 || Boolean(state.globalFilter);
+  const isFiltered =
+    state.columnFilters.length > 0 || Boolean(state.globalFilter) || revealed.size > 0;
   const { shown, hidden } = visibleFacets(table, facets, revealed, pinnedFacets);
   const facetTitle = (facet: DataTableFacet) => {
     const column = table.getColumn(facet.columnId);
@@ -131,6 +132,16 @@ export function DataTableToolbar<T>({
             column={column}
             title={facet.title}
             options={facet.options}
+            onEmptyClose={
+              revealed.has(facet.columnId)
+                ? () =>
+                    setRevealed((current) => {
+                      const next = new Set(current);
+                      next.delete(facet.columnId);
+                      return next;
+                    })
+                : undefined
+            }
           />
         );
       })}
@@ -144,7 +155,7 @@ export function DataTableToolbar<T>({
               data-facet-menu=""
               className="h-8 rounded-xl px-2.5 text-muted-foreground hover:text-foreground"
             >
-              <ListFilter className="size-4" />
+              <Plus className="size-4" />
               Filter
             </Button>
           </DropdownMenuTrigger>

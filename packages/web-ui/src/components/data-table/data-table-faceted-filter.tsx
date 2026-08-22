@@ -79,7 +79,8 @@ export function DataTableFacetedFilter<T>({
               <span className="mx-0.5 h-4 w-px bg-border/60" aria-hidden="true" />
               {selected.length > 2 ? (
                 <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal tabular-nums">
-                  {selected.length}
+                  <span aria-hidden="true">{selected.length}</span>
+                  <span className="sr-only">{selected.length} selected</span>
                 </span>
               ) : (
                 options

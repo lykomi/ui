@@ -244,6 +244,11 @@ describe("useDataTable + DataTable", () => {
     expect(split2.hidden.map((f) => f.columnId)).toEqual(["priority"]);
     act(() => h.table.resetColumnFilters());
     expect(facetButtons()).toEqual(["status"]);
+    // a facet with more than two values announces the count to assistive tech
+    act(() => h.table.getColumn("status")!.setFilterValue(["open", "done", "x"]));
+    expect(container!.querySelector("button[data-facet='status'] .sr-only")?.textContent).toBe(
+      "3 selected",
+    );
   });
 
   it("hides a column below its breakpoint with a literal responsive class", () => {
