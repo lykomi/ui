@@ -58,6 +58,71 @@ export { CollectionEmptyState } from "./components/collection-empty-state.tsx";
 export { CollectionSkeleton } from "./components/collection-skeleton.tsx";
 export { InfiniteScrollSentinel } from "./components/infinite-scroll-sentinel.tsx";
 export { CollectionSurface } from "./components/collection-surface.tsx";
+export { DataTable, type DataTableProps } from "./components/data-table/data-table.tsx";
+export {
+  DataTableToolbar,
+  type DataTableFacet,
+  type DataTableToolbarProps,
+} from "./components/data-table/data-table-toolbar.tsx";
+export {
+  DataTableFacetedFilter,
+  type DataTableFacetedFilterProps,
+} from "./components/data-table/data-table-faceted-filter.tsx";
+export {
+  DataTableViewOptions,
+  type DataTableViewOptionsProps,
+} from "./components/data-table/data-table-view-options.tsx";
+export {
+  DataTableColumnHeader,
+  type DataTableColumnHeaderProps,
+} from "./components/data-table/data-table-column-header.tsx";
+export {
+  DataTablePagination,
+  type DataTablePaginationProps,
+} from "./components/data-table/data-table-pagination.tsx";
+export {
+  DataTableRowActions,
+  type DataTableRowAction,
+  type DataTableRowActionsProps,
+} from "./components/data-table/data-table-row-actions.tsx";
+export { selectionColumn, SELECTION_COLUMN_ID } from "./components/data-table/selection-column.tsx";
+export { useDataTable, type UseDataTableOptions } from "./components/data-table/use-data-table.ts";
+export {
+  DEFAULT_PAGE_SIZE,
+  EMPTY_DATA_TABLE_STATE,
+  isDataTableUrlKey,
+  mergeDataTableUrlState,
+  parseDataTableState,
+  serializeDataTableState,
+  type DataTableState,
+  type DataTableUrlOptions,
+} from "./components/data-table/state.ts";
+export {
+  FACET_EMPTY,
+  cellText,
+  columnLabel,
+  facetCounts,
+  facetFilterFn,
+  facetKeys,
+  facetOptions,
+  normalizeFacetValue,
+  rowSearchText,
+  tokenSearchFilterFn,
+  type DataTableFacetCount,
+  type DataTableFacetOption,
+} from "./components/data-table/facets.ts";
+export {
+  createColumnHelper,
+  flexRender,
+  type Column,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type Row,
+  type RowSelectionState,
+  type SortingState,
+  type Table,
+  type VisibilityState,
+} from "@tanstack/react-table";
 export {
   ThemeRuntimeProvider,
   ThemeScope,
@@ -82,6 +147,7 @@ export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./ui/collap
 export {
   DropdownMenu,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -170,10 +236,7 @@ export { useNewConversation } from "./lib/use-new-conversation.ts";
 // --- Adapters ---
 export { AGUIAdapterSDK } from "./lib/ag-ui-adapter.ts";
 export { FileAttachmentAdapter, resolveMimeType } from "./lib/attachment-adapter.ts";
-export {
-  registerAttachmentAdapter,
-  useAttachmentAdapterStore,
-} from "./lib/attachment-registry.ts";
+export { registerAttachmentAdapter, useAttachmentAdapterStore } from "./lib/attachment-registry.ts";
 export { ReasoningPart, ReasoningMessagePartComponent } from "./components/reasoning-part.tsx";
 export { ReasoningEffortPicker } from "./components/reasoning-effort-picker.tsx";
 

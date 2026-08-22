@@ -1,0 +1,164 @@
+/**
+ * One facet: a dashed "+ Title" button that opens a checklist of options
+ * with live counts. Picking several options ORs them; the table ANDs the
+ * facets. Options come from the data unless declared.
+ */
+import type { Column } from "@tanstack/react-table";
+import { Check, PlusCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.tsx";
+import {
+  columnLabel,
+  facetOptions,
+  normalizeFacetValue,
+  type DataTableFacetOption,
+} from "./facets.ts";
+
+export interface DataTableFacetedFilterProps<T> {
+  column: Column<T, unknown>;
+  title?: string;
+  options?: DataTableFacetOption[];
+  /** Show a search box inside the list once there are more options than this (default 7). */
+  searchableFrom?: number;
+  className?: string;
+}
+
+export function DataTableFacetedFilter<T>({
+  column,
+  title,
+  options: declared,
+  searchableFrom = 7,
+  className,
+}: DataTableFacetedFilterProps<T>) {
+  const [query, setQuery] = useState("");
+  const label = title ?? columnLabel(column);
+  const selected = normalizeFacetValue(column.getFilterValue());
+  const selectedSet = new Set(selected);
+  const options = facetOptions(column, declared);
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return needle ? options.filter((o) => o.label.toLowerCase().includes(needle)) : options;
+  }, [options, query]);
+
+  const toggle = (value: string) => {
+    const next = selectedSet.has(value)
+      ? selected.filter((item) => item !== value)
+      : [...selected, value];
+    column.setFilterValue(next.length ? next : undefined);
+  };
+
+  return (
+    <Popover onOpenChange={(open) => !open && setQuery("")}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          data-facet={column.id}
+          data-active={selected.length ? "" : undefined}
+          className={cn(
+            "h-8 rounded-xl border-dashed border-border/60 bg-background/65 shadow-none hover:bg-muted/26",
+            selected.length && "border-solid border-primary/30",
+            className,
+          )}
+        >
+          <PlusCircle className="size-4" />
+          {label}
+          {selected.length > 0 ? (
+            <>
+              <span className="mx-0.5 h-4 w-px bg-border/60" aria-hidden="true" />
+              <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal lg:hidden">
+                {selected.length}
+              </span>
+              <span className="hidden gap-1 lg:flex">
+                {selected.length > 2 ? (
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal">
+                    {selected.length} selected
+                  </span>
+                ) : (
+                  options
+                    .filter((option) => selectedSet.has(option.value))
+                    .map((option) => (
+                      <span
+                        key={option.value}
+                        className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal"
+                      >
+                        {option.label}
+                      </span>
+                    ))
+                )}
+              </span>
+            </>
+          ) : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-1.5">
+        {options.length >= searchableFrom ? (
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={label}
+            aria-label={`Search ${label} options`}
+            className="mb-1 h-8 w-full rounded-lg border border-border/45 bg-background/72 px-2 text-sm outline-none focus:border-primary/30"
+          />
+        ) : null}
+        <div
+          role="group"
+          aria-label={`${label} filter`}
+          className="max-h-72 space-y-0.5 overflow-y-auto"
+        >
+          {shown.length === 0 ? (
+            <div className="px-2 py-4 text-center text-xs text-muted-foreground">No options.</div>
+          ) : (
+            shown.map((option) => {
+              const checked = selectedSet.has(option.value);
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={checked}
+                  onClick={() => toggle(option.value)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent",
+                    option.count === 0 && !checked && "text-muted-foreground",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded border border-border",
+                      checked
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "opacity-60 [&_svg]:invisible",
+                    )}
+                  >
+                    <Check className="size-3.5" />
+                  </span>
+                  {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
+                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                  <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
+                    {option.count}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+        {selected.length > 0 ? (
+          <>
+            <div className="my-1 h-px bg-border/45" />
+            <button
+              type="button"
+              onClick={() => column.setFilterValue(undefined)}
+              className="w-full rounded-lg px-2 py-1.5 text-center text-sm hover:bg-accent"
+            >
+              Clear filter
+            </button>
+          </>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}

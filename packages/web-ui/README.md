@@ -38,6 +38,29 @@ components are generated:
 @source "../node_modules/@iloveagents/foundry-web-ui/dist";
 ```
 
+## Lists
+
+Every list renders through one `DataTable` family (TanStack Table underneath):
+AND-of-tokens search, faceted filters with live counts (OR within a facet, AND
+across facets, array cells count per element, empty cells as "None"), sortable
+headers, column visibility, row selection, optional paging, optional grouping,
+and a URL codec that keeps `q` / `sort` / `f_<column>` / `hide` / `page` / `size`.
+
+```tsx
+const table = useDataTable({ data: rows, columns, getRowId: (row) => row.id, pageSize: 20 });
+
+<DataTableToolbar table={table} facets={[{ columnId: "status" }, { columnId: "priority" }]} />
+<DataTable table={table} onRowClick={(row) => open(row.original)} />
+<DataTablePagination table={table} />
+```
+
+Give a column `filterFn: facetFilterFn` (or the string `"facet"` in untyped
+code) to use it as a facet; `meta.facetLabels` names
+its values, `meta.label` names the column in the View menu, and
+`DataTableColumnHeader` makes a header sortable. Pass `state` + `onStateChange`
+(with `parseDataTableState` / `mergeDataTableUrlState`) to keep the whole list
+state in the URL.
+
 ## Extension Points
 
 Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via registries — no direct imports needed:
