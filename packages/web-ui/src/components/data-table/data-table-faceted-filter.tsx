@@ -21,6 +21,8 @@ export interface DataTableFacetedFilterProps<T> {
   options?: DataTableFacetOption[];
   /** Show a search box inside the list once there are more options than this (default 7). */
   searchableFrom?: number;
+  /** Called when the popover closes with nothing selected (a revealed facet goes back into the menu). */
+  onEmptyClose?: () => void;
   className?: string;
 }
 
@@ -29,6 +31,7 @@ export function DataTableFacetedFilter<T>({
   title,
   options: declared,
   searchableFrom = 7,
+  onEmptyClose,
   className,
 }: DataTableFacetedFilterProps<T>) {
   const [query, setQuery] = useState("");
@@ -49,7 +52,13 @@ export function DataTableFacetedFilter<T>({
   };
 
   return (
-    <Popover onOpenChange={(open) => !open && setQuery("")}>
+    <Popover
+      onOpenChange={(open) => {
+        if (open) return;
+        setQuery("");
+        if (normalizeFacetValue(column.getFilterValue()).length === 0) onEmptyClose?.();
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
