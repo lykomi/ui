@@ -75,6 +75,7 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   );
   const stateRef = useRef(state);
   stateRef.current = state;
+  const tableRef = useRef<Table<T> | null>(null);
 
   const update = useCallback(
     <K extends keyof DataTableState>(key: K, updater: Updater<DataTableState[K]>) => {
@@ -89,6 +90,13 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
         next.pagination = { ...next.pagination, pageIndex: 0 };
       }
       stateRef.current = next;
+      // Apply to the instance now, not on the next render: a caller that
+      // reads row models right after a mutation (agent tools, tests) sees
+      // the new state even while the host owns it (URL, store).
+      tableRef.current?.setOptions((prev) => ({
+        ...prev,
+        state: { ...prev.state, [key]: value, pagination: next.pagination },
+      }));
       if (controlled) onStateChange(next);
       else setInnerState(next);
     },
@@ -130,5 +138,7 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   } else if (pageSize) {
     tableOptions.getPaginationRowModel = getPaginationRowModel();
   }
-  return useReactTable(tableOptions);
+  const table = useReactTable(tableOptions);
+  tableRef.current = table;
+  return table;
 }
