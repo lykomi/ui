@@ -70,11 +70,20 @@ function Harness(
     onTable: (table: Table<Task>) => void;
     facets?: string[];
     pinnedFacets?: number;
+    toolbarProps?: Partial<React.ComponentProps<typeof DataTableToolbar>>;
     groupOrder?: string[];
     activeRowId?: string;
   },
 ) {
-  const { onTable, facets = [], pinnedFacets, groupOrder, activeRowId, ...options } = props;
+  const {
+    onTable,
+    facets = [],
+    pinnedFacets,
+    toolbarProps,
+    groupOrder,
+    activeRowId,
+    ...options
+  } = props;
   const table = useDataTable<Task>({
     data: TASKS,
     columns: COLUMNS,
@@ -88,6 +97,7 @@ function Harness(
         table={table}
         facets={facets.map((columnId) => ({ columnId }))}
         pinnedFacets={pinnedFacets}
+        {...toolbarProps}
       />
       <DataTable
         table={table}
@@ -291,6 +301,67 @@ describe("useDataTable + DataTable", () => {
     });
     expect(container!.querySelector("[data-focused]")).toBeNull();
     expect(container!.querySelector(".plain")).not.toBeNull();
+  });
+
+  it("puts filters on their own row and collapses them behind the Filters toggle", () => {
+    const h = mount({ facets: ["status", "priority"] });
+    const filterRow = () => container!.querySelector("[data-filter-row]");
+    const toggle = () =>
+      container!.querySelector<HTMLButtonElement>("button[data-filters-toggle]")!;
+    expect(filterRow()).not.toBeNull();
+    // Row 1 holds the search; the facets live in the filter row, not beside it.
+    expect(filterRow()!.querySelectorAll("button[data-facet]")).toHaveLength(2);
+    expect(
+      container!.querySelector("input[type='search']")?.closest("[data-filter-row]"),
+    ).toBeNull();
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    expect(toggle().textContent).not.toMatch(/\d/);
+    act(() => h.table.getColumn("status")!.setFilterValue(["open"]));
+    expect(toggle().querySelector(".sr-only")?.textContent).toBe("1 active");
+    act(() => toggle().click());
+    expect(filterRow()).toBeNull();
+    // Collapsed, the list still shows the filter is on — and the rows stay filtered.
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(renderedIds()).toEqual(["t1", "t2"]);
+    act(() => toggle().click());
+    expect(filterRow()).not.toBeNull();
+  });
+
+  it("children alone do not open a filter row", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <Harness
+          toolbarProps={{ children: <span data-extra="">extra</span> }}
+          onTable={() => {}}
+        />,
+      );
+    });
+    expect(container!.querySelector("[data-extra]")).not.toBeNull();
+    expect(container!.querySelector("[data-filter-row]")).toBeNull();
+    expect(container!.querySelector("button[data-filters-toggle]")).toBeNull();
+  });
+
+  it("layout=inline keeps one wrapping row", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          facets={["status"]}
+          toolbarProps={{ layout: "inline" }}
+          onTable={(t) => (table = t)}
+        />,
+      );
+    });
+    expect(container!.querySelector("[data-filter-row]")).toBeNull();
+    expect(container!.querySelector("button[data-filters-toggle]")).toBeNull();
+    expect(container!.querySelectorAll("button[data-facet]")).toHaveLength(1);
+    expect(table.getState().columnFilters).toEqual([]);
   });
 
   it("groups rows in the declared group order with a header per group", () => {
