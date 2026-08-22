@@ -39,10 +39,13 @@ export const EMPTY_DATA_TABLE_STATE: DataTableState = {
 };
 
 const FILTER_PREFIX = "f_";
-const OWN_KEYS = new Set(["q", "sort", "hide", "page", "size"]);
+const OWN_KEYS = ["q", "sort", "hide", "page", "size"] as const;
 
-export function isDataTableUrlKey(key: string): boolean {
-  return OWN_KEYS.has(key) || key.startsWith(FILTER_PREFIX);
+/** `prefix` namespaces every key (`risks.q`, `risks.f_status`) so two lists can share a page. */
+export function isDataTableUrlKey(key: string, prefix = ""): boolean {
+  if (!key.startsWith(prefix)) return false;
+  const bare = key.slice(prefix.length);
+  return (OWN_KEYS as readonly string[]).includes(bare) || bare.startsWith(FILTER_PREFIX);
 }
 
 function encodePart(value: string): string {
@@ -65,6 +68,8 @@ function filterValues(value: unknown): string[] {
 }
 
 export interface DataTableUrlOptions {
+  /** Key namespace for pages with several lists (`"risks."` → `risks.q`, `risks.f_status`). */
+  prefix?: string;
   /** Page size that is implied when `size` is absent (default 20). */
   defaultPageSize?: number;
   /**
@@ -98,12 +103,13 @@ export function serializeDataTableState(
   options?: DataTableUrlOptions,
 ): URLSearchParams {
   const defaults = options?.defaults ?? {};
+  const prefix = options?.prefix ?? "";
   const params = new URLSearchParams();
   if (state.globalFilter !== undefined && state.globalFilter !== (defaults.globalFilter ?? "")) {
-    params.set("q", state.globalFilter);
+    params.set(`${prefix}q`, state.globalFilter);
   }
   if (state.sorting !== undefined && sortKey(state.sorting) !== sortKey(defaults.sorting)) {
-    params.set("sort", sortKey(state.sorting));
+    params.set(`${prefix}sort`, sortKey(state.sorting));
   }
   if (state.columnFilters !== undefined) {
     const current = new Map(
@@ -117,22 +123,25 @@ export function serializeDataTableState(
     );
     for (const id of new Set([...current.keys(), ...base.keys()])) {
       const value = current.get(id) ?? "";
-      if (value !== (base.get(id) ?? "")) params.set(`${FILTER_PREFIX}${id}`, value);
+      if (value !== (base.get(id) ?? "")) params.set(`${prefix}${FILTER_PREFIX}${id}`, value);
     }
   }
   if (
     state.columnVisibility !== undefined &&
     hiddenKey(state.columnVisibility) !== hiddenKey(defaults.columnVisibility)
   ) {
-    params.set("hide", hiddenKey(state.columnVisibility));
+    params.set(`${prefix}hide`, hiddenKey(state.columnVisibility));
   }
   const pagination = state.pagination;
   if (pagination) {
     const defaultIndex = defaults.pagination?.pageIndex ?? 0;
-    if (pagination.pageIndex !== defaultIndex) params.set("page", String(pagination.pageIndex + 1));
+    if (pagination.pageIndex !== defaultIndex) {
+      params.set(`${prefix}page`, String(pagination.pageIndex + 1));
+    }
     const defaultSize =
       options?.defaultPageSize ?? defaults.pagination?.pageSize ?? DEFAULT_PAGE_SIZE;
-    if (pagination.pageSize !== defaultSize) params.set("size", String(pagination.pageSize));
+    if (pagination.pageSize !== defaultSize)
+      params.set(`${prefix}size`, String(pagination.pageSize));
   }
   return params;
 }
@@ -143,8 +152,10 @@ export function parseDataTableState(
   options?: DataTableUrlOptions,
 ): DataTableState {
   const defaults = { ...EMPTY_DATA_TABLE_STATE, ...options?.defaults };
+  const prefix = options?.prefix ?? "";
+  const filterPrefix = `${prefix}${FILTER_PREFIX}`;
   const defaultSize = options?.defaultPageSize ?? defaults.pagination.pageSize;
-  const sortRaw = params.get("sort");
+  const sortRaw = params.get(`${prefix}sort`);
   const sorting: SortingState =
     sortRaw == null
       ? defaults.sorting
@@ -158,15 +169,15 @@ export function parseDataTableState(
           );
   const filtersById = new Map(defaults.columnFilters.map((filter) => [filter.id, filter] as const));
   for (const [key, raw] of params.entries()) {
-    if (!key.startsWith(FILTER_PREFIX)) continue;
-    const id = key.slice(FILTER_PREFIX.length);
+    if (!key.startsWith(filterPrefix)) continue;
+    const id = key.slice(filterPrefix.length);
     const values = raw.split(",").filter(Boolean).map(decodePart);
     if (values.length) filtersById.set(id, { id, value: values });
     else filtersById.delete(id);
   }
   const columnFilters: ColumnFiltersState = Array.from(filtersById.values());
   const columnVisibility: VisibilityState = { ...defaults.columnVisibility };
-  const hideRaw = params.get("hide");
+  const hideRaw = params.get(`${prefix}hide`);
   if (hideRaw != null) {
     for (const id of Object.keys(columnVisibility)) {
       if (columnVisibility[id] === false) delete columnVisibility[id];
@@ -174,12 +185,14 @@ export function parseDataTableState(
     for (const id of hideRaw.split(",").filter(Boolean).map(decodePart))
       columnVisibility[id] = false;
   }
-  const pageRaw = params.get("page");
+  const pageRaw = params.get(`${prefix}page`);
   const page = Number.parseInt(pageRaw ?? "", 10);
-  const size = Number.parseInt(params.get("size") ?? "", 10);
+  const size = Number.parseInt(params.get(`${prefix}size`) ?? "", 10);
   return {
     ...defaults,
-    globalFilter: params.has("q") ? (params.get("q") ?? "") : defaults.globalFilter,
+    globalFilter: params.has(`${prefix}q`)
+      ? (params.get(`${prefix}q`) ?? "")
+      : defaults.globalFilter,
     sorting,
     columnFilters,
     columnVisibility,
@@ -202,7 +215,9 @@ export function mergeDataTableUrlState(
   options?: DataTableUrlOptions,
 ): URLSearchParams {
   const next = new URLSearchParams();
-  for (const [key, value] of params.entries()) if (!isDataTableUrlKey(key)) next.append(key, value);
+  for (const [key, value] of params.entries()) {
+    if (!isDataTableUrlKey(key, options?.prefix)) next.append(key, value);
+  }
   for (const [key, value] of serializeDataTableState(state, options).entries())
     next.set(key, value);
   return next;

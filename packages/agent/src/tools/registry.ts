@@ -27,30 +27,42 @@ export interface ClientToolEntry {
 
 interface ClientToolRegistryState {
   globalTools: Map<string, ClientToolEntry>;
+  /** Tools the host page registered (replaced wholesale by `registerPageTools`). */
   pageTools: Map<string, ClientToolEntry>;
+  /** Tools contributed by components on the page (survive host re-registration). */
+  contributedTools: Map<string, ClientToolEntry>;
 
-  /** Register a global tool (called once at app init) */
   registerGlobal: (tool: ClientToolEntry) => void;
 
-  /** Register page-scoped tools (called by the host on mount) */
+  /** Replace the host page's tool catalogue (called by the host on navigation / capability change). */
   registerPageTools: (tools: ClientToolEntry[]) => void;
 
-  /** Remove page-scoped tools (called by the host on unmount) */
+  /**
+   * Merge page-scoped tools by name, keeping the ones already registered —
+   * for components (a list, a panel) that contribute their own tools next
+   * to the page's. A contributed tool shadows a host tool of the same name
+   * while mounted. Pair with `removePageTools` on unmount.
+   */
+  addPageTools: (tools: ClientToolEntry[]) => void;
+
+  /** Drop contributed tools by name (a contributing component unmounted). */
+  removePageTools: (names: string[]) => void;
+
+  /** Every page-scoped tool: host tools, then contributed ones (which win by name). */
+  listPageTools: () => ClientToolEntry[];
+
+  /** Remove page-scoped tools — host and contributed (called by the host on unmount). */
   clearPageTools: () => void;
 
-  /** Get all active tool schemas for the runner */
   getActiveSchemas: () => AGUITool[];
-
-  /** Check if a tool name is registered */
   isRegistered: (name: string) => boolean;
-
-  /** Execute a registered tool by name */
   executeTool: (name: string, argsJson: string) => Promise<string>;
 }
 
 export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get) => ({
   globalTools: new Map(),
   pageTools: new Map(),
+  contributedTools: new Map(),
 
   registerGlobal: (tool) => {
     const { globalTools } = get();
@@ -67,19 +79,44 @@ export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get
     set({ pageTools: next });
   },
 
+  addPageTools: (tools) => {
+    const next = new Map(get().contributedTools);
+    for (const tool of tools) {
+      next.set(tool.name, tool);
+    }
+    set({ contributedTools: next });
+  },
+
+  removePageTools: (names) => {
+    const { contributedTools } = get();
+    if (!names.some((name) => contributedTools.has(name))) return;
+    const next = new Map(contributedTools);
+    for (const name of names) {
+      next.delete(name);
+    }
+    set({ contributedTools: next });
+  },
+
+  listPageTools: () => {
+    const { pageTools, contributedTools } = get();
+    const merged = new Map(pageTools);
+    for (const tool of contributedTools.values()) {
+      merged.set(tool.name, tool);
+    }
+    return Array.from(merged.values());
+  },
+
   clearPageTools: () => {
-    set({ pageTools: new Map() });
+    set({ pageTools: new Map(), contributedTools: new Map() });
   },
 
   getActiveSchemas: () => {
-    const { globalTools, pageTools } = get();
-    // Merge: page tools override global tools with the same name
     const merged = new Map<string, ClientToolEntry>();
-    for (const tool of globalTools.values()) {
+    for (const tool of get().globalTools.values()) {
       merged.set(tool.name, tool);
     }
-    for (const tool of pageTools.values()) {
-      merged.set(tool.name, tool); // page overrides global
+    for (const tool of get().listPageTools()) {
+      merged.set(tool.name, tool); // page overrides global, contributed overrides page
     }
     return Array.from(merged.values()).map((tool) => ({
       name: tool.name,
@@ -89,14 +126,13 @@ export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get
   },
 
   isRegistered: (name) => {
-    const { globalTools, pageTools } = get();
-    return pageTools.has(name) || globalTools.has(name);
+    const { globalTools, pageTools, contributedTools } = get();
+    return contributedTools.has(name) || pageTools.has(name) || globalTools.has(name);
   },
 
   executeTool: async (name, argsJson) => {
-    const { globalTools, pageTools } = get();
-    // Page tools take precedence
-    const tool = pageTools.get(name) ?? globalTools.get(name);
+    const { globalTools, pageTools, contributedTools } = get();
+    const tool = contributedTools.get(name) ?? pageTools.get(name) ?? globalTools.get(name);
     if (!tool) {
       return JSON.stringify({ error: `Unknown client tool: ${name}` });
     }
@@ -104,7 +140,6 @@ export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get
   },
 }));
 
-/** Read-only registry view — what the runner consumes. */
 export interface ToolRegistry {
   isRegistered: (name: string) => boolean;
   executeTool: (name: string, argsJson: string) => Promise<string>;

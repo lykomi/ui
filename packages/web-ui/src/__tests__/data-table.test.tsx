@@ -18,6 +18,7 @@ import {
   rowSearchText,
 } from "../components/data-table/facets.ts";
 import {
+  isDataTableUrlKey,
   mergeDataTableUrlState,
   parseDataTableState,
   serializeDataTableState,
@@ -373,6 +374,24 @@ describe("URL state", () => {
     expect(untouched.pagination).toEqual({ pageIndex: 1, pageSize: 10 });
     expect(untouched.columnFilters).toEqual([{ id: "status", value: ["open"] }]);
     expect(serializeDataTableState(untouched, { defaults }).toString()).toBe("");
+  });
+
+  it("namespaces keys with a prefix so two lists share one URL", () => {
+    const a = mergeDataTableUrlState(
+      new URLSearchParams("view=grid&b.q=old"),
+      { globalFilter: "x", columnFilters: [{ id: "status", value: ["open"] }] },
+      { prefix: "a." },
+    );
+    expect(a.toString()).toBe("view=grid&b.q=old&a.q=x&a.f_status=open");
+    const parsedA = parseDataTableState(a, { prefix: "a." });
+    expect(parsedA.globalFilter).toBe("x");
+    expect(parsedA.columnFilters).toEqual([{ id: "status", value: ["open"] }]);
+    const parsedB = parseDataTableState(a, { prefix: "b." });
+    expect(parsedB.globalFilter).toBe("old");
+    expect(parsedB.columnFilters).toEqual([]);
+    expect(isDataTableUrlKey("a.f_status", "a.")).toBe(true);
+    expect(isDataTableUrlKey("f_status", "a.")).toBe(false);
+    expect(isDataTableUrlKey("f_status")).toBe(true);
   });
 
   it("omits defaults, keeps foreign params on merge, and applies defaults when absent", () => {
