@@ -140,10 +140,15 @@ export function DataTable<T>({
     !breakpoint || width === undefined || width >= MIN_WIDTH[breakpoint];
   // Pinned columns: frozen against the left edge so a row keeps its identity
   // while the rest of a wide table scrolls sideways.
-  const pinnedIds = table
-    .getVisibleLeafColumns()
-    .filter((column) => column.columnDef.meta?.pinned === "left")
-    .map((column) => column.id);
+  // Freezing is a run from the left edge: everything up to the last pinned
+  // column comes along, so a leading checkbox never slides out from under the
+  // rows it belongs to.
+  const leafColumns = table.getVisibleLeafColumns();
+  const lastPinnedIndex = leafColumns.reduce(
+    (last, column, index) => (column.columnDef.meta?.pinned === "left" ? index : last),
+    -1,
+  );
+  const pinnedIds = leafColumns.slice(0, lastPinnedIndex + 1).map((column) => column.id);
   const { offsets, lastPinned, measure } = usePinnedOffsets(pinnedIds);
   // A pinned cell is opaque — the other columns slide underneath it — and it
   // restates the row's hover / selected / active tints. Those rules live in

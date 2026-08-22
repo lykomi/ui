@@ -507,6 +507,11 @@ describe("useDataTable + DataTable", () => {
       act(() => callbacks.forEach((callback) => callback()));
       expect(headers()[0]!.getAttribute("data-pinned")).toBe("header");
       expect(headers()[1]!.getAttribute("data-pinned")).toBe("header");
+      // pinning is a run from the left edge, so a leading column with no
+      // `pinned` of its own still comes along
+      expect(
+        Array.from(container!.querySelectorAll("tbody tr[data-row-id] td[data-pinned]")).length,
+      ).toBeGreaterThan(0);
       expect(headers()[1]!.hasAttribute("data-pinned-edge")).toBe(true);
       expect(headers()[2]!.hasAttribute("data-pinned")).toBe(false);
       // the second pinned column starts where the first one ends
