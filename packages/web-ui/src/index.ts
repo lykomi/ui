@@ -69,6 +69,7 @@ export {
   DataTableToolbar,
   visibleFacets,
   type DataTableFacet,
+  type DataTableToolbarLayout,
   type DataTableToolbarProps,
 } from "./components/data-table/data-table-toolbar.tsx";
 export {
