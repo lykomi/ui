@@ -24,6 +24,8 @@ declare module "@tanstack/react-table" {
     facetLabels?: Record<string, string>;
     /** Keep unused type parameter referenced for declaration merging. */
     __cellValue?: TValue;
+    /** Hosts may carry their own keys in `meta` (e.g. a server sort key). */
+    [key: string]: unknown;
   }
   interface FilterFns {
     facet: FilterFn<unknown>;
