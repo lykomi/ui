@@ -4,15 +4,24 @@
  * the facet's own filter, AND-of-tokens search, URL round-trips, grouping
  * order, and the toolbar's Reset.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ColumnDef, Table } from "@tanstack/react-table";
+import type { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { DataTable } from "../components/data-table/data-table.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu.tsx";
 import { DataTableFrame } from "../components/data-table/data-table-frame.tsx";
 import { DataTableToolbar, visibleFacets } from "../components/data-table/data-table-toolbar.tsx";
 import {
   FACET_EMPTY,
+  columnFacetKeys,
   facetFilterFn,
   facetKeys,
   facetOptions,
@@ -26,7 +35,11 @@ import {
   type DataTableState,
 } from "../components/data-table/state.ts";
 import { selectionColumn } from "../components/data-table/selection-column.tsx";
-import { useDataTable, type UseDataTableOptions } from "../components/data-table/use-data-table.ts";
+import {
+  defaultHiddenColumns,
+  useDataTable,
+  type UseDataTableOptions,
+} from "../components/data-table/use-data-table.ts";
 
 interface Task {
   id: string;
@@ -70,7 +83,11 @@ function Harness(
     onTable: (table: Table<Task>) => void;
     facets?: string[];
     pinnedFacets?: number;
+    onActiveRowChange?: (row: Row<Task> | null) => void;
+    onRowOpen?: (row: Row<Task>) => void;
+    onRowClick?: (row: Row<Task>) => void;
     toolbarProps?: Partial<React.ComponentProps<typeof DataTableToolbar>>;
+    tableProps?: Partial<React.ComponentProps<typeof DataTable>>;
     groupOrder?: string[];
     activeRowId?: string;
   },
@@ -80,8 +97,12 @@ function Harness(
     facets = [],
     pinnedFacets,
     toolbarProps,
+    tableProps,
     groupOrder,
     activeRowId,
+    onActiveRowChange,
+    onRowOpen,
+    onRowClick,
     ...options
   } = props;
   const table = useDataTable<Task>({
@@ -103,7 +124,11 @@ function Harness(
         table={table}
         groupOrder={groupOrder}
         activeRowId={activeRowId}
+        onActiveRowChange={onActiveRowChange}
+        onRowOpen={onRowOpen}
+        onRowClick={onRowClick}
         emptyState="Nothing here"
+        {...tableProps}
       />
     </>
   );
@@ -129,6 +154,345 @@ const renderedIds = () =>
     tr.getAttribute("data-row-id"),
   );
 
+describe("promises the metadata makes", () => {
+  it("starts a defaultHidden column hidden, and lets the caller override it", () => {
+    const columns: ColumnDef<Task, unknown>[] = [
+      { id: "title", accessorKey: "title", header: "Title" },
+      { id: "notes", accessorKey: "status", header: "Notes", meta: { defaultHidden: true } },
+    ];
+    function Bare({
+      initialState,
+      onTable,
+    }: {
+      initialState?: Partial<DataTableState>;
+      onTable: (t: Table<Task>) => void;
+    }) {
+      const table = useDataTable<Task>({
+        data: TASKS,
+        columns,
+        getRowId: (row) => row.id,
+        initialState,
+      });
+      onTable(table);
+      return <DataTable table={table} />;
+    }
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => root!.render(<Bare onTable={(t) => (table = t)} />));
+    expect(table.getColumn("notes")!.getIsVisible()).toBe(false);
+    // …and it is still in the Columns menu, i.e. the user can bring it out.
+    act(() => table.getColumn("notes")!.toggleVisibility(true));
+    expect(table.getColumn("notes")!.getIsVisible()).toBe(true);
+
+    // An explicit choice (state, or a URL) outranks the default.
+    act(() => root!.unmount());
+    root = createRoot(container);
+    act(() =>
+      root!.render(
+        <Bare initialState={{ columnVisibility: { notes: true } }} onTable={(t) => (table = t)} />,
+      ),
+    );
+    expect(table.getColumn("notes")!.getIsVisible()).toBe(true);
+  });
+
+  it("leaves a controlled list's visibility to its owner", () => {
+    // A hidden-only URL records nothing when a column is SHOWN, so re-applying
+    // the metadata on every render would snap the user's choice back. A list
+    // whose state lives elsewhere passes `defaultHiddenColumns` into that
+    // layer's defaults instead.
+    const columns: ColumnDef<Task, unknown>[] = [
+      { id: "title", accessorKey: "title", header: "Title" },
+      { id: "notes", accessorKey: "status", header: "Notes", meta: { defaultHidden: true } },
+    ];
+    expect(defaultHiddenColumns(columns)).toEqual({ notes: false });
+    let table!: Table<Task>;
+    function Controlled() {
+      table = useDataTable<Task>({
+        data: TASKS,
+        columns,
+        getRowId: (row) => row.id,
+        // what the URL says after the user brought the column out: nothing
+        state: { columnVisibility: {} },
+        onStateChange: () => {},
+      });
+      return <DataTable table={table} />;
+    }
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => root!.render(<Controlled />));
+    expect(table.getColumn("notes")!.getIsVisible()).toBe(true);
+  });
+
+  it("gives a row the keyboard can reach a visible focus state", () => {
+    // A list navigated with the arrows is focusable without being clickable;
+    // silent focus leaves a keyboard user guessing which row is theirs.
+    const h = mount({ activeRowId: "t1", onActiveRowChange: () => {} });
+    expect(h.table).toBeTruthy();
+    const row = container!.querySelector("tbody tr[data-row-id='t1']") as HTMLElement;
+    expect(row.getAttribute("tabindex")).toBe("0");
+    expect(row.hasAttribute("data-focusable")).toBe(true);
+    expect(row.className).toContain("focus-visible:");
+  });
+
+  it("resolves ids the way TanStack does", () => {
+    // A dotted accessorKey becomes `user_name`, and an accessorFn column can
+    // take its id from a string header. Writing visibility under the raw key
+    // would leave the metadata inert.
+    expect(
+      defaultHiddenColumns<Task>([
+        // every dot, the way TanStack's `replaceAll` does it
+        { accessorKey: "user.profile.name", header: "Who", meta: { defaultHidden: true } },
+        { accessorFn: (row) => row.title, header: "Title", meta: { defaultHidden: true } },
+      ] as ColumnDef<Task, unknown>[]),
+    ).toEqual({ user_profile_name: false, Title: false });
+  });
+
+  it("counts a row once even when its buckets overlap", () => {
+    const column = {
+      id: "size",
+      columnDef: { meta: { facetBuckets: () => ["big", "big", "notable"] } },
+    } as never;
+    expect(columnFacetKeys(column, 12)).toEqual(["big", "notable"]);
+  });
+
+  it("shows focus-only columns in focus mode, not merely because the table fills", () => {
+    // `fill` is a scroll-layout prop; a host may use it on an ordinary page.
+    const columns: ColumnDef<Task, unknown>[] = [
+      { id: "title", accessorKey: "title", header: "Title" },
+      { id: "detail", accessorKey: "status", header: "Detail", meta: { showIn: "focus" } },
+    ];
+    function Filled() {
+      const table = useDataTable<Task>({ data: TASKS, columns, getRowId: (row) => row.id });
+      return <DataTable table={table} fill />;
+    }
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => root!.render(<Filled />));
+    // (the trailing empty cell is the `spacer` column)
+    const drawn = Array.from(container!.querySelectorAll("thead th"))
+      .map((th) => th.textContent)
+      .filter(Boolean);
+    expect(drawn).toEqual(["Title"]);
+  });
+
+  it("a double click selects once and opens once", () => {
+    const clicks: string[] = [];
+    const opens: string[] = [];
+    const h = mount({
+      onRowClick: (row) => clicks.push(row.id),
+      onRowOpen: (row) => opens.push(row.id),
+    });
+    expect(h.table).toBeTruthy();
+    const row = container!.querySelector("tbody tr[data-row-id='t1']") as HTMLElement;
+    act(() => {
+      // What a browser really sends: click(detail 1), click(detail 2), dblclick.
+      row.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+      row.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 2 }));
+      row.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, detail: 2 }));
+    });
+    expect(clicks).toEqual(["t1"]);
+    expect(opens).toEqual(["t1"]);
+  });
+});
+
+describe("what the table actually draws", () => {
+  interface Cell {
+    id: string;
+    a: string;
+    b: string;
+  }
+  const ROWS: Cell[] = [
+    { id: "r1", a: "a1", b: "b1" },
+    { id: "r2", a: "a2", b: "b2" },
+  ];
+
+  function GatedHarness({
+    columns,
+    onRendered,
+  }: {
+    columns: ColumnDef<Cell, unknown>[];
+    onRendered?: (ids: string[]) => void;
+  }) {
+    const table = useDataTable<Cell>({ data: ROWS, columns, getRowId: (row) => row.id });
+    return <DataTable table={table} onRenderedColumnsChange={onRendered} />;
+  }
+
+  function mountGated(columns: ColumnDef<Cell, unknown>[]) {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    const seen: string[][] = [];
+    act(() => {
+      root!.render(<GatedHarness columns={columns} onRendered={(ids) => seen.push(ids)} />);
+    });
+    return seen;
+  }
+
+  it("leaves Escape to the frame when no row is active", () => {
+    // Escape means "let go of the active row" only while there is one;
+    // otherwise it belongs to the enclosing frame, which uses it to leave
+    // focus mode.
+    const cleared: Array<string | null> = [];
+    let stopped = false;
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <Harness
+          activeRowId={null}
+          onActiveRowChange={(row) => cleared.push(row?.id ?? null)}
+          onTable={() => {}}
+        />,
+      );
+    });
+    const table = container!.querySelector("table")!;
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    event.stopPropagation = () => {
+      stopped = true;
+    };
+    act(() => {
+      table.querySelector("tbody tr[data-row-id]")!.dispatchEvent(event);
+    });
+    expect(cleared).toEqual([]);
+    expect(stopped).toBe(false);
+  });
+
+  it("hides a defaultHidden leaf that lives under a grouping header", () => {
+    const columns: ColumnDef<Task, unknown>[] = [
+      {
+        id: "group",
+        header: "Group",
+        columns: [
+          { id: "title", accessorKey: "title", header: "Title" },
+          { id: "buried", accessorKey: "status", header: "Buried", meta: { defaultHidden: true } },
+        ],
+      },
+    ];
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    function Grouped() {
+      table = useDataTable<Task>({ data: TASKS, columns, getRowId: (row) => row.id });
+      return <DataTable table={table} />;
+    }
+    act(() => root!.render(<Grouped />));
+    // Visibility is a leaf property; the group header has no state to hide.
+    expect(table.getColumn("buried")!.getIsVisible()).toBe(false);
+    expect(table.getColumn("title")!.getIsVisible()).toBe(true);
+  });
+
+  it("sizes a half-gated group by the leaves that survived", () => {
+    // `getSize()` sums every descendant, so a group that lost a leaf to the
+    // width gate would hold space for a column that is not drawn.
+    const columns: ColumnDef<Task, unknown>[] = [
+      {
+        id: "pair",
+        header: "Pair",
+        columns: [
+          { id: "a", accessorKey: "title", header: "A", size: 200 },
+          { id: "b", accessorKey: "status", header: "B", size: 200, meta: { showIn: "focus" } },
+        ],
+      },
+    ];
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    function Grouped() {
+      const table = useDataTable<Task>({ data: TASKS, columns, getRowId: (row) => row.id });
+      return <DataTable table={table} />;
+    }
+    act(() => root!.render(<Grouped />));
+    const group = container!.querySelector("thead th[scope='col']") as HTMLElement;
+    expect(group.getAttribute("colspan")).toBe("1");
+    expect(group.style.width).toBe("200px");
+  });
+
+  it("reports a column id that contains a comma intact", () => {
+    const columns: ColumnDef<Task, unknown>[] = [
+      { id: "risk,score", accessorKey: "title", header: "Risk, score" },
+    ];
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    const seen: string[][] = [];
+    function Comma() {
+      const table = useDataTable<Task>({ data: TASKS, columns, getRowId: (row) => row.id });
+      return <DataTable table={table} onRenderedColumnsChange={(ids) => seen.push(ids)} />;
+    }
+    act(() => root!.render(<Comma />));
+    // Joining on commas would report two columns that do not exist.
+    expect(seen.at(-1)).toEqual(["risk,score"]);
+  });
+
+  it("tells the host which columns are on screen, so the agent sees what the user sees", () => {
+    // Width gating is render-time, not TanStack visibility (which belongs to
+    // the user and rides in the URL) — without this a tool would report a
+    // column nobody can see.
+    const seen = mountGated([
+      { id: "a", accessorKey: "a", header: "A" },
+      { id: "b", accessorKey: "b", header: "B", meta: { showIn: "focus" } },
+    ]);
+    expect(seen.at(-1)).toEqual(["a"]);
+    expect(Array.from(container!.querySelectorAll("thead th[scope='col']")).length).toBe(1);
+  });
+
+  it("never freezes a column the width gate dropped", () => {
+    // The seam says "there is more to the left"; it must sit on a column that
+    // is actually drawn.
+    mountGated([
+      { id: "a", accessorKey: "a", header: "A", meta: { pinned: "left" } },
+      { id: "b", accessorKey: "b", header: "B", meta: { pinned: "left", showIn: "focus" } },
+    ]);
+    const pinnedHeaders = Array.from(container!.querySelectorAll("thead th[data-pinned]"));
+    expect(pinnedHeaders.length).toBe(1);
+    expect(pinnedHeaders[0]!.hasAttribute("data-pinned-edge")).toBe(true);
+  });
+
+  it("narrows a grouping header to the leaves that survive, and drops it when none do", () => {
+    mountGated([
+      {
+        id: "pair",
+        header: "Pair",
+        columns: [
+          { id: "a", accessorKey: "a", header: "A" },
+          { id: "b", accessorKey: "b", header: "B", meta: { showIn: "focus" } },
+        ],
+      },
+      {
+        id: "gone",
+        header: "Gone",
+        columns: [{ id: "c", accessorFn: () => "c", header: "C", meta: { showIn: "focus" } }],
+      },
+    ]);
+    const groupRow = container!.querySelectorAll("thead tr")[0]!;
+    const groupHeaders = Array.from(groupRow.querySelectorAll("th[scope='col']"));
+    expect(groupHeaders.map((th) => th.textContent)).toEqual(["Pair"]);
+    expect(groupHeaders[0]!.getAttribute("colspan")).toBe("1");
+  });
+
+  it("keeps frozen cells under the sticky header", () => {
+    // The regression this guards: a frozen cell painted over the sticky header
+    // while scrolling, because the cell's z-index outranked the header row's.
+    const read = (relative: string) => readFileSync(resolve(process.cwd(), relative), "utf8");
+    const css = read("src/styles.css");
+    const zOf = (selector: string) => {
+      const rule = new RegExp(`\\[data-pinned="${selector}"\\][^}]*z-index:\\s*(\\d+)`).exec(css);
+      return Number(rule?.[1]);
+    };
+    const source = read("src/components/data-table/data-table.tsx");
+    const headerRow = Number(/sticky top-0 z-(\d+)/.exec(source)?.[1]);
+    expect(headerRow).toBeGreaterThan(0);
+    expect(zOf("cell")).toBeLessThan(headerRow);
+    expect(zOf("header")).toBeGreaterThan(0);
+  });
+});
+
 describe("facet keys", () => {
   it("splits arrays, maps empties to the sentinel, reads ids off objects", () => {
     expect(facetKeys(["a", "b"])).toEqual(["a", "b"]);
@@ -141,7 +505,8 @@ describe("facet keys", () => {
   });
 
   it("facetFilterFn ORs the selected keys and is removed when empty", () => {
-    const row = { getValue: () => ["a", "b"] } as never;
+    // A bare row stand-in: no cells, so the filter falls back to plain keys.
+    const row = { getValue: () => ["a", "b"], getAllCells: () => [] } as never;
     expect(facetFilterFn(row, "tags", ["b", "z"], () => {})).toBe(true);
     expect(facetFilterFn(row, "tags", ["z"], () => {})).toBe(false);
     expect(facetFilterFn(row, "tags", [], () => {})).toBe(true);
@@ -161,6 +526,55 @@ describe("useDataTable + DataTable", () => {
     expect(renderedIds()).toEqual(["t1", "t2", "t3"]);
     act(() => h.table.getColumn("status")!.setFilterValue(["open"]));
     expect(renderedIds()).toEqual(["t1", "t2"]);
+  });
+
+  it("keeps both values when two facet options are clicked before a re-render", () => {
+    const h = mount({ facets: ["status"] });
+    act(() => container!.querySelector<HTMLButtonElement>("button[data-facet='status']")!.click());
+    const options = () =>
+      Array.from(
+        document.querySelectorAll<HTMLButtonElement>(
+          "[role='group'][aria-label='Status filter'] button[role='checkbox']",
+        ),
+      );
+    expect(options().length).toBeGreaterThan(1);
+    // both clicks inside one act(): no render in between, as with a fast user
+    act(() => {
+      options()[0]!.click();
+      options()[1]!.click();
+    });
+    expect(h.table.getColumn("status")!.getFilterValue()).toEqual(["done", "open"]);
+  });
+
+  it("buckets turn a number into something you can tick, counts and all", () => {
+    const amounts: Record<string, number> = { t1: 100, t2: 200, t3: 300, t4: 50 };
+    const h = mount({
+      facets: ["amount"],
+      columns: [
+        ...COLUMNS.slice(0, 3),
+        {
+          id: "amount",
+          accessorFn: (task: Task) => amounts[task.id],
+          header: "Amount",
+          filterFn: facetFilterFn,
+          meta: {
+            facetLabels: { gte: "≥ 150", lt: "< 150" },
+            facetBuckets: (value: unknown) => [Number(value) >= 150 ? "gte" : "lt"],
+          },
+        },
+      ],
+    });
+    const column = h.table.getColumn("amount")!;
+    // the raw numbers never appear — only the buckets, counted
+    // undeclared keys come back in label order
+    expect(facetOptions(column).map((o) => [o.value, o.label, o.count])).toEqual([
+      ["lt", "< 150", 2],
+      ["gte", "≥ 150", 2],
+    ]);
+    act(() => column.setFilterValue(["gte"]));
+    expect(renderedIds()).toEqual(["t2", "t3"]);
+    act(() => column.setFilterValue(["lt"]));
+    expect(renderedIds()).toEqual(["t1", "t4"]);
   });
 
   it("counts a facet over the rows every OTHER filter lets through", () => {
@@ -261,19 +675,91 @@ describe("useDataTable + DataTable", () => {
     );
   });
 
-  it("hides a column below its breakpoint with a literal responsive class", () => {
-    mount({
-      columns: [
-        { ...COLUMNS[0]! },
-        { ...COLUMNS[1]!, meta: { breakpoint: "lg" } },
-        ...COLUMNS.slice(2),
-      ],
+  it("hides a column when the list itself is too narrow for it", () => {
+    // jsdom reports zero-width elements: unmeasured means "show everything",
+    // so nothing is hidden on a guess. Feeding a width exercises the rule.
+    const widths = new Map<Element, number>();
+    const observed: Array<() => void> = [];
+    class StubResizeObserver {
+      constructor(private readonly callback: () => void) {}
+      observe() {
+        observed.push(this.callback);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    const previousRO = window.ResizeObserver;
+    const previousRect = Element.prototype.getBoundingClientRect;
+    Object.defineProperty(window, "ResizeObserver", { writable: true, value: StubResizeObserver });
+    Element.prototype.getBoundingClientRect = function () {
+      return { ...previousRect.call(this), width: widths.get(this) ?? 0 } as DOMRect;
+    };
+    try {
+      const h = mount({
+        columns: [
+          { ...COLUMNS[0]! },
+          { ...COLUMNS[1]!, meta: { breakpoint: "lg" } },
+          ...COLUMNS.slice(2),
+        ],
+      });
+      const headers = () =>
+        Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")).map(
+          (th) => th.textContent,
+        );
+      expect(headers()).toEqual(["Title", "Status", "Priority", "Tags"]);
+      const root = container!.querySelector("table")!.closest("div")!.parentElement!;
+      widths.set(root, 700); // narrower than `lg` (896)
+      act(() => observed.forEach((callback) => callback()));
+      expect(headers()).toEqual(["Title", "Priority", "Tags"]);
+      expect(
+        container!.querySelectorAll("tbody tr[data-row-id='t1'] td:not([aria-hidden])"),
+      ).toHaveLength(3);
+      widths.set(root, 1200); // roomy again
+      act(() => observed.forEach((callback) => callback()));
+      expect(headers()).toEqual(["Title", "Status", "Priority", "Tags"]);
+      expect(h.table.getVisibleLeafColumns()).toHaveLength(4);
+    } finally {
+      Object.defineProperty(window, "ResizeObserver", { writable: true, value: previousRO });
+      Element.prototype.getBoundingClientRect = previousRect;
+    }
+  });
+
+  it("a column can wait for focus mode, where every facet is shown too", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <DataTableFrame className="plain">
+          <Harness
+            facets={["status", "priority", "tags"]}
+            columns={[
+              COLUMNS[0]!,
+              { ...COLUMNS[1]!, meta: { showIn: "focus" } },
+              ...COLUMNS.slice(2),
+            ]}
+            onTable={() => {}}
+          />
+        </DataTableFrame>,
+      );
     });
-    const statusHeader = Array.from(container!.querySelectorAll("thead th"))[1]!;
-    expect(statusHeader.className).toContain("max-lg:hidden");
-    expect(
-      container!.querySelector("tbody tr[data-row-id='t1'] td:nth-child(2)")?.className,
-    ).toContain("max-lg:hidden");
+    const headers = () =>
+      Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")).map(
+        (th) => th.textContent,
+      );
+    const facetIds = () =>
+      Array.from(container!.querySelectorAll("button[data-facet]")).map((b) =>
+        b.getAttribute("data-facet"),
+      );
+    // on a page: the focus-only column waits, and only the pinned facets show
+    expect(headers()).toEqual(["Title", "Priority", "Tags"]);
+    expect(facetIds()).toEqual(["status", "priority", "tags"].slice(0, 3));
+    const focusButton = container!.querySelector<HTMLButtonElement>(
+      "button[aria-label='Focus on the list']",
+    )!;
+    act(() => focusButton.click());
+    // with the screen to itself: the column joins in
+    expect(headers()).toEqual(["Title", "Status", "Priority", "Tags"]);
   });
 
   it("a frame adds a focus button to the toolbar and Escape leaves focus mode", () => {
@@ -363,6 +849,37 @@ describe("useDataTable + DataTable", () => {
     expect(container!.querySelector("button[data-filters-toggle]")).toBeNull();
   });
 
+  it("a selection takes the filter row's place, so the list never jumps", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          facets={["status"]}
+          enableRowSelection
+          toolbarProps={{ selectionBar: <span data-bar="">selected</span> }}
+          onTable={(t) => (table = t)}
+        />,
+      );
+    });
+    // Nothing ticked: the bar renders null, so the filter row must stay —
+    // passing a `selectionBar` element is not the same as having a selection.
+    expect(container!.querySelector("[data-selection-row]")).toBeNull();
+    expect(container!.querySelector("[data-filter-row]")).not.toBeNull();
+
+    act(() => table.getRow("t1").toggleSelected(true));
+    // Now it replaces the filter row, rather than pushing it down.
+    expect(container!.querySelector("[data-selection-row]")).not.toBeNull();
+    expect(container!.querySelector("[data-filter-row]")).toBeNull();
+    expect(container!.querySelector("[data-bar]")?.textContent).toBe("selected");
+
+    act(() => table.resetRowSelection(true));
+    expect(container!.querySelector("[data-selection-row]")).toBeNull();
+    expect(container!.querySelector("[data-filter-row]")).not.toBeNull();
+  });
+
   it("layout=inline keeps one wrapping row", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -381,6 +898,133 @@ describe("useDataTable + DataTable", () => {
     expect(container!.querySelector("button[data-filters-toggle]")).toBeNull();
     expect(container!.querySelectorAll("button[data-facet]")).toHaveLength(1);
     expect(table.getState().columnFilters).toEqual([]);
+  });
+
+  it("freezes pinned columns, stacking their offsets, and walks rows with the keyboard", () => {
+    const moves: Array<string | null> = [];
+    // jsdom has no layout: feed the pinned headers a width so the offsets are
+    // exercised the way a browser would produce them.
+    const widths = new Map<Element, number>();
+    const callbacks: Array<() => void> = [];
+    class StubResizeObserver {
+      constructor(private readonly callback: () => void) {}
+      observe(element: Element) {
+        callbacks.push(this.callback);
+        if (!widths.has(element)) widths.set(element, 60);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    const previousRO = window.ResizeObserver;
+    const previousRect = Element.prototype.getBoundingClientRect;
+    Object.defineProperty(window, "ResizeObserver", { writable: true, value: StubResizeObserver });
+    Element.prototype.getBoundingClientRect = function () {
+      return { ...previousRect.call(this), width: widths.get(this) ?? 0 } as DOMRect;
+    };
+    try {
+      container = document.createElement("div");
+      document.body.appendChild(container);
+      root = createRoot(container);
+      let active: string | null = "t2";
+      const render = () =>
+        act(() => {
+          root!.render(
+            <Harness
+              columns={[
+                { ...COLUMNS[0]!, meta: { pinned: "left" } },
+                { ...COLUMNS[1]!, meta: { pinned: "left" } },
+                ...COLUMNS.slice(2),
+              ]}
+              activeRowId={active ?? undefined}
+              onActiveRowChange={(row) => {
+                active = row?.id ?? null;
+                moves.push(active);
+                render();
+              }}
+              onTable={() => {}}
+            />,
+          );
+        });
+      render();
+      const headers = () =>
+        Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")) as HTMLElement[];
+      headers()
+        .slice(0, 2)
+        .forEach((header, index) => widths.set(header, index === 0 ? 40 : 120));
+      act(() => callbacks.forEach((callback) => callback()));
+      expect(headers()[0]!.getAttribute("data-pinned")).toBe("header");
+      expect(headers()[1]!.getAttribute("data-pinned")).toBe("header");
+      // pinning is a run from the left edge, so a leading column with no
+      // `pinned` of its own still comes along
+      expect(
+        Array.from(container!.querySelectorAll("tbody tr[data-row-id] td[data-pinned]")).length,
+      ).toBeGreaterThan(0);
+      expect(headers()[1]!.hasAttribute("data-pinned-edge")).toBe(true);
+      expect(headers()[2]!.hasAttribute("data-pinned")).toBe(false);
+      // the second pinned column starts where the first one ends
+      expect(headers()[0]!.style.left).toBe("0px");
+      expect(headers()[1]!.style.left).toBe("40px");
+      // pinned body cells are marked so the shipped CSS can keep them opaque
+      const cell = container!.querySelector("tbody tr td") as HTMLElement;
+      expect(cell.getAttribute("data-pinned")).toBe("cell");
+      // rows are focusable even without onRowClick
+      expect(container!.querySelector("tbody tr[data-row-id]")!.getAttribute("tabindex")).toBe("0");
+
+      const table = container!.querySelector("table")!;
+      const key = (k: string, target?: Element) =>
+        act(() => {
+          (target ?? table).dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
+        });
+      key("ArrowDown");
+      key("ArrowDown");
+      key("ArrowUp");
+      key("Home");
+      key("End");
+      // a control inside the table that owns the key keeps it
+      const control = document.createElement("button");
+      container!.querySelector("tbody tr td")!.appendChild(control);
+      key("ArrowDown", control);
+      key("Escape");
+      expect(moves).toEqual(["t3", "t4", "t3", "t1", "t4", null]);
+    } finally {
+      Object.defineProperty(window, "ResizeObserver", { writable: true, value: previousRO });
+      Element.prototype.getBoundingClientRect = previousRect;
+    }
+  });
+
+  it("a long menu stays reachable: capped to the available room and scrollable", () => {
+    // The Columns menu of a wide list can be taller than the screen; Radix
+    // reports the room it has and the content scrolls inside it.
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <DropdownMenu open>
+          <DropdownMenuTrigger>open</DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuCheckboxItem checked>one</DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>,
+      );
+    });
+    const menu = document.querySelector("[role='menu']") as HTMLElement;
+    expect(menu).not.toBeNull();
+    expect(menu.hasAttribute("data-menu-scroll")).toBe(true);
+    expect(document.querySelectorAll("[role='menuitemcheckbox']")).toHaveLength(1);
+  });
+
+  it("maxHeight gives the list its own scroll viewport with a sticky header", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(<Harness tableProps={{ maxHeight: "60vh" }} onTable={() => {}} />);
+    });
+    const scroller = container!.querySelector("table")!.parentElement as HTMLElement;
+    expect(scroller.className).toContain("overflow-auto");
+    expect(scroller.style.maxHeight).toBe("60vh");
+    expect(container!.querySelector("thead")!.className).toContain("sticky");
   });
 
   it("groups rows in the declared group order with a header per group", () => {
@@ -464,11 +1108,34 @@ describe("useDataTable + DataTable", () => {
     expect(rowSearchText(h.table.getCoreRowModel().rows[1]!)).toContain("hidden-token");
   });
 
+  it("a click selects a row while Enter and a double click open it", () => {
+    const clicked: string[] = [];
+    const opened: string[] = [];
+    const h = mount({
+      onRowClick: (row) => clicked.push(row.id),
+      onRowOpen: (row) => opened.push(row.id),
+    });
+    const row = () => container!.querySelector("tbody tr[data-row-id='t2']") as HTMLElement;
+    act(() => row().dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(clicked).toEqual(["t2"]);
+    expect(opened).toEqual([]);
+    act(() => row().dispatchEvent(new MouseEvent("dblclick", { bubbles: true })));
+    expect(opened).toEqual(["t2"]);
+    act(() => row().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    expect(opened).toEqual(["t2", "t2"]);
+    // Space selects, it does not open — the desktop convention.
+    act(() => row().dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true })));
+    expect(clicked).toEqual(["t2", "t2"]);
+    expect(opened).toHaveLength(2);
+    expect(h.table.getState().rowSelection).toEqual({});
+  });
+
   it("selection column toggles rows and reports through the table", () => {
     const h = mount({
       columns: [selectionColumn<Task>(), ...COLUMNS],
       enableRowSelection: true,
     });
+    // The checkbox is the selection an agent reads; it is not the row click.
     const boxes = container!.querySelectorAll<HTMLButtonElement>("tbody [aria-label='Select row']");
     expect(boxes).toHaveLength(4);
     act(() => boxes[1]!.click());

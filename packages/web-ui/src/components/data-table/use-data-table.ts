@@ -21,6 +21,7 @@ import {
   type Table,
   type TableOptions,
   type Updater,
+  type VisibilityState,
 } from "@tanstack/react-table";
 import { facetFilterFn, tokenSearchFilterFn } from "./facets.ts";
 import { DEFAULT_PAGE_SIZE, EMPTY_DATA_TABLE_STATE, type DataTableState } from "./state.ts";
@@ -48,6 +49,50 @@ export interface UseDataTableOptions<T> {
 
 const PAGE_RESET_KEYS = new Set<keyof DataTableState>(["globalFilter", "columnFilters", "sorting"]);
 
+/**
+ * TanStack's own rule for a column's id, mirrored so `meta.defaultHidden` can
+ * be resolved before the table exists: an explicit `id`, else the
+ * `accessorKey` with EVERY dot turned into an underscore (`user.profile.name`
+ * → `user_profile_name`), else a string header. Anything else has no stable
+ * id to key visibility by.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function columnId<T>(column: ColumnDef<T, any>): string | undefined {
+  if (column.id) return column.id;
+  const accessorKey = "accessorKey" in column ? column.accessorKey : undefined;
+  if (accessorKey != null) return String(accessorKey).replace(/\./g, "_");
+  return typeof column.header === "string" ? column.header : undefined;
+}
+
+/**
+ * `{ id: false }` for every column whose `meta.defaultHidden` says it starts
+ * out of the way — the leaves, since visibility is a leaf property and a
+ * grouping header has no state to hide.
+ *
+ * `useDataTable` applies this to its own initial state. A list whose state
+ * lives somewhere else (the URL) must pass it as part of that layer's
+ * `defaults` instead: re-applying it on every render would undo the user the
+ * moment they bring a column out, because "visible" is exactly what a
+ * hidden-only URL does not record.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function defaultHiddenColumns<T>(columns: readonly ColumnDef<T, any>[]): VisibilityState {
+  const hidden: VisibilityState = {};
+  const walk = (defs: readonly ColumnDef<T, any>[]) => {
+    for (const column of defs) {
+      const children = "columns" in column ? column.columns : undefined;
+      if (children?.length) {
+        walk(children);
+        continue;
+      }
+      const id = columnId(column);
+      if (id && column.meta?.defaultHidden) hidden[id] = false;
+    }
+  };
+  walk(columns);
+  return hidden;
+}
+
 export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   const {
     data,
@@ -65,9 +110,11 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   const controlled = controlledState !== undefined && onStateChange !== undefined;
 
   const basePageSize = pageSize || DEFAULT_PAGE_SIZE;
+  const defaultHidden = useMemo(() => defaultHiddenColumns(columns), [columns]);
   const [innerState, setInnerState] = useState<DataTableState>(() => ({
     ...EMPTY_DATA_TABLE_STATE,
     ...initialState,
+    columnVisibility: { ...defaultHidden, ...initialState?.columnVisibility },
     pagination: { pageIndex: 0, pageSize: basePageSize, ...initialState?.pagination },
   }));
   const state = useMemo<DataTableState>(

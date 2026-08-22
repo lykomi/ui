@@ -66,6 +66,10 @@ export {
   type DataTableFrameContextValue,
 } from "./components/data-table/data-table-frame.tsx";
 export {
+  DataTableSelectionBar,
+  type DataTableSelectionBarProps,
+} from "./components/data-table/data-table-selection-bar.tsx";
+export {
   DataTableToolbar,
   visibleFacets,
   type DataTableFacet,
@@ -94,7 +98,16 @@ export {
   type DataTableRowActionsProps,
 } from "./components/data-table/data-table-row-actions.tsx";
 export { selectionColumn, SELECTION_COLUMN_ID } from "./components/data-table/selection-column.tsx";
-export { useDataTable, type UseDataTableOptions } from "./components/data-table/use-data-table.ts";
+export {
+  useDataTable,
+  defaultHiddenColumns,
+  type UseDataTableOptions,
+} from "./components/data-table/use-data-table.ts";
+export {
+  usePinnedOffsets,
+  type PinnedOffsets,
+} from "./components/data-table/use-pinned-offsets.ts";
+export { useElementWidth } from "./components/data-table/use-element-width.ts";
 export {
   DEFAULT_PAGE_SIZE,
   EMPTY_DATA_TABLE_STATE,
@@ -106,8 +119,21 @@ export {
   type DataTableUrlOptions,
 } from "./components/data-table/state.ts";
 export {
+  ageBucket,
+  ageBuckets,
+  dueState,
+  parseDateish,
+  relativeAge,
+  type AgeBucket,
+  type DateBucketOptions,
+  type DueState,
+  type DueStateOptions,
+} from "./components/data-table/date-buckets.ts";
+export {
+  DATA_TABLE_MIN_WIDTH,
   FACET_EMPTY,
   cellText,
+  columnFacetKeys,
   columnLabel,
   facetCounts,
   facetFilterFn,

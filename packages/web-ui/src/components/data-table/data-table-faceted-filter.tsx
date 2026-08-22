@@ -44,11 +44,18 @@ export function DataTableFacetedFilter<T>({
     return needle ? options.filter((o) => o.label.toLowerCase().includes(needle)) : options;
   }, [options, query]);
 
+  // A functional update, not one derived from this render's `selected`: with
+  // URL-backed state the re-render lands a tick later, so two quick clicks
+  // would otherwise both start from the same value and the first would be
+  // lost.
   const toggle = (value: string) => {
-    const next = selectedSet.has(value)
-      ? selected.filter((item) => item !== value)
-      : [...selected, value];
-    column.setFilterValue(next.length ? next : undefined);
+    column.setFilterValue((current: unknown) => {
+      const values = normalizeFacetValue(current);
+      const next = values.includes(value)
+        ? values.filter((item) => item !== value)
+        : [...values, value];
+      return next.length ? next : undefined;
+    });
   };
 
   return (

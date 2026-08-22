@@ -109,3 +109,35 @@ Foundry UI was extracted from a commercial product on 2026-04-26. The four packa
 - **Claude Code**: reads `CLAUDE.md` which `@`-imports this file, plus per-package `CLAUDE.md` files. Repo-local config: `.claude/settings.json` (permissions) + `.mcp.json` (grounding MCPs).
 - **GitHub Copilot / Cursor**: both read root + nested `AGENTS.md` natively; Copilot coding agent preinstalls deps via `.github/workflows/copilot-setup-steps.yml`.
 - **Downstream apps** (generated starters, products built on these packages): install the Claude Code plugin — `/plugin marketplace add iLoveAgents/foundry-ui` → `/plugin install foundry-ui@foundry-ui`. Source: [`plugins/foundry-ui/`](plugins/foundry-ui/) (grounding skill, ChatModule authoring skill, doc MCPs). Keep the plugin's skills in sync with this file's Grounding + conventions sections when they change.
+
+# Bot code review (do not skip, do not merge around)
+
+Every PR in this repo is reviewed by **Codex** (`chatgpt-codex-connector`) and
+**GitHub Copilot**. Their findings are not advisory noise — in practice they
+have caught real defects that green CI and a passing local suite did not: a
+frozen column painted over a sticky header, a parser that guessed a date's
+country, a documented option that did nothing.
+
+The rule for an agent working here:
+
+1. **Push, then let both bots review.** Codex re-reviews on a new commit and
+   on a `@codex review` comment; Copilot's pass is repo automation and cannot
+   be requested through the API (`requested_reviewers` silently stays empty) —
+   it arrives on its own.
+2. **Read every thread, including ones GitHub still shows as "live" from an
+   earlier round.** `gh api graphql` → `pullRequest.reviewThreads` with
+   `isResolved`/`isOutdated`; a thread whose line still exists stays "live"
+   even after the fix, so judge by content, not by the flag.
+3. **Fix, push, ask for another pass, and repeat.** Rounds converge — 18
+   findings, then 4, then 3 is a normal shape. Do not merge on the first
+   green.
+4. **Stop when what is left is genuinely minor** — style preference,
+   a refactor whose churn outweighs its value, a case the code deliberately
+   does not support. Say so in the thread, with the reason, rather than
+   leaving it silent. "Fixed" and "declined, because…" are both finished;
+   "unread" is not.
+5. **Answer in the thread.** A reply is how the next person knows a finding
+   was considered rather than missed, and it is what makes round N+1 shorter.
+
+Never merge with unread findings, and never close a thread by force-pushing
+over it.

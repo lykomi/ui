@@ -61,6 +61,86 @@ its values, `meta.label` names the column in the View menu, and
 (with `parseDataTableState` / `mergeDataTableUrlState`) to keep the whole list
 state in the URL.
 
+### A column says where it earns its place
+
+```tsx
+const column: ColumnDef<Risk> = {
+  id: "worst_case",
+  accessorKey: "worst_case",
+  meta: {
+    breakpoint: "lg", // the narrowest LIST width it needs (not the window)
+    showIn: "focus", // only when the list has the screen to itself
+    pinned: "left", // frozen against the left edge while the rest scrolls
+    defaultHidden: true, // in the Columns menu, off until asked for*
+    align: "right",
+  },
+};
+```
+
+Widths are measured on the table itself, so a list beside an open detail pane
+sheds exactly the columns a narrow window would and focus mode brings them
+back — no media queries in the host. `DATA_TABLE_MIN_WIDTH` publishes the
+bands (`sm` 448 · `md` 672 · `lg` 896 · `xl` 1024 · `2xl` 1280) for a host that
+derives them from a schema.
+
+\* `useDataTable` applies `defaultHidden` to its own initial state. A list
+whose state lives elsewhere (the URL) passes `defaultHiddenColumns(columns)`
+into that layer's `defaults` instead — a hidden-only URL records nothing when
+a column is _shown_, so re-applying the default on every render would undo the
+user the moment they bring one out.
+
+Freezing is a run from the left edge: every column up to the last `pinned` one
+comes along, so a leading checkbox never slides out from under its rows.
+
+That gating is render-time and deliberately **not** TanStack `columnVisibility`
+(which belongs to the user and rides in the URL), so anything that must agree
+with what is on screen reads `onRenderedColumnsChange` rather than
+`column.getIsVisible()`.
+
+### Numbers and dates you can tick
+
+`meta.facetBuckets` turns a raw value into the keys a person actually filters
+by; counts, OR-within, AND-across, the URL and the agent tools work on those
+keys unchanged.
+
+```tsx
+const probability: ColumnDef<Risk> = {
+  id: "probability",
+  accessorKey: "probability",
+  filterFn: facetFilterFn,
+  meta: {
+    facetBuckets: (value) => [Number(value) >= 0.5 ? "high" : "low"],
+    facetLabels: { high: "50 % or more", low: "under 50 %" },
+  },
+};
+```
+
+Dates get the buckets every list wants: `ageBucket` (`today` · `week` ·
+`month` · `older` · `never`), `dueState` (`overdue` · `soon` · `later` ·
+`undated`) and `relativeAge` for the cell. `parseDateish` underneath reads ISO
+and the dotted European form and refuses `03/04/2026` — March in one country,
+April in another — rather than guessing.
+
+### Selecting, opening, and the keyboard
+
+A click selects (`onRowClick`), Enter or a double click opens (`onRowOpen`) —
+the desktop-list split, so brushing a row never opens a pane by surprise.
+`selectionColumn()` adds the tick boxes; `DataTableSelectionBar` is the one
+place bulk actions live (and the selection a chat agent reads).
+`onActiveRowChange` + `activeRowId` walk the list with ↑/↓/Home/End, Escape
+clears, and the active row stays scrolled into view.
+
+`useAppStore.setContextItem(key, item | null)` keeps one context chip per key,
+so a list can keep the chat in step with its selection instead of piling up
+stale chips.
+
+### Room to scroll
+
+`DataTable` takes `maxHeight` to give a list its own viewport (sticky header,
+both axes) instead of running down the page; inside a focused `DataTableFrame`
+it fills the layer. `spacer` (default) keeps columns at their natural width
+with the slack at the end, the way a spreadsheet looks.
+
 ## Extension Points
 
 Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via registries — no direct imports needed:

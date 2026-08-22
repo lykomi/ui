@@ -62,6 +62,8 @@ export type ContextItemType = "selection" | "page" | "ref" | "note";
 
 export interface ContextItem {
   id: string;
+  /** Set for context that tracks the UI (a list's selection): one item per key. */
+  key?: string;
   type: ContextItemType;
   label: string;
   payload: ContextPayload;
@@ -140,9 +142,7 @@ function compactContextValue(value: unknown): unknown {
   return value;
 }
 
-function compactReferenceTarget(
-  target: ReferencePayload["target"],
-): ReferencePayload["target"] {
+function compactReferenceTarget(target: ReferencePayload["target"]): ReferencePayload["target"] {
   if (!target) return undefined;
   return {
     ...target,
@@ -178,7 +178,15 @@ interface AppState {
   // Context items
   contextItems: ContextItem[];
   sentContext: Record<string, ContextItem[]>;
-  addContextItem: (item: Omit<ContextItem, "id" | "createdAt">) => void;
+  /** Context the user pinned. Keyed (UI-tracked) items go through
+   *  `setContextItem`, which is the only thing that replaces by key. */
+  addContextItem: (item: Omit<ContextItem, "id" | "createdAt" | "key">) => void;
+  /**
+   * Context that tracks a piece of UI rather than a user's pin — the rows
+   * selected in a list, say. One item per `key`: setting replaces, `null`
+   * clears. Without this, a chip that changes with the UI would pile up.
+   */
+  setContextItem: (key: string, item: Omit<ContextItem, "id" | "createdAt"> | null) => void;
   removeContextItem: (id: string) => void;
   promoteContextItem: (id: string) => void;
   clearAllContext: () => void;
@@ -202,10 +210,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().currentPage;
     if (prev === page) return;
 
-    // Clear ephemeral context on navigation
+    // Clear ephemeral context on navigation — and every KEYED item, whatever
+    // its persistence: those track a piece of UI, and that UI is gone. A pin
+    // the user made survives, because promoting an item drops its key.
     set({
       currentPage: page,
-      contextItems: get().contextItems.filter((i) => i.persistence !== "ephemeral"),
+      contextItems: get().contextItems.filter(
+        // `key === undefined`, not falsy: "" is a key someone chose, and a
+        // keyed item tracks UI that this navigation just unmounted.
+        (i) => i.persistence !== "ephemeral" && i.key === undefined,
+      ),
     });
   },
 
@@ -268,13 +282,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
+  setContextItem: (key, item) => {
+    const withoutKey = get().contextItems.filter((existing) => existing.key !== key);
+    if (!item) {
+      if (withoutKey.length !== get().contextItems.length) set({ contextItems: withoutKey });
+      return;
+    }
+    if (withoutKey.length >= MAX_ITEMS) return;
+    const label =
+      item.label.length > MAX_LABEL_LENGTH
+        ? `${item.label.slice(0, MAX_LABEL_LENGTH)}...`
+        : item.label;
+    set({
+      contextItems: [
+        ...withoutKey,
+        { ...item, key, label, id: crypto.randomUUID(), createdAt: Date.now() },
+      ],
+    });
+  },
+
   removeContextItem: (id) => set({ contextItems: get().contextItems.filter((i) => i.id !== id) }),
 
   promoteContextItem: (id) =>
     set({
-      contextItems: get().contextItems.map((i) =>
-        i.id === id ? { ...i, persistence: "persistent" as const } : i,
-      ),
+      contextItems: get().contextItems.map((i) => {
+        if (i.id !== id) return i;
+        // Pinning takes the item away from the UI that was tracking it: the
+        // key goes, so the next selection change replaces nothing and the
+        // pin the user made survives.
+        const { key: _tracked, ...rest } = i;
+        return { ...rest, persistence: "persistent" as const };
+      }),
     }),
 
   clearAllContext: () => set({ contextItems: [], sentContext: {} }),
@@ -285,9 +323,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const snapshot = [...contextItems];
 
-    // Keep persistent, remove ephemeral
+    // Keep persistent, remove ephemeral — except context that TRACKS the UI
+    // (a keyed item, e.g. a live list selection). Those rows are still
+    // ticked after the message goes; dropping the chip would take them out
+    // of every later message while the user can still see them selected.
+    // Their owner clears them (`setContextItem(key, null)`), and navigation
+    // still does.
     set({
-      contextItems: contextItems.filter((i) => i.persistence === "persistent"),
+      contextItems: contextItems.filter(
+        (i) => i.persistence === "persistent" || i.key !== undefined,
+      ),
       sentContext: { ...sentContext, [messageId]: snapshot },
     });
 

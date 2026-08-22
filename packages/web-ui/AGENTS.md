@@ -22,6 +22,32 @@ src/
 - MUST NOT import from `features/` or `pages/` (those are app-level)
 - Cross-runtime transport (AG-UI runner, registry, vanilla stores, MSAL token store) lives in `@iloveagents/foundry-agent`. Re-exporting it from this package is forbidden by the no-shim rule.
 
+# Lists (the DataTable family)
+
+One family under `components/data-table/`, TanStack Table underneath. The
+split that matters:
+
+- **`facets.ts` owns the semantics** — how a cell becomes facet keys, OR
+  within a facet, AND across facets, counts from the faceted row model, and
+  the `ColumnMeta` declaration merge every other file reads. Change meaning
+  here, nowhere else.
+- **`data-table.tsx` owns what is drawn** — TanStack visibility, then the
+  width (`meta.breakpoint`, measured on the table via `useElementWidth`) and
+  mode (`meta.showIn`) gates. That gating is NOT TanStack visibility: user
+  column choices ride in the URL, and mixing the two would let a narrow pane
+  persist a hidden column. Anything that must agree with the screen (the chat
+  agent's view of the list) reads `onRenderedColumnsChange`. Gating removes
+  the cell from the tree, so a stateful cell loses its state when the list
+  narrows past its breakpoint — keep cell state in the row, not the cell.
+- **`styles.css` carries what a host's CSS scanner cannot infer** — frozen
+  columns, their opaque row tints, the scrolled-x seam, capped menus. Hosts
+  import the stylesheet; components stay class-only. A frozen cell must stay
+  _under_ the sticky header (`z-index` 1 vs the header row's 10) — there is a
+  source-reading guard test for exactly that regression.
+- **`use-pinned-offsets.ts`** measures rendered header widths (a column's
+  `size` is a hint, not the used width) and hands back one stable ref callback
+  per column, so React does not detach on every render.
+
 # Extension Points
 
 SPACES and other feature modules plug in via these registries:

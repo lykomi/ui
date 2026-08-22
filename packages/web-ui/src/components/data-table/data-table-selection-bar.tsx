@@ -1,0 +1,63 @@
+/**
+ * What you can do with the rows you ticked. Appears only while something is
+ * selected, states the count in words, and hosts drop their bulk actions in —
+ * the same place in every list, so "select some rows, then do a thing" is one
+ * habit across the platform (and the same set the chat agent reads).
+ */
+import type { Row, Table } from "@tanstack/react-table";
+import { X } from "lucide-react";
+import type { ReactNode } from "react";
+import { Button, cn } from "@iloveagents/foundry-web-primitives";
+
+export interface DataTableSelectionBarProps<T> {
+  table: Table<T>;
+  /** Bulk actions for the selected rows. */
+  children?: ReactNode | ((rows: Row<T>[]) => ReactNode);
+  /** What one row is called ("risk"); the plural is derived, or give `plural`. */
+  label?: string;
+  plural?: string;
+  className?: string;
+}
+
+export function DataTableSelectionBar<T>({
+  table,
+  children,
+  label = "row",
+  plural,
+  className,
+}: DataTableSelectionBarProps<T>) {
+  // Every selected row, not only the ones the current filter shows: a
+  // selection the user cannot see is still a selection, and hiding the bar
+  // would take away the only way to clear it.
+  const rows = table.getSelectedRowModel().rows;
+  if (rows.length === 0) return null;
+  return (
+    <div
+      data-selection-bar=""
+      role="status"
+      className={cn(
+        "flex min-h-8 flex-wrap items-center gap-2 rounded-xl bg-primary/5 px-3 text-sm",
+        className,
+      )}
+    >
+      <span className="font-medium">
+        {rows.length} {rows.length === 1 ? label : (plural ?? `${label}s`)} selected
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        {typeof children === "function" ? children(rows) : children}
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        // `true` = the blank state, not the caller's `initialState`, which
+        // would make "Clear" resurrect rows.
+        onClick={() => table.resetRowSelection(true)}
+        className="ml-auto h-8 rounded-lg px-2.5"
+      >
+        Clear
+        <X className="size-4" />
+      </Button>
+    </div>
+  );
+}

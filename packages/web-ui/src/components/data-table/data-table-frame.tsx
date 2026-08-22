@@ -19,9 +19,11 @@
  */
 import {
   createContext,
+  forwardRef,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type HTMLAttributes,
   type ReactNode,
@@ -45,46 +47,64 @@ export interface DataTableFrameProps extends Omit<HTMLAttributes<HTMLDivElement>
   /** Classes applied in focus mode on top of the fullscreen layer. */
   focusClassName?: string;
   defaultFocused?: boolean;
+  /** Told when focus mode turns on or off — a host with room to spare can show more. */
+  onFocusChange?: (focused: boolean) => void;
 }
 
-export function DataTableFrame({
-  children,
-  className,
-  focusClassName,
-  defaultFocused = false,
-  ...rest
-}: DataTableFrameProps) {
-  const [focused, setFocused] = useState(defaultFocused);
-  useEffect(() => {
-    if (!focused) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFocused(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [focused]);
-  const value = useMemo(() => ({ focused, setFocused }), [focused]);
-  return (
-    <DataTableFrameContext.Provider value={value}>
-      <div
-        {...rest}
-        data-focused={focused ? "" : undefined}
-        className={
-          focused
-            ? cn(
-                "fixed inset-0 z-50 flex flex-col gap-3 overflow-hidden bg-background p-4 sm:p-6",
-                focusClassName,
-              )
-            : className
+export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
+  function DataTableFrame(
+    { children, className, focusClassName, defaultFocused = false, onFocusChange, ...rest },
+    ref,
+  ) {
+    const [focused, setFocused] = useState(defaultFocused);
+    const changeRef = useRef(onFocusChange);
+    changeRef.current = onFocusChange;
+    useEffect(() => {
+      if (!focused) return;
+      const onKeyDown = (event: KeyboardEvent) => {
+        // Through the same door as the button: a host told about focus mode
+        // must hear about it however it ended.
+        if (event.key === "Escape") {
+          setFocused(false);
+          changeRef.current?.(false);
         }
-      >
-        {children}
-      </div>
-    </DataTableFrameContext.Provider>
-  );
-}
+      };
+      document.addEventListener("keydown", onKeyDown);
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.removeEventListener("keydown", onKeyDown);
+        document.body.style.overflow = previousOverflow;
+      };
+    }, [focused]);
+    const value = useMemo(
+      () => ({
+        focused,
+        setFocused: (next: boolean) => {
+          setFocused(next);
+          changeRef.current?.(next);
+        },
+      }),
+      [focused],
+    );
+    return (
+      <DataTableFrameContext.Provider value={value}>
+        <div
+          {...rest}
+          ref={ref}
+          data-focused={focused ? "" : undefined}
+          className={
+            focused
+              ? cn(
+                  "fixed inset-0 z-50 flex flex-col gap-3 overflow-hidden bg-background p-4 sm:p-6",
+                  focusClassName,
+                )
+              : className
+          }
+        >
+          {children}
+        </div>
+      </DataTableFrameContext.Provider>
+    );
+  },
+);

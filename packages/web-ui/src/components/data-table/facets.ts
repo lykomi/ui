@@ -22,8 +22,26 @@ declare module "@tanstack/react-table" {
     searchText?: (row: TData) => string;
     /** Labels for facet keys and group headers (`value → label`). */
     facetLabels?: Record<string, string>;
-    /** Smallest viewport the column is shown at; below it the column is hidden (the View menu can still force it). */
+    /** Narrowest list width the column is shown at; below it the column hides (the Columns menu still lists it). */
     breakpoint?: DataTableBreakpoint;
+    /**
+     * Which mode the column earns its place in. `"always"` (default) means
+     * wherever it fits; `"focus"` keeps it for when the list has the screen
+     * to itself, so a page-embedded list stays scannable and going
+     * fullscreen actually shows you more.
+     */
+    showIn?: "always" | "focus";
+    /** Start hidden: available in the Columns menu, off until asked for. */
+    defaultHidden?: boolean;
+    /**
+     * Turn a raw value into the facet keys it belongs to — how a number or a
+     * date becomes something you can tick: "≥ 50 %", "overdue", "this week".
+     * The rest of the machinery (counts, OR within, AND across, the URL, the
+     * agent tools) works on those keys unchanged.
+     */
+    facetBuckets?: (value: unknown) => string[];
+    /** Freeze the column against the left edge while the table scrolls sideways. */
+    pinned?: "left";
     /** Keep unused type parameter referenced for declaration merging. */
     __cellValue?: TValue;
     /** Hosts may carry their own keys in `meta` (e.g. a server sort key). */
@@ -31,8 +49,28 @@ declare module "@tanstack/react-table" {
   }
 }
 
-/** Tailwind breakpoints a column can be gated on. */
+/**
+ * How much room a column needs. Measured against the *list's* own width, not
+ * the window — so a list beside an open detail pane sheds columns and gets
+ * them back in focus mode, with no work from the host.
+ *
+ * `sm` 448px · `md` 672px · `lg` 896px · `xl` 1024px · `2xl` 1280px.
+ */
 export type DataTableBreakpoint = "sm" | "md" | "lg" | "xl" | "2xl";
+
+/**
+ * The list width at which each band starts earning its columns. Measured on
+ * the list itself, not the viewport — a list in a side pane is narrow even on
+ * a wide screen. Exported so a host that derives breakpoints from a schema
+ * measures against the same numbers the table renders by.
+ */
+export const DATA_TABLE_MIN_WIDTH: Record<DataTableBreakpoint, number> = {
+  sm: 448,
+  md: 672,
+  lg: 896,
+  xl: 1024,
+  "2xl": 1280,
+};
 
 /** Facet key for empty cells (`null`, `undefined`, `""`, `[]`). */
 export const FACET_EMPTY = "__none__";
@@ -52,6 +90,16 @@ export interface DataTableFacetCount extends DataTableFacetOption {
  * element. A real value that spells the empty sentinel is escaped with a
  * leading backslash so it never masquerades as "no value".
  */
+export function columnFacetKeys<T>(column: Column<T, unknown>, value: unknown): string[] {
+  const buckets = column.columnDef.meta?.facetBuckets;
+  if (!buckets) return facetKeys(value);
+  // Unique, like `facetKeys` is for arrays: a bucket rule that overlaps
+  // itself would otherwise count one row twice and report a facet with more
+  // matches than there are rows.
+  const keys = Array.from(new Set(buckets(value).filter((key) => key !== "")));
+  return keys.length ? keys : [FACET_EMPTY];
+}
+
 export function facetKeys(value: unknown): string[] {
   if (value == null || value === "") return [FACET_EMPTY];
   if (value === FACET_EMPTY) return [`\\${FACET_EMPTY}`];
@@ -65,6 +113,23 @@ export function facetKeys(value: unknown): string[] {
     return key == null || key === "" ? [FACET_EMPTY] : [String(key)];
   }
   return [String(value)];
+}
+
+// TanStack memoizes a row's cells, so the array identity is a safe cache key:
+// the id → column map is built once per row instead of scanned once per row
+// per active filter (a scan that is O(columns) on every pass over the data).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rowColumnCache = new WeakMap<object, Map<string, Column<any, unknown>>>();
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function columnOfRow(row: Row<any>, columnId: string): Column<any, unknown> | undefined {
+  const cells = row.getAllCells();
+  let byId = rowColumnCache.get(cells);
+  if (!byId) {
+    byId = new Map(cells.map((cell) => [cell.column.id, cell.column]));
+    rowColumnCache.set(cells, byId);
+  }
+  return byId.get(columnId);
 }
 
 /** A facet filter value is a list of selected keys; anything else means "no filter". */
@@ -83,7 +148,11 @@ export function normalizeFacetValue(filterValue: unknown): string[] {
 export const facetFilterFn: FilterFn<any> = (row, columnId, filterValue) => {
   const wanted = normalizeFacetValue(filterValue);
   if (!wanted.length) return true;
-  return facetKeys(row.getValue(columnId)).some((key) => wanted.includes(key));
+  const column = columnOfRow(row, columnId);
+  const keys = column
+    ? columnFacetKeys(column, row.getValue(columnId))
+    : facetKeys(row.getValue(columnId));
+  return keys.some((key) => wanted.includes(key));
 };
 facetFilterFn.autoRemove = (value) => normalizeFacetValue(value).length === 0;
 
@@ -91,7 +160,7 @@ facetFilterFn.autoRemove = (value) => normalizeFacetValue(value).length === 0;
 export function facetCounts<T>(column: Column<T, unknown>): Map<string, number> {
   const counts = new Map<string, number>();
   for (const row of column.getFacetedRowModel().flatRows) {
-    for (const key of facetKeys(row.getValue(column.id))) {
+    for (const key of columnFacetKeys(column, row.getValue(column.id))) {
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
   }
