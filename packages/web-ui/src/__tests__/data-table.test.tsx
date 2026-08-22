@@ -21,6 +21,7 @@ import { DataTableFrame } from "../components/data-table/data-table-frame.tsx";
 import { DataTableToolbar, visibleFacets } from "../components/data-table/data-table-toolbar.tsx";
 import {
   FACET_EMPTY,
+  columnFacetKeys,
   facetFilterFn,
   facetKeys,
   facetOptions,
@@ -148,6 +149,98 @@ const renderedIds = () =>
   Array.from(container!.querySelectorAll("tbody tr[data-row-id]")).map((tr) =>
     tr.getAttribute("data-row-id"),
   );
+
+describe("promises the metadata makes", () => {
+  it("starts a defaultHidden column hidden, and lets the caller override it", () => {
+    const columns: ColumnDef<Task, unknown>[] = [
+      { id: "title", accessorKey: "title", header: "Title" },
+      { id: "notes", accessorKey: "status", header: "Notes", meta: { defaultHidden: true } },
+    ];
+    function Bare({
+      initialState,
+      onTable,
+    }: {
+      initialState?: Partial<DataTableState>;
+      onTable: (t: Table<Task>) => void;
+    }) {
+      const table = useDataTable<Task>({
+        data: TASKS,
+        columns,
+        getRowId: (row) => row.id,
+        initialState,
+      });
+      onTable(table);
+      return <DataTable table={table} />;
+    }
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => root!.render(<Bare onTable={(t) => (table = t)} />));
+    expect(table.getColumn("notes")!.getIsVisible()).toBe(false);
+    // …and it is still in the Columns menu, i.e. the user can bring it out.
+    act(() => table.getColumn("notes")!.toggleVisibility(true));
+    expect(table.getColumn("notes")!.getIsVisible()).toBe(true);
+
+    // An explicit choice (state, or a URL) outranks the default.
+    act(() => root!.unmount());
+    root = createRoot(container);
+    act(() =>
+      root!.render(
+        <Bare initialState={{ columnVisibility: { notes: true } }} onTable={(t) => (table = t)} />,
+      ),
+    );
+    expect(table.getColumn("notes")!.getIsVisible()).toBe(true);
+  });
+
+  it("counts a row once even when its buckets overlap", () => {
+    const column = {
+      id: "size",
+      columnDef: { meta: { facetBuckets: () => ["big", "big", "notable"] } },
+    } as never;
+    expect(columnFacetKeys(column, 12)).toEqual(["big", "notable"]);
+  });
+
+  it("shows focus-only columns in focus mode, not merely because the table fills", () => {
+    // `fill` is a scroll-layout prop; a host may use it on an ordinary page.
+    const columns: ColumnDef<Task, unknown>[] = [
+      { id: "title", accessorKey: "title", header: "Title" },
+      { id: "detail", accessorKey: "status", header: "Detail", meta: { showIn: "focus" } },
+    ];
+    function Filled() {
+      const table = useDataTable<Task>({ data: TASKS, columns, getRowId: (row) => row.id });
+      return <DataTable table={table} fill />;
+    }
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => root!.render(<Filled />));
+    // (the trailing empty cell is the `spacer` column)
+    const drawn = Array.from(container!.querySelectorAll("thead th"))
+      .map((th) => th.textContent)
+      .filter(Boolean);
+    expect(drawn).toEqual(["Title"]);
+  });
+
+  it("a double click selects once and opens once", () => {
+    const clicks: string[] = [];
+    const opens: string[] = [];
+    const h = mount({
+      onRowClick: (row) => clicks.push(row.id),
+      onRowOpen: (row) => opens.push(row.id),
+    });
+    expect(h.table).toBeTruthy();
+    const row = container!.querySelector("tbody tr[data-row-id='t1']") as HTMLElement;
+    act(() => {
+      // What a browser really sends: click(detail 1), click(detail 2), dblclick.
+      row.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+      row.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 2 }));
+      row.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, detail: 2 }));
+    });
+    expect(clicks).toEqual(["t1"]);
+    expect(opens).toEqual(["t1"]);
+  });
+});
 
 describe("what the table actually draws", () => {
   interface Cell {
@@ -605,19 +698,31 @@ describe("useDataTable + DataTable", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
+    let table!: Table<Task>;
     act(() => {
       root!.render(
         <Harness
           facets={["status"]}
-          toolbarProps={{ selectionBar: <span data-bar="">2 selected</span> }}
-          onTable={() => {}}
+          enableRowSelection
+          toolbarProps={{ selectionBar: <span data-bar="">selected</span> }}
+          onTable={(t) => (table = t)}
         />,
       );
     });
-    // the filter row is replaced, not pushed down
+    // Nothing ticked: the bar renders null, so the filter row must stay —
+    // passing a `selectionBar` element is not the same as having a selection.
+    expect(container!.querySelector("[data-selection-row]")).toBeNull();
+    expect(container!.querySelector("[data-filter-row]")).not.toBeNull();
+
+    act(() => table.getRow("t1").toggleSelected(true));
+    // Now it replaces the filter row, rather than pushing it down.
     expect(container!.querySelector("[data-selection-row]")).not.toBeNull();
     expect(container!.querySelector("[data-filter-row]")).toBeNull();
-    expect(container!.querySelector("[data-bar]")?.textContent).toBe("2 selected");
+    expect(container!.querySelector("[data-bar]")?.textContent).toBe("selected");
+
+    act(() => table.resetRowSelection(true));
+    expect(container!.querySelector("[data-selection-row]")).toBeNull();
+    expect(container!.querySelector("[data-filter-row]")).not.toBeNull();
   });
 
   it("layout=inline keeps one wrapping row", () => {

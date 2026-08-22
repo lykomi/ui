@@ -57,10 +57,17 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
     ref,
   ) {
     const [focused, setFocused] = useState(defaultFocused);
+    const changeRef = useRef(onFocusChange);
+    changeRef.current = onFocusChange;
     useEffect(() => {
       if (!focused) return;
       const onKeyDown = (event: KeyboardEvent) => {
-        if (event.key === "Escape") setFocused(false);
+        // Through the same door as the button: a host told about focus mode
+        // must hear about it however it ended.
+        if (event.key === "Escape") {
+          setFocused(false);
+          changeRef.current?.(false);
+        }
       };
       document.addEventListener("keydown", onKeyDown);
       const previousOverflow = document.body.style.overflow;
@@ -70,8 +77,6 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
         document.body.style.overflow = previousOverflow;
       };
     }, [focused]);
-    const changeRef = useRef(onFocusChange);
-    changeRef.current = onFocusChange;
     const value = useMemo(
       () => ({
         focused,

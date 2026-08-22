@@ -85,6 +85,12 @@ export function visibleFacets<T>(
   revealed: ReadonlySet<string>,
   pinnedFacets: number,
 ): { shown: DataTableFacet[]; hidden: DataTableFacet[] } {
+  // "Show everything" beats a per-facet `pinned: false`: focus mode has the
+  // room, and the promise is that nothing stays behind the menu there.
+  if (pinnedFacets === Number.POSITIVE_INFINITY) {
+    const shown = facets.filter((facet) => table.getColumn(facet.columnId));
+    return { shown, hidden: [] };
+  }
   const explicit = facets.some((facet) => facet.pinned !== undefined);
   const shown: DataTableFacet[] = [];
   const hidden: DataTableFacet[] = [];
@@ -133,6 +139,11 @@ export function DataTableToolbar<T>({
       </Button>
     ) : null;
   const state = table.getState();
+  // `DataTableSelectionBar` renders null with nothing selected, so the
+  // element being present says nothing. Ask the table instead — otherwise
+  // the filter row disappears behind an empty selection row.
+  const hasSelection = table.getSelectedRowModel().rows.length > 0;
+  const showSelectionBar = Boolean(selectionBar) && hasSelection;
   const isFiltered =
     state.columnFilters.length > 0 || Boolean(state.globalFilter) || revealed.size > 0;
   // Focus mode has the screen to itself: show every facet unless told otherwise.
@@ -272,15 +283,20 @@ export function DataTableToolbar<T>({
 
   if (!stacked) {
     return (
-      <div className={cn("flex items-start gap-2", className)}>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          {searchNode}
-          {facetNodes}
-          {addFilterNode}
-          {children}
-          {resetNode}
+      <div className={cn("flex flex-col gap-2", className)}>
+        <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            {searchNode}
+            {facetNodes}
+            {addFilterNode}
+            {children}
+            {resetNode}
+          </div>
+          {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
         </div>
-        {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
+        {/* An inline list can still select rows, so its bulk actions have a
+            home too — under the one row rather than in place of it. */}
+        {showSelectionBar ? <div data-selection-row="">{selectionBar}</div> : null}
       </div>
     );
   }
@@ -291,7 +307,7 @@ export function DataTableToolbar<T>({
         {searchNode}
         {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
       </div>
-      {selectionBar ? (
+      {showSelectionBar ? (
         <div data-selection-row="">{selectionBar}</div>
       ) : showFilters ? (
         <div data-filter-row="" className="flex flex-wrap items-center gap-2">

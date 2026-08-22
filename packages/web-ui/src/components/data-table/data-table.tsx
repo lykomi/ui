@@ -136,7 +136,11 @@ export function DataTable<T>({
   // A column has to earn its place twice: the mode it is meant for, and the
   // width the list actually has.
   const fits = (meta?: { breakpoint?: DataTableBreakpoint; showIn?: "always" | "focus" }) => {
-    if (meta?.showIn === "focus" && !filling) return false;
+    // Focus mode is the question, not `fill`: `fill` is a scroll-layout prop
+    // a host may set on an ordinary page, and it would otherwise reveal
+    // columns meant for the fullscreen layer (and hide them inside it when
+    // a host passed `fill={false}`).
+    if (meta?.showIn === "focus" && !(frame?.focused ?? false)) return false;
     const breakpoint = meta?.breakpoint;
     return !breakpoint || width === undefined || width >= DATA_TABLE_MIN_WIDTH[breakpoint];
   };
@@ -211,6 +215,14 @@ export function DataTable<T>({
       (row) => (row as HTMLElement).dataset.rowId === activeRowId,
     ) as HTMLElement | undefined;
     element?.scrollIntoView?.({ block: "nearest" });
+    // Take the keyboard along, but only if it was already in the list:
+    // arrows move the active row, and leaving focus on the row it left means
+    // the next Enter opens the wrong one. Focus is never stolen from
+    // elsewhere on the page.
+    const active = typeof document === "undefined" ? null : document.activeElement;
+    if (element && active && active !== element && bodyRef.current?.contains(active)) {
+      element.focus?.({ preventScroll: true });
+    }
   }, [activeRowId, activeIndex]);
   const columnCount = renderedColumns.length + (spacer ? 1 : 0);
   const renderedKey = renderedColumns.map((column) => column.id).join(",");
@@ -268,8 +280,14 @@ export function DataTable<T>({
                   else if (event.key === "ArrowUp") moveActive(-1);
                   else if (event.key === "Home") moveActive("first");
                   else if (event.key === "End") moveActive("last");
-                  else if (event.key === "Escape") onActiveRowChange(null);
-                  else return;
+                  else if (event.key === "Escape") {
+                    // One Escape, one effect: without this the frame's own
+                    // document listener also fires and the list leaves
+                    // focus mode while the user only wanted the row let go.
+                    onActiveRowChange(null);
+                    event.stopPropagation();
+                    event.nativeEvent.stopImmediatePropagation();
+                  } else return;
                   event.preventDefault();
                 }
               : undefined
@@ -290,7 +308,13 @@ export function DataTable<T>({
                       key={header.id}
                       colSpan={span}
                       scope="col"
-                      ref={meta?.pinned === "left" ? measure(header.column.id) : undefined}
+                      // Every column in the run, not only the marked ones: the
+                      // run can start with an unmarked leader (a selection
+                      // checkbox), and an unmeasured leader leaves the column
+                      // after it stacked at zero, overlapping it.
+                      ref={
+                        pinnedIds.includes(header.column.id) ? measure(header.column.id) : undefined
+                      }
                       {...pinnedProps(header.column.id, "header")}
                       style={{
                         ...(header.getSize() !== 150 ? { width: header.getSize() } : {}),
@@ -369,8 +393,16 @@ export function DataTable<T>({
                       activeRowId != null && row.id === activeRowId ? "true" : undefined
                     }
                     aria-selected={row.getIsSelected() || undefined}
+                    data-clickable={onRowClick || onRowOpen ? "" : undefined}
                     tabIndex={onRowClick || onRowOpen || onActiveRowChange ? 0 : undefined}
-                    onClick={(event) => activate(row, event, onRowClick)}
+                    // `detail` counts the clicks in the sequence: the second
+                    // one belongs to the double-click that follows, and
+                    // letting it through would toggle a selection off again
+                    // right before the row opens.
+                    onClick={(event) => {
+                      if (event.detail > 1) return;
+                      activate(row, event, onRowClick);
+                    }}
                     onDoubleClick={(event) => activate(row, event, onRowOpen)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {

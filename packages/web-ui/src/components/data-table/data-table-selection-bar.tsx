@@ -26,7 +26,10 @@ export function DataTableSelectionBar<T>({
   plural,
   className,
 }: DataTableSelectionBarProps<T>) {
-  const rows = table.getFilteredSelectedRowModel().rows;
+  // Every selected row, not only the ones the current filter shows: a
+  // selection the user cannot see is still a selection, and hiding the bar
+  // would take away the only way to clear it.
+  const rows = table.getSelectedRowModel().rows;
   if (rows.length === 0) return null;
   return (
     <div
@@ -47,7 +50,9 @@ export function DataTableSelectionBar<T>({
         type="button"
         variant="ghost"
         size="sm"
-        onClick={() => table.resetRowSelection()}
+        // `true` = the blank state, not the caller's `initialState`, which
+        // would make "Clear" resurrect rows.
+        onClick={() => table.resetRowSelection(true)}
         className="ml-auto h-8 rounded-lg px-2.5"
       >
         Clear

@@ -65,9 +65,21 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   const controlled = controlledState !== undefined && onStateChange !== undefined;
 
   const basePageSize = pageSize || DEFAULT_PAGE_SIZE;
+  // `meta.defaultHidden` is a DEFAULT, so it sits under whatever the caller
+  // or the URL says: a column the user has since switched on carries its own
+  // entry and wins. Without this the metadata was documented but inert.
+  const defaultHidden = useMemo(() => {
+    const hidden: Record<string, boolean> = {};
+    for (const column of columns) {
+      const id = column.id ?? ("accessorKey" in column ? String(column.accessorKey) : undefined);
+      if (id && column.meta?.defaultHidden) hidden[id] = false;
+    }
+    return hidden;
+  }, [columns]);
   const [innerState, setInnerState] = useState<DataTableState>(() => ({
     ...EMPTY_DATA_TABLE_STATE,
     ...initialState,
+    columnVisibility: { ...defaultHidden, ...initialState?.columnVisibility },
     pagination: { pageIndex: 0, pageSize: basePageSize, ...initialState?.pagination },
   }));
   const state = useMemo<DataTableState>(
@@ -76,10 +88,11 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
         ? {
             ...EMPTY_DATA_TABLE_STATE,
             ...controlledState,
+            columnVisibility: { ...defaultHidden, ...controlledState.columnVisibility },
             pagination: { pageIndex: 0, pageSize: basePageSize, ...controlledState.pagination },
           }
         : innerState,
-    [basePageSize, controlled, controlledState, innerState],
+    [basePageSize, controlled, controlledState, defaultHidden, innerState],
   );
   const stateRef = useRef(state);
   stateRef.current = state;

@@ -93,7 +93,10 @@ export interface DataTableFacetCount extends DataTableFacetOption {
 export function columnFacetKeys<T>(column: Column<T, unknown>, value: unknown): string[] {
   const buckets = column.columnDef.meta?.facetBuckets;
   if (!buckets) return facetKeys(value);
-  const keys = buckets(value).filter((key) => key !== "");
+  // Unique, like `facetKeys` is for arrays: a bucket rule that overlaps
+  // itself would otherwise count one row twice and report a facet with more
+  // matches than there are rows.
+  const keys = Array.from(new Set(buckets(value).filter((key) => key !== "")));
   return keys.length ? keys : [FACET_EMPTY];
 }
 

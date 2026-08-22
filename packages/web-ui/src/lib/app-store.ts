@@ -297,9 +297,14 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   promoteContextItem: (id) =>
     set({
-      contextItems: get().contextItems.map((i) =>
-        i.id === id ? { ...i, persistence: "persistent" as const } : i,
-      ),
+      contextItems: get().contextItems.map((i) => {
+        if (i.id !== id) return i;
+        // Pinning takes the item away from the UI that was tracking it: the
+        // key goes, so the next selection change replaces nothing and the
+        // pin the user made survives.
+        const { key: _tracked, ...rest } = i;
+        return { ...rest, persistence: "persistent" as const };
+      }),
     }),
 
   clearAllContext: () => set({ contextItems: [], sentContext: {} }),
@@ -310,9 +315,14 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const snapshot = [...contextItems];
 
-    // Keep persistent, remove ephemeral
+    // Keep persistent, remove ephemeral — except context that TRACKS the UI
+    // (a keyed item, e.g. a live list selection). Those rows are still
+    // ticked after the message goes; dropping the chip would take them out
+    // of every later message while the user can still see them selected.
+    // Their owner clears them (`setContextItem(key, null)`), and navigation
+    // still does.
     set({
-      contextItems: contextItems.filter((i) => i.persistence === "persistent"),
+      contextItems: contextItems.filter((i) => i.persistence === "persistent" || i.key),
       sentContext: { ...sentContext, [messageId]: snapshot },
     });
 

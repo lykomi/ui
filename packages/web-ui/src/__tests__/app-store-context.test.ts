@@ -27,6 +27,37 @@ describe("keyed context items", () => {
     expect(useAppStore.getState().contextItems).toEqual([]);
   });
 
+  it("survives being sent, because the rows are still selected", () => {
+    // Ephemeral one-shot context goes with the message. A live selection is
+    // not one-shot: the rows are still ticked, the effect that published them
+    // will not re-run (nothing changed), and dropping the chip would quietly
+    // take them out of every later message.
+    const store = useAppStore.getState();
+    store.setContextItem("list:risks", note("2 risks selected"));
+    store.addContextItem(note("a one-shot mention"));
+    store.consumeContextForMessage("m1");
+    expect(useAppStore.getState().contextItems.map((i) => i.label)).toEqual(["2 risks selected"]);
+    store.setContextItem("list:risks", null);
+    expect(useAppStore.getState().contextItems).toEqual([]);
+  });
+
+  it("navigation still takes it away", () => {
+    const store = useAppStore.getState();
+    store.setContextItem("list:risks", note("2 risks selected"));
+    store.setCurrentPage("/somewhere-else");
+    expect(useAppStore.getState().contextItems).toEqual([]);
+  });
+
+  it("pinning hands the item to the user, so the next selection cannot take it", () => {
+    const store = useAppStore.getState();
+    store.setContextItem("list:risks", note("2 risks selected"));
+    const pinned = useAppStore.getState().contextItems[0]!;
+    store.promoteContextItem(pinned.id);
+    expect(useAppStore.getState().contextItems[0]!.key).toBeUndefined();
+    store.setContextItem("list:risks", null);
+    expect(useAppStore.getState().contextItems.map((i) => i.persistence)).toEqual(["persistent"]);
+  });
+
   it("leaves other keys and the user's own pins alone", () => {
     const store = useAppStore.getState();
     store.addContextItem(note("a note the user pinned"));
