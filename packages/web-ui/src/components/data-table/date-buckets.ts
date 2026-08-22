@@ -89,7 +89,7 @@ export function parseDateish(value: unknown): number | null {
 
 export type AgeBucket = "today" | "week" | "month" | "older" | "never";
 
-/** How recently something happened — the buckets a "last update" filter offers. */
+/** The narrowest bucket something falls in — the one to LABEL it with. */
 export function ageBucket(value: unknown, options: DateBucketOptions = {}): AgeBucket {
   const at = parseDateish(value);
   if (at === null) return "never";
@@ -98,6 +98,26 @@ export function ageBucket(value: unknown, options: DateBucketOptions = {}): AgeB
   if (age < 7 * DAY) return "week";
   if (age < 30 * DAY) return "month";
   return "older";
+}
+
+/**
+ * Every bucket something belongs to — what a FILTER needs.
+ *
+ * "Last 7 days" includes today. Saying it does not is technically defensible
+ * and reads as broken: a register where everything had just been touched
+ * showed "Today 11, Last 7 days 8, Last 30 days 0", three numbers that
+ * cannot all be true of the same rows. Ranges nest, so the keys nest, and
+ * the counts come out as totals a person can check by eye.
+ *
+ * The tail ("older than 30 days") and "never" are states rather than
+ * ranges, so they stand alone.
+ */
+export function ageBuckets(value: unknown, options: DateBucketOptions = {}): AgeBucket[] {
+  const narrowest = ageBucket(value, options);
+  if (narrowest === "today") return ["today", "week", "month"];
+  if (narrowest === "week") return ["week", "month"];
+  if (narrowest === "month") return ["month"];
+  return [narrowest];
 }
 
 export interface DueStateOptions extends DateBucketOptions {

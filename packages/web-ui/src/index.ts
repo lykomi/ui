@@ -120,6 +120,7 @@ export {
 } from "./components/data-table/state.ts";
 export {
   ageBucket,
+  ageBuckets,
   dueState,
   parseDateish,
   relativeAge,

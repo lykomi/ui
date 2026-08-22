@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ageBucket,
+  ageBuckets,
   dueState,
   parseDateish,
   relativeAge,
@@ -60,6 +61,21 @@ describe("parseDateish", () => {
     expect(parseDateish("Contract signature (May)")).toBe(null);
     expect(parseDateish("")).toBe(null);
     expect(parseDateish(null)).toBe(null);
+  });
+});
+
+describe("ageBuckets", () => {
+  it("nests, because ranges do — today is also within the last 7 days", () => {
+    // The labels say "Last 7 days" and "Last 30 days". Exclusive slices made
+    // the counts read as nonsense: Today 11, Last 7 days 8, Last 30 days 0.
+    expect(ageBuckets(daysOut(0), { now: NOW })).toEqual(["today", "week", "month"]);
+    expect(ageBuckets(daysOut(-3), { now: NOW })).toEqual(["week", "month"]);
+    expect(ageBuckets(daysOut(-20), { now: NOW })).toEqual(["month"]);
+  });
+
+  it("leaves the states that are not ranges alone", () => {
+    expect(ageBuckets(daysOut(-90), { now: NOW })).toEqual(["older"]);
+    expect(ageBuckets(null, { now: NOW })).toEqual(["never"]);
   });
 });
 
