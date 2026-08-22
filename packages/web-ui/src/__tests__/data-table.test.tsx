@@ -159,7 +159,8 @@ describe("facet keys", () => {
   });
 
   it("facetFilterFn ORs the selected keys and is removed when empty", () => {
-    const row = { getValue: () => ["a", "b"] } as never;
+    // A bare row stand-in: no cells, so the filter falls back to plain keys.
+    const row = { getValue: () => ["a", "b"], getAllCells: () => [] } as never;
     expect(facetFilterFn(row, "tags", ["b", "z"], () => {})).toBe(true);
     expect(facetFilterFn(row, "tags", ["z"], () => {})).toBe(false);
     expect(facetFilterFn(row, "tags", [], () => {})).toBe(true);
@@ -197,6 +198,37 @@ describe("useDataTable + DataTable", () => {
       options()[1]!.click();
     });
     expect(h.table.getColumn("status")!.getFilterValue()).toEqual(["done", "open"]);
+  });
+
+  it("buckets turn a number into something you can tick, counts and all", () => {
+    const amounts: Record<string, number> = { t1: 100, t2: 200, t3: 300, t4: 50 };
+    const h = mount({
+      facets: ["amount"],
+      columns: [
+        ...COLUMNS.slice(0, 3),
+        {
+          id: "amount",
+          accessorFn: (task: Task) => amounts[task.id],
+          header: "Amount",
+          filterFn: facetFilterFn,
+          meta: {
+            facetLabels: { gte: "≥ 150", lt: "< 150" },
+            facetBuckets: (value: unknown) => [Number(value) >= 150 ? "gte" : "lt"],
+          },
+        },
+      ],
+    });
+    const column = h.table.getColumn("amount")!;
+    // the raw numbers never appear — only the buckets, counted
+    // undeclared keys come back in label order
+    expect(facetOptions(column).map((o) => [o.value, o.label, o.count])).toEqual([
+      ["lt", "< 150", 2],
+      ["gte", "≥ 150", 2],
+    ]);
+    act(() => column.setFilterValue(["gte"]));
+    expect(renderedIds()).toEqual(["t2", "t3"]);
+    act(() => column.setFilterValue(["lt"]));
+    expect(renderedIds()).toEqual(["t1", "t4"]);
   });
 
   it("counts a facet over the rows every OTHER filter lets through", () => {

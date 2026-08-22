@@ -117,6 +117,7 @@ export {
 export {
   FACET_EMPTY,
   cellText,
+  columnFacetKeys,
   columnLabel,
   facetCounts,
   facetFilterFn,

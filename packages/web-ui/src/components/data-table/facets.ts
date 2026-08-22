@@ -33,6 +33,13 @@ declare module "@tanstack/react-table" {
     showIn?: "always" | "focus";
     /** Start hidden: available in the Columns menu, off until asked for. */
     defaultHidden?: boolean;
+    /**
+     * Turn a raw value into the facet keys it belongs to — how a number or a
+     * date becomes something you can tick: "≥ 50 %", "overdue", "this week".
+     * The rest of the machinery (counts, OR within, AND across, the URL, the
+     * agent tools) works on those keys unchanged.
+     */
+    facetBuckets?: (value: unknown) => string[];
     /** Freeze the column against the left edge while the table scrolls sideways. */
     pinned?: "left";
     /** Keep unused type parameter referenced for declaration merging. */
@@ -69,6 +76,13 @@ export interface DataTableFacetCount extends DataTableFacetOption {
  * element. A real value that spells the empty sentinel is escaped with a
  * leading backslash so it never masquerades as "no value".
  */
+export function columnFacetKeys<T>(column: Column<T, unknown>, value: unknown): string[] {
+  const buckets = column.columnDef.meta?.facetBuckets;
+  if (!buckets) return facetKeys(value);
+  const keys = buckets(value).filter((key) => key !== "");
+  return keys.length ? keys : [FACET_EMPTY];
+}
+
 export function facetKeys(value: unknown): string[] {
   if (value == null || value === "") return [FACET_EMPTY];
   if (value === FACET_EMPTY) return [`\\${FACET_EMPTY}`];
@@ -100,7 +114,11 @@ export function normalizeFacetValue(filterValue: unknown): string[] {
 export const facetFilterFn: FilterFn<any> = (row, columnId, filterValue) => {
   const wanted = normalizeFacetValue(filterValue);
   if (!wanted.length) return true;
-  return facetKeys(row.getValue(columnId)).some((key) => wanted.includes(key));
+  const column = row.getAllCells().find((cell) => cell.column.id === columnId)?.column;
+  const keys = column
+    ? columnFacetKeys(column, row.getValue(columnId))
+    : facetKeys(row.getValue(columnId));
+  return keys.some((key) => wanted.includes(key));
 };
 facetFilterFn.autoRemove = (value) => normalizeFacetValue(value).length === 0;
 
@@ -108,7 +126,7 @@ facetFilterFn.autoRemove = (value) => normalizeFacetValue(value).length === 0;
 export function facetCounts<T>(column: Column<T, unknown>): Map<string, number> {
   const counts = new Map<string, number>();
   for (const row of column.getFacetedRowModel().flatRows) {
-    for (const key of facetKeys(row.getValue(column.id))) {
+    for (const key of columnFacetKeys(column, row.getValue(column.id))) {
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
   }
