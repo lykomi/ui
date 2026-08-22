@@ -37,6 +37,12 @@ export interface DataTableProps<T> {
   /** Declared order of group keys; unknown keys follow in data order. */
   groupOrder?: string[];
   emptyState?: ReactNode;
+  /**
+   * Keep the columns at their natural width and let the leftover room sit at
+   * the end, the way a spreadsheet looks, instead of stretching a text column
+   * across the gap. Set `false` for a table whose last column should fill.
+   */
+  spacer?: boolean;
   /** Keep the header in place while the rows scroll (always on in focus mode). */
   stickyHeader?: boolean;
   /**
@@ -98,6 +104,7 @@ export function DataTable<T>({
   renderGroup,
   groupOrder,
   emptyState = "No results.",
+  spacer = true,
   stickyHeader = false,
   fill,
   maxHeight,
@@ -170,9 +177,9 @@ export function DataTable<T>({
     ) as HTMLElement | undefined;
     element?.scrollIntoView?.({ block: "nearest" });
   }, [activeRowId]);
-  const columnCount = table
-    .getVisibleLeafColumns()
-    .filter((column) => fits(column.columnDef.meta?.breakpoint)).length;
+  const columnCount =
+    table.getVisibleLeafColumns().filter((column) => fits(column.columnDef.meta?.breakpoint))
+      .length + (spacer ? 1 : 0);
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
   const activate = (row: Row<T>, event: MouseEvent | KeyboardEvent) => {
@@ -246,6 +253,7 @@ export function DataTable<T>({
                     </th>
                   );
                 })}
+                {spacer ? <th aria-hidden="true" className="w-full p-0" /> : null}
               </tr>
             ))}
           </thead>
@@ -267,8 +275,15 @@ export function DataTable<T>({
                     data-group-row=""
                     className="border-t border-border/45 bg-muted/35 text-sm font-medium"
                   >
-                    <td colSpan={columnCount} className="px-3 py-1.5">
-                      <div className="flex items-center gap-2">
+                    <td colSpan={columnCount} className="p-0">
+                      {/* The group's cell spans the whole (scrollable) width,
+                          so its content is pinned to the viewport instead —
+                          the label and total stay put while the columns move. */}
+                      <div
+                        data-group-content=""
+                        style={width ? { width } : undefined}
+                        className="flex items-center gap-2 px-3 py-1.5"
+                      >
                         <button
                           type="button"
                           onClick={row.getToggleExpandedHandler()}
@@ -335,6 +350,7 @@ export function DataTable<T>({
                         </td>
                       );
                     })}
+                    {spacer ? <td aria-hidden="true" className="w-full p-0" /> : null}
                   </tr>
                 ),
               )

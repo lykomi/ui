@@ -167,7 +167,16 @@
   background-color: var(--background);
 }
 [data-pinned-edge] {
-  border-right: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  /* A seam, so it reads as "this part is held in place". */
+  box-shadow: 6px 0 6px -6px color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+/* A group header spans the scrollable width; its content sticks to the
+ * viewport so the label and total stay readable while columns scroll. */
+[data-group-content] {
+  position: sticky;
+  left: 0;
 }
 tr:hover > [data-pinned="cell"] {
   background-color: color-mix(in srgb, var(--muted) 30%, var(--background));

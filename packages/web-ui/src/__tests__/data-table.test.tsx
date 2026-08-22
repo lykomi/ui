@@ -319,13 +319,17 @@ describe("useDataTable + DataTable", () => {
         ],
       });
       const headers = () =>
-        Array.from(container!.querySelectorAll("thead th")).map((th) => th.textContent);
+        Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")).map(
+          (th) => th.textContent,
+        );
       expect(headers()).toEqual(["Title", "Status", "Priority", "Tags"]);
       const root = container!.querySelector("table")!.closest("div")!.parentElement!;
       widths.set(root, 700); // narrower than `lg` (896)
       act(() => observed.forEach((callback) => callback()));
       expect(headers()).toEqual(["Title", "Priority", "Tags"]);
-      expect(container!.querySelectorAll("tbody tr[data-row-id='t1'] td")).toHaveLength(3);
+      expect(
+        container!.querySelectorAll("tbody tr[data-row-id='t1'] td:not([aria-hidden])"),
+      ).toHaveLength(3);
       widths.set(root, 1200); // roomy again
       act(() => observed.forEach((callback) => callback()));
       expect(headers()).toEqual(["Title", "Status", "Priority", "Tags"]);
@@ -489,7 +493,8 @@ describe("useDataTable + DataTable", () => {
           );
         });
       render();
-      const headers = () => Array.from(container!.querySelectorAll("thead th")) as HTMLElement[];
+      const headers = () =>
+        Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")) as HTMLElement[];
       headers()
         .slice(0, 2)
         .forEach((header, index) => widths.set(header, index === 0 ? 40 : 120));

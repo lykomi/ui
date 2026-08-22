@@ -48,7 +48,6 @@ export function DataTableViewOptions<T>({ table, className }: DataTableViewOptio
             checked={column.getIsVisible()}
             onCheckedChange={(checked) => column.toggleVisibility(Boolean(checked))}
             onSelect={(event) => event.preventDefault()}
-            className="capitalize"
           >
             {columnLabel(column)}
           </DropdownMenuCheckboxItem>
