@@ -208,10 +208,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().currentPage;
     if (prev === page) return;
 
-    // Clear ephemeral context on navigation
+    // Clear ephemeral context on navigation — and every KEYED item, whatever
+    // its persistence: those track a piece of UI, and that UI is gone. A pin
+    // the user made survives, because promoting an item drops its key.
     set({
       currentPage: page,
-      contextItems: get().contextItems.filter((i) => i.persistence !== "ephemeral"),
+      contextItems: get().contextItems.filter((i) => i.persistence !== "ephemeral" && !i.key),
     });
   },
 

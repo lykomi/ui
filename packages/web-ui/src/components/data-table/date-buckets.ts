@@ -59,6 +59,17 @@ function startOfDay(at: number): number {
 }
 
 /**
+ * The last millisecond of that local day — built from the NEXT day's calendar
+ * fields, never by adding 24 hours. On a daylight-saving change the day is 23
+ * or 25 hours long, and a fixed offset would end it an hour early in autumn
+ * and an hour into tomorrow in spring.
+ */
+function endOfDay(at: number): number {
+  const date = new Date(at);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime() - 1;
+}
+
+/**
  * Whole calendar days between two instants — 23:30 and 00:30 the next
  * morning are ONE day apart even though barely an hour passed. Everything
  * a person calls "today" or "yesterday" is a calendar question, so counting
@@ -164,7 +175,7 @@ export function dueState(value: unknown, options: DueStateOptions = {}): DueStat
   // A date with no clock is a whole day, and someone with until Friday is not
   // late on Friday morning — so it runs out at the end of that day where
   // they are. A real timestamp is compared as the instant it is.
-  const deadline = parts.dateOnly ? startOfDay(parts.at) + DAY - 1 : parts.at;
+  const deadline = parts.dateOnly ? endOfDay(parts.at) : parts.at;
   if (deadline < now) return "overdue";
   return deadline - now <= (options.soonDays ?? 30) * DAY ? "soon" : "later";
 }

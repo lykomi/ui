@@ -41,11 +41,17 @@ describe("keyed context items", () => {
     expect(useAppStore.getState().contextItems).toEqual([]);
   });
 
-  it("navigation still takes it away", () => {
+  it("navigation still takes it away, however it was published", () => {
+    // Keyed context tracks a piece of UI. When the page holding that UI is
+    // gone, so is the context — even if the caller marked it persistent, or a
+    // list on an unrelated page would keep feeding the agent rows nobody can
+    // see. A pin the user made survives, because promoting drops the key.
     const store = useAppStore.getState();
     store.setContextItem("list:risks", note("2 risks selected"));
+    store.setContextItem("list:tasks", { ...note("1 task"), persistence: "persistent" });
+    store.addContextItem({ ...note("a real pin"), persistence: "persistent" });
     store.setCurrentPage("/somewhere-else");
-    expect(useAppStore.getState().contextItems).toEqual([]);
+    expect(useAppStore.getState().contextItems.map((i) => i.label)).toEqual(["a real pin"]);
   });
 
   it("pinning hands the item to the user, so the next selection cannot take it", () => {

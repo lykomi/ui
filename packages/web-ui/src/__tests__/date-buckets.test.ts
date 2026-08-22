@@ -91,6 +91,22 @@ describe("calendar days, not elapsed hours", () => {
     expect(relativeAge(earlier, { now: justAfterMidnight })).toBe("today");
   });
 
+  it("ends a date-only deadline at the next local midnight, DST and all", () => {
+    // A day is 23 or 25 hours long twice a year, so the end of it has to be
+    // built from the next day's calendar fields rather than by adding 24h.
+    // (In a zone without DST this still holds; it simply never differs.)
+    for (const [year, month, day] of [
+      [2026, 10, 1], // around a northern fall-back
+      [2026, 2, 29], // around a northern spring-forward
+    ] as const) {
+      const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const oneSecondBeforeMidnight = new Date(year, month, day + 1).getTime() - 1000;
+      const justAfterMidnight = new Date(year, month, day + 1).getTime() + 1000;
+      expect(dueState(date, { now: oneSecondBeforeMidnight })).toBe("soon");
+      expect(dueState(date, { now: justAfterMidnight })).toBe("overdue");
+    }
+  });
+
   it("ends a date-only deadline with the reader's day, not UTC's", () => {
     // Late in the local evening the deadline for that same date is not yet
     // past — the bug this guards made it overdue as soon as UTC rolled over.

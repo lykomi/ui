@@ -79,7 +79,31 @@ export interface DataTableProps<T> {
   "aria-label"?: string;
 }
 
-const INTERACTIVE = "a, button, input, select, textarea, [role='menuitem'], [data-no-row-click]";
+// Native controls, the ARIA widgets that own the same keys (a slider or a
+// listbox answers to arrows; a checkbox to space), and anything a host marks.
+// A row's keyboard handling must never take a key out from under one of them.
+const INTERACTIVE = [
+  "a",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "[contenteditable]:not([contenteditable='false'])",
+  "[role='menuitem']",
+  "[role='menuitemcheckbox']",
+  "[role='menuitemradio']",
+  "[role='checkbox']",
+  "[role='radio']",
+  "[role='switch']",
+  "[role='slider']",
+  "[role='spinbutton']",
+  "[role='textbox']",
+  "[role='combobox']",
+  "[role='listbox']",
+  "[role='option']",
+  "[role='tab']",
+  "[data-no-row-click]",
+].join(", ");
 
 /** Group header rows and their expanded children, in declared group order. */
 function orderedRows<T>(table: Table<T>, groupOrder?: string[]): Row<T>[] {
