@@ -127,27 +127,19 @@ export function DataTable<T>({
     .filter((column) => column.columnDef.meta?.pinned === "left")
     .map((column) => column.id);
   const { offsets, lastPinned, measure } = usePinnedOffsets(pinnedIds);
+  // A pinned cell is opaque — the other columns slide underneath it — and it
+  // restates the row's hover / selected / active tints. Those rules live in
+  // this package's `styles.css`, keyed off the attributes below, so a host
+  // needs no CSS wiring of its own.
+  const pinnedProps = (columnId: string, tone: "header" | "cell") =>
+    offsets[columnId] === undefined
+      ? {}
+      : {
+          "data-pinned": tone,
+          "data-pinned-edge": columnId === lastPinned ? "" : undefined,
+        };
   const pinnedStyle = (columnId: string) =>
     offsets[columnId] === undefined ? undefined : { left: offsets[columnId] };
-  // A pinned cell must be opaque — the other columns slide underneath it — so
-  // the row's translucent hover / selected / active tints are restated here
-  // as their opaque equivalents.
-  const pinnedClass = (columnId: string, tone: "header" | "cell") =>
-    offsets[columnId] === undefined
-      ? undefined
-      : cn(
-          "sticky z-20",
-          tone === "header"
-            ? "bg-card"
-            : [
-                "bg-background",
-                onRowClick &&
-                  "group-hover/row:bg-[color-mix(in_srgb,var(--muted)_30%,var(--background))]",
-                "group-data-[state=selected]/row:bg-[color-mix(in_srgb,var(--primary)_6%,var(--background))]",
-                "group-data-[active]/row:bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))]",
-              ],
-          columnId === lastPinned && "border-r border-border/45",
-        );
 
   // Keyboard: the active row moves with the arrows and stays in view, so a
   // long list can be walked without touching the mouse.
@@ -236,6 +228,7 @@ export function DataTable<T>({
                       colSpan={header.colSpan}
                       scope="col"
                       ref={meta?.pinned === "left" ? measure(header.column.id) : undefined}
+                      {...pinnedProps(header.column.id, "header")}
                       style={{
                         ...(header.getSize() !== 150 ? { width: header.getSize() } : {}),
                         ...pinnedStyle(header.column.id),
@@ -244,7 +237,6 @@ export function DataTable<T>({
                         "h-10 px-3 text-left align-middle text-xs font-medium text-muted-foreground",
                         meta?.align === "right" && "text-right",
                         meta?.align === "center" && "text-center",
-                        pinnedClass(header.column.id, "header"),
                         meta?.headerClassName,
                       )}
                     >
@@ -329,13 +321,13 @@ export function DataTable<T>({
                       return (
                         <td
                           key={cell.id}
+                          {...pinnedProps(cell.column.id, "cell")}
                           style={pinnedStyle(cell.column.id)}
                           className={cn(
                             cellPad,
                             "align-middle",
                             meta?.align === "right" && "text-right",
                             meta?.align === "center" && "text-center",
-                            pinnedClass(cell.column.id, "cell"),
                             meta?.className,
                           )}
                         >

@@ -140,3 +140,41 @@
   --code-block: oklch(0.16 0.01 286);
   --code-block-foreground: oklch(0.9 0.01 286);
 }
+
+/* ---------------------------------------------------------------- lists --
+ * Rules the components need but a host's CSS scanner cannot infer, so they
+ * ship here. Import this stylesheet (see the README) to get them.
+ */
+
+/* A long menu — every column of a wide list — stays reachable: capped to the
+ * room the trigger has and scrollable inside it. */
+[data-menu-scroll] {
+  max-height: var(--radix-dropdown-menu-content-available-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Frozen columns. The cell has to be opaque, since the other columns scroll
+ * underneath it, so the row's translucent states are restated opaquely. */
+[data-pinned] {
+  position: sticky;
+  z-index: 20;
+}
+[data-pinned="header"] {
+  background-color: var(--card);
+}
+[data-pinned="cell"] {
+  background-color: var(--background);
+}
+[data-pinned-edge] {
+  border-right: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+}
+tr:hover > [data-pinned="cell"] {
+  background-color: color-mix(in srgb, var(--muted) 30%, var(--background));
+}
+tr[data-state="selected"] > [data-pinned="cell"] {
+  background-color: color-mix(in srgb, var(--primary) 6%, var(--background));
+}
+tr[data-active] > [data-pinned="cell"] {
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--background));
+}

@@ -9,6 +9,12 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { DataTable } from "../components/data-table/data-table.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu.tsx";
 import { DataTableFrame } from "../components/data-table/data-table-frame.tsx";
 import { DataTableToolbar, visibleFacets } from "../components/data-table/data-table-toolbar.tsx";
 import {
@@ -488,16 +494,16 @@ describe("useDataTable + DataTable", () => {
         .slice(0, 2)
         .forEach((header, index) => widths.set(header, index === 0 ? 40 : 120));
       act(() => callbacks.forEach((callback) => callback()));
-      expect(headers()[0]!.className).toContain("sticky");
-      expect(headers()[1]!.className).toContain("sticky");
-      expect(headers()[1]!.className).toContain("border-r");
-      expect(headers()[2]!.className).not.toContain("sticky");
+      expect(headers()[0]!.getAttribute("data-pinned")).toBe("header");
+      expect(headers()[1]!.getAttribute("data-pinned")).toBe("header");
+      expect(headers()[1]!.hasAttribute("data-pinned-edge")).toBe(true);
+      expect(headers()[2]!.hasAttribute("data-pinned")).toBe(false);
       // the second pinned column starts where the first one ends
       expect(headers()[0]!.style.left).toBe("0px");
       expect(headers()[1]!.style.left).toBe("40px");
-      // pinned body cells restate the row's state tints, since they are opaque
+      // pinned body cells are marked so the shipped CSS can keep them opaque
       const cell = container!.querySelector("tbody tr td") as HTMLElement;
-      expect(cell.className).toContain("group-data-[state=selected]/row:bg-[color-mix");
+      expect(cell.getAttribute("data-pinned")).toBe("cell");
       // rows are focusable even without onRowClick
       expect(container!.querySelector("tbody tr[data-row-id]")!.getAttribute("tabindex")).toBe("0");
 
@@ -521,6 +527,28 @@ describe("useDataTable + DataTable", () => {
       Object.defineProperty(window, "ResizeObserver", { writable: true, value: previousRO });
       Element.prototype.getBoundingClientRect = previousRect;
     }
+  });
+
+  it("a long menu stays reachable: capped to the available room and scrollable", () => {
+    // The Columns menu of a wide list can be taller than the screen; Radix
+    // reports the room it has and the content scrolls inside it.
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <DropdownMenu open>
+          <DropdownMenuTrigger>open</DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuCheckboxItem checked>one</DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>,
+      );
+    });
+    const menu = document.querySelector("[role='menu']") as HTMLElement;
+    expect(menu).not.toBeNull();
+    expect(menu.hasAttribute("data-menu-scroll")).toBe(true);
+    expect(document.querySelectorAll("[role='menuitemcheckbox']")).toHaveLength(1);
   });
 
   it("maxHeight gives the list its own scroll viewport with a sticky header", () => {
