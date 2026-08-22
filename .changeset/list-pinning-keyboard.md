@@ -9,3 +9,5 @@ Rules the components need but a host's CSS scanner cannot infer — frozen-colum
 The grid itself reads like a spreadsheet: columns keep their natural width with the slack at the end (`spacer`), a group header's label and total stay put while the columns scroll, the frozen edge carries a seam, and the Columns menu shows each column's own label rather than title-casing it.
 
 Selecting and opening are separate acts, the way a desktop list behaves: a click selects (`onRowClick`), Enter or a double click opens (`onRowOpen`), and the tick boxes of `selectionColumn` are the selection a chat agent reads. `DataTableSelectionBar` gives every list one place for bulk actions on that selection. The frozen seam only appears once the list is scrolled sideways, and list scrollbars stay visible instead of relying on the overlay ones macOS hides.
+
+Context that tracks the UI now has a home: `useAppStore.setContextItem(key, item | null)` keeps one item per key, so a list can keep the chat in step with its selection — replacing the chip as the selection changes and taking it away when it empties — without piling up stale ones next to the user's own pins.

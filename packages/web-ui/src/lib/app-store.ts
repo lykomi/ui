@@ -62,6 +62,8 @@ export type ContextItemType = "selection" | "page" | "ref" | "note";
 
 export interface ContextItem {
   id: string;
+  /** Set for context that tracks the UI (a list's selection): one item per key. */
+  key?: string;
   type: ContextItemType;
   label: string;
   payload: ContextPayload;
@@ -140,9 +142,7 @@ function compactContextValue(value: unknown): unknown {
   return value;
 }
 
-function compactReferenceTarget(
-  target: ReferencePayload["target"],
-): ReferencePayload["target"] {
+function compactReferenceTarget(target: ReferencePayload["target"]): ReferencePayload["target"] {
   if (!target) return undefined;
   return {
     ...target,
@@ -179,6 +179,12 @@ interface AppState {
   contextItems: ContextItem[];
   sentContext: Record<string, ContextItem[]>;
   addContextItem: (item: Omit<ContextItem, "id" | "createdAt">) => void;
+  /**
+   * Context that tracks a piece of UI rather than a user's pin — the rows
+   * selected in a list, say. One item per `key`: setting replaces, `null`
+   * clears. Without this, a chip that changes with the UI would pile up.
+   */
+  setContextItem: (key: string, item: Omit<ContextItem, "id" | "createdAt"> | null) => void;
   removeContextItem: (id: string) => void;
   promoteContextItem: (id: string) => void;
   clearAllContext: () => void;
@@ -264,6 +270,25 @@ export const useAppStore = create<AppState>((set, get) => ({
       contextItems: [
         ...contextItems,
         { ...item, label, id: crypto.randomUUID(), createdAt: Date.now() },
+      ],
+    });
+  },
+
+  setContextItem: (key, item) => {
+    const withoutKey = get().contextItems.filter((existing) => existing.key !== key);
+    if (!item) {
+      if (withoutKey.length !== get().contextItems.length) set({ contextItems: withoutKey });
+      return;
+    }
+    if (withoutKey.length >= MAX_ITEMS) return;
+    const label =
+      item.label.length > MAX_LABEL_LENGTH
+        ? `${item.label.slice(0, MAX_LABEL_LENGTH)}...`
+        : item.label;
+    set({
+      contextItems: [
+        ...withoutKey,
+        { ...item, key, label, id: crypto.randomUUID(), createdAt: Date.now() },
       ],
     });
   },
