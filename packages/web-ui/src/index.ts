@@ -66,6 +66,10 @@ export {
   type DataTableFrameContextValue,
 } from "./components/data-table/data-table-frame.tsx";
 export {
+  DataTableSelectionBar,
+  type DataTableSelectionBarProps,
+} from "./components/data-table/data-table-selection-bar.tsx";
+export {
   DataTableToolbar,
   visibleFacets,
   type DataTableFacet,

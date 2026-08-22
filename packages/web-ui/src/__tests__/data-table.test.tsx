@@ -77,6 +77,8 @@ function Harness(
     facets?: string[];
     pinnedFacets?: number;
     onActiveRowChange?: (row: Row<Task> | null) => void;
+    onRowOpen?: (row: Row<Task>) => void;
+    onRowClick?: (row: Row<Task>) => void;
     toolbarProps?: Partial<React.ComponentProps<typeof DataTableToolbar>>;
     tableProps?: Partial<React.ComponentProps<typeof DataTable>>;
     groupOrder?: string[];
@@ -92,6 +94,8 @@ function Harness(
     groupOrder,
     activeRowId,
     onActiveRowChange,
+    onRowOpen,
+    onRowClick,
     ...options
   } = props;
   const table = useDataTable<Task>({
@@ -114,6 +118,8 @@ function Harness(
         groupOrder={groupOrder}
         activeRowId={activeRowId}
         onActiveRowChange={onActiveRowChange}
+        onRowOpen={onRowOpen}
+        onRowClick={onRowClick}
         emptyState="Nothing here"
         {...tableProps}
       />
@@ -650,11 +656,34 @@ describe("useDataTable + DataTable", () => {
     expect(rowSearchText(h.table.getCoreRowModel().rows[1]!)).toContain("hidden-token");
   });
 
+  it("a click selects a row while Enter and a double click open it", () => {
+    const clicked: string[] = [];
+    const opened: string[] = [];
+    const h = mount({
+      onRowClick: (row) => clicked.push(row.id),
+      onRowOpen: (row) => opened.push(row.id),
+    });
+    const row = () => container!.querySelector("tbody tr[data-row-id='t2']") as HTMLElement;
+    act(() => row().dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(clicked).toEqual(["t2"]);
+    expect(opened).toEqual([]);
+    act(() => row().dispatchEvent(new MouseEvent("dblclick", { bubbles: true })));
+    expect(opened).toEqual(["t2"]);
+    act(() => row().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    expect(opened).toEqual(["t2", "t2"]);
+    // Space selects, it does not open — the desktop convention.
+    act(() => row().dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true })));
+    expect(clicked).toEqual(["t2", "t2"]);
+    expect(opened).toHaveLength(2);
+    expect(h.table.getState().rowSelection).toEqual({});
+  });
+
   it("selection column toggles rows and reports through the table", () => {
     const h = mount({
       columns: [selectionColumn<Task>(), ...COLUMNS],
       enableRowSelection: true,
     });
+    // The checkbox is the selection an agent reads; it is not the row click.
     const boxes = container!.querySelectorAll<HTMLButtonElement>("tbody [aria-label='Select row']");
     expect(boxes).toHaveLength(4);
     act(() => boxes[1]!.click());

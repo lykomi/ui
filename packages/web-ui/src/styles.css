@@ -166,10 +166,35 @@
 [data-pinned="cell"] {
   background-color: var(--background);
 }
-[data-pinned-edge] {
+/* The seam says "there is more to the left" — so it appears only once the
+ * list is actually scrolled sideways, and stays quiet otherwise. */
+[data-scrolled-x] [data-pinned-edge] {
   border-right: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  /* A seam, so it reads as "this part is held in place". */
   box-shadow: 6px 0 6px -6px color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+/* A list you can scroll should say so: keep its scrollbars visible rather
+ * than relying on the overlay ones macOS hides until you already scroll. */
+[data-list-scroller] {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 25%, transparent) transparent;
+}
+[data-list-scroller]::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+[data-list-scroller]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-list-scroller]::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, var(--foreground) 22%, transparent);
+}
+[data-list-scroller]:hover::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--foreground) 32%, transparent);
 }
 
 /* A group header spans the scrollable width; its content sticks to the

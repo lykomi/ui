@@ -7,3 +7,5 @@ Wide lists keep their bearings. `meta.pinned: "left"` freezes leading columns ag
 Rules the components need but a host's CSS scanner cannot infer — frozen-column stickiness and its opaque row tints, and a long menu capped to the room it has and scrollable inside — now ship in this package's `styles.css`, so importing that stylesheet (as the README says) is all a host has to do.
 
 The grid itself reads like a spreadsheet: columns keep their natural width with the slack at the end (`spacer`), a group header's label and total stay put while the columns scroll, the frozen edge carries a seam, and the Columns menu shows each column's own label rather than title-casing it.
+
+Selecting and opening are separate acts, the way a desktop list behaves: a click selects (`onRowClick`), Enter or a double click opens (`onRowOpen`), and the tick boxes of `selectionColumn` are the selection a chat agent reads. `DataTableSelectionBar` gives every list one place for bulk actions on that selection. The frozen seam only appears once the list is scrolled sideways, and list scrollbars stay visible instead of relying on the overlay ones macOS hides.

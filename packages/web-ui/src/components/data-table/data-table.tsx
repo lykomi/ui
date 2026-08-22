@@ -10,6 +10,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -22,7 +23,14 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface DataTableProps<T> {
   table: Table<T>;
+  /** Single click on a row — selecting it, in the desktop sense. */
   onRowClick?: (row: Row<T>, event: MouseEvent | KeyboardEvent) => void;
+  /**
+   * Opening a row: Enter or a double click, the way a file list behaves. Keep
+   * it separate from `onRowClick` so brushing or clicking a row (to scroll,
+   * to select) never opens a detail pane by surprise.
+   */
+  onRowOpen?: (row: Row<T>, event: MouseEvent | KeyboardEvent) => void;
   /** The row whose details are open elsewhere (drawer, panel) — highlighted, `aria-current`. */
   activeRowId?: string | null;
   /**
@@ -98,6 +106,7 @@ function orderedRows<T>(table: Table<T>, groupOrder?: string[]): Row<T>[] {
 export function DataTable<T>({
   table,
   onRowClick,
+  onRowOpen,
   activeRowId,
   onActiveRowChange,
   rowClassName,
@@ -124,6 +133,8 @@ export function DataTable<T>({
   const rows = orderedRows(table, groupOrder);
   const dataRows = rows.filter((row) => !row.getIsGrouped());
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [scrolledX, setScrolledX] = useState(false);
   const width = useElementWidth(rootRef);
   const fits = (breakpoint?: DataTableBreakpoint) =>
     !breakpoint || width === undefined || width >= MIN_WIDTH[breakpoint];
@@ -182,16 +193,23 @@ export function DataTable<T>({
       .length + (spacer ? 1 : 0);
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
-  const activate = (row: Row<T>, event: MouseEvent | KeyboardEvent) => {
-    if (!onRowClick) return;
+  const activate = (
+    row: Row<T>,
+    event: MouseEvent | KeyboardEvent,
+    handler: DataTableProps<T>["onRowClick"],
+  ) => {
+    if (!handler) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest(INTERACTIVE)) return;
-    onRowClick(row, event);
+    handler(row, event);
   };
 
   return (
     <div
       ref={rootRef}
+      // The frozen seam is a signal that content is hidden to the left, so it
+      // only shows once the list is actually scrolled sideways.
+      data-scrolled-x={scrolledX ? "" : undefined}
       className={cn(
         "overflow-hidden rounded-2xl border border-border/45 bg-card/60",
         filling && "flex min-h-0 flex-1 flex-col",
@@ -199,6 +217,12 @@ export function DataTable<T>({
       )}
     >
       <div
+        ref={scrollerRef}
+        onScroll={(event) => {
+          const next = event.currentTarget.scrollLeft > 0;
+          setScrolledX((current) => (current === next ? current : next));
+        }}
+        data-list-scroller=""
         style={bounded ? { maxHeight } : undefined}
         className={cn(
           filling ? "min-h-0 flex-1 overflow-auto" : bounded ? "overflow-auto" : "overflow-x-auto",
@@ -313,18 +337,23 @@ export function DataTable<T>({
                       activeRowId != null && row.id === activeRowId ? "true" : undefined
                     }
                     aria-selected={row.getIsSelected() || undefined}
-                    tabIndex={onRowClick || onActiveRowChange ? 0 : undefined}
-                    onClick={(event) => activate(row, event)}
+                    tabIndex={onRowClick || onRowOpen || onActiveRowChange ? 0 : undefined}
+                    onClick={(event) => activate(row, event, onRowClick)}
+                    onDoubleClick={(event) => activate(row, event, onRowOpen)}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
+                      if (event.key === "Enter") {
                         if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
                         event.preventDefault();
-                        activate(row, event);
+                        activate(row, event, onRowOpen ?? onRowClick);
+                      } else if (event.key === " ") {
+                        if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
+                        event.preventDefault();
+                        activate(row, event, onRowClick);
                       }
                     }}
                     className={cn(
                       "group/row border-t border-border/35 transition-colors",
-                      onRowClick &&
+                      (onRowClick || onRowOpen) &&
                         "cursor-pointer hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none",
                       "data-[state=selected]:bg-primary/6 data-[active]:bg-primary/8",
                       rowClassName?.(row),
