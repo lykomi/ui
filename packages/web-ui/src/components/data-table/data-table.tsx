@@ -8,6 +8,7 @@ import { flexRender, type Row, type Table } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import type { DataTableBreakpoint } from "./facets.ts";
+import { useDataTableFrame } from "./data-table-frame.tsx";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface DataTableProps<T> {
@@ -21,7 +22,14 @@ export interface DataTableProps<T> {
   /** Declared order of group keys; unknown keys follow in data order. */
   groupOrder?: string[];
   emptyState?: ReactNode;
+  /** Keep the header in place while the rows scroll (always on in focus mode). */
   stickyHeader?: boolean;
+  /**
+   * Make the table the scroll region of its flex-column parent, on both
+   * axes, instead of growing the page. Defaults to true inside a focused
+   * `DataTableFrame`.
+   */
+  fill?: boolean;
   dense?: boolean;
   className?: string;
   "aria-label"?: string;
@@ -66,10 +74,17 @@ export function DataTable<T>({
   groupOrder,
   emptyState = "No results.",
   stickyHeader = false,
+  fill,
   dense = false,
   className,
   "aria-label": ariaLabel,
 }: DataTableProps<T>) {
+  const frame = useDataTableFrame();
+  // In focus mode the layer is a fixed flex column: the table takes the
+  // remaining height (`min-h-0` lets a flex item shrink below its content)
+  // and scrolls in both directions, so the toolbar above stays put.
+  const filling = fill ?? frame?.focused ?? false;
+  const sticky = stickyHeader || filling;
   const rows = orderedRows(table, groupOrder);
   const columnCount = table.getVisibleLeafColumns().length;
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
@@ -83,11 +98,15 @@ export function DataTable<T>({
 
   return (
     <div
-      className={cn("overflow-hidden rounded-2xl border border-border/45 bg-card/60", className)}
+      className={cn(
+        "overflow-hidden rounded-2xl border border-border/45 bg-card/60",
+        filling && "flex min-h-0 flex-1 flex-col",
+        className,
+      )}
     >
-      <div className="overflow-x-auto">
+      <div className={cn(filling ? "min-h-0 flex-1 overflow-auto" : "overflow-x-auto")}>
         <table className="w-full caption-bottom text-sm" aria-label={ariaLabel}>
-          <thead className={cn(stickyHeader && "sticky top-0 z-10 bg-card")}>
+          <thead className={cn(sticky && "sticky top-0 z-10 bg-card")}>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-border/45">
                 {headerGroup.headers.map((header) => {

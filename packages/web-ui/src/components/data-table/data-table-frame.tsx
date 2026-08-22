@@ -3,6 +3,12 @@
  * fullscreen layer (Escape leaves it). `DataTableToolbar` shows the focus
  * button whenever it renders inside a frame — users with wide lists get a
  * way out of a cramped page without the host doing anything.
+ *
+ * The focus layer is a viewport overlay in a portal on `document.body`, so
+ * no ancestor's transform, filter or stacking context can trap it. It never
+ * scrolls itself: it is a flex column whose growing child — the table —
+ * owns the scrolling, which keeps the toolbar in place while the rows move
+ * under a sticky header (see `DataTable`, which reads this context).
  */
 import {
   createContext,
@@ -13,6 +19,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface DataTableFrameContextValue {
@@ -56,22 +63,25 @@ export function DataTableFrame({
     };
   }, [focused]);
   const value = useMemo(() => ({ focused, setFocused }), [focused]);
+  const content = (
+    <div
+      {...rest}
+      data-focused={focused ? "" : undefined}
+      className={
+        focused
+          ? cn(
+              "fixed inset-0 z-50 flex flex-col gap-3 overflow-hidden bg-background p-4 sm:p-6",
+              focusClassName,
+            )
+          : className
+      }
+    >
+      {children}
+    </div>
+  );
   return (
     <DataTableFrameContext.Provider value={value}>
-      <div
-        {...rest}
-        data-focused={focused ? "" : undefined}
-        className={
-          focused
-            ? cn(
-                "fixed inset-0 z-50 flex flex-col gap-3 overflow-auto bg-background p-4 sm:p-6",
-                focusClassName,
-              )
-            : className
-        }
-      >
-        {children}
-      </div>
+      {focused && typeof document !== "undefined" ? createPortal(content, document.body) : content}
     </DataTableFrameContext.Provider>
   );
 }
