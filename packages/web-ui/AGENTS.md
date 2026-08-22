@@ -36,7 +36,9 @@ split that matters:
   mode (`meta.showIn`) gates. That gating is NOT TanStack visibility: user
   column choices ride in the URL, and mixing the two would let a narrow pane
   persist a hidden column. Anything that must agree with the screen (the chat
-  agent's view of the list) reads `onRenderedColumnsChange`.
+  agent's view of the list) reads `onRenderedColumnsChange`. Gating removes
+  the cell from the tree, so a stateful cell loses its state when the list
+  narrows past its breakpoint — keep cell state in the row, not the cell.
 - **`styles.css` carries what a host's CSS scanner cannot infer** — frozen
   columns, their opaque row tints, the scrolled-x seam, capped menus. Hosts
   import the stylesheet; components stay class-only. A frozen cell must stay
