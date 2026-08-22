@@ -1,5 +1,55 @@
 # @iloveagents/foundry-web-ui
 
+## 0.20.0
+
+### Minor Changes
+
+- b24949c: Dates become things you can tick. `ageBuckets` (the filter keys — nested, because ranges are: something touched today is also within the last 7 days), `ageBucket` ("today", "last 7 days", …), `dueState` ("overdue", "soon", "later", "undated") and `relativeAge` ("6 d ago") turn a timestamp into the words a person filters by — feed them to `meta.facetBuckets` and counts, OR-within, AND-across, the URL and the agent tools work on them unchanged. `parseDateish` reads only shapes whose meaning is not in doubt — ISO (with an optional time and zone), the dotted European `d.m.yyyy`, and year-first `yyyy/m/d` — and validates the calendar day. Everything else is `null`, including `03/04/2026` and `03-04-2026` (March in one country, April in another) and the shorthand a lenient parser invents dates from (`Date.parse("1")` is the year 2001). A field where people write "Contract signature (May)" needs a parser that says no. A day is a CALENDAR day in the reader's own zone throughout: 23:30 last night and 00:30 this morning are a day apart though barely an hour passed, a bare date means that day where the reader is rather than in UTC, and a date-only deadline runs out at the end of THEIR day — not at 17:00 for anyone in UTC−7.
+- b24949c: Numbers and dates become things you can tick: a column's `meta.facetBuckets` turns its raw value into facet keys ("≥ 50 %", "overdue", "this week"), and the rest of the machinery — counts, OR within a facet, AND across facets, the URL, the agent tools — works on those keys unchanged.
+- b24949c: Wide lists keep their bearings. `meta.pinned: "left"` freezes leading columns against the left edge (offsets measured from the rendered header cells, an edge border on the last pinned one). `onActiveRowChange` walks the active row with ↑/↓/Home/End, clears it with Escape and keeps it scrolled into view — the master-list keyboard flow beside a detail pane. And `meta.breakpoint` is measured against the _list's own width_ rather than the window, so a list narrowed by an open detail pane sheds exactly the columns a narrow window would and focus mode brings them back — no CSS wiring in the host. Two facet options clicked in quick succession now both stick (the toggle is a functional update, so it no longer reads a value the pending render has not applied). `DataTable` also takes `maxHeight`, giving a list its own scroll viewport (sticky header, both axes) instead of running down the page, and `DataTableFrame` forwards a ref so a host can measure it.
+
+  Rules the components need but a host's CSS scanner cannot infer — frozen-column stickiness and its opaque row tints, and a long menu capped to the room it has and scrollable inside — now ship in this package's `styles.css`, so importing that stylesheet (as the README says) is all a host has to do.
+
+  The grid itself reads like a spreadsheet: columns keep their natural width with the slack at the end (`spacer`), a group header's label and total stay put while the columns scroll, the frozen edge carries a seam, and the Columns menu shows each column's own label rather than title-casing it.
+
+  Selecting and opening are separate acts, the way a desktop list behaves: a click selects (`onRowClick`), Enter or a double click opens (`onRowOpen`), and the tick boxes of `selectionColumn` are the selection a chat agent reads. `DataTableSelectionBar` gives every list one place for bulk actions on that selection. The frozen seam only appears once the list is scrolled sideways, and list scrollbars stay visible instead of relying on the overlay ones macOS hides.
+
+  Context that tracks the UI now has a home: `useAppStore.setContextItem(key, item | null)` keeps one item per key, so a list can keep the chat in step with its selection — replacing the chip as the selection changes and taking it away when it empties — without piling up stale ones next to the user's own pins.
+
+  A column says where it earns its place: `meta.breakpoint` is the narrowest list width it needs, and `meta.showIn: "focus"` keeps it for when the list has the screen to itself — so an embedded list stays scannable and going fullscreen genuinely shows more. Focus mode also shows every facet, and `DataTableFrame` reports focus changes to its host.
+
+### Patch Changes
+
+- 2141de2: The column-visibility menu is called "Columns" (was "View"), and its heading reads "Show columns" — what it does, in the user's words.
+- 2141de2: Focus mode scrolls. The fullscreen layer no longer scrolls itself; inside it the table becomes the scroll region on both axes with a sticky header, so the toolbar stays put while long, wide lists scroll. Entering and leaving focus only swaps the frame's classes, so the list keeps its state and its theme scope. `DataTable` gains `fill` to request that layout outside a frame.
+- b24949c: Frozen columns stay under the sticky header while a list scrolls (the cell's `z-index` outranked the header row's, so the header was painted over), and they restate the row's focus tint like its other states.
+
+  What the table actually draws is now one list, derived once: the frozen run never includes a column the width gate dropped (no seam on an invisible column), a grouping header narrows to the leaves that survive and disappears when none do, and `onRenderedColumnsChange` tells the host which columns are on screen — render-time gating is not TanStack visibility, so anything that must agree with the user's view (a chat agent reading the list) has something truthful to read.
+
+  The active row also scrolls into view when it _moves_ — a late-arriving page or a re-sort — not only when its id changes, and the facet filter resolves a column once per row instead of scanning every cell on every pass.
+
+- b24949c: A round of review findings on the list family, each of which a user would eventually have hit.
+
+  Frozen columns: the run is measured from every column in it (a selection checkbox leading a pinned identity column left the next one stacked at zero, overlapping it), the cells take an opaque form of the table's own surface instead of the page background (a visibly different strip in dark mode), and their hover tint is limited to rows that actually respond to a hover.
+
+  Keyboard and pointer: Escape on an active row no longer also leaves focus mode, arrow keys carry DOM focus with the active row (Enter used to open the row the keyboard had left), and a double click performs one selection and one open rather than two clicks and an open.
+
+  Toolbar and selection: the selection bar appears only while rows are selected — passing the component is not the same as having a selection, and the filter row was disappearing behind an empty one — it renders in inline layouts too, counts every selected row (a filter that hides them no longer hides the only way to clear them), and "Clear" clears rather than restoring a caller's `initialState`. Focus mode shows every facet even when some declare `pinned`.
+
+  Also: `meta.defaultHidden` now actually starts a column hidden (it was documented and inert), `facetBuckets` keys are deduplicated so a facet cannot count one row twice, `showIn: "focus"` follows real focus mode rather than the `fill` layout prop, `useElementWidth` re-observes when the ref's element is replaced, and `DataTableFrame` reports focus changes made with Escape.
+
+  A second pass closed four more: rendered-column reports keep ids that contain a comma, Escape falls through to the frame when no row is active, `meta.defaultHidden` reaches leaves nested under a grouping header, and `parseDateish` no longer lets `Date.parse` make the country-dependent guess it exists to refuse.
+
+  A third pass closed three more: `meta.defaultHidden` resolves ids the way TanStack does (a dotted `accessorKey`, a string header) and is left to the owner of a controlled list — `defaultHiddenColumns(columns)` is exported for that layer's defaults, since re-applying it every render undid the user the moment they brought a column out — and a date-only deadline now runs out at the END of its day rather than at midnight, so nothing is "overdue" for most of the day it is due.
+
+  A fifth pass: a date-only deadline ends at the next LOCAL midnight (a day is 23 or 25 hours long twice a year, so adding 86,400,000 ms ended it an hour early each autumn), pinned row tints composite over the table's own surface rather than the page background so a frozen strip does not diverge on hover or selection, the row keyboard handler leaves arrows and space to ARIA widgets (`role="slider"`, `switch`, `checkbox`, `combobox`, `contenteditable`) instead of only native controls, and keyed context is cleared on navigation whatever its persistence — it tracks a piece of UI, and that UI is gone.
+
+  A sixth pass: tree and grid widgets keep their arrows, focus follows the active row only when it is ON a row (never out of a control someone is using inside one), the frozen strip stops tinting for a focused descendant the rest of the row does not tint for, and an empty-string context key counts as a key. The DST regression test also runs in a zone that observes daylight saving — CI runs in UTC, where every day is 24 hours and the test could not have failed.
+
+  A seventh pass: a partially gated grouping header is sized by the leaves that survived (its own `getSize()` still counted the dropped ones, holding space for a column nobody can see), `role="button"` and `role="link"` count as controls so a div-button's click no longer opens the row behind it, `addContextItem` no longer accepts a tracking `key` it would not replace by, and the README's facet example is valid TypeScript rather than an object literal with a semicolon in it.
+  - @iloveagents/foundry-agent@0.20.0
+  - @iloveagents/foundry-web-primitives@0.20.0
+
 ## 0.19.0
 
 ### Minor Changes

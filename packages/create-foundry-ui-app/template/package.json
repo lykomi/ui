@@ -21,10 +21,10 @@
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
-    "@iloveagents/foundry-agent": "0.19.0",
-    "@iloveagents/foundry-web-primitives": "0.19.0",
-    "@iloveagents/foundry-web-shell": "0.19.0",
-    "@iloveagents/foundry-web-ui": "0.19.0",
+    "@iloveagents/foundry-agent": "0.20.0",
+    "@iloveagents/foundry-web-primitives": "0.20.0",
+    "@iloveagents/foundry-web-shell": "0.20.0",
+    "@iloveagents/foundry-web-ui": "0.20.0",
     "@assistant-ui/react": "^0.15.1",
     "@ag-ui/client": "^0.0.52",
     "@ag-ui/core": "^0.0.52",
