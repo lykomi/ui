@@ -236,9 +236,6 @@ importers:
       '@types/react':
         specifier: ^19.2.2
         version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.2.2
-        version: 19.2.3(@types/react@19.2.14)
       jsdom:
         specifier: ^28.1.0
         version: 28.1.0
