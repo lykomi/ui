@@ -264,23 +264,49 @@ describe("useDataTable + DataTable", () => {
     );
   });
 
-  it("hides a column below the list's own width, via a container query", () => {
-    mount({
-      columns: [
-        { ...COLUMNS[0]! },
-        { ...COLUMNS[1]!, meta: { breakpoint: "lg" } },
-        ...COLUMNS.slice(2),
-      ],
-    });
-    const statusHeader = Array.from(container!.querySelectorAll("thead th"))[1]!;
-    // a container query against the table's own width, not the viewport
-    expect(statusHeader.className).toContain("@max-4xl:hidden");
-    expect(container!.querySelector("table")!.closest("div")!.parentElement!.className).toContain(
-      "@container",
-    );
-    expect(
-      container!.querySelector("tbody tr[data-row-id='t1'] td:nth-child(2)")?.className,
-    ).toContain("@max-4xl:hidden");
+  it("hides a column when the list itself is too narrow for it", () => {
+    // jsdom reports zero-width elements: unmeasured means "show everything",
+    // so nothing is hidden on a guess. Feeding a width exercises the rule.
+    const widths = new Map<Element, number>();
+    const observed: Array<() => void> = [];
+    class StubResizeObserver {
+      constructor(private readonly callback: () => void) {}
+      observe() {
+        observed.push(this.callback);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    const previousRO = window.ResizeObserver;
+    const previousRect = Element.prototype.getBoundingClientRect;
+    Object.defineProperty(window, "ResizeObserver", { writable: true, value: StubResizeObserver });
+    Element.prototype.getBoundingClientRect = function () {
+      return { ...previousRect.call(this), width: widths.get(this) ?? 0 } as DOMRect;
+    };
+    try {
+      const h = mount({
+        columns: [
+          { ...COLUMNS[0]! },
+          { ...COLUMNS[1]!, meta: { breakpoint: "lg" } },
+          ...COLUMNS.slice(2),
+        ],
+      });
+      const headers = () =>
+        Array.from(container!.querySelectorAll("thead th")).map((th) => th.textContent);
+      expect(headers()).toEqual(["Title", "Status", "Priority", "Tags"]);
+      const root = container!.querySelector("table")!.closest("div")!.parentElement!;
+      widths.set(root, 700); // narrower than `lg` (896)
+      act(() => observed.forEach((callback) => callback()));
+      expect(headers()).toEqual(["Title", "Priority", "Tags"]);
+      expect(container!.querySelectorAll("tbody tr[data-row-id='t1'] td")).toHaveLength(3);
+      widths.set(root, 1200); // roomy again
+      act(() => observed.forEach((callback) => callback()));
+      expect(headers()).toEqual(["Title", "Status", "Priority", "Tags"]);
+      expect(h.table.getVisibleLeafColumns()).toHaveLength(4);
+    } finally {
+      Object.defineProperty(window, "ResizeObserver", { writable: true, value: previousRO });
+      Element.prototype.getBoundingClientRect = previousRect;
+    }
   });
 
   it("a frame adds a focus button to the toolbar and Escape leaves focus mode", () => {

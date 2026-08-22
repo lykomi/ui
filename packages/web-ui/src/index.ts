@@ -99,6 +99,7 @@ export {
   usePinnedOffsets,
   type PinnedOffsets,
 } from "./components/data-table/use-pinned-offsets.ts";
+export { useElementWidth } from "./components/data-table/use-element-width.ts";
 export {
   DEFAULT_PAGE_SIZE,
   EMPTY_DATA_TABLE_STATE,

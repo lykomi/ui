@@ -17,6 +17,7 @@ import {
 import type { DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { usePinnedOffsets } from "./use-pinned-offsets.ts";
+import { useElementWidth } from "./use-element-width.ts";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface DataTableProps<T> {
@@ -52,20 +53,17 @@ export interface DataTableProps<T> {
 const INTERACTIVE = "a, button, input, select, textarea, [role='menuitem'], [data-no-row-click]";
 
 /**
- * Literal classes so Tailwind generates them. These are *container* queries
- * against the table's own width (the root below is a `@container`), so a list
- * narrowed by an open detail pane hides the same columns a narrow window
- * would — and focus mode brings them back.
+ * How wide the list must be for a column to earn its place. Measured on the
+ * table itself, not the window: a list beside an open detail pane is narrower
+ * than the page, and focus mode is wider — only the table knows.
  */
-const BREAKPOINT_CLASS: Record<DataTableBreakpoint, string> = {
-  sm: "@max-md:hidden",
-  md: "@max-2xl:hidden",
-  lg: "@max-4xl:hidden",
-  xl: "@max-5xl:hidden",
-  "2xl": "@max-7xl:hidden",
+const MIN_WIDTH: Record<DataTableBreakpoint, number> = {
+  sm: 448,
+  md: 672,
+  lg: 896,
+  xl: 1024,
+  "2xl": 1280,
 };
-const breakpointClass = (breakpoint?: DataTableBreakpoint) =>
-  breakpoint ? BREAKPOINT_CLASS[breakpoint] : undefined;
 
 function orderedRows<T>(table: Table<T>, groupOrder?: string[]): Row<T>[] {
   const rows = table.getRowModel().rows;
@@ -107,6 +105,10 @@ export function DataTable<T>({
   const sticky = stickyHeader || filling;
   const rows = orderedRows(table, groupOrder);
   const dataRows = rows.filter((row) => !row.getIsGrouped());
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const width = useElementWidth(rootRef);
+  const fits = (breakpoint?: DataTableBreakpoint) =>
+    !breakpoint || width === undefined || width >= MIN_WIDTH[breakpoint];
   // Pinned columns: frozen against the left edge so a row keeps its identity
   // while the rest of a wide table scrolls sideways.
   const pinnedIds = table
@@ -154,7 +156,9 @@ export function DataTable<T>({
     ) as HTMLElement | undefined;
     element?.scrollIntoView?.({ block: "nearest" });
   }, [activeRowId]);
-  const columnCount = table.getVisibleLeafColumns().length;
+  const columnCount = table
+    .getVisibleLeafColumns()
+    .filter((column) => fits(column.columnDef.meta?.breakpoint)).length;
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
   const activate = (row: Row<T>, event: MouseEvent | KeyboardEvent) => {
@@ -166,8 +170,9 @@ export function DataTable<T>({
 
   return (
     <div
+      ref={rootRef}
       className={cn(
-        "@container overflow-hidden rounded-2xl border border-border/45 bg-card/60",
+        "overflow-hidden rounded-2xl border border-border/45 bg-card/60",
         filling && "flex min-h-0 flex-1 flex-col",
         className,
       )}
@@ -196,6 +201,7 @@ export function DataTable<T>({
               <tr key={headerGroup.id} className="border-b border-border/45">
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta;
+                  if (!fits(meta?.breakpoint)) return null;
                   return (
                     <th
                       key={header.id}
@@ -210,7 +216,6 @@ export function DataTable<T>({
                         "h-10 px-3 text-left align-middle text-xs font-medium text-muted-foreground",
                         meta?.align === "right" && "text-right",
                         meta?.align === "center" && "text-center",
-                        breakpointClass(meta?.breakpoint),
                         pinnedClass(header.column.id, "header"),
                         meta?.headerClassName,
                       )}
@@ -292,6 +297,7 @@ export function DataTable<T>({
                   >
                     {row.getVisibleCells().map((cell) => {
                       const meta = cell.column.columnDef.meta;
+                      if (!fits(meta?.breakpoint)) return null;
                       return (
                         <td
                           key={cell.id}
@@ -301,7 +307,6 @@ export function DataTable<T>({
                             "align-middle",
                             meta?.align === "right" && "text-right",
                             meta?.align === "center" && "text-center",
-                            breakpointClass(meta?.breakpoint),
                             pinnedClass(cell.column.id, "cell"),
                             meta?.className,
                           )}
