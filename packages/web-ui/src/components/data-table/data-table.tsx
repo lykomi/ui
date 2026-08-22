@@ -12,6 +12,8 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 export interface DataTableProps<T> {
   table: Table<T>;
   onRowClick?: (row: Row<T>, event: MouseEvent | KeyboardEvent) => void;
+  /** The row whose details are open elsewhere (drawer, panel) — highlighted, `aria-current`. */
+  activeRowId?: string | null;
   rowClassName?: (row: Row<T>) => string | undefined;
   /** Content of a group header row (default: label and count). */
   renderGroup?: (row: Row<T>) => ReactNode;
@@ -46,6 +48,7 @@ function orderedRows<T>(table: Table<T>, groupOrder?: string[]): Row<T>[] {
 export function DataTable<T>({
   table,
   onRowClick,
+  activeRowId,
   rowClassName,
   renderGroup,
   groupOrder,
@@ -143,6 +146,10 @@ export function DataTable<T>({
                     key={row.id}
                     data-row-id={row.id}
                     data-state={row.getIsSelected() ? "selected" : undefined}
+                    data-active={activeRowId != null && row.id === activeRowId ? "" : undefined}
+                    aria-current={
+                      activeRowId != null && row.id === activeRowId ? "true" : undefined
+                    }
                     aria-selected={row.getIsSelected() || undefined}
                     tabIndex={onRowClick ? 0 : undefined}
                     onClick={(event) => activate(row, event)}
@@ -157,7 +164,7 @@ export function DataTable<T>({
                       "border-t border-border/35 transition-colors",
                       onRowClick &&
                         "cursor-pointer hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none",
-                      "data-[state=selected]:bg-primary/6",
+                      "data-[state=selected]:bg-primary/6 data-[active]:bg-primary/8",
                       rowClassName?.(row),
                     )}
                   >

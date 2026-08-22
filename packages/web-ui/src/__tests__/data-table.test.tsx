@@ -67,9 +67,10 @@ function Harness(
     onTable: (table: Table<Task>) => void;
     facets?: string[];
     groupOrder?: string[];
+    activeRowId?: string;
   },
 ) {
-  const { onTable, facets = [], groupOrder, ...options } = props;
+  const { onTable, facets = [], groupOrder, activeRowId, ...options } = props;
   const table = useDataTable<Task>({
     data: TASKS,
     columns: COLUMNS,
@@ -80,7 +81,12 @@ function Harness(
   return (
     <>
       <DataTableToolbar table={table} facets={facets.map((columnId) => ({ columnId }))} />
-      <DataTable table={table} groupOrder={groupOrder} emptyState="Nothing here" />
+      <DataTable
+        table={table}
+        groupOrder={groupOrder}
+        activeRowId={activeRowId}
+        emptyState="Nothing here"
+      />
     </>
   );
 }
@@ -128,8 +134,11 @@ describe("facet keys", () => {
 
 describe("useDataTable + DataTable", () => {
   it("renders every row and ANDs facets while ORing within one", () => {
-    const h = mount({ facets: ["status", "priority"] });
+    const h = mount({ facets: ["status", "priority"], activeRowId: "t3" });
     expect(renderedIds()).toEqual(["t1", "t2", "t3", "t4"]);
+    expect(container!.querySelector("tr[aria-current='true']")?.getAttribute("data-row-id")).toBe(
+      "t3",
+    );
     act(() => h.table.getColumn("priority")!.setFilterValue(["high", "low"]));
     expect(renderedIds()).toEqual(["t1", "t2", "t3"]);
     act(() => h.table.getColumn("status")!.setFilterValue(["open"]));
