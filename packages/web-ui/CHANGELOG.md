@@ -1,5 +1,18 @@
 # @iloveagents/foundry-web-ui
 
+## 0.18.0
+
+### Minor Changes
+
+- 1e90612: Lists compose: `clientToolRegistry.addPageTools` / `removePageTools` let a component (a list, a panel) contribute page tools next to the page's own instead of replacing them, and the DataTable URL codec takes a `prefix` (`risks.q`, `risks.f_status`) so several lists can share one page URL.
+- 6651005: Lists stay calm and fit the screen: `DataTableToolbar` pins only the first facets (explicit `pinned`, else `pinnedFacets`, default 3) and parks the rest behind a "+ Filter" menu until chosen or active, with short truncated selection badges; a column's `meta.breakpoint` ("sm" | "md" | "lg" | "xl" | "2xl") hides it below that viewport; `DataTableFrame` adds a focus (fullscreen) mode with a toolbar button and Escape to leave. `visibleFacets()` exposes the facet split.
+
+### Patch Changes
+
+- Updated dependencies [1e90612]
+  - @iloveagents/foundry-agent@0.18.0
+  - @iloveagents/foundry-web-primitives@0.18.0
+
 ## 0.17.0
 
 ### Minor Changes
