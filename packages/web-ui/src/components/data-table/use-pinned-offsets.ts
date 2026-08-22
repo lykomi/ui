@@ -49,18 +49,27 @@ export function usePinnedOffsets(pinnedIds: readonly string[]): PinnedOffsets {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, read]);
 
+  // One stable callback per column: a fresh ref callback on every render
+  // would make React detach and re-attach the ref each time.
+  const callbacks = useRef(new Map<string, (element: HTMLElement | null) => void>());
   const measure = useCallback(
-    (columnId: string) => (element: HTMLElement | null) => {
-      const previous = elements.current.get(columnId);
-      if (previous === element) return;
-      if (previous) observerRef.current?.unobserve(previous);
-      if (element) {
-        elements.current.set(columnId, element);
-        observerRef.current?.observe(element);
-      } else {
-        elements.current.delete(columnId);
-      }
-      read();
+    (columnId: string) => {
+      const existing = callbacks.current.get(columnId);
+      if (existing) return existing;
+      const callback = (element: HTMLElement | null) => {
+        const previous = elements.current.get(columnId);
+        if (previous === element) return;
+        if (previous) observerRef.current?.unobserve(previous);
+        if (element) {
+          elements.current.set(columnId, element);
+          observerRef.current?.observe(element);
+        } else {
+          elements.current.delete(columnId);
+        }
+        read();
+      };
+      callbacks.current.set(columnId, callback);
+      return callback;
     },
     [read],
   );

@@ -434,52 +434,90 @@ describe("useDataTable + DataTable", () => {
     expect(table.getState().columnFilters).toEqual([]);
   });
 
-  it("freezes pinned columns and walks the active row with the keyboard", () => {
+  it("freezes pinned columns, stacking their offsets, and walks rows with the keyboard", () => {
     const moves: Array<string | null> = [];
-    container = document.createElement("div");
-    document.body.appendChild(container);
-    root = createRoot(container);
-    let active: string | null = "t2";
-    const render = () =>
-      act(() => {
-        root!.render(
-          <Harness
-            columns={[
-              { ...COLUMNS[0]!, meta: { pinned: "left" } },
-              { ...COLUMNS[1]!, meta: { pinned: "left" } },
-              ...COLUMNS.slice(2),
-            ]}
-            activeRowId={active ?? undefined}
-            onActiveRowChange={(row) => {
-              active = row?.id ?? null;
-              moves.push(active);
-              render();
-            }}
-            onTable={() => {}}
-          />,
-        );
-      });
-    render();
-    const headers = Array.from(container!.querySelectorAll("thead th"));
-    expect(headers[0]!.className).toContain("sticky");
-    expect(headers[1]!.className).toContain("sticky");
-    expect(headers[1]!.className).toContain("border-r");
-    expect(headers[2]!.className).not.toContain("sticky");
-    // offsets stack: the first pinned column sits at 0, the next after it
-    expect((headers[0] as HTMLElement).style.left).toBe("0px");
-    expect((headers[1] as HTMLElement).style.left).toBe("0px"); // jsdom reports zero widths
-    const table = container!.querySelector("table")!;
-    const key = (k: string) =>
-      act(() => {
-        table.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
-      });
-    key("ArrowDown");
-    key("ArrowDown");
-    key("ArrowUp");
-    key("Home");
-    key("End");
-    key("Escape");
-    expect(moves).toEqual(["t3", "t4", "t3", "t1", "t4", null]);
+    // jsdom has no layout: feed the pinned headers a width so the offsets are
+    // exercised the way a browser would produce them.
+    const widths = new Map<Element, number>();
+    const callbacks: Array<() => void> = [];
+    class StubResizeObserver {
+      constructor(private readonly callback: () => void) {}
+      observe(element: Element) {
+        callbacks.push(this.callback);
+        if (!widths.has(element)) widths.set(element, 60);
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    const previousRO = window.ResizeObserver;
+    const previousRect = Element.prototype.getBoundingClientRect;
+    Object.defineProperty(window, "ResizeObserver", { writable: true, value: StubResizeObserver });
+    Element.prototype.getBoundingClientRect = function () {
+      return { ...previousRect.call(this), width: widths.get(this) ?? 0 } as DOMRect;
+    };
+    try {
+      container = document.createElement("div");
+      document.body.appendChild(container);
+      root = createRoot(container);
+      let active: string | null = "t2";
+      const render = () =>
+        act(() => {
+          root!.render(
+            <Harness
+              columns={[
+                { ...COLUMNS[0]!, meta: { pinned: "left" } },
+                { ...COLUMNS[1]!, meta: { pinned: "left" } },
+                ...COLUMNS.slice(2),
+              ]}
+              activeRowId={active ?? undefined}
+              onActiveRowChange={(row) => {
+                active = row?.id ?? null;
+                moves.push(active);
+                render();
+              }}
+              onTable={() => {}}
+            />,
+          );
+        });
+      render();
+      const headers = () => Array.from(container!.querySelectorAll("thead th")) as HTMLElement[];
+      headers()
+        .slice(0, 2)
+        .forEach((header, index) => widths.set(header, index === 0 ? 40 : 120));
+      act(() => callbacks.forEach((callback) => callback()));
+      expect(headers()[0]!.className).toContain("sticky");
+      expect(headers()[1]!.className).toContain("sticky");
+      expect(headers()[1]!.className).toContain("border-r");
+      expect(headers()[2]!.className).not.toContain("sticky");
+      // the second pinned column starts where the first one ends
+      expect(headers()[0]!.style.left).toBe("0px");
+      expect(headers()[1]!.style.left).toBe("40px");
+      // pinned body cells restate the row's state tints, since they are opaque
+      const cell = container!.querySelector("tbody tr td") as HTMLElement;
+      expect(cell.className).toContain("group-data-[state=selected]/row:bg-[color-mix");
+      // rows are focusable even without onRowClick
+      expect(container!.querySelector("tbody tr[data-row-id]")!.getAttribute("tabindex")).toBe("0");
+
+      const table = container!.querySelector("table")!;
+      const key = (k: string, target?: Element) =>
+        act(() => {
+          (target ?? table).dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
+        });
+      key("ArrowDown");
+      key("ArrowDown");
+      key("ArrowUp");
+      key("Home");
+      key("End");
+      // a control inside the table that owns the key keeps it
+      const control = document.createElement("button");
+      container!.querySelector("tbody tr td")!.appendChild(control);
+      key("ArrowDown", control);
+      key("Escape");
+      expect(moves).toEqual(["t3", "t4", "t3", "t1", "t4", null]);
+    } finally {
+      Object.defineProperty(window, "ResizeObserver", { writable: true, value: previousRO });
+      Element.prototype.getBoundingClientRect = previousRect;
+    }
   });
 
   it("groups rows in the declared group order with a header per group", () => {

@@ -118,12 +118,23 @@ export function DataTable<T>({
   const { offsets, lastPinned, measure } = usePinnedOffsets(pinnedIds);
   const pinnedStyle = (columnId: string) =>
     offsets[columnId] === undefined ? undefined : { left: offsets[columnId] };
+  // A pinned cell must be opaque — the other columns slide underneath it — so
+  // the row's translucent hover / selected / active tints are restated here
+  // as their opaque equivalents.
   const pinnedClass = (columnId: string, tone: "header" | "cell") =>
     offsets[columnId] === undefined
       ? undefined
       : cn(
           "sticky z-20",
-          tone === "header" ? "bg-card" : "bg-background",
+          tone === "header"
+            ? "bg-card"
+            : [
+                "bg-background",
+                onRowClick &&
+                  "group-hover/row:bg-[color-mix(in_srgb,var(--muted)_30%,var(--background))]",
+                "group-data-[state=selected]/row:bg-[color-mix(in_srgb,var(--primary)_6%,var(--background))]",
+                "group-data-[active]/row:bg-[color-mix(in_srgb,var(--primary)_8%,var(--background))]",
+              ],
           columnId === lastPinned && "border-r border-border/45",
         );
 
@@ -184,7 +195,8 @@ export function DataTable<T>({
           onKeyDown={
             onActiveRowChange
               ? (event) => {
-                  if ((event.target as HTMLElement).closest("input, select, textarea")) return;
+                  // Let a control that owns these keys keep them.
+                  if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
                   if (event.key === "ArrowDown") moveActive(1);
                   else if (event.key === "ArrowUp") moveActive(-1);
                   else if (event.key === "Home") moveActive("first");
@@ -278,7 +290,7 @@ export function DataTable<T>({
                       activeRowId != null && row.id === activeRowId ? "true" : undefined
                     }
                     aria-selected={row.getIsSelected() || undefined}
-                    tabIndex={onRowClick ? 0 : undefined}
+                    tabIndex={onRowClick || onActiveRowChange ? 0 : undefined}
                     onClick={(event) => activate(row, event)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -288,7 +300,7 @@ export function DataTable<T>({
                       }
                     }}
                     className={cn(
-                      "border-t border-border/35 transition-colors",
+                      "group/row border-t border-border/35 transition-colors",
                       onRowClick &&
                         "cursor-pointer hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none",
                       "data-[state=selected]:bg-primary/6 data-[active]:bg-primary/8",
