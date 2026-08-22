@@ -4,6 +4,8 @@
  * the facet's own filter, AND-of-tokens search, URL round-trips, grouping
  * order, and the toolbar's Reset.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -146,6 +148,102 @@ const renderedIds = () =>
   Array.from(container!.querySelectorAll("tbody tr[data-row-id]")).map((tr) =>
     tr.getAttribute("data-row-id"),
   );
+
+describe("what the table actually draws", () => {
+  interface Cell {
+    id: string;
+    a: string;
+    b: string;
+  }
+  const ROWS: Cell[] = [
+    { id: "r1", a: "a1", b: "b1" },
+    { id: "r2", a: "a2", b: "b2" },
+  ];
+
+  function GatedHarness({
+    columns,
+    onRendered,
+  }: {
+    columns: ColumnDef<Cell, unknown>[];
+    onRendered?: (ids: string[]) => void;
+  }) {
+    const table = useDataTable<Cell>({ data: ROWS, columns, getRowId: (row) => row.id });
+    return <DataTable table={table} onRenderedColumnsChange={onRendered} />;
+  }
+
+  function mountGated(columns: ColumnDef<Cell, unknown>[]) {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    const seen: string[][] = [];
+    act(() => {
+      root!.render(<GatedHarness columns={columns} onRendered={(ids) => seen.push(ids)} />);
+    });
+    return seen;
+  }
+
+  it("tells the host which columns are on screen, so the agent sees what the user sees", () => {
+    // Width gating is render-time, not TanStack visibility (which belongs to
+    // the user and rides in the URL) — without this a tool would report a
+    // column nobody can see.
+    const seen = mountGated([
+      { id: "a", accessorKey: "a", header: "A" },
+      { id: "b", accessorKey: "b", header: "B", meta: { showIn: "focus" } },
+    ]);
+    expect(seen.at(-1)).toEqual(["a"]);
+    expect(Array.from(container!.querySelectorAll("thead th[scope='col']")).length).toBe(1);
+  });
+
+  it("never freezes a column the width gate dropped", () => {
+    // The seam says "there is more to the left"; it must sit on a column that
+    // is actually drawn.
+    mountGated([
+      { id: "a", accessorKey: "a", header: "A", meta: { pinned: "left" } },
+      { id: "b", accessorKey: "b", header: "B", meta: { pinned: "left", showIn: "focus" } },
+    ]);
+    const pinnedHeaders = Array.from(container!.querySelectorAll("thead th[data-pinned]"));
+    expect(pinnedHeaders.length).toBe(1);
+    expect(pinnedHeaders[0]!.hasAttribute("data-pinned-edge")).toBe(true);
+  });
+
+  it("narrows a grouping header to the leaves that survive, and drops it when none do", () => {
+    mountGated([
+      {
+        id: "pair",
+        header: "Pair",
+        columns: [
+          { id: "a", accessorKey: "a", header: "A" },
+          { id: "b", accessorKey: "b", header: "B", meta: { showIn: "focus" } },
+        ],
+      },
+      {
+        id: "gone",
+        header: "Gone",
+        columns: [{ id: "c", accessorFn: () => "c", header: "C", meta: { showIn: "focus" } }],
+      },
+    ]);
+    const groupRow = container!.querySelectorAll("thead tr")[0]!;
+    const groupHeaders = Array.from(groupRow.querySelectorAll("th[scope='col']"));
+    expect(groupHeaders.map((th) => th.textContent)).toEqual(["Pair"]);
+    expect(groupHeaders[0]!.getAttribute("colspan")).toBe("1");
+  });
+
+  it("keeps frozen cells under the sticky header", () => {
+    // The regression this guards: a frozen cell painted over the sticky header
+    // while scrolling, because the cell's z-index outranked the header row's.
+    const read = (relative: string) => readFileSync(resolve(process.cwd(), relative), "utf8");
+    const css = read("src/styles.css");
+    const zOf = (selector: string) => {
+      const rule = new RegExp(`\\[data-pinned="${selector}"\\][^}]*z-index:\\s*(\\d+)`).exec(css);
+      return Number(rule?.[1]);
+    };
+    const source = read("src/components/data-table/data-table.tsx");
+    const headerRow = Number(/sticky top-0 z-(\d+)/.exec(source)?.[1]);
+    expect(headerRow).toBeGreaterThan(0);
+    expect(zOf("cell")).toBeLessThan(headerRow);
+    expect(zOf("header")).toBeGreaterThan(0);
+  });
+});
 
 describe("facet keys", () => {
   it("splits arrays, maps empties to the sentinel, reads ids off objects", () => {

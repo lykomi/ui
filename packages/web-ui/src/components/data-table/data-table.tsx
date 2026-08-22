@@ -4,7 +4,7 @@
  * ignore interactive descendants so a selection checkbox or a row menu
  * never doubles as "open".
  */
-import { flexRender, type Row, type Table } from "@tanstack/react-table";
+import { flexRender, type Header, type Row, type Table } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   useCallback,
@@ -67,17 +67,21 @@ export interface DataTableProps<T> {
    */
   maxHeight?: string | number;
   dense?: boolean;
+  /**
+   * The columns the table actually drew, whenever that set changes. Width and
+   * focus gating happen at render time and are deliberately NOT TanStack
+   * visibility (that belongs to the user and rides in the URL) — so anything
+   * that must agree with what is on screen, above all the chat agent's view
+   * of the list, learns it here.
+   */
+  onRenderedColumnsChange?: (columnIds: string[]) => void;
   className?: string;
   "aria-label"?: string;
 }
 
 const INTERACTIVE = "a, button, input, select, textarea, [role='menuitem'], [data-no-row-click]";
 
-/**
- * How wide the list must be for a column to earn its place. Measured on the
- * table itself, not the window: a list beside an open detail pane is narrower
- * than the page, and focus mode is wider — only the table knows.
- */
+/** Group header rows and their expanded children, in declared group order. */
 function orderedRows<T>(table: Table<T>, groupOrder?: string[]): Row<T>[] {
   const rows = table.getRowModel().rows;
   if (!table.getState().grouping.length) return rows;
@@ -110,6 +114,7 @@ export function DataTable<T>({
   fill,
   maxHeight,
   dense = false,
+  onRenderedColumnsChange,
   className,
   "aria-label": ariaLabel,
 }: DataTableProps<T>) {
@@ -135,17 +140,30 @@ export function DataTable<T>({
     const breakpoint = meta?.breakpoint;
     return !breakpoint || width === undefined || width >= DATA_TABLE_MIN_WIDTH[breakpoint];
   };
+  // What the table actually draws: TanStack visibility, then the width and
+  // mode gates. Everything downstream — the pinned run, the empty-row colspan,
+  // what the host is told — is derived from this one list, so none of them can
+  // name a column that is not on screen.
+  const renderedColumns = table
+    .getVisibleLeafColumns()
+    .filter((column) => fits(column.columnDef.meta));
+  const fittingLeafCount = (header: Header<T, unknown>): number =>
+    header.subHeaders.length === 0
+      ? fits(header.column.columnDef.meta)
+        ? 1
+        : 0
+      : header.subHeaders.reduce((total, sub) => total + fittingLeafCount(sub), 0);
   // Pinned columns: frozen against the left edge so a row keeps its identity
   // while the rest of a wide table scrolls sideways.
   // Freezing is a run from the left edge: everything up to the last pinned
   // column comes along, so a leading checkbox never slides out from under the
-  // rows it belongs to.
-  const leafColumns = table.getVisibleLeafColumns();
-  const lastPinnedIndex = leafColumns.reduce(
+  // rows it belongs to. A pinned column the width gate dropped is not in the
+  // run at all — otherwise the seam would mark a column nobody can see.
+  const lastPinnedIndex = renderedColumns.reduce(
     (last, column, index) => (column.columnDef.meta?.pinned === "left" ? index : last),
     -1,
   );
-  const pinnedIds = leafColumns.slice(0, lastPinnedIndex + 1).map((column) => column.id);
+  const pinnedIds = renderedColumns.slice(0, lastPinnedIndex + 1).map((column) => column.id);
   const { offsets, lastPinned, measure } = usePinnedOffsets(pinnedIds);
   // A pinned cell is opaque — the other columns slide underneath it — and it
   // restates the row's hover / selected / active tints. Those rules live in
@@ -183,16 +201,24 @@ export function DataTable<T>({
     },
     [activeRowId, dataRows, onActiveRowChange],
   );
+  // Sorting, filtering or a late-arriving page moves the active row without
+  // changing its id, and an id restored before the rows load points at nothing
+  // yet — so the position is part of what this watches.
+  const activeIndex = dataRows.findIndex((row) => row.id === activeRowId);
   useEffect(() => {
-    if (!activeRowId) return;
+    if (!activeRowId || activeIndex < 0) return;
     const element = Array.from(bodyRef.current?.querySelectorAll("tr[data-row-id]") ?? []).find(
       (row) => (row as HTMLElement).dataset.rowId === activeRowId,
     ) as HTMLElement | undefined;
     element?.scrollIntoView?.({ block: "nearest" });
-  }, [activeRowId]);
-  const columnCount =
-    table.getVisibleLeafColumns().filter((column) => fits(column.columnDef.meta)).length +
-    (spacer ? 1 : 0);
+  }, [activeRowId, activeIndex]);
+  const columnCount = renderedColumns.length + (spacer ? 1 : 0);
+  const renderedKey = renderedColumns.map((column) => column.id).join(",");
+  const renderedRef = useRef(onRenderedColumnsChange);
+  renderedRef.current = onRenderedColumnsChange;
+  useEffect(() => {
+    renderedRef.current?.(renderedKey ? renderedKey.split(",") : []);
+  }, [renderedKey]);
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
   const activate = (
@@ -254,11 +280,15 @@ export function DataTable<T>({
               <tr key={headerGroup.id} className="border-b border-border/45">
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta;
-                  if (!fits(meta)) return null;
+                  // A grouping header spans its leaves; when the width gate
+                  // drops some of them it has to narrow, and when it drops all
+                  // of them the group header goes too.
+                  const span = fittingLeafCount(header);
+                  if (span === 0) return null;
                   return (
                     <th
                       key={header.id}
-                      colSpan={header.colSpan}
+                      colSpan={span}
                       scope="col"
                       ref={meta?.pinned === "left" ? measure(header.column.id) : undefined}
                       {...pinnedProps(header.column.id, "header")}

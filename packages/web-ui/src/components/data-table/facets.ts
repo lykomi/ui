@@ -112,6 +112,23 @@ export function facetKeys(value: unknown): string[] {
   return [String(value)];
 }
 
+// TanStack memoizes a row's cells, so the array identity is a safe cache key:
+// the id → column map is built once per row instead of scanned once per row
+// per active filter (a scan that is O(columns) on every pass over the data).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rowColumnCache = new WeakMap<object, Map<string, Column<any, unknown>>>();
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function columnOfRow(row: Row<any>, columnId: string): Column<any, unknown> | undefined {
+  const cells = row.getAllCells();
+  let byId = rowColumnCache.get(cells);
+  if (!byId) {
+    byId = new Map(cells.map((cell) => [cell.column.id, cell.column]));
+    rowColumnCache.set(cells, byId);
+  }
+  return byId.get(columnId);
+}
+
 /** A facet filter value is a list of selected keys; anything else means "no filter". */
 export function normalizeFacetValue(filterValue: unknown): string[] {
   if (Array.isArray(filterValue)) return filterValue.map(String).filter(Boolean);
@@ -128,7 +145,7 @@ export function normalizeFacetValue(filterValue: unknown): string[] {
 export const facetFilterFn: FilterFn<any> = (row, columnId, filterValue) => {
   const wanted = normalizeFacetValue(filterValue);
   if (!wanted.length) return true;
-  const column = row.getAllCells().find((cell) => cell.column.id === columnId)?.column;
+  const column = columnOfRow(row, columnId);
   const keys = column
     ? columnFacetKeys(column, row.getValue(columnId))
     : facetKeys(row.getValue(columnId));
