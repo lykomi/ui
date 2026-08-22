@@ -9,7 +9,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ColumnDef, Table } from "@tanstack/react-table";
 import { DataTable } from "../components/data-table/data-table.tsx";
-import { DataTableToolbar } from "../components/data-table/data-table-toolbar.tsx";
+import { DataTableToolbar, visibleFacets } from "../components/data-table/data-table-toolbar.tsx";
 import {
   FACET_EMPTY,
   facetFilterFn,
@@ -68,11 +68,12 @@ function Harness(
   props: Partial<UseDataTableOptions<Task>> & {
     onTable: (table: Table<Task>) => void;
     facets?: string[];
+    pinnedFacets?: number;
     groupOrder?: string[];
     activeRowId?: string;
   },
 ) {
-  const { onTable, facets = [], groupOrder, activeRowId, ...options } = props;
+  const { onTable, facets = [], pinnedFacets, groupOrder, activeRowId, ...options } = props;
   const table = useDataTable<Task>({
     data: TASKS,
     columns: COLUMNS,
@@ -82,7 +83,11 @@ function Harness(
   onTable(table);
   return (
     <>
-      <DataTableToolbar table={table} facets={facets.map((columnId) => ({ columnId }))} />
+      <DataTableToolbar
+        table={table}
+        facets={facets.map((columnId) => ({ columnId }))}
+        pinnedFacets={pinnedFacets}
+      />
       <DataTable
         table={table}
         groupOrder={groupOrder}
@@ -208,6 +213,36 @@ describe("useDataTable + DataTable", () => {
     act(() => reset()!.click());
     expect(renderedIds()).toEqual(["t1", "t2", "t3", "t4"]);
     expect(reset()).toBeUndefined();
+  });
+
+  it("pins the first facets, parks the rest behind + Filter, and surfaces a hidden facet once it has a value", () => {
+    const h = mount({ facets: ["status", "priority", "tags"], pinnedFacets: 1 });
+    const facetButtons = () =>
+      Array.from(container!.querySelectorAll("button[data-facet]")).map((b) =>
+        b.getAttribute("data-facet"),
+      );
+    expect(facetButtons()).toEqual(["status"]);
+    expect(container!.querySelector("button[data-facet-menu]")).not.toBeNull();
+    act(() => h.table.getColumn("tags")!.setFilterValue(["b"]));
+    expect(facetButtons()).toEqual(["status", "tags"]);
+    const split = visibleFacets(
+      h.table,
+      [{ columnId: "status" }, { columnId: "priority", pinned: true }, { columnId: "tags" }],
+      new Set(["status"]),
+      0,
+    );
+    expect(split.shown.map((f) => f.columnId)).toEqual(["status", "priority", "tags"]);
+    expect(split.hidden).toEqual([]);
+    const split2 = visibleFacets(
+      h.table,
+      [{ columnId: "status" }, { columnId: "priority" }],
+      new Set(),
+      1,
+    );
+    expect(split2.shown.map((f) => f.columnId)).toEqual(["status"]);
+    expect(split2.hidden.map((f) => f.columnId)).toEqual(["priority"]);
+    act(() => h.table.resetColumnFilters());
+    expect(facetButtons()).toEqual(["status"]);
   });
 
   it("groups rows in the declared group order with a header per group", () => {

@@ -61,6 +61,7 @@ export { CollectionSurface } from "./components/collection-surface.tsx";
 export { DataTable, type DataTableProps } from "./components/data-table/data-table.tsx";
 export {
   DataTableToolbar,
+  visibleFacets,
   type DataTableFacet,
   type DataTableToolbarProps,
 } from "./components/data-table/data-table-toolbar.tsx";

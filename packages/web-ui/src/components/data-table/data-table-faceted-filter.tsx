@@ -68,27 +68,23 @@ export function DataTableFacetedFilter<T>({
           {selected.length > 0 ? (
             <>
               <span className="mx-0.5 h-4 w-px bg-border/60" aria-hidden="true" />
-              <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal lg:hidden">
-                {selected.length}
-              </span>
-              <span className="hidden gap-1 lg:flex">
-                {selected.length > 2 ? (
-                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal">
-                    {selected.length} selected
-                  </span>
-                ) : (
-                  options
-                    .filter((option) => selectedSet.has(option.value))
-                    .map((option) => (
-                      <span
-                        key={option.value}
-                        className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal"
-                      >
-                        {option.label}
-                      </span>
-                    ))
-                )}
-              </span>
+              {selected.length > 2 ? (
+                <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal tabular-nums">
+                  {selected.length}
+                </span>
+              ) : (
+                options
+                  .filter((option) => selectedSet.has(option.value))
+                  .map((option) => (
+                    <span
+                      key={option.value}
+                      title={option.label}
+                      className="max-w-[8rem] truncate rounded-md bg-muted px-1.5 py-0.5 text-xs font-normal"
+                    >
+                      {option.label}
+                    </span>
+                  ))
+              )}
             </>
           ) : null}
         </Button>
