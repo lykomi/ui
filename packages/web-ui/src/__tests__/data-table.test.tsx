@@ -433,6 +433,25 @@ describe("useDataTable + DataTable", () => {
     expect(container!.querySelector("button[data-filters-toggle]")).toBeNull();
   });
 
+  it("a selection takes the filter row's place, so the list never jumps", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <Harness
+          facets={["status"]}
+          toolbarProps={{ selectionBar: <span data-bar="">2 selected</span> }}
+          onTable={() => {}}
+        />,
+      );
+    });
+    // the filter row is replaced, not pushed down
+    expect(container!.querySelector("[data-selection-row]")).not.toBeNull();
+    expect(container!.querySelector("[data-filter-row]")).toBeNull();
+    expect(container!.querySelector("[data-bar]")?.textContent).toBe("2 selected");
+  });
+
   it("layout=inline keeps one wrapping row", () => {
     container = document.createElement("div");
     document.body.appendChild(container);

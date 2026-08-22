@@ -66,6 +66,12 @@ export interface DataTableToolbarProps<T> {
   children?: ReactNode;
   /** Controls rendered on the right, before the View menu. */
   actions?: ReactNode;
+  /**
+   * Shown *in place of* the filter row while rows are ticked — the mail-app
+   * move, so the list never jumps when a selection appears. Receives nothing;
+   * compose `DataTableSelectionBar` or your own summary.
+   */
+  selectionBar?: ReactNode;
   className?: string;
 }
 
@@ -102,6 +108,7 @@ export function DataTableToolbar<T>({
   focus = true,
   children,
   actions,
+  selectionBar,
   className,
 }: DataTableToolbarProps<T>) {
   const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
@@ -279,7 +286,9 @@ export function DataTableToolbar<T>({
         {searchNode}
         {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
       </div>
-      {showFilters ? (
+      {selectionBar ? (
+        <div data-selection-row="">{selectionBar}</div>
+      ) : showFilters ? (
         <div data-filter-row="" className="flex flex-wrap items-center gap-2">
           {facetNodes}
           {addFilterNode}

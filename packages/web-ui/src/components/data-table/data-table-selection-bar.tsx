@@ -13,15 +13,17 @@ export interface DataTableSelectionBarProps<T> {
   table: Table<T>;
   /** Bulk actions for the selected rows. */
   children?: ReactNode | ((rows: Row<T>[]) => ReactNode);
-  /** What the rows are called, for the count ("3 risks selected"). */
+  /** What one row is called ("risk"); the plural is derived, or give `plural`. */
   label?: string;
+  plural?: string;
   className?: string;
 }
 
 export function DataTableSelectionBar<T>({
   table,
   children,
-  label = "rows",
+  label = "row",
+  plural,
   className,
 }: DataTableSelectionBarProps<T>) {
   const rows = table.getFilteredSelectedRowModel().rows;
@@ -31,12 +33,12 @@ export function DataTableSelectionBar<T>({
       data-selection-bar=""
       role="status"
       className={cn(
-        "flex flex-wrap items-center gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2 text-sm",
+        "flex min-h-8 flex-wrap items-center gap-2 rounded-xl bg-primary/5 px-3 text-sm",
         className,
       )}
     >
       <span className="font-medium">
-        {rows.length} {label} selected
+        {rows.length} {rows.length === 1 ? label : (plural ?? `${label}s`)} selected
       </span>
       <div className="flex flex-wrap items-center gap-2">
         {typeof children === "function" ? children(rows) : children}
