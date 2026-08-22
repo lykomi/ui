@@ -35,6 +35,16 @@ interface ClientToolRegistryState {
   /** Register page-scoped tools (called by the host on mount) */
   registerPageTools: (tools: ClientToolEntry[]) => void;
 
+  /**
+   * Merge page-scoped tools by name, keeping the ones already registered —
+   * for components (a list, a panel) that contribute their own tools next
+   * to the page's. Pair with `removePageTools` on unmount.
+   */
+  addPageTools: (tools: ClientToolEntry[]) => void;
+
+  /** Drop page-scoped tools by name (a contributing component unmounted). */
+  removePageTools: (names: string[]) => void;
+
   /** Remove page-scoped tools (called by the host on unmount) */
   clearPageTools: () => void;
 
@@ -63,6 +73,24 @@ export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get
     const next = new Map<string, ClientToolEntry>();
     for (const tool of tools) {
       next.set(tool.name, tool);
+    }
+    set({ pageTools: next });
+  },
+
+  addPageTools: (tools) => {
+    const next = new Map(get().pageTools);
+    for (const tool of tools) {
+      next.set(tool.name, tool);
+    }
+    set({ pageTools: next });
+  },
+
+  removePageTools: (names) => {
+    const { pageTools } = get();
+    if (!names.some((name) => pageTools.has(name))) return;
+    const next = new Map(pageTools);
+    for (const name of names) {
+      next.delete(name);
     }
     set({ pageTools: next });
   },
