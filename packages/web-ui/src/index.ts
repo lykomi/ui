@@ -115,6 +115,16 @@ export {
   type DataTableUrlOptions,
 } from "./components/data-table/state.ts";
 export {
+  ageBucket,
+  dueState,
+  parseDateish,
+  relativeAge,
+  type AgeBucket,
+  type DateBucketOptions,
+  type DueState,
+  type DueStateOptions,
+} from "./components/data-table/date-buckets.ts";
+export {
   DATA_TABLE_MIN_WIDTH,
   FACET_EMPTY,
   cellText,

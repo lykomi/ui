@@ -99,6 +99,12 @@ meta: {
 }
 ```
 
+Dates get the buckets every list wants: `ageBucket` (`today` · `week` ·
+`month` · `older` · `never`), `dueState` (`overdue` · `soon` · `later` ·
+`undated`) and `relativeAge` for the cell. `parseDateish` underneath reads ISO
+and the dotted European form and refuses `03/04/2026` — March in one country,
+April in another — rather than guessing.
+
 ### Selecting, opening, and the keyboard
 
 A click selects (`onRowClick`), Enter or a double click opens (`onRowOpen`) —
