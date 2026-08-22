@@ -3,7 +3,9 @@
  *
  * URL keys are shared with the older collection pages (`q`, `sort`, `f_<id>`)
  * so a link that worked before keeps working; `hide`, `page` and `size` are
- * new. Selection and expansion are never put in the URL.
+ * new. Selection and expansion are never put in the URL. A present-but-empty
+ * key (`f_status=`, `sort=`, `hide=`, `q=`) means "cleared", so a default the
+ * host configured can be switched off by the user and survive a reload.
  */
 import type {
   ColumnFiltersState,
@@ -48,40 +50,88 @@ function encodePart(value: string): string {
 }
 
 function decodePart(value: string): string {
-  return value.replace(/%2C/gi, ",").replace(/%25/g, "%");
+  return value.replace(/%2C/gi, ",").replace(/%2D/gi, "-").replace(/%25/g, "%");
+}
+
+/** Sort ids may contain commas or start with "-"; both are escaped. */
+function encodeSortId(id: string): string {
+  const encoded = encodePart(id);
+  return encoded.startsWith("-") ? `%2D${encoded.slice(1)}` : encoded;
+}
+
+function filterValues(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  return value == null || value === "" ? [] : [String(value)];
 }
 
 export interface DataTableUrlOptions {
   /** Page size that is implied when `size` is absent (default 20). */
   defaultPageSize?: number;
+  /**
+   * State implied when the URL says nothing. Serializing writes an explicit
+   * empty key when the user cleared a value the defaults would bring back.
+   */
+  defaults?: Partial<DataTableState>;
 }
 
-/** Serialize the URL-worthy part of the state; unset keys are omitted. */
+function sortKey(sorting: SortingState | undefined): string {
+  return (sorting ?? [])
+    .map((s) => (s.desc ? `-${encodeSortId(s.id)}` : encodeSortId(s.id)))
+    .join(",");
+}
+
+function hiddenKey(visibility: VisibilityState | undefined): string {
+  return Object.entries(visibility ?? {})
+    .filter(([, visible]) => visible === false)
+    .map(([id]) => encodePart(id))
+    .sort()
+    .join(",");
+}
+
+/**
+ * Serialize the URL-worthy part of the state. A key whose value equals the
+ * default is omitted; a key the user cleared while a default exists is
+ * written empty; a key absent from a partial `state` is omitted.
+ */
 export function serializeDataTableState(
   state: Partial<DataTableState>,
   options?: DataTableUrlOptions,
 ): URLSearchParams {
+  const defaults = options?.defaults ?? {};
   const params = new URLSearchParams();
-  if (state.globalFilter) params.set("q", state.globalFilter);
-  if (state.sorting?.length) {
-    params.set("sort", state.sorting.map((s) => (s.desc ? `-${s.id}` : s.id)).join(","));
+  if (state.globalFilter !== undefined && state.globalFilter !== (defaults.globalFilter ?? "")) {
+    params.set("q", state.globalFilter);
   }
-  for (const filter of state.columnFilters ?? []) {
-    const values = Array.isArray(filter.value)
-      ? filter.value.map(String).filter(Boolean)
-      : filter.value == null || filter.value === ""
-        ? []
-        : [String(filter.value)];
-    if (values.length) params.set(`${FILTER_PREFIX}${filter.id}`, values.map(encodePart).join(","));
+  if (state.sorting !== undefined && sortKey(state.sorting) !== sortKey(defaults.sorting)) {
+    params.set("sort", sortKey(state.sorting));
   }
-  const hidden = Object.entries(state.columnVisibility ?? {})
-    .filter(([, visible]) => visible === false)
-    .map(([id]) => id);
-  if (hidden.length) params.set("hide", hidden.map(encodePart).join(","));
+  if (state.columnFilters !== undefined) {
+    const current = new Map(
+      state.columnFilters.map((f) => [f.id, filterValues(f.value).map(encodePart).join(",")]),
+    );
+    const base = new Map(
+      (defaults.columnFilters ?? []).map((f) => [
+        f.id,
+        filterValues(f.value).map(encodePart).join(","),
+      ]),
+    );
+    for (const id of new Set([...current.keys(), ...base.keys()])) {
+      const value = current.get(id) ?? "";
+      if (value !== (base.get(id) ?? "")) params.set(`${FILTER_PREFIX}${id}`, value);
+    }
+  }
+  if (
+    state.columnVisibility !== undefined &&
+    hiddenKey(state.columnVisibility) !== hiddenKey(defaults.columnVisibility)
+  ) {
+    params.set("hide", hiddenKey(state.columnVisibility));
+  }
   const pagination = state.pagination;
   if (pagination) {
-    if (pagination.pageIndex > 0) params.set("page", String(pagination.pageIndex + 1));
-    const defaultSize = options?.defaultPageSize ?? DEFAULT_PAGE_SIZE;
+    const defaultIndex = defaults.pagination?.pageIndex ?? 0;
+    if (pagination.pageIndex !== defaultIndex) params.set("page", String(pagination.pageIndex + 1));
+    const defaultSize =
+      options?.defaultPageSize ?? defaults.pagination?.pageSize ?? DEFAULT_PAGE_SIZE;
     if (pagination.pageSize !== defaultSize) params.set("size", String(pagination.pageSize));
   }
   return params;
@@ -90,51 +140,59 @@ export function serializeDataTableState(
 /** Parse a URL into a full state; `defaults` fill what the URL doesn't say. */
 export function parseDataTableState(
   params: URLSearchParams,
-  options?: DataTableUrlOptions & { defaults?: Partial<DataTableState> },
+  options?: DataTableUrlOptions,
 ): DataTableState {
   const defaults = { ...EMPTY_DATA_TABLE_STATE, ...options?.defaults };
   const defaultSize = options?.defaultPageSize ?? defaults.pagination.pageSize;
   const sortRaw = params.get("sort");
-  const sorting: SortingState = sortRaw
-    ? sortRaw
-        .split(",")
-        .filter(Boolean)
-        .map((part) =>
-          part.startsWith("-") ? { id: part.slice(1), desc: true } : { id: part, desc: false },
-        )
-    : defaults.sorting;
-  const columnFilters: ColumnFiltersState = [];
+  const sorting: SortingState =
+    sortRaw == null
+      ? defaults.sorting
+      : sortRaw
+          .split(",")
+          .filter(Boolean)
+          .map((part) =>
+            part.startsWith("-")
+              ? { id: decodePart(part.slice(1)), desc: true }
+              : { id: decodePart(part), desc: false },
+          );
+  const filtersById = new Map(defaults.columnFilters.map((filter) => [filter.id, filter] as const));
   for (const [key, raw] of params.entries()) {
-    if (!key.startsWith(FILTER_PREFIX) || !raw) continue;
+    if (!key.startsWith(FILTER_PREFIX)) continue;
+    const id = key.slice(FILTER_PREFIX.length);
     const values = raw.split(",").filter(Boolean).map(decodePart);
-    if (values.length) columnFilters.push({ id: key.slice(FILTER_PREFIX.length), value: values });
+    if (values.length) filtersById.set(id, { id, value: values });
+    else filtersById.delete(id);
   }
+  const columnFilters: ColumnFiltersState = Array.from(filtersById.values());
   const columnVisibility: VisibilityState = { ...defaults.columnVisibility };
   const hideRaw = params.get("hide");
   if (hideRaw != null) {
-    for (const id of Object.keys(columnVisibility))
+    for (const id of Object.keys(columnVisibility)) {
       if (columnVisibility[id] === false) delete columnVisibility[id];
+    }
     for (const id of hideRaw.split(",").filter(Boolean).map(decodePart))
       columnVisibility[id] = false;
   }
-  const page = Number.parseInt(params.get("page") ?? "", 10);
+  const pageRaw = params.get("page");
+  const page = Number.parseInt(pageRaw ?? "", 10);
   const size = Number.parseInt(params.get("size") ?? "", 10);
   return {
     ...defaults,
-    globalFilter: params.get("q") ?? defaults.globalFilter,
+    globalFilter: params.has("q") ? (params.get("q") ?? "") : defaults.globalFilter,
     sorting,
-    columnFilters: hasFilterKey(params) ? columnFilters : defaults.columnFilters,
+    columnFilters,
     columnVisibility,
     pagination: {
-      pageIndex: Number.isFinite(page) && page > 1 ? page - 1 : 0,
+      pageIndex:
+        pageRaw == null
+          ? defaults.pagination.pageIndex
+          : Number.isFinite(page) && page > 1
+            ? page - 1
+            : 0,
       pageSize: Number.isFinite(size) && size > 0 ? size : defaultSize,
     },
   };
-}
-
-function hasFilterKey(params: URLSearchParams): boolean {
-  for (const key of params.keys()) if (key.startsWith(FILTER_PREFIX)) return true;
-  return false;
 }
 
 /** Replace this table's keys in `params`, leaving every other key untouched. */

@@ -42,9 +42,14 @@ export interface DataTableFacetCount extends DataTableFacetOption {
   count: number;
 }
 
-/** Keys a cell value contributes to a facet — arrays contribute one key per element. */
+/**
+ * Keys a cell value contributes to a facet — arrays contribute one key per
+ * element. A real value that spells the empty sentinel is escaped with a
+ * leading backslash so it never masquerades as "no value".
+ */
 export function facetKeys(value: unknown): string[] {
   if (value == null || value === "") return [FACET_EMPTY];
+  if (value === FACET_EMPTY) return [`\\${FACET_EMPTY}`];
   if (Array.isArray(value)) {
     const keys = value.flatMap((item) => facetKeys(item)).filter((key) => key !== FACET_EMPTY);
     return keys.length ? Array.from(new Set(keys)) : [FACET_EMPTY];
@@ -150,14 +155,19 @@ export function cellText(value: unknown): string {
   return String(value);
 }
 
-const searchTextCache = new WeakMap<object, string>();
+const searchTextCache = new WeakMap<object, { cells: unknown; text: string }>();
 
-/** Lower-cased text of every searchable cell of a row (cached per row object). */
+/**
+ * Lower-cased text of every searchable cell of a row. Cached per row object
+ * and invalidated when the row's cells change identity (new columns or a
+ * changed `meta.searchText`), since TanStack keeps row objects across
+ * column changes.
+ */
 export function rowSearchText<T>(row: Row<T>): string {
+  const cells = row.getAllCells();
   const cached = searchTextCache.get(row);
-  if (cached !== undefined) return cached;
-  const text = row
-    .getAllCells()
+  if (cached && cached.cells === cells) return cached.text;
+  const text = cells
     .filter((cell) => cell.column.getCanGlobalFilter())
     .map((cell) => {
       const custom = cell.column.columnDef.meta?.searchText;
@@ -165,7 +175,7 @@ export function rowSearchText<T>(row: Row<T>): string {
     })
     .join(" ")
     .toLowerCase();
-  searchTextCache.set(row, text);
+  searchTextCache.set(row, { cells, text });
   return text;
 }
 

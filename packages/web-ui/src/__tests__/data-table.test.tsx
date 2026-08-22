@@ -15,6 +15,7 @@ import {
   facetFilterFn,
   facetKeys,
   facetOptions,
+  rowSearchText,
 } from "../components/data-table/facets.ts";
 import {
   mergeDataTableUrlState,
@@ -248,6 +249,47 @@ describe("useDataTable + DataTable", () => {
     expect(renderedIds()).toEqual(["t1"]);
   });
 
+  it("keeps pageSize when initialState carries a partial pagination and clamps a stranded page", () => {
+    const h = mount({ pageSize: 1, initialState: { pagination: { pageIndex: 3 } as never } });
+    expect(h.table.getState().pagination).toEqual({ pageIndex: 3, pageSize: 1 });
+    expect(renderedIds()).toEqual(["t4"]);
+    act(() => h.table.getColumn("priority")!.setFilterValue(["high"]));
+    expect(h.table.getState().pagination.pageIndex).toBe(0);
+    act(() => h.table.setPageIndex(1));
+    expect(renderedIds()).toEqual(["t3"]);
+    act(() => h.table.getColumn("priority")!.setFilterValue(["medium"]));
+    act(() => h.table.setPageIndex(5));
+    expect(h.table.getState().pagination.pageIndex).toBe(0);
+    expect(renderedIds()).toEqual(["t4"]);
+  });
+
+  it("escapes a real value that spells the empty sentinel", () => {
+    expect(facetKeys(FACET_EMPTY)).toEqual([`\\${FACET_EMPTY}`]);
+    expect(facetKeys(null)).toEqual([FACET_EMPTY]);
+  });
+
+  it("re-reads a row's search text when its columns change", () => {
+    const h = mount({});
+    const row = h.table.getCoreRowModel().rows[1]!;
+    expect(rowSearchText(row)).toContain("beta draft");
+    expect(rowSearchText(row)).not.toContain("hidden-token");
+    act(() => {
+      root!.render(
+        <Harness
+          columns={[
+            {
+              ...COLUMNS[0]!,
+              meta: { searchText: (task: Task) => (task.id === "t2" ? "hidden-token" : "") },
+            },
+            ...COLUMNS.slice(1),
+          ]}
+          onTable={() => {}}
+        />,
+      );
+    });
+    expect(rowSearchText(h.table.getCoreRowModel().rows[1]!)).toContain("hidden-token");
+  });
+
   it("selection column toggles rows and reports through the table", () => {
     const h = mount({
       columns: [selectionColumn<Task>(), ...COLUMNS],
@@ -291,6 +333,46 @@ describe("URL state", () => {
     expect(parsed.columnFilters).toEqual(state.columnFilters);
     expect(parsed.columnVisibility).toEqual({ tags: false });
     expect(parsed.pagination).toEqual({ pageIndex: 2, pageSize: 50 });
+  });
+
+  it("escapes sort ids that contain commas or start with a dash", () => {
+    const sorting = [
+      { id: "-odd,id", desc: true },
+      { id: "a,b", desc: false },
+    ];
+    const params = serializeDataTableState({ sorting });
+    expect(parseDataTableState(new URLSearchParams(params.toString())).sorting).toEqual(sorting);
+  });
+
+  it("writes an explicit empty key when a defaulted value is cleared, and honours default paging", () => {
+    const defaults: Partial<DataTableState> = {
+      globalFilter: "seed",
+      sorting: [{ id: "title", desc: false }],
+      columnFilters: [{ id: "status", value: ["open"] }],
+      columnVisibility: { tags: false },
+      pagination: { pageIndex: 1, pageSize: 10 },
+    };
+    const cleared = serializeDataTableState(
+      {
+        globalFilter: "",
+        sorting: [],
+        columnFilters: [],
+        columnVisibility: {},
+        pagination: { pageIndex: 0, pageSize: 10 },
+      },
+      { defaults },
+    );
+    expect(cleared.toString()).toBe("q=&sort=&f_status=&hide=&page=1");
+    const parsed = parseDataTableState(new URLSearchParams(cleared.toString()), { defaults });
+    expect(parsed.globalFilter).toBe("");
+    expect(parsed.sorting).toEqual([]);
+    expect(parsed.columnFilters).toEqual([]);
+    expect(parsed.columnVisibility).toEqual({});
+    expect(parsed.pagination).toEqual({ pageIndex: 0, pageSize: 10 });
+    const untouched = parseDataTableState(new URLSearchParams(""), { defaults });
+    expect(untouched.pagination).toEqual({ pageIndex: 1, pageSize: 10 });
+    expect(untouched.columnFilters).toEqual([{ id: "status", value: ["open"] }]);
+    expect(serializeDataTableState(untouched, { defaults }).toString()).toBe("");
   });
 
   it("omits defaults, keeps foreign params on merge, and applies defaults when absent", () => {

@@ -4,7 +4,7 @@
  * optional pagination and optional single-level grouping — with the whole
  * state as ONE value so it can live in component state or in the URL.
  */
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCoreRowModel,
   getExpandedRowModel,
@@ -64,14 +64,22 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   } = options;
   const controlled = controlledState !== undefined && onStateChange !== undefined;
 
+  const basePageSize = pageSize || DEFAULT_PAGE_SIZE;
   const [innerState, setInnerState] = useState<DataTableState>(() => ({
     ...EMPTY_DATA_TABLE_STATE,
-    pagination: { pageIndex: 0, pageSize: pageSize || DEFAULT_PAGE_SIZE },
     ...initialState,
+    pagination: { pageIndex: 0, pageSize: basePageSize, ...initialState?.pagination },
   }));
   const state = useMemo<DataTableState>(
-    () => (controlled ? { ...EMPTY_DATA_TABLE_STATE, ...controlledState } : innerState),
-    [controlled, controlledState, innerState],
+    () =>
+      controlled
+        ? {
+            ...EMPTY_DATA_TABLE_STATE,
+            ...controlledState,
+            pagination: { pageIndex: 0, pageSize: basePageSize, ...controlledState.pagination },
+          }
+        : innerState,
+    [basePageSize, controlled, controlledState, innerState],
   );
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -140,5 +148,13 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   }
   const table = useReactTable(tableOptions);
   tableRef.current = table;
+
+  // A shrinking data set (or a tighter filter) can strand a later page.
+  useEffect(() => {
+    if (grouped || !pageSize) return;
+    const index = table.getState().pagination.pageIndex;
+    const count = table.getPageCount();
+    if (index > 0 && index >= count) table.setPageIndex(Math.max(0, count - 1));
+  });
   return table;
 }
