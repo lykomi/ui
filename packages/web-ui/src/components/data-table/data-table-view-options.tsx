@@ -1,4 +1,4 @@
-/** The "View" menu: toggle column visibility. */
+/** The "Columns" menu: toggle column visibility. */
 import type { Table } from "@tanstack/react-table";
 import { Settings2 } from "lucide-react";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
@@ -33,14 +33,14 @@ export function DataTableViewOptions<T>({ table, className }: DataTableViewOptio
           )}
         >
           <Settings2 className="size-4" />
-          View
+          Columns
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         className="w-48 rounded-xl border-border/45 bg-popover/95 shadow-lg"
       >
-        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+        <DropdownMenuLabel>Show columns</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {columns.map((column) => (
           <DropdownMenuCheckboxItem
