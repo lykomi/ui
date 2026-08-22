@@ -213,7 +213,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     // the user made survives, because promoting an item drops its key.
     set({
       currentPage: page,
-      contextItems: get().contextItems.filter((i) => i.persistence !== "ephemeral" && !i.key),
+      contextItems: get().contextItems.filter(
+        // `key === undefined`, not falsy: "" is a key someone chose, and a
+        // keyed item tracks UI that this navigation just unmounted.
+        (i) => i.persistence !== "ephemeral" && i.key === undefined,
+      ),
     });
   },
 
@@ -324,7 +328,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Their owner clears them (`setContextItem(key, null)`), and navigation
     // still does.
     set({
-      contextItems: contextItems.filter((i) => i.persistence === "persistent" || i.key),
+      contextItems: contextItems.filter(
+        (i) => i.persistence === "persistent" || i.key !== undefined,
+      ),
       sentContext: { ...sentContext, [messageId]: snapshot },
     });
 

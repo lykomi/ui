@@ -102,6 +102,15 @@ const INTERACTIVE = [
   "[role='listbox']",
   "[role='option']",
   "[role='tab']",
+  // Arrow-owning composites: a tree or a grid inside a cell navigates with
+  // exactly the keys this table wants.
+  "[role='tree']",
+  "[role='treeitem']",
+  "[role='grid']",
+  "[role='gridcell']",
+  "[role='menu']",
+  "[role='menubar']",
+  "[role='radiogroup']",
   "[data-no-row-click]",
 ].join(", ");
 
@@ -239,12 +248,17 @@ export function DataTable<T>({
       (row) => (row as HTMLElement).dataset.rowId === activeRowId,
     ) as HTMLElement | undefined;
     element?.scrollIntoView?.({ block: "nearest" });
-    // Take the keyboard along, but only if it was already in the list:
-    // arrows move the active row, and leaving focus on the row it left means
-    // the next Enter opens the wrong one. Focus is never stolen from
-    // elsewhere on the page.
+    // Take the keyboard along, but only when it is on a ROW: arrows move the
+    // active row, and leaving focus on the row it left means the next Enter
+    // opens the wrong one. Focus inside a cell's own control stays there —
+    // moving it would eject someone mid-edit when a re-sort happens to shift
+    // the row — and focus elsewhere on the page is never stolen.
     const active = typeof document === "undefined" ? null : document.activeElement;
-    if (element && active && active !== element && bodyRef.current?.contains(active)) {
+    const onARow =
+      active instanceof HTMLElement &&
+      active.matches("tr[data-row-id]") &&
+      bodyRef.current?.contains(active);
+    if (element && onARow && active !== element) {
       element.focus?.({ preventScroll: true });
     }
   }, [activeRowId, activeIndex]);

@@ -219,8 +219,10 @@
 tr[data-clickable]:hover > [data-pinned="cell"] {
   background-color: color-mix(in srgb, var(--muted) 30%, var(--pinned-surface));
 }
-tr[data-focusable]:focus-visible > [data-pinned="cell"],
-tr[data-focusable]:has(:focus-visible) > [data-pinned="cell"] {
+/* Only when the ROW itself is focused. A control inside a cell does not tint
+ * the ordinary cells, so tinting the frozen ones would make the strip diverge
+ * exactly while someone is using that control. */
+tr[data-focusable]:focus-visible > [data-pinned="cell"] {
   background-color: color-mix(in srgb, var(--muted) 30%, var(--pinned-surface));
 }
 tr[data-state="selected"] > [data-pinned="cell"] {

@@ -54,6 +54,13 @@ describe("keyed context items", () => {
     expect(useAppStore.getState().contextItems.map((i) => i.label)).toEqual(["a real pin"]);
   });
 
+  it('treats "" as a key, because someone chose it', () => {
+    const store = useAppStore.getState();
+    store.setContextItem("", { ...note("keyed with an empty string"), persistence: "persistent" });
+    store.setCurrentPage("/elsewhere");
+    expect(useAppStore.getState().contextItems).toEqual([]);
+  });
+
   it("pinning hands the item to the user, so the next selection cannot take it", () => {
     const store = useAppStore.getState();
     store.setContextItem("list:risks", note("2 risks selected"));
