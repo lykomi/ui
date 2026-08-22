@@ -108,8 +108,9 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
     onRowSelectionChange: (updater) => update("rowSelection", updater),
     onPaginationChange: (updater) => update("pagination", updater),
     onExpandedChange: (updater) => update("expanded", updater),
-    filterFns: { facet: facetFilterFn as FilterFn<T> },
-    globalFilterFn: globalFilterFn ?? (tokenSearchFilterFn as FilterFn<T>),
+    // String alias for untyped column defs (JSX renderers): `filterFn: "facet"`.
+    filterFns: { facet: facetFilterFn },
+    globalFilterFn: globalFilterFn ?? tokenSearchFilterFn,
     getColumnCanGlobalFilter: (column) =>
       column.columnDef.enableGlobalFilter ?? column.accessorFn != null,
     enableRowSelection,

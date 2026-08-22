@@ -27,9 +27,6 @@ declare module "@tanstack/react-table" {
     /** Hosts may carry their own keys in `meta` (e.g. a server sort key). */
     [key: string]: unknown;
   }
-  interface FilterFns {
-    facet: FilterFn<unknown>;
-  }
 }
 
 /** Facet key for empty cells (`null`, `undefined`, `""`, `[]`). */
@@ -67,8 +64,13 @@ export function normalizeFacetValue(filterValue: unknown): string[] {
   return [String(filterValue)];
 }
 
-/** OR within a facet: a row passes when any of its keys is selected. */
-export const facetFilterFn: FilterFn<unknown> = (row, columnId, filterValue) => {
+/**
+ * OR within a facet: a row passes when any of its keys is selected. Typed
+ * loosely so `filterFn: facetFilterFn` fits any row type; `useDataTable`
+ * also registers it as the string `"facet"` for untyped (JSX) columns.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const facetFilterFn: FilterFn<any> = (row, columnId, filterValue) => {
   const wanted = normalizeFacetValue(filterValue);
   if (!wanted.length) return true;
   return facetKeys(row.getValue(columnId)).some((key) => wanted.includes(key));
@@ -168,7 +170,8 @@ export function rowSearchText<T>(row: Row<T>): string {
 }
 
 /** Every whitespace-separated token must appear somewhere in the row (AND across tokens). */
-export const tokenSearchFilterFn: FilterFn<unknown> = (row, _columnId, filterValue) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const tokenSearchFilterFn: FilterFn<any> = (row, _columnId, filterValue) => {
   const tokens = String(filterValue ?? "")
     .toLowerCase()
     .split(/\s+/)

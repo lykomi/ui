@@ -54,7 +54,8 @@ const table = useDataTable({ data: rows, columns, getRowId: (row) => row.id, pag
 <DataTablePagination table={table} />
 ```
 
-Give a column `filterFn: "facet"` to use it as a facet; `meta.facetLabels` names
+Give a column `filterFn: facetFilterFn` (or the string `"facet"` in untyped
+code) to use it as a facet; `meta.facetLabels` names
 its values, `meta.label` names the column in the View menu, and
 `DataTableColumnHeader` makes a header sortable. Pass `state` + `onStateChange`
 (with `parseDataTableState` / `mergeDataTableUrlState`) to keep the whole list

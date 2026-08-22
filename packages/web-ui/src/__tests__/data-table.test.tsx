@@ -45,11 +45,11 @@ const COLUMNS: ColumnDef<Task, unknown>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    filterFn: "facet",
+    filterFn: facetFilterFn,
     meta: { facetLabels: { open: "Open" } },
   },
-  { accessorKey: "priority", header: "Priority", filterFn: "facet" },
-  { accessorKey: "tags", header: "Tags", filterFn: "facet" },
+  { accessorKey: "priority", header: "Priority", filterFn: facetFilterFn },
+  { accessorKey: "tags", header: "Tags", filterFn: facetFilterFn },
 ];
 
 let root: Root | null = null;
