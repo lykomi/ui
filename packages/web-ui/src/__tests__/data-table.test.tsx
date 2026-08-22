@@ -291,16 +291,35 @@ describe("useDataTable + DataTable", () => {
       container!.querySelector<HTMLButtonElement>(
         "button[aria-label='Focus on the list'], button[aria-label='Leave focus mode']",
       )!;
+    const layer = () => container!.querySelector("[data-focused]");
     expect(button().getAttribute("aria-pressed")).toBe("false");
-    expect(container!.querySelector("[data-focused]")).toBeNull();
+    expect(layer()).toBeNull();
+    expect(container!.querySelector("table")!.parentElement!.className).toContain(
+      "overflow-x-auto",
+    );
+    const rowBefore = container!.querySelector("tbody tr[data-row-id]");
     act(() => button().click());
-    expect(container!.querySelector("[data-focused]")).not.toBeNull();
+    expect(layer()).not.toBeNull();
+    // The subtree stays mounted: focus mode only swaps the frame's classes,
+    // so the list keeps its state (and its theme scope).
+    expect(container!.querySelector("tbody tr[data-row-id]")).toBe(rowBefore);
     expect(button().getAttribute("aria-pressed")).toBe("true");
+    // The layer itself never scrolls: the table is the scroll region (both
+    // axes) and its header sticks while the rows move.
+    expect(layer()!.className).toContain("overflow-hidden");
+    const scroller = layer()!.querySelector("table")!.parentElement!;
+    expect(scroller.className).toContain("overflow-auto");
+    expect(scroller.className).toContain("min-h-0");
+    expect(scroller.parentElement!.className).toContain("flex-1");
+    expect(layer()!.querySelector("thead")!.className).toContain("sticky");
     act(() => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     });
-    expect(container!.querySelector("[data-focused]")).toBeNull();
+    expect(layer()).toBeNull();
     expect(container!.querySelector(".plain")).not.toBeNull();
+    expect(container!.querySelector("table")!.parentElement!.className).toContain(
+      "overflow-x-auto",
+    );
   });
 
   it("puts filters on their own row and collapses them behind the Filters toggle", () => {

@@ -2,7 +2,7 @@
  * Two bands, so a list with many filters still reads as ordered rather than
  * as a ragged wrap:
  *
- *   row 1   search …………………………………… Filters (n) · actions · View · ⤢
+ *   row 1   search ……………………………… Filters (n) · actions · Columns · ⤢
  *   row 2   facet · facet · facet · + Filter · Reset
  *
  * Row one never wraps (its right group is fixed); filters live on their own
@@ -58,7 +58,7 @@ export interface DataTableToolbarProps<T> {
   searchPlaceholder?: string;
   /** Hide the search box. */
   search?: boolean;
-  /** Hide the View (column visibility) menu. */
+  /** Hide the Columns (column visibility) menu. */
   viewOptions?: boolean;
   /** Hide the focus (fullscreen) button that appears inside a `DataTableFrame`. */
   focus?: boolean;

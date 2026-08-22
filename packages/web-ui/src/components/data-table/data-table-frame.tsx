@@ -3,6 +3,19 @@
  * fullscreen layer (Escape leaves it). `DataTableToolbar` shows the focus
  * button whenever it renders inside a frame — users with wide lists get a
  * way out of a cramped page without the host doing anything.
+ *
+ * The focus layer stays where it is in the tree — only its classes change —
+ * so entering and leaving focus never remounts the list (its rows, drawer,
+ * selection and in-flight edits survive) and it keeps inheriting the host's
+ * theme scope. It never scrolls itself: it is a fixed flex column whose
+ * growing child — the table — owns the scrolling, which keeps the toolbar in
+ * place while the rows move under a sticky header (see `DataTable`, which
+ * reads this context).
+ *
+ * A `position: fixed` layer is relative to the viewport unless an ancestor
+ * establishes a containing block (`transform`, `filter`, `perspective`,
+ * `contain: paint`); a host that does that on a list's ancestor has to opt
+ * out of focus mode.
  */
 import {
   createContext,
@@ -64,7 +77,7 @@ export function DataTableFrame({
         className={
           focused
             ? cn(
-                "fixed inset-0 z-50 flex flex-col gap-3 overflow-auto bg-background p-4 sm:p-6",
+                "fixed inset-0 z-50 flex flex-col gap-3 overflow-hidden bg-background p-4 sm:p-6",
                 focusClassName,
               )
             : className
