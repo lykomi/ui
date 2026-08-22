@@ -109,93 +109,95 @@ export function DataTableToolbar<T>({
     return facet.title ?? (column ? columnLabel(column) : facet.columnId);
   };
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      {search ? (
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={(state.globalFilter as string) ?? ""}
-            onChange={(event) => table.setGlobalFilter(event.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder}
-            className="h-8 w-[160px] rounded-xl border-border/45 bg-background/72 pl-8 text-sm shadow-none lg:w-[250px]"
-          />
-        </div>
-      ) : null}
-      {shown.map((facet) => {
-        const column = table.getColumn(facet.columnId);
-        if (!column) return null;
-        return (
-          <DataTableFacetedFilter
-            key={facet.columnId}
-            column={column}
-            title={facet.title}
-            options={facet.options}
-            onEmptyClose={
-              revealed.has(facet.columnId)
-                ? () =>
-                    setRevealed((current) => {
-                      const next = new Set(current);
-                      next.delete(facet.columnId);
-                      return next;
-                    })
-                : undefined
-            }
-          />
-        );
-      })}
-      {hidden.length > 0 ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-facet-menu=""
-              className="h-8 rounded-xl px-2.5 text-muted-foreground hover:text-foreground"
-            >
-              <Plus className="size-4" />
-              Filter
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="w-48 rounded-xl border-border/45 bg-popover/95 shadow-lg"
-          >
-            <DropdownMenuLabel>Filter by</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {hidden.map((facet) => (
-              <DropdownMenuItem
-                key={facet.columnId}
-                data-facet-menu-item={facet.columnId}
-                onSelect={() => setRevealed((current) => new Set([...current, facet.columnId]))}
+    <div className={cn("flex items-start gap-2", className)}>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {search ? (
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={(state.globalFilter as string) ?? ""}
+              onChange={(event) => table.setGlobalFilter(event.target.value)}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+              className="h-8 w-[160px] rounded-xl border-border/45 bg-background/72 pl-8 text-sm shadow-none lg:w-[250px]"
+            />
+          </div>
+        ) : null}
+        {shown.map((facet) => {
+          const column = table.getColumn(facet.columnId);
+          if (!column) return null;
+          return (
+            <DataTableFacetedFilter
+              key={facet.columnId}
+              column={column}
+              title={facet.title}
+              options={facet.options}
+              onEmptyClose={
+                revealed.has(facet.columnId)
+                  ? () =>
+                      setRevealed((current) => {
+                        const next = new Set(current);
+                        next.delete(facet.columnId);
+                        return next;
+                      })
+                  : undefined
+              }
+            />
+          );
+        })}
+        {hidden.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-facet-menu=""
+                className="h-8 rounded-xl px-2.5 text-muted-foreground hover:text-foreground"
               >
-                {facetTitle(facet)}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
-      {children}
-      {isFiltered ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            table.resetColumnFilters();
-            table.setGlobalFilter("");
-            setRevealed(new Set());
-          }}
-          className="h-8 rounded-xl px-2.5"
-        >
-          Reset
-          <X className="size-4" />
-        </Button>
-      ) : null}
+                <Plus className="size-4" />
+                Filter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="w-48 rounded-xl border-border/45 bg-popover/95 shadow-lg"
+            >
+              <DropdownMenuLabel>Filter by</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {hidden.map((facet) => (
+                <DropdownMenuItem
+                  key={facet.columnId}
+                  data-facet-menu-item={facet.columnId}
+                  onSelect={() => setRevealed((current) => new Set([...current, facet.columnId]))}
+                >
+                  {facetTitle(facet)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+        {children}
+        {isFiltered ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              table.resetColumnFilters();
+              table.setGlobalFilter("");
+              setRevealed(new Set());
+            }}
+            className="h-8 rounded-xl px-2.5"
+          >
+            Reset
+            <X className="size-4" />
+          </Button>
+        ) : null}
+      </div>
       {actions || viewOptions || focusButton ? (
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {actions}
           {viewOptions ? <DataTableViewOptions table={table} /> : null}
           {focusButton}
