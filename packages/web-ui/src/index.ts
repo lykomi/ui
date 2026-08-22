@@ -98,7 +98,11 @@ export {
   type DataTableRowActionsProps,
 } from "./components/data-table/data-table-row-actions.tsx";
 export { selectionColumn, SELECTION_COLUMN_ID } from "./components/data-table/selection-column.tsx";
-export { useDataTable, type UseDataTableOptions } from "./components/data-table/use-data-table.ts";
+export {
+  useDataTable,
+  defaultHiddenColumns,
+  type UseDataTableOptions,
+} from "./components/data-table/use-data-table.ts";
 export {
   usePinnedOffsets,
   type PinnedOffsets,

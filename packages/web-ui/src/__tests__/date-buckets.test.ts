@@ -81,6 +81,16 @@ describe("dueState", () => {
     expect(dueState("when the boat comes in", { now: NOW })).toBe("undated");
   });
 
+  it("gives a date-only deadline its whole day", () => {
+    // Someone with until Friday is not late on Friday morning. NOW is midday
+    // on the 22nd, so a deadline of "2026-08-22" still has hours left.
+    expect(dueState("2026-08-22", { now: NOW })).toBe("soon");
+    expect(dueState("2026-08-21", { now: NOW })).toBe("overdue");
+    // A real timestamp is compared as the instant it is.
+    expect(dueState("2026-08-22T09:00:00Z", { now: NOW })).toBe("overdue");
+    expect(dueState("2026-08-22T18:00:00Z", { now: NOW })).toBe("soon");
+  });
+
   it("takes the window from the caller", () => {
     expect(dueState(daysOut(45), { now: NOW })).toBe("later");
     expect(dueState(daysOut(45), { now: NOW, soonDays: 60 })).toBe("soon");

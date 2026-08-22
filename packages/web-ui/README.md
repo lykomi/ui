@@ -68,7 +68,7 @@ meta: {
   breakpoint: "lg",        // the narrowest LIST width it needs (not the window)
   showIn: "focus",         // only when the list has the screen to itself
   pinned: "left",          // frozen against the left edge while the rest scrolls
-  defaultHidden: true,     // in the Columns menu, off until asked for
+  defaultHidden: true,     // in the Columns menu, off until asked for*
   align: "right",
 }
 ```
@@ -78,6 +78,12 @@ sheds exactly the columns a narrow window would and focus mode brings them
 back — no media queries in the host. `DATA_TABLE_MIN_WIDTH` publishes the
 bands (`sm` 448 · `md` 672 · `lg` 896 · `xl` 1024 · `2xl` 1280) for a host that
 derives them from a schema.
+
+\* `useDataTable` applies `defaultHidden` to its own initial state. A list
+whose state lives elsewhere (the URL) passes `defaultHiddenColumns(columns)`
+into that layer's `defaults` instead — a hidden-only URL records nothing when
+a column is _shown_, so re-applying the default on every render would undo the
+user the moment they bring one out.
 
 Freezing is a run from the left edge: every column up to the last `pinned` one
 comes along, so a leading checkbox never slides out from under its rows.

@@ -46,10 +46,18 @@ function utcDay(year: number, month: number, day: number): number | null {
     : null;
 }
 
-export function parseDateish(value: unknown): number | null {
+interface DateParts {
+  at: number;
+  /** No clock was given, so the value means a whole day, not an instant. */
+  dateOnly: boolean;
+}
+
+function parseParts(value: unknown): DateParts | null {
   if (value == null || value === "") return null;
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.getTime();
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (value instanceof Date)
+    return Number.isNaN(value.getTime()) ? null : { at: value.getTime(), dateOnly: false };
+  if (typeof value === "number")
+    return Number.isFinite(value) ? { at: value, dateOnly: false } : null;
   const text = String(value).trim();
   if (!text) return null;
 
@@ -59,13 +67,24 @@ export function parseDateish(value: unknown): number | null {
     // job, and it handles ISO without guessing.
     if (utcDay(Number(iso[1]), Number(iso[2]), Number(iso[3])) === null) return null;
     const parsed = Date.parse(text);
-    return Number.isNaN(parsed) ? null : parsed;
+    if (Number.isNaN(parsed)) return null;
+    return { at: parsed, dateOnly: text.length === 10 };
   }
   const dotted = DOTTED.exec(text);
-  if (dotted) return utcDay(Number(dotted[3]), Number(dotted[2]), Number(dotted[1]));
+  if (dotted) {
+    const at = utcDay(Number(dotted[3]), Number(dotted[2]), Number(dotted[1]));
+    return at === null ? null : { at, dateOnly: true };
+  }
   const yearFirst = YEAR_FIRST.exec(text);
-  if (yearFirst) return utcDay(Number(yearFirst[1]), Number(yearFirst[2]), Number(yearFirst[3]));
+  if (yearFirst) {
+    const at = utcDay(Number(yearFirst[1]), Number(yearFirst[2]), Number(yearFirst[3]));
+    return at === null ? null : { at, dateOnly: true };
+  }
   return null;
+}
+
+export function parseDateish(value: unknown): number | null {
+  return parseParts(value)?.at ?? null;
 }
 
 export type AgeBucket = "today" | "week" | "month" | "older" | "never";
@@ -94,11 +113,15 @@ export type DueState = "overdue" | "soon" | "later" | "undated";
  * those neither late nor on time is the honest reading.
  */
 export function dueState(value: unknown, options: DueStateOptions = {}): DueState {
-  const at = parseDateish(value);
-  if (at === null) return "undated";
+  const parts = parseParts(value);
+  if (parts === null) return "undated";
   const now = options.now ?? Date.now();
-  if (at < now) return "overdue";
-  return at - now <= (options.soonDays ?? 30) * DAY ? "soon" : "later";
+  // A date with no clock is a whole day, and someone with until Friday is not
+  // late on Friday morning — so it runs out at the END of its day. A real
+  // timestamp is compared as the instant it is.
+  const deadline = parts.dateOnly ? parts.at + DAY - 1 : parts.at;
+  if (deadline < now) return "overdue";
+  return deadline - now <= (options.soonDays ?? 30) * DAY ? "soon" : "later";
 }
 
 /** "today" · "yesterday" · "6 d ago" · the date once that stops being useful. */

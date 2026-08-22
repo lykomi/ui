@@ -35,7 +35,11 @@ import {
   type DataTableState,
 } from "../components/data-table/state.ts";
 import { selectionColumn } from "../components/data-table/selection-column.tsx";
-import { useDataTable, type UseDataTableOptions } from "../components/data-table/use-data-table.ts";
+import {
+  defaultHiddenColumns,
+  useDataTable,
+  type UseDataTableOptions,
+} from "../components/data-table/use-data-table.ts";
 
 interface Task {
   id: string;
@@ -191,6 +195,47 @@ describe("promises the metadata makes", () => {
       ),
     );
     expect(table.getColumn("notes")!.getIsVisible()).toBe(true);
+  });
+
+  it("leaves a controlled list's visibility to its owner", () => {
+    // A hidden-only URL records nothing when a column is SHOWN, so re-applying
+    // the metadata on every render would snap the user's choice back. A list
+    // whose state lives elsewhere passes `defaultHiddenColumns` into that
+    // layer's defaults instead.
+    const columns: ColumnDef<Task, unknown>[] = [
+      { id: "title", accessorKey: "title", header: "Title" },
+      { id: "notes", accessorKey: "status", header: "Notes", meta: { defaultHidden: true } },
+    ];
+    expect(defaultHiddenColumns(columns)).toEqual({ notes: false });
+    let table!: Table<Task>;
+    function Controlled() {
+      table = useDataTable<Task>({
+        data: TASKS,
+        columns,
+        getRowId: (row) => row.id,
+        // what the URL says after the user brought the column out: nothing
+        state: { columnVisibility: {} },
+        onStateChange: () => {},
+      });
+      return <DataTable table={table} />;
+    }
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => root!.render(<Controlled />));
+    expect(table.getColumn("notes")!.getIsVisible()).toBe(true);
+  });
+
+  it("resolves ids the way TanStack does", () => {
+    // A dotted accessorKey becomes `user_name`, and an accessorFn column can
+    // take its id from a string header. Writing visibility under the raw key
+    // would leave the metadata inert.
+    expect(
+      defaultHiddenColumns<Task>([
+        { accessorKey: "user.name", header: "Who", meta: { defaultHidden: true } },
+        { accessorFn: (row) => row.title, header: "Title", meta: { defaultHidden: true } },
+      ] as ColumnDef<Task, unknown>[]),
+    ).toEqual({ user_name: false, Title: false });
   });
 
   it("counts a row once even when its buckets overlap", () => {
