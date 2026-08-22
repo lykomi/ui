@@ -23,6 +23,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type HTMLAttributes,
   type ReactNode,
@@ -46,11 +47,13 @@ export interface DataTableFrameProps extends Omit<HTMLAttributes<HTMLDivElement>
   /** Classes applied in focus mode on top of the fullscreen layer. */
   focusClassName?: string;
   defaultFocused?: boolean;
+  /** Told when focus mode turns on or off — a host with room to spare can show more. */
+  onFocusChange?: (focused: boolean) => void;
 }
 
 export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
   function DataTableFrame(
-    { children, className, focusClassName, defaultFocused = false, ...rest },
+    { children, className, focusClassName, defaultFocused = false, onFocusChange, ...rest },
     ref,
   ) {
     const [focused, setFocused] = useState(defaultFocused);
@@ -67,7 +70,18 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
         document.body.style.overflow = previousOverflow;
       };
     }, [focused]);
-    const value = useMemo(() => ({ focused, setFocused }), [focused]);
+    const changeRef = useRef(onFocusChange);
+    changeRef.current = onFocusChange;
+    const value = useMemo(
+      () => ({
+        focused,
+        setFocused: (next: boolean) => {
+          setFocused(next);
+          changeRef.current?.(next);
+        },
+      }),
+      [focused],
+    );
     return (
       <DataTableFrameContext.Provider value={value}>
         <div

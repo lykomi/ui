@@ -346,6 +346,44 @@ describe("useDataTable + DataTable", () => {
     }
   });
 
+  it("a column can wait for focus mode, where every facet is shown too", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <DataTableFrame className="plain">
+          <Harness
+            facets={["status", "priority", "tags"]}
+            columns={[
+              COLUMNS[0]!,
+              { ...COLUMNS[1]!, meta: { showIn: "focus" } },
+              ...COLUMNS.slice(2),
+            ]}
+            onTable={() => {}}
+          />
+        </DataTableFrame>,
+      );
+    });
+    const headers = () =>
+      Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")).map(
+        (th) => th.textContent,
+      );
+    const facetIds = () =>
+      Array.from(container!.querySelectorAll("button[data-facet]")).map((b) =>
+        b.getAttribute("data-facet"),
+      );
+    // on a page: the focus-only column waits, and only the pinned facets show
+    expect(headers()).toEqual(["Title", "Priority", "Tags"]);
+    expect(facetIds()).toEqual(["status", "priority", "tags"].slice(0, 3));
+    const focusButton = container!.querySelector<HTMLButtonElement>(
+      "button[aria-label='Focus on the list']",
+    )!;
+    act(() => focusButton.click());
+    // with the screen to itself: the column joins in
+    expect(headers()).toEqual(["Title", "Status", "Priority", "Tags"]);
+  });
+
   it("a frame adds a focus button to the toolbar and Escape leaves focus mode", () => {
     container = document.createElement("div");
     document.body.appendChild(container);

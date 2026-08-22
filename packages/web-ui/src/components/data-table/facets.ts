@@ -24,6 +24,15 @@ declare module "@tanstack/react-table" {
     facetLabels?: Record<string, string>;
     /** Narrowest list width the column is shown at; below it the column hides (the Columns menu still lists it). */
     breakpoint?: DataTableBreakpoint;
+    /**
+     * Which mode the column earns its place in. `"always"` (default) means
+     * wherever it fits; `"focus"` keeps it for when the list has the screen
+     * to itself, so a page-embedded list stays scannable and going
+     * fullscreen actually shows you more.
+     */
+    showIn?: "always" | "focus";
+    /** Start hidden: available in the Columns menu, off until asked for. */
+    defaultHidden?: boolean;
     /** Freeze the column against the left edge while the table scrolls sideways. */
     pinned?: "left";
     /** Keep unused type parameter referenced for declaration merging. */

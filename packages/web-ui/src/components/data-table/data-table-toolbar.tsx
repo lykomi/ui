@@ -53,7 +53,10 @@ export interface DataTableToolbarProps<T> {
   collapsibleFilters?: boolean;
   /** Whether the filter row starts open (default `true`; when closed the toggle still shows the active count). */
   defaultFiltersOpen?: boolean;
-  /** Facets always visible when none declares `pinned` (default 3; `Infinity` shows all). */
+  /**
+   * Facets always visible when none declares `pinned` (default 3; `Infinity`
+   * shows all). Focus mode shows every facet unless a number is given.
+   */
   pinnedFacets?: number;
   searchPlaceholder?: string;
   /** Hide the search box. */
@@ -101,7 +104,7 @@ export function DataTableToolbar<T>({
   layout = "auto",
   collapsibleFilters,
   defaultFiltersOpen = true,
-  pinnedFacets = 3,
+  pinnedFacets,
   searchPlaceholder = "Search…",
   search = true,
   viewOptions = true,
@@ -132,7 +135,9 @@ export function DataTableToolbar<T>({
   const state = table.getState();
   const isFiltered =
     state.columnFilters.length > 0 || Boolean(state.globalFilter) || revealed.size > 0;
-  const { shown, hidden } = visibleFacets(table, facets, revealed, pinnedFacets);
+  // Focus mode has the screen to itself: show every facet unless told otherwise.
+  const pinnedCount = pinnedFacets ?? (frame?.focused ? Number.POSITIVE_INFINITY : 3);
+  const { shown, hidden } = visibleFacets(table, facets, revealed, pinnedCount);
   // `children` alone (extra controls, no facets) is not a reason to open a
   // second band — it rides in the filter row only when there is one.
   const stacked = layout === "stacked" || (layout === "auto" && facets.length > 0);

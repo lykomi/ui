@@ -136,8 +136,13 @@ export function DataTable<T>({
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [scrolledX, setScrolledX] = useState(false);
   const width = useElementWidth(rootRef);
-  const fits = (breakpoint?: DataTableBreakpoint) =>
-    !breakpoint || width === undefined || width >= MIN_WIDTH[breakpoint];
+  // A column has to earn its place twice: the mode it is meant for, and the
+  // width the list actually has.
+  const fits = (meta?: { breakpoint?: DataTableBreakpoint; showIn?: "always" | "focus" }) => {
+    if (meta?.showIn === "focus" && !filling) return false;
+    const breakpoint = meta?.breakpoint;
+    return !breakpoint || width === undefined || width >= MIN_WIDTH[breakpoint];
+  };
   // Pinned columns: frozen against the left edge so a row keeps its identity
   // while the rest of a wide table scrolls sideways.
   // Freezing is a run from the left edge: everything up to the last pinned
@@ -194,8 +199,8 @@ export function DataTable<T>({
     element?.scrollIntoView?.({ block: "nearest" });
   }, [activeRowId]);
   const columnCount =
-    table.getVisibleLeafColumns().filter((column) => fits(column.columnDef.meta?.breakpoint))
-      .length + (spacer ? 1 : 0);
+    table.getVisibleLeafColumns().filter((column) => fits(column.columnDef.meta)).length +
+    (spacer ? 1 : 0);
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
   const activate = (
@@ -257,7 +262,7 @@ export function DataTable<T>({
               <tr key={headerGroup.id} className="border-b border-border/45">
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta;
-                  if (!fits(meta?.breakpoint)) return null;
+                  if (!fits(meta)) return null;
                   return (
                     <th
                       key={header.id}
@@ -366,7 +371,7 @@ export function DataTable<T>({
                   >
                     {row.getVisibleCells().map((cell) => {
                       const meta = cell.column.columnDef.meta;
-                      if (!fits(meta?.breakpoint)) return null;
+                      if (!fits(meta)) return null;
                       return (
                         <td
                           key={cell.id}
