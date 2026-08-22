@@ -7,6 +7,7 @@
 import { flexRender, type Row, type Table } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { DataTableBreakpoint } from "./facets.ts";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface DataTableProps<T> {
@@ -27,6 +28,17 @@ export interface DataTableProps<T> {
 }
 
 const INTERACTIVE = "a, button, input, select, textarea, [role='menuitem'], [data-no-row-click]";
+
+/** Literal classes so Tailwind generates them: hide the column below the breakpoint. */
+const BREAKPOINT_CLASS: Record<DataTableBreakpoint, string> = {
+  sm: "max-sm:hidden",
+  md: "max-md:hidden",
+  lg: "max-lg:hidden",
+  xl: "max-xl:hidden",
+  "2xl": "max-2xl:hidden",
+};
+const breakpointClass = (breakpoint?: DataTableBreakpoint) =>
+  breakpoint ? BREAKPOINT_CLASS[breakpoint] : undefined;
 
 function orderedRows<T>(table: Table<T>, groupOrder?: string[]): Row<T>[] {
   const rows = table.getRowModel().rows;
@@ -90,6 +102,7 @@ export function DataTable<T>({
                         "h-10 px-3 text-left align-middle text-xs font-medium text-muted-foreground",
                         meta?.align === "right" && "text-right",
                         meta?.align === "center" && "text-center",
+                        breakpointClass(meta?.breakpoint),
                         meta?.headerClassName,
                       )}
                     >
@@ -178,6 +191,7 @@ export function DataTable<T>({
                             "align-middle",
                             meta?.align === "right" && "text-right",
                             meta?.align === "center" && "text-center",
+                            breakpointClass(meta?.breakpoint),
                             meta?.className,
                           )}
                         >

@@ -8,7 +8,7 @@
  * filter the user added reads as a chip in the same row.
  */
 import type { Table } from "@tanstack/react-table";
-import { ListFilter, Search, X } from "lucide-react";
+import { ListFilter, Maximize2, Minimize2, Search, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button, Input, cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "../../ui/dropdown-menu.tsx";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter.tsx";
+import { useDataTableFrame } from "./data-table-frame.tsx";
 import { DataTableViewOptions } from "./data-table-view-options.tsx";
 import { columnLabel, normalizeFacetValue, type DataTableFacetOption } from "./facets.ts";
 
@@ -41,6 +42,8 @@ export interface DataTableToolbarProps<T> {
   search?: boolean;
   /** Hide the View (column visibility) menu. */
   viewOptions?: boolean;
+  /** Hide the focus (fullscreen) button that appears inside a `DataTableFrame`. */
+  focus?: boolean;
   /** Extra controls rendered next to the facets (left side). */
   children?: ReactNode;
   /** Controls rendered on the right, before the View menu. */
@@ -75,11 +78,28 @@ export function DataTableToolbar<T>({
   searchPlaceholder = "Search…",
   search = true,
   viewOptions = true,
+  focus = true,
   children,
   actions,
   className,
 }: DataTableToolbarProps<T>) {
   const [revealed, setRevealed] = useState<ReadonlySet<string>>(() => new Set());
+  const frame = useDataTableFrame();
+  const focusButton =
+    focus && frame ? (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-pressed={frame.focused}
+        aria-label={frame.focused ? "Leave focus mode" : "Focus on the list"}
+        title={frame.focused ? "Leave focus mode (Esc)" : "Focus on the list"}
+        onClick={() => frame.setFocused(!frame.focused)}
+        className="size-8 rounded-xl border-border/45 bg-background/65 p-0 shadow-none hover:bg-muted/26"
+      >
+        {frame.focused ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+      </Button>
+    ) : null;
   const state = table.getState();
   const isFiltered = state.columnFilters.length > 0 || Boolean(state.globalFilter);
   const { shown, hidden } = visibleFacets(table, facets, revealed, pinnedFacets);
@@ -163,10 +183,11 @@ export function DataTableToolbar<T>({
           <X className="size-4" />
         </Button>
       ) : null}
-      {actions || viewOptions ? (
+      {actions || viewOptions || focusButton ? (
         <div className="ml-auto flex items-center gap-2">
           {actions}
           {viewOptions ? <DataTableViewOptions table={table} /> : null}
+          {focusButton}
         </div>
       ) : null}
     </div>

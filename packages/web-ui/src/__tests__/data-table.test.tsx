@@ -9,6 +9,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ColumnDef, Table } from "@tanstack/react-table";
 import { DataTable } from "../components/data-table/data-table.tsx";
+import { DataTableFrame } from "../components/data-table/data-table-frame.tsx";
 import { DataTableToolbar, visibleFacets } from "../components/data-table/data-table-toolbar.tsx";
 import {
   FACET_EMPTY,
@@ -243,6 +244,48 @@ describe("useDataTable + DataTable", () => {
     expect(split2.hidden.map((f) => f.columnId)).toEqual(["priority"]);
     act(() => h.table.resetColumnFilters());
     expect(facetButtons()).toEqual(["status"]);
+  });
+
+  it("hides a column below its breakpoint with a literal responsive class", () => {
+    mount({
+      columns: [
+        { ...COLUMNS[0]! },
+        { ...COLUMNS[1]!, meta: { breakpoint: "lg" } },
+        ...COLUMNS.slice(2),
+      ],
+    });
+    const statusHeader = Array.from(container!.querySelectorAll("thead th"))[1]!;
+    expect(statusHeader.className).toContain("max-lg:hidden");
+    expect(
+      container!.querySelector("tbody tr[data-row-id='t1'] td:nth-child(2)")?.className,
+    ).toContain("max-lg:hidden");
+  });
+
+  it("a frame adds a focus button to the toolbar and Escape leaves focus mode", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <DataTableFrame className="plain">
+          <Harness onTable={() => {}} />
+        </DataTableFrame>,
+      );
+    });
+    const button = () =>
+      container!.querySelector<HTMLButtonElement>(
+        "button[aria-label='Focus on the list'], button[aria-label='Leave focus mode']",
+      )!;
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+    expect(container!.querySelector("[data-focused]")).toBeNull();
+    act(() => button().click());
+    expect(container!.querySelector("[data-focused]")).not.toBeNull();
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    expect(container!.querySelector("[data-focused]")).toBeNull();
+    expect(container!.querySelector(".plain")).not.toBeNull();
   });
 
   it("groups rows in the declared group order with a header per group", () => {

@@ -22,12 +22,17 @@ declare module "@tanstack/react-table" {
     searchText?: (row: TData) => string;
     /** Labels for facet keys and group headers (`value → label`). */
     facetLabels?: Record<string, string>;
+    /** Smallest viewport the column is shown at; below it the column is hidden (the View menu can still force it). */
+    breakpoint?: DataTableBreakpoint;
     /** Keep unused type parameter referenced for declaration merging. */
     __cellValue?: TValue;
     /** Hosts may carry their own keys in `meta` (e.g. a server sort key). */
     [key: string]: unknown;
   }
 }
+
+/** Tailwind breakpoints a column can be gated on. */
+export type DataTableBreakpoint = "sm" | "md" | "lg" | "xl" | "2xl";
 
 /** Facet key for empty cells (`null`, `undefined`, `""`, `[]`). */
 export const FACET_EMPTY = "__none__";

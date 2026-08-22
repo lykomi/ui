@@ -60,6 +60,12 @@ export { InfiniteScrollSentinel } from "./components/infinite-scroll-sentinel.ts
 export { CollectionSurface } from "./components/collection-surface.tsx";
 export { DataTable, type DataTableProps } from "./components/data-table/data-table.tsx";
 export {
+  DataTableFrame,
+  useDataTableFrame,
+  type DataTableFrameProps,
+  type DataTableFrameContextValue,
+} from "./components/data-table/data-table-frame.tsx";
+export {
   DataTableToolbar,
   visibleFacets,
   type DataTableFacet,
@@ -109,6 +115,7 @@ export {
   normalizeFacetValue,
   rowSearchText,
   tokenSearchFilterFn,
+  type DataTableBreakpoint,
   type DataTableFacetCount,
   type DataTableFacetOption,
 } from "./components/data-table/facets.ts";
