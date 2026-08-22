@@ -22,8 +22,10 @@ declare module "@tanstack/react-table" {
     searchText?: (row: TData) => string;
     /** Labels for facet keys and group headers (`value → label`). */
     facetLabels?: Record<string, string>;
-    /** Smallest viewport the column is shown at; below it the column is hidden (the View menu can still force it). */
+    /** Narrowest list width the column is shown at; below it the column hides (the Columns menu still lists it). */
     breakpoint?: DataTableBreakpoint;
+    /** Freeze the column against the left edge while the table scrolls sideways. */
+    pinned?: "left";
     /** Keep unused type parameter referenced for declaration merging. */
     __cellValue?: TValue;
     /** Hosts may carry their own keys in `meta` (e.g. a server sort key). */
@@ -31,7 +33,13 @@ declare module "@tanstack/react-table" {
   }
 }
 
-/** Tailwind breakpoints a column can be gated on. */
+/**
+ * How much room a column needs. Measured against the *list's* own width, not
+ * the window — so a list beside an open detail pane sheds columns and gets
+ * them back in focus mode, with no work from the host.
+ *
+ * `sm` 448px · `md` 672px · `lg` 896px · `xl` 1024px · `2xl` 1280px.
+ */
 export type DataTableBreakpoint = "sm" | "md" | "lg" | "xl" | "2xl";
 
 /** Facet key for empty cells (`null`, `undefined`, `""`, `[]`). */

@@ -6,9 +6,17 @@
  */
 import { flexRender, type Row, type Table } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import type { DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
+import { usePinnedOffsets } from "./use-pinned-offsets.ts";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface DataTableProps<T> {
@@ -16,6 +24,12 @@ export interface DataTableProps<T> {
   onRowClick?: (row: Row<T>, event: MouseEvent | KeyboardEvent) => void;
   /** The row whose details are open elsewhere (drawer, panel) — highlighted, `aria-current`. */
   activeRowId?: string | null;
+  /**
+   * Move the active row with ↑/↓ (Home/End for the ends) and clear it with
+   * Escape, scrolling it into view — the keyboard flow people expect from a
+   * master list beside a detail pane. Needs `activeRowId`.
+   */
+  onActiveRowChange?: (row: Row<T> | null) => void;
   rowClassName?: (row: Row<T>) => string | undefined;
   /** Content of a group header row (default: label and count). */
   renderGroup?: (row: Row<T>) => ReactNode;
@@ -37,13 +51,18 @@ export interface DataTableProps<T> {
 
 const INTERACTIVE = "a, button, input, select, textarea, [role='menuitem'], [data-no-row-click]";
 
-/** Literal classes so Tailwind generates them: hide the column below the breakpoint. */
+/**
+ * Literal classes so Tailwind generates them. These are *container* queries
+ * against the table's own width (the root below is a `@container`), so a list
+ * narrowed by an open detail pane hides the same columns a narrow window
+ * would — and focus mode brings them back.
+ */
 const BREAKPOINT_CLASS: Record<DataTableBreakpoint, string> = {
-  sm: "max-sm:hidden",
-  md: "max-md:hidden",
-  lg: "max-lg:hidden",
-  xl: "max-xl:hidden",
-  "2xl": "max-2xl:hidden",
+  sm: "@max-md:hidden",
+  md: "@max-2xl:hidden",
+  lg: "@max-4xl:hidden",
+  xl: "@max-5xl:hidden",
+  "2xl": "@max-7xl:hidden",
 };
 const breakpointClass = (breakpoint?: DataTableBreakpoint) =>
   breakpoint ? BREAKPOINT_CLASS[breakpoint] : undefined;
@@ -69,6 +88,7 @@ export function DataTable<T>({
   table,
   onRowClick,
   activeRowId,
+  onActiveRowChange,
   rowClassName,
   renderGroup,
   groupOrder,
@@ -86,6 +106,54 @@ export function DataTable<T>({
   const filling = fill ?? frame?.focused ?? false;
   const sticky = stickyHeader || filling;
   const rows = orderedRows(table, groupOrder);
+  const dataRows = rows.filter((row) => !row.getIsGrouped());
+  // Pinned columns: frozen against the left edge so a row keeps its identity
+  // while the rest of a wide table scrolls sideways.
+  const pinnedIds = table
+    .getVisibleLeafColumns()
+    .filter((column) => column.columnDef.meta?.pinned === "left")
+    .map((column) => column.id);
+  const { offsets, lastPinned, measure } = usePinnedOffsets(pinnedIds);
+  const pinnedStyle = (columnId: string) =>
+    offsets[columnId] === undefined ? undefined : { left: offsets[columnId] };
+  const pinnedClass = (columnId: string, tone: "header" | "cell") =>
+    offsets[columnId] === undefined
+      ? undefined
+      : cn(
+          "sticky z-20",
+          tone === "header" ? "bg-card" : "bg-background",
+          columnId === lastPinned && "border-r border-border/45",
+        );
+
+  // Keyboard: the active row moves with the arrows and stays in view, so a
+  // long list can be walked without touching the mouse.
+  const bodyRef = useRef<HTMLTableSectionElement | null>(null);
+  const moveActive = useCallback(
+    (delta: number | "first" | "last") => {
+      if (!onActiveRowChange || dataRows.length === 0) return;
+      const index = dataRows.findIndex((row) => row.id === activeRowId);
+      const next =
+        delta === "first"
+          ? 0
+          : delta === "last"
+            ? dataRows.length - 1
+            : index < 0
+              ? delta > 0
+                ? 0
+                : dataRows.length - 1
+              : Math.min(dataRows.length - 1, Math.max(0, index + delta));
+      const row = dataRows[next];
+      if (row) onActiveRowChange(row);
+    },
+    [activeRowId, dataRows, onActiveRowChange],
+  );
+  useEffect(() => {
+    if (!activeRowId) return;
+    const element = Array.from(bodyRef.current?.querySelectorAll("tr[data-row-id]") ?? []).find(
+      (row) => (row as HTMLElement).dataset.rowId === activeRowId,
+    ) as HTMLElement | undefined;
+    element?.scrollIntoView?.({ block: "nearest" });
+  }, [activeRowId]);
   const columnCount = table.getVisibleLeafColumns().length;
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
@@ -99,13 +167,30 @@ export function DataTable<T>({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-border/45 bg-card/60",
+        "@container overflow-hidden rounded-2xl border border-border/45 bg-card/60",
         filling && "flex min-h-0 flex-1 flex-col",
         className,
       )}
     >
       <div className={cn(filling ? "min-h-0 flex-1 overflow-auto" : "overflow-x-auto")}>
-        <table className="w-full caption-bottom text-sm" aria-label={ariaLabel}>
+        <table
+          className="w-full caption-bottom text-sm"
+          aria-label={ariaLabel}
+          onKeyDown={
+            onActiveRowChange
+              ? (event) => {
+                  if ((event.target as HTMLElement).closest("input, select, textarea")) return;
+                  if (event.key === "ArrowDown") moveActive(1);
+                  else if (event.key === "ArrowUp") moveActive(-1);
+                  else if (event.key === "Home") moveActive("first");
+                  else if (event.key === "End") moveActive("last");
+                  else if (event.key === "Escape") onActiveRowChange(null);
+                  else return;
+                  event.preventDefault();
+                }
+              : undefined
+          }
+        >
           <thead className={cn(sticky && "sticky top-0 z-10 bg-card")}>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-border/45">
@@ -116,12 +201,17 @@ export function DataTable<T>({
                       key={header.id}
                       colSpan={header.colSpan}
                       scope="col"
-                      style={header.getSize() !== 150 ? { width: header.getSize() } : undefined}
+                      ref={meta?.pinned === "left" ? measure(header.column.id) : undefined}
+                      style={{
+                        ...(header.getSize() !== 150 ? { width: header.getSize() } : {}),
+                        ...pinnedStyle(header.column.id),
+                      }}
                       className={cn(
                         "h-10 px-3 text-left align-middle text-xs font-medium text-muted-foreground",
                         meta?.align === "right" && "text-right",
                         meta?.align === "center" && "text-center",
                         breakpointClass(meta?.breakpoint),
+                        pinnedClass(header.column.id, "header"),
                         meta?.headerClassName,
                       )}
                     >
@@ -134,7 +224,7 @@ export function DataTable<T>({
               </tr>
             ))}
           </thead>
-          <tbody>
+          <tbody ref={bodyRef}>
             {rows.length === 0 ? (
               <tr>
                 <td
@@ -205,12 +295,14 @@ export function DataTable<T>({
                       return (
                         <td
                           key={cell.id}
+                          style={pinnedStyle(cell.column.id)}
                           className={cn(
                             cellPad,
                             "align-middle",
                             meta?.align === "right" && "text-right",
                             meta?.align === "center" && "text-center",
                             breakpointClass(meta?.breakpoint),
+                            pinnedClass(cell.column.id, "cell"),
                             meta?.className,
                           )}
                         >

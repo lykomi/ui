@@ -7,7 +7,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ColumnDef, Table } from "@tanstack/react-table";
+import type { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { DataTable } from "../components/data-table/data-table.tsx";
 import { DataTableFrame } from "../components/data-table/data-table-frame.tsx";
 import { DataTableToolbar, visibleFacets } from "../components/data-table/data-table-toolbar.tsx";
@@ -70,6 +70,7 @@ function Harness(
     onTable: (table: Table<Task>) => void;
     facets?: string[];
     pinnedFacets?: number;
+    onActiveRowChange?: (row: Row<Task> | null) => void;
     toolbarProps?: Partial<React.ComponentProps<typeof DataTableToolbar>>;
     groupOrder?: string[];
     activeRowId?: string;
@@ -82,6 +83,7 @@ function Harness(
     toolbarProps,
     groupOrder,
     activeRowId,
+    onActiveRowChange,
     ...options
   } = props;
   const table = useDataTable<Task>({
@@ -103,6 +105,7 @@ function Harness(
         table={table}
         groupOrder={groupOrder}
         activeRowId={activeRowId}
+        onActiveRowChange={onActiveRowChange}
         emptyState="Nothing here"
       />
     </>
@@ -261,7 +264,7 @@ describe("useDataTable + DataTable", () => {
     );
   });
 
-  it("hides a column below its breakpoint with a literal responsive class", () => {
+  it("hides a column below the list's own width, via a container query", () => {
     mount({
       columns: [
         { ...COLUMNS[0]! },
@@ -270,10 +273,14 @@ describe("useDataTable + DataTable", () => {
       ],
     });
     const statusHeader = Array.from(container!.querySelectorAll("thead th"))[1]!;
-    expect(statusHeader.className).toContain("max-lg:hidden");
+    // a container query against the table's own width, not the viewport
+    expect(statusHeader.className).toContain("@max-4xl:hidden");
+    expect(container!.querySelector("table")!.closest("div")!.parentElement!.className).toContain(
+      "@container",
+    );
     expect(
       container!.querySelector("tbody tr[data-row-id='t1'] td:nth-child(2)")?.className,
-    ).toContain("max-lg:hidden");
+    ).toContain("@max-4xl:hidden");
   });
 
   it("a frame adds a focus button to the toolbar and Escape leaves focus mode", () => {
@@ -381,6 +388,54 @@ describe("useDataTable + DataTable", () => {
     expect(container!.querySelector("button[data-filters-toggle]")).toBeNull();
     expect(container!.querySelectorAll("button[data-facet]")).toHaveLength(1);
     expect(table.getState().columnFilters).toEqual([]);
+  });
+
+  it("freezes pinned columns and walks the active row with the keyboard", () => {
+    const moves: Array<string | null> = [];
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let active: string | null = "t2";
+    const render = () =>
+      act(() => {
+        root!.render(
+          <Harness
+            columns={[
+              { ...COLUMNS[0]!, meta: { pinned: "left" } },
+              { ...COLUMNS[1]!, meta: { pinned: "left" } },
+              ...COLUMNS.slice(2),
+            ]}
+            activeRowId={active ?? undefined}
+            onActiveRowChange={(row) => {
+              active = row?.id ?? null;
+              moves.push(active);
+              render();
+            }}
+            onTable={() => {}}
+          />,
+        );
+      });
+    render();
+    const headers = Array.from(container!.querySelectorAll("thead th"));
+    expect(headers[0]!.className).toContain("sticky");
+    expect(headers[1]!.className).toContain("sticky");
+    expect(headers[1]!.className).toContain("border-r");
+    expect(headers[2]!.className).not.toContain("sticky");
+    // offsets stack: the first pinned column sits at 0, the next after it
+    expect((headers[0] as HTMLElement).style.left).toBe("0px");
+    expect((headers[1] as HTMLElement).style.left).toBe("0px"); // jsdom reports zero widths
+    const table = container!.querySelector("table")!;
+    const key = (k: string) =>
+      act(() => {
+        table.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
+      });
+    key("ArrowDown");
+    key("ArrowDown");
+    key("ArrowUp");
+    key("Home");
+    key("End");
+    key("Escape");
+    expect(moves).toEqual(["t3", "t4", "t3", "t1", "t4", null]);
   });
 
   it("groups rows in the declared group order with a header per group", () => {

@@ -96,6 +96,10 @@ export {
 export { selectionColumn, SELECTION_COLUMN_ID } from "./components/data-table/selection-column.tsx";
 export { useDataTable, type UseDataTableOptions } from "./components/data-table/use-data-table.ts";
 export {
+  usePinnedOffsets,
+  type PinnedOffsets,
+} from "./components/data-table/use-pinned-offsets.ts";
+export {
   DEFAULT_PAGE_SIZE,
   EMPTY_DATA_TABLE_STATE,
   isDataTableUrlKey,
