@@ -275,6 +275,78 @@ describe("what the table actually draws", () => {
     return seen;
   }
 
+  it("leaves Escape to the frame when no row is active", () => {
+    // Escape means "let go of the active row" only while there is one;
+    // otherwise it belongs to the enclosing frame, which uses it to leave
+    // focus mode.
+    const cleared: Array<string | null> = [];
+    let stopped = false;
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(
+        <Harness
+          activeRowId={null}
+          onActiveRowChange={(row) => cleared.push(row?.id ?? null)}
+          onTable={() => {}}
+        />,
+      );
+    });
+    const table = container!.querySelector("table")!;
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    event.stopPropagation = () => {
+      stopped = true;
+    };
+    act(() => {
+      table.querySelector("tbody tr[data-row-id]")!.dispatchEvent(event);
+    });
+    expect(cleared).toEqual([]);
+    expect(stopped).toBe(false);
+  });
+
+  it("hides a defaultHidden leaf that lives under a grouping header", () => {
+    const columns: ColumnDef<Task, unknown>[] = [
+      {
+        id: "group",
+        header: "Group",
+        columns: [
+          { id: "title", accessorKey: "title", header: "Title" },
+          { id: "buried", accessorKey: "status", header: "Buried", meta: { defaultHidden: true } },
+        ],
+      },
+    ];
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    function Grouped() {
+      table = useDataTable<Task>({ data: TASKS, columns, getRowId: (row) => row.id });
+      return <DataTable table={table} />;
+    }
+    act(() => root!.render(<Grouped />));
+    // Visibility is a leaf property; the group header has no state to hide.
+    expect(table.getColumn("buried")!.getIsVisible()).toBe(false);
+    expect(table.getColumn("title")!.getIsVisible()).toBe(true);
+  });
+
+  it("reports a column id that contains a comma intact", () => {
+    const columns: ColumnDef<Task, unknown>[] = [
+      { id: "risk,score", accessorKey: "title", header: "Risk, score" },
+    ];
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    const seen: string[][] = [];
+    function Comma() {
+      const table = useDataTable<Task>({ data: TASKS, columns, getRowId: (row) => row.id });
+      return <DataTable table={table} onRenderedColumnsChange={(ids) => seen.push(ids)} />;
+    }
+    act(() => root!.render(<Comma />));
+    // Joining on commas would report two columns that do not exist.
+    expect(seen.at(-1)).toEqual(["risk,score"]);
+  });
+
   it("tells the host which columns are on screen, so the agent sees what the user sees", () => {
     // Width gating is render-time, not TanStack visibility (which belongs to
     // the user and rides in the URL) — without this a tool would report a

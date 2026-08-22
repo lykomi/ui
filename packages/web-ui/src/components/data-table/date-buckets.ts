@@ -19,30 +19,53 @@ export interface DateBucketOptions {
 /**
  * Milliseconds for a value that carries a date, `null` for one that does not.
  *
- * ISO first, then the dot-separated `d.m.yyyy` European form. Slash forms are
- * deliberately NOT read: `03/04/2026` is March in one country and April in
- * another, and a filter that quietly picks one is worse than one that admits
- * it cannot tell.
+ * Only shapes whose meaning is not in doubt are read: ISO (`2026-08-22`, with
+ * an optional time and zone), the dotted European `d.m.yyyy`, and year-first
+ * `yyyy/m/d`. Everything else is `null` — including `03/04/2026` and
+ * `03-04-2026`, which are March in one country and April in another.
+ *
+ * The alternative, handing the leftovers to `Date.parse`, is what makes that
+ * guess quietly: it reads `03-04-2026` as March 4th and even turns `"1"` into
+ * a date. A field where people legitimately write "Contract signature (May)"
+ * needs a parser that says no.
  */
+const ISO =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\s*(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+const DOTTED = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/;
+const YEAR_FIRST = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/;
+
+/** The day itself must exist: 2026-02-31 is a typo, not a date. */
+function utcDay(year: number, month: number, day: number): number | null {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const at = Date.UTC(year, month - 1, day);
+  const check = new Date(at);
+  return check.getUTCFullYear() === year &&
+    check.getUTCMonth() === month - 1 &&
+    check.getUTCDate() === day
+    ? at
+    : null;
+}
+
 export function parseDateish(value: unknown): number | null {
   if (value == null || value === "") return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.getTime();
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   const text = String(value).trim();
   if (!text) return null;
-  const dmy = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(text);
-  if (dmy) {
-    const parsed = Date.parse(
-      `${dmy[3]}-${dmy[2]!.padStart(2, "0")}-${dmy[1]!.padStart(2, "0")}T00:00:00Z`,
-    );
+
+  const iso = ISO.exec(text);
+  if (iso) {
+    // The calendar day has to be real; the clock and zone are `Date.parse`'s
+    // job, and it handles ISO without guessing.
+    if (utcDay(Number(iso[1]), Number(iso[2]), Number(iso[3])) === null) return null;
+    const parsed = Date.parse(text);
     return Number.isNaN(parsed) ? null : parsed;
   }
-  // `Date.parse` happily reads 03/04/2026 as March 4th, which is exactly the
-  // guess this refuses to make. A year-first form (2026/04/03) is not
-  // ambiguous, so it goes through.
-  if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(text)) return null;
-  const parsed = Date.parse(text);
-  return Number.isNaN(parsed) ? null : parsed;
+  const dotted = DOTTED.exec(text);
+  if (dotted) return utcDay(Number(dotted[3]), Number(dotted[2]), Number(dotted[1]));
+  const yearFirst = YEAR_FIRST.exec(text);
+  if (yearFirst) return utcDay(Number(yearFirst[1]), Number(yearFirst[2]), Number(yearFirst[3]));
+  return null;
 }
 
 export type AgeBucket = "today" | "week" | "month" | "older" | "never";

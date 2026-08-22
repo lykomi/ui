@@ -70,10 +70,21 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   // entry and wins. Without this the metadata was documented but inert.
   const defaultHidden = useMemo(() => {
     const hidden: Record<string, boolean> = {};
-    for (const column of columns) {
-      const id = column.id ?? ("accessorKey" in column ? String(column.accessorKey) : undefined);
-      if (id && column.meta?.defaultHidden) hidden[id] = false;
-    }
+    // Depth-first: a hidden-by-default column is often a leaf under a
+    // grouping header, and visibility is a LEAF property — the group itself
+    // has no state to hide.
+    const walk = (defs: readonly ColumnDef<T, any>[]) => {
+      for (const column of defs) {
+        const children = "columns" in column ? column.columns : undefined;
+        if (children?.length) {
+          walk(children);
+          continue;
+        }
+        const id = column.id ?? ("accessorKey" in column ? String(column.accessorKey) : undefined);
+        if (id && column.meta?.defaultHidden) hidden[id] = false;
+      }
+    };
+    walk(columns);
     return hidden;
   }, [columns]);
   const [innerState, setInnerState] = useState<DataTableState>(() => ({

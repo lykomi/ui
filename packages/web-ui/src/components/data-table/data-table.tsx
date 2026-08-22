@@ -225,11 +225,17 @@ export function DataTable<T>({
     }
   }, [activeRowId, activeIndex]);
   const columnCount = renderedColumns.length + (spacer ? 1 : 0);
-  const renderedKey = renderedColumns.map((column) => column.id).join(",");
+  const renderedIds = renderedColumns.map((column) => column.id);
+  // JSON, not a comma-joined string: a column id may contain a comma, and
+  // splitting one back apart would report columns that do not exist (and let
+  // two different sets share a key, so the host is never told).
+  const renderedKey = JSON.stringify(renderedIds);
   const renderedRef = useRef(onRenderedColumnsChange);
   renderedRef.current = onRenderedColumnsChange;
+  const renderedIdsRef = useRef(renderedIds);
+  renderedIdsRef.current = renderedIds;
   useEffect(() => {
-    renderedRef.current?.(renderedKey ? renderedKey.split(",") : []);
+    renderedRef.current?.(renderedIdsRef.current);
   }, [renderedKey]);
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
@@ -281,9 +287,11 @@ export function DataTable<T>({
                   else if (event.key === "Home") moveActive("first");
                   else if (event.key === "End") moveActive("last");
                   else if (event.key === "Escape") {
-                    // One Escape, one effect: without this the frame's own
-                    // document listener also fires and the list leaves
-                    // focus mode while the user only wanted the row let go.
+                    // Only when there IS a row to let go of. One Escape, one
+                    // effect: it clears the active row without also leaving
+                    // focus mode — but with no active row it belongs to the
+                    // frame, so it is left alone to bubble there.
+                    if (!activeRowId) return;
                     onActiveRowChange(null);
                     event.stopPropagation();
                     event.nativeEvent.stopImmediatePropagation();

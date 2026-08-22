@@ -24,10 +24,36 @@ describe("parseDateish", () => {
     expect(parseDateish("03.04.2026")).toBe(Date.parse("2026-04-03T00:00:00Z"));
   });
 
-  it("refuses the slash form rather than guessing a country", () => {
+  it("refuses every ambiguous form rather than guessing a country", () => {
     // 03/04/2026 is March in one place and April in another; a filter that
-    // silently picks is worse than one that says it cannot tell.
+    // silently picks is worse than one that says it cannot tell. The
+    // hyphenated shorthand is the same trap, and `Date.parse` falls for it.
     expect(parseDateish("03/04/2026")).toBe(null);
+    expect(parseDateish("03-04-2026")).toBe(null);
+    expect(parseDateish("4/3/26")).toBe(null);
+  });
+
+  it("reads the year-first slash form, which is not ambiguous", () => {
+    expect(parseDateish("2026/04/03")).toBe(Date.parse("2026-04-03T00:00:00Z"));
+  });
+
+  it("refuses shorthand a lenient parser would happily invent a date from", () => {
+    // `Date.parse("1")` is the year 2001 — nobody writing "1" in a deadline
+    // field means that.
+    expect(parseDateish("1")).toBe(null);
+    expect(parseDateish("May")).toBe(null);
+    expect(parseDateish("Q3")).toBe(null);
+  });
+
+  it("refuses a day that does not exist", () => {
+    expect(parseDateish("2026-02-31")).toBe(null);
+    expect(parseDateish("31.02.2026")).toBe(null);
+    expect(parseDateish("2026-13-01")).toBe(null);
+  });
+
+  it("keeps the clock and the zone when they are given", () => {
+    expect(parseDateish("2026-08-22T09:30:00Z")).toBe(Date.parse("2026-08-22T09:30:00Z"));
+    expect(parseDateish("2026-08-22T09:30:00+02:00")).toBe(Date.parse("2026-08-22T09:30:00+02:00"));
   });
 
   it("says nothing for a deadline written as prose", () => {
