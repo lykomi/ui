@@ -166,6 +166,24 @@ describe("useDataTable + DataTable", () => {
     expect(renderedIds()).toEqual(["t1", "t2"]);
   });
 
+  it("keeps both values when two facet options are clicked before a re-render", () => {
+    const h = mount({ facets: ["status"] });
+    act(() => container!.querySelector<HTMLButtonElement>("button[data-facet='status']")!.click());
+    const options = () =>
+      Array.from(
+        document.querySelectorAll<HTMLButtonElement>(
+          "[role='group'][aria-label='Status filter'] button[role='checkbox']",
+        ),
+      );
+    expect(options().length).toBeGreaterThan(1);
+    // both clicks inside one act(): no render in between, as with a fast user
+    act(() => {
+      options()[0]!.click();
+      options()[1]!.click();
+    });
+    expect(h.table.getColumn("status")!.getFilterValue()).toEqual(["done", "open"]);
+  });
+
   it("counts a facet over the rows every OTHER filter lets through", () => {
     const h = mount({ facets: ["status", "priority"] });
     act(() => h.table.getColumn("status")!.setFilterValue(["open"]));
