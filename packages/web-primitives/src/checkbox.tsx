@@ -11,11 +11,7 @@ const Checkbox = React.forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      // ``group`` so the indicator icons can read the ROOT's rendered state:
-      // the glyph has to follow what Radix actually resolved, which is not
-      // the same as what the caller passed (``defaultChecked="indeterminate"``
-      // leaves ``checked`` undefined, and an uncontrolled box moves on click).
-      "group peer size-4 shrink-0 rounded border border-border bg-background shadow-sm outline-none transition",
+      "peer size-4 shrink-0 rounded border border-border bg-background shadow-sm outline-none transition",
       "focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50",
       "data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
       // "Some of these" is a state of its own. Left unstyled it drew a tick
@@ -25,9 +21,20 @@ const Checkbox = React.forwardRef<
     )}
     {...props}
   >
-    <CheckboxPrimitive.Indicator className="flex items-center justify-center text-current">
-      <Check className="size-3.5 group-data-[state=indeterminate]:hidden" />
-      <Minus className="hidden size-3.5 group-data-[state=indeterminate]:block" />
+    {/* The glyph follows the state Radix RESOLVED, not the prop the caller
+        passed: `defaultChecked="indeterminate"` never sets `checked`, and an
+        uncontrolled box moves on click. Read off this indicator's own
+        `data-state` — a `group-*` variant would also match any ancestor that
+        happens to carry `.group` and a `data-state` of its own. */}
+    <CheckboxPrimitive.Indicator
+      className={cn(
+        "flex items-center justify-center text-current",
+        "data-[state=indeterminate]:[&_[data-glyph=check]]:hidden",
+        "data-[state=indeterminate]:[&_[data-glyph=minus]]:block",
+      )}
+    >
+      <Check data-glyph="check" className="size-3.5" />
+      <Minus data-glyph="minus" className="hidden size-3.5" />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ));

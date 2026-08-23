@@ -1162,15 +1162,18 @@ describe("useDataTable + DataTable", () => {
     // uncontrolled box moves on click. Both icons ship; the group variant
     // picks one. (JSDOM does not evaluate Tailwind, so this pins the
     // contract; the painted result is checked in the app.)
-    const glyph = (name: string) => all().querySelector<SVGElement>(`svg.lucide-${name}`)!;
-    expect(all().className).toMatch(/(^|\s)group(\s|$)/);
-    expect(glyph("check").getAttribute("class")).toContain(
-      "group-data-[state=indeterminate]:hidden",
+    const indicator = () => all().querySelector<HTMLElement>("[data-state]:not([role])")!;
+    expect(all().querySelector("[data-glyph='check']")).not.toBeNull();
+    expect(all().querySelector("[data-glyph='minus']")).not.toBeNull();
+    // Scoped to THIS indicator: a `group-*` variant would also match any
+    // ancestor carrying `.group` and a `data-state` of its own.
+    expect(indicator().className).toContain(
+      "data-[state=indeterminate]:[&_[data-glyph=check]]:hidden",
     );
-    expect(glyph("minus").getAttribute("class")).toContain(
-      "group-data-[state=indeterminate]:block",
+    expect(indicator().className).toContain(
+      "data-[state=indeterminate]:[&_[data-glyph=minus]]:block",
     );
-    expect(glyph("minus").getAttribute("class")).toContain("hidden");
+    expect(indicator().className).not.toMatch(/(^|\s)group-data-/);
     act(() => all().click());
     expect(all().getAttribute("data-state")).toBe("checked");
   });
@@ -1188,13 +1191,9 @@ describe("useDataTable + DataTable", () => {
     expect(box().getAttribute("data-state")).toBe("indeterminate");
     // No `checked` prop exists here at all, so the glyph cannot come from one:
     // both ship, and the variant keyed to the root's state picks the minus.
-    expect(box().className).toMatch(/(^|\s)group(\s|$)/);
-    expect(box().querySelector("svg.lucide-minus")?.getAttribute("class")).toContain(
-      "group-data-[state=indeterminate]:block",
-    );
-    expect(box().querySelector("svg.lucide-check")?.getAttribute("class")).toContain(
-      "group-data-[state=indeterminate]:hidden",
-    );
+    expect(box().querySelector("[data-glyph='minus']")).not.toBeNull();
+    expect(box().querySelector("[data-glyph='check']")).not.toBeNull();
+    expect(box().className).not.toMatch(/(^|\s)group(\s|$)/);
     // And it moves: an uncontrolled box that started indeterminate becomes
     // checked, which is the case a `defaultChecked` lookup would still call
     // indeterminate forever.
