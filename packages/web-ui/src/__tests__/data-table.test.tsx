@@ -1186,21 +1186,27 @@ describe("useDataTable + DataTable", () => {
     const host = document.createElement("div");
     document.body.appendChild(host);
     const root = createRoot(host);
-    act(() => root.render(<Checkbox defaultChecked="indeterminate" aria-label="Partial" />));
-    const box = () => host.querySelector<HTMLButtonElement>("[aria-label='Partial']")!;
-    expect(box().getAttribute("data-state")).toBe("indeterminate");
-    // No `checked` prop exists here at all, so the glyph cannot come from one:
-    // both ship, and the variant keyed to the root's state picks the minus.
-    expect(box().querySelector("[data-glyph='minus']")).not.toBeNull();
-    expect(box().querySelector("[data-glyph='check']")).not.toBeNull();
-    expect(box().className).not.toMatch(/(^|\s)group(\s|$)/);
-    // And it moves: an uncontrolled box that started indeterminate becomes
-    // checked, which is the case a `defaultChecked` lookup would still call
-    // indeterminate forever.
-    act(() => box().click());
-    expect(box().getAttribute("data-state")).toBe("checked");
-    act(() => root.unmount());
-    host.remove();
+    // try/finally: this root is outside the file's global afterEach, so a
+    // failing assertion would otherwise leak a mounted tree into the next
+    // test rather than just failing this one.
+    try {
+      act(() => root.render(<Checkbox defaultChecked="indeterminate" aria-label="Partial" />));
+      const box = () => host.querySelector<HTMLButtonElement>("[aria-label='Partial']")!;
+      expect(box().getAttribute("data-state")).toBe("indeterminate");
+      // No `checked` prop exists here at all, so the glyph cannot come from one:
+      // both ship, and the variant keyed to the root's state picks the minus.
+      expect(box().querySelector("[data-glyph='minus']")).not.toBeNull();
+      expect(box().querySelector("[data-glyph='check']")).not.toBeNull();
+      expect(box().className).not.toMatch(/(^|\s)group(\s|$)/);
+      // And it moves: an uncontrolled box that started indeterminate becomes
+      // checked, which is the case a `defaultChecked` lookup would still call
+      // indeterminate forever.
+      act(() => box().click());
+      expect(box().getAttribute("data-state")).toBe("checked");
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+    }
   });
 });
 
