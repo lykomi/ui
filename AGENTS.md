@@ -216,8 +216,14 @@ Two soft signals, both with caveats:
   `copilot_work_finished` is unreliable and often never arrives, and a
   dangling `started` from hours ago means nothing. Bound it by age.
 
-The dependable question is simply: *is there a review by that bot's id, newer
-than my request, whose `commit_id` is my head?*
+The dependable question has to cover **both** surfaces, because a clean Codex
+pass has no `commit_id` to match — the SHA lives only in the comment body:
+
+- a **review** by that bot's id whose `commit_id` is your head, **or**
+- an **issue comment** by that bot's id whose `Reviewed commit:` names it.
+
+Either one means it looked at this code. Waiting only for the first is how an
+agent sits on a finished review indefinitely, or asks for it again.
 
 ## The loop
 
