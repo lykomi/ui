@@ -110,6 +110,23 @@ Foundry UI was extracted from a commercial product on 2026-04-26. The four packa
 - **GitHub Copilot / Cursor**: both read root + nested `AGENTS.md` natively; Copilot coding agent preinstalls deps via `.github/workflows/copilot-setup-steps.yml`.
 - **Downstream apps** (generated starters, products built on these packages): install the Claude Code plugin — `/plugin marketplace add iLoveAgents/foundry-ui` → `/plugin install foundry-ui@foundry-ui`. Source: [`plugins/foundry-ui/`](plugins/foundry-ui/) (grounding skill, ChatModule authoring skill, doc MCPs). Keep the plugin's skills in sync with this file's Grounding + conventions sections when they change.
 
+# What ships is the published package, not the workspace
+
+Consumers install `@iloveagents/foundry-*` from npm. A sibling workspace
+(`lastspace-meta`) links this source directly, which is convenient and
+misleading: an export that exists only here looks fine to a linked consumer
+and is missing for everyone else until it is released.
+
+- **A new export is not usable by a consumer until it is published.** If a
+  downstream repo needs it, the order is: merge here → merge the changesets
+  version PR → confirm npm has it → bump the consumer's pin.
+- **Check the artifact, not the build.** `npm pack @iloveagents/foundry-web-ui@<v>`
+  and look inside: the symbol, and `dist/styles.css` if the change ships CSS.
+  A green build says the source compiles, not that the package carries it.
+- **Every change needs a changeset.** No changeset, no release, and a
+  consumer waiting on it waits forever.
+
+
 # Bot code review (do not skip, do not merge around)
 
 Every PR in this repo is reviewed by **Codex** (`chatgpt-codex-connector`) and
