@@ -1,5 +1,19 @@
 # @iloveagents/foundry-web-primitives
 
+## 0.20.1
+
+### Patch Changes
+
+- c1bd1c1: Checkbox: "some of these" now looks like its own state
+
+  An indeterminate checkbox was left unstyled — a tick drawn on a white
+  box, which is the one shape that reads as _not_ selected. Every list's
+  select-all header inherited that: tick a single row and the header
+  claimed a selection nobody made.
+
+  Indeterminate now fills like checked and draws a minus instead of a
+  check, so partial, none and all are three distinguishable shapes.
+
 ## 0.20.0
 
 ## 0.19.0
