@@ -11,7 +11,11 @@ const Checkbox = React.forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      "peer size-4 shrink-0 rounded border border-border bg-background shadow-sm outline-none transition",
+      // ``group`` so the indicator icons can read the ROOT's rendered state:
+      // the glyph has to follow what Radix actually resolved, which is not
+      // the same as what the caller passed (``defaultChecked="indeterminate"``
+      // leaves ``checked`` undefined, and an uncontrolled box moves on click).
+      "group peer size-4 shrink-0 rounded border border-border bg-background shadow-sm outline-none transition",
       "focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50",
       "data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
       // "Some of these" is a state of its own. Left unstyled it drew a tick
@@ -22,11 +26,8 @@ const Checkbox = React.forwardRef<
     {...props}
   >
     <CheckboxPrimitive.Indicator className="flex items-center justify-center text-current">
-      {props.checked === "indeterminate" ? (
-        <Minus className="size-3.5" />
-      ) : (
-        <Check className="size-3.5" />
-      )}
+      <Check className="size-3.5 group-data-[state=indeterminate]:hidden" />
+      <Minus className="hidden size-3.5 group-data-[state=indeterminate]:block" />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ));

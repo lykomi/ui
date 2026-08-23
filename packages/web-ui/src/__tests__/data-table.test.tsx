@@ -35,6 +35,7 @@ import {
   type DataTableState,
 } from "../components/data-table/state.ts";
 import { selectionColumn } from "../components/data-table/selection-column.tsx";
+import { Checkbox } from "@iloveagents/foundry-web-primitives";
 import {
   defaultHiddenColumns,
   useDataTable,
@@ -1147,7 +1148,8 @@ describe("useDataTable + DataTable", () => {
 
   it("the select-all box says PARTIAL when only some rows are selected", () => {
     mount({ columns: [selectionColumn<Task>(), ...COLUMNS], enableRowSelection: true });
-    const all = () => container!.querySelector<HTMLButtonElement>("thead [aria-label='Select all']")!;
+    const all = () =>
+      container!.querySelector<HTMLButtonElement>("thead [aria-label='Select all']")!;
     const boxes = container!.querySelectorAll<HTMLButtonElement>("tbody [aria-label='Select row']");
     expect(all().getAttribute("data-state")).toBe("unchecked");
     act(() => boxes[1]!.click());
@@ -1155,10 +1157,51 @@ describe("useDataTable + DataTable", () => {
     // header claims a selection the user did not make.
     expect(all().getAttribute("data-state")).toBe("indeterminate");
     expect(all().className).toMatch(/data-\[state=indeterminate\]:bg-primary/);
-    expect(all().querySelector("svg")?.classList.contains("lucide-minus")).toBe(true);
+    // The glyph follows the ROOT's rendered state, not the prop the caller
+    // passed — `defaultChecked="indeterminate"` never sets `checked`, and an
+    // uncontrolled box moves on click. Both icons ship; the group variant
+    // picks one. (JSDOM does not evaluate Tailwind, so this pins the
+    // contract; the painted result is checked in the app.)
+    const glyph = (name: string) => all().querySelector<SVGElement>(`svg.lucide-${name}`)!;
+    expect(all().className).toMatch(/(^|\s)group(\s|$)/);
+    expect(glyph("check").getAttribute("class")).toContain(
+      "group-data-[state=indeterminate]:hidden",
+    );
+    expect(glyph("minus").getAttribute("class")).toContain(
+      "group-data-[state=indeterminate]:block",
+    );
+    expect(glyph("minus").getAttribute("class")).toContain("hidden");
     act(() => all().click());
     expect(all().getAttribute("data-state")).toBe("checked");
-    expect(all().querySelector("svg")?.classList.contains("lucide-check")).toBe(true);
+  });
+
+  it("an UNCONTROLLED indeterminate box still resolves to the partial state", () => {
+    // The prop the caller passed is not the state Radix rendered: with
+    // `defaultChecked` there is no `checked` prop at all, and the box moves
+    // on click. Anything that reads the props instead of the DOM gets this
+    // wrong, which is why the glyph is chosen by `data-state`.
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => root.render(<Checkbox defaultChecked="indeterminate" aria-label="Partial" />));
+    const box = () => host.querySelector<HTMLButtonElement>("[aria-label='Partial']")!;
+    expect(box().getAttribute("data-state")).toBe("indeterminate");
+    // No `checked` prop exists here at all, so the glyph cannot come from one:
+    // both ship, and the variant keyed to the root's state picks the minus.
+    expect(box().className).toMatch(/(^|\s)group(\s|$)/);
+    expect(box().querySelector("svg.lucide-minus")?.getAttribute("class")).toContain(
+      "group-data-[state=indeterminate]:block",
+    );
+    expect(box().querySelector("svg.lucide-check")?.getAttribute("class")).toContain(
+      "group-data-[state=indeterminate]:hidden",
+    );
+    // And it moves: an uncontrolled box that started indeterminate becomes
+    // checked, which is the case a `defaultChecked` lookup would still call
+    // indeterminate forever.
+    act(() => box().click());
+    expect(box().getAttribute("data-state")).toBe("checked");
+    act(() => root.unmount());
+    host.remove();
   });
 });
 
