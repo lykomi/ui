@@ -35,6 +35,7 @@ import {
   type DataTableState,
 } from "../components/data-table/state.ts";
 import { selectionColumn } from "../components/data-table/selection-column.tsx";
+import { Checkbox } from "@iloveagents/foundry-web-primitives";
 import {
   defaultHiddenColumns,
   useDataTable,
@@ -1143,6 +1144,69 @@ describe("useDataTable + DataTable", () => {
     expect(container!.querySelector("tr[data-row-id='t2']")?.getAttribute("data-state")).toBe(
       "selected",
     );
+  });
+
+  it("the select-all box says PARTIAL when only some rows are selected", () => {
+    mount({ columns: [selectionColumn<Task>(), ...COLUMNS], enableRowSelection: true });
+    const all = () =>
+      container!.querySelector<HTMLButtonElement>("thead [aria-label='Select all']")!;
+    const boxes = container!.querySelectorAll<HTMLButtonElement>("tbody [aria-label='Select row']");
+    expect(all().getAttribute("data-state")).toBe("unchecked");
+    act(() => boxes[1]!.click());
+    // Some, not all — and the box has to look different from both, or the
+    // header claims a selection the user did not make.
+    expect(all().getAttribute("data-state")).toBe("indeterminate");
+    expect(all().className).toMatch(/data-\[state=indeterminate\]:bg-primary/);
+    // The glyph follows the ROOT's rendered state, not the prop the caller
+    // passed — `defaultChecked="indeterminate"` never sets `checked`, and an
+    // uncontrolled box moves on click. Both icons ship; the group variant
+    // picks one. (JSDOM does not evaluate Tailwind, so this pins the
+    // contract; the painted result is checked in the app.)
+    const indicator = () => all().querySelector<HTMLElement>("[data-state]:not([role])")!;
+    expect(all().querySelector("[data-glyph='check']")).not.toBeNull();
+    expect(all().querySelector("[data-glyph='minus']")).not.toBeNull();
+    // Scoped to THIS indicator: a `group-*` variant would also match any
+    // ancestor carrying `.group` and a `data-state` of its own.
+    expect(indicator().className).toContain(
+      "data-[state=indeterminate]:[&_[data-glyph=check]]:hidden",
+    );
+    expect(indicator().className).toContain(
+      "data-[state=indeterminate]:[&_[data-glyph=minus]]:block",
+    );
+    expect(indicator().className).not.toMatch(/(^|\s)group-data-/);
+    act(() => all().click());
+    expect(all().getAttribute("data-state")).toBe("checked");
+  });
+
+  it("an UNCONTROLLED indeterminate box still resolves to the partial state", () => {
+    // The prop the caller passed is not the state Radix rendered: with
+    // `defaultChecked` there is no `checked` prop at all, and the box moves
+    // on click. Anything that reads the props instead of the DOM gets this
+    // wrong, which is why the glyph is chosen by `data-state`.
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    // try/finally: this root is outside the file's global afterEach, so a
+    // failing assertion would otherwise leak a mounted tree into the next
+    // test rather than just failing this one.
+    try {
+      act(() => root.render(<Checkbox defaultChecked="indeterminate" aria-label="Partial" />));
+      const box = () => host.querySelector<HTMLButtonElement>("[aria-label='Partial']")!;
+      expect(box().getAttribute("data-state")).toBe("indeterminate");
+      // No `checked` prop exists here at all, so the glyph cannot come from one:
+      // both ship, and the variant keyed to the root's state picks the minus.
+      expect(box().querySelector("[data-glyph='minus']")).not.toBeNull();
+      expect(box().querySelector("[data-glyph='check']")).not.toBeNull();
+      expect(box().className).not.toMatch(/(^|\s)group(\s|$)/);
+      // And it moves: an uncontrolled box that started indeterminate becomes
+      // checked, which is the case a `defaultChecked` lookup would still call
+      // indeterminate forever.
+      act(() => box().click());
+      expect(box().getAttribute("data-state")).toBe("checked");
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+    }
   });
 });
 
