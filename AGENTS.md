@@ -129,32 +129,29 @@ and is missing for everyone else until it is released.
 
 # Bot code review (do not skip, do not merge around)
 
-Every PR in this repo is reviewed by **Codex** (`chatgpt-codex-connector`) and
-**GitHub Copilot**. Their findings are not advisory noise — in practice they
-have caught real defects that green CI and a passing local suite did not: a
-frozen column painted over a sticky header, a parser that guessed a date's
-country, a documented option that did nothing.
+Every PR here is reviewed by **Codex** and **GitHub Copilot**. Their findings are not advisory noise: they have caught defects that
+green CI and a passing local suite did not, including fixes of ours that broke
+the case they were written for.
 
-The rule for an agent working here:
+The loop, in full — how to trigger each bot, where a verdict actually lands,
+how to tell a running review from a finished one, and how to judge a finding —
+is **[`docs/BOT_CODE_REVIEW.md`](docs/BOT_CODE_REVIEW.md)**. Read it before
+your first round; the traps in it are ones this repo has already paid for.
 
-1. **Push, then let both bots review.** Codex re-reviews on a new commit and
-   on a `@codex review` comment; Copilot's pass is repo automation and cannot
-   be requested through the API (`requested_reviewers` silently stays empty) —
-   it arrives on its own.
-2. **Read every thread, including ones GitHub still shows as "live" from an
-   earlier round.** `gh api graphql` → `pullRequest.reviewThreads` with
-   `isResolved`/`isOutdated`; a thread whose line still exists stays "live"
-   even after the fix, so judge by content, not by the flag.
-3. **Fix, push, ask for another pass, and repeat.** Rounds converge — 18
-   findings, then 4, then 3 is a normal shape. Do not merge on the first
-   green.
-4. **Stop when what is left is genuinely minor** — style preference,
-   a refactor whose churn outweighs its value, a case the code deliberately
-   does not support. Say so in the thread, with the reason, rather than
-   leaving it silent. "Fixed" and "declined, because…" are both finished;
-   "unread" is not.
-5. **Answer in the thread.** A reply is how the next person knows a finding
-   was considered rather than missed, and it is what makes round N+1 shorter.
+The non-negotiables:
+
+- **Ask both bots every round**, and re-ask after every push. Copilot reviews a
+  PR once unless the ruleset says otherwise.
+- **A verdict is not always a review object.** A clean Codex pass is an issue
+  comment. Query both surfaces, match on the bot's numeric id, and compare
+  against the head SHA — or you will call a finished review missing.
+- **Read every finding and answer it in the thread.** "Fixed" and "declined,
+  because…" are both finished; "unread" is not.
+- **Verify a claim against the code before acting on it**, and take the
+  findings on your own fixes most seriously — they are the ones nobody else
+  will catch.
+- **Rounds do not converge monotonically.** A round that goes up is the process
+  working. Do not merge on the first green.
 
 Never merge with unread findings, and never close a thread by force-pushing
 over it.
