@@ -1144,6 +1144,22 @@ describe("useDataTable + DataTable", () => {
       "selected",
     );
   });
+
+  it("the select-all box says PARTIAL when only some rows are selected", () => {
+    mount({ columns: [selectionColumn<Task>(), ...COLUMNS], enableRowSelection: true });
+    const all = () => container!.querySelector<HTMLButtonElement>("thead [aria-label='Select all']")!;
+    const boxes = container!.querySelectorAll<HTMLButtonElement>("tbody [aria-label='Select row']");
+    expect(all().getAttribute("data-state")).toBe("unchecked");
+    act(() => boxes[1]!.click());
+    // Some, not all — and the box has to look different from both, or the
+    // header claims a selection the user did not make.
+    expect(all().getAttribute("data-state")).toBe("indeterminate");
+    expect(all().className).toMatch(/data-\[state=indeterminate\]:bg-primary/);
+    expect(all().querySelector("svg")?.classList.contains("lucide-minus")).toBe(true);
+    act(() => all().click());
+    expect(all().getAttribute("data-state")).toBe("checked");
+    expect(all().querySelector("svg")?.classList.contains("lucide-check")).toBe(true);
+  });
 });
 
 describe("URL state", () => {

@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { Check } from "lucide-react";
+import { Check, Minus } from "lucide-react";
 
 import { cn } from "./utils.ts";
 
@@ -14,12 +14,19 @@ const Checkbox = React.forwardRef<
       "peer size-4 shrink-0 rounded border border-border bg-background shadow-sm outline-none transition",
       "focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50",
       "data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+      // "Some of these" is a state of its own. Left unstyled it drew a tick
+      // on a white box — the one shape that reads as "not selected".
+      "data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground",
       className,
     )}
     {...props}
   >
     <CheckboxPrimitive.Indicator className="flex items-center justify-center text-current">
-      <Check className="size-3.5" />
+      {props.checked === "indeterminate" ? (
+        <Minus className="size-3.5" />
+      ) : (
+        <Check className="size-3.5" />
+      )}
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ));
