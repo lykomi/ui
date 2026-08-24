@@ -86,7 +86,13 @@ const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*\]?\s*$/;
 const UNCLOSED_LINK = /!?\[([^\]]*)\]\([^)]*$/;
 /** Matches nothing, so a rule can be switched off without branching the chain. */
 const NOTHING = /(?!)/;
-/** A bracketed run at the end of a SETTLED answer: keep the words, lose the brackets. */
+/**
+ * A bracketed run at the end of a SETTLED answer: keep the words, lose the
+ * brackets. Replaced with a LEADING SPACE, because the bracket may be doing
+ * the work of a separator — "array[index]" spoken as "arrayindex" is worse
+ * than the delimiters it was meant to remove. The whitespace collapse and
+ * `trim()` further down tidy up the doubled or leading space.
+ */
 const TRAILING_BRACKETED = /\[([^\]]*)\]?\s*$/;
 const HEADING = /^\s{0,3}#{1,6}\s+/gm;
 const BLOCKQUOTE = /^\s{0,3}>\s?/gm;
@@ -133,7 +139,7 @@ export function toSpeakableText(markdown: string, options: { final?: boolean } =
       // Settled: keep the words, drop the delimiters. A voice reads "[yes/no]"
       // as "open bracket yes slash no close bracket", which is the reason
       // citations are stripped in the first place.
-      .replace(settled ? TRAILING_BRACKETED : NOTHING, "$1")
+      .replace(settled ? TRAILING_BRACKETED : NOTHING, " $1")
       .replace(/[ \t]+/g, " ")
       .replace(/\s*\n\s*/g, "\n")
       .trim()

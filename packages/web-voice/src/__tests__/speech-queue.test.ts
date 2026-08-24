@@ -64,6 +64,15 @@ describe("SentenceStream", () => {
     expect(after).toBe("Figure the governor housing");
   });
 
+  it("does not weld the words together when the bracket was the separator", () => {
+    // "array[index]" has no space before the bracket, so dropping the
+    // delimiters outright produces "arrayindex" — worse than the brackets it
+    // was removing.
+    expect(toSpeakableText("Use array[index]", { final: true })).toBe("Use array index");
+    expect(toSpeakableText("choose [yes/no]", { final: true })).toBe("choose yes/no");
+    expect(toSpeakableText("[yes/no]", { final: true })).toBe("yes/no");
+  });
+
   it("unwraps the final brackets even with whitespace after them", () => {
     // The end anchor runs BEFORE whitespace collapsing and trim(), so a
     // trailing newline meant the pattern did not match and the delimiters

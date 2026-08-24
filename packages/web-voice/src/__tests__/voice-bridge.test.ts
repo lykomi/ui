@@ -607,7 +607,7 @@ describe("session lifecycle", () => {
 
     const bridge = new VoiceBridge(relay());
     const detach = bridge.attach(controls);
-    bridge.createAdapter().connect({});
+    const session = bridge.createAdapter().connect({});
     // `setup` awaits the host's controls before it calls connect(), so the
     // transport is not pending yet on the synchronous path.
     await vi.waitFor(() => expect(connectStarted).toBe(true));
@@ -616,6 +616,12 @@ describe("session lifecycle", () => {
     bridge.handleClosed();
 
     expect(disconnects, "a transport that never settles was left coming up").toBe(1);
+
+    // Stopping at the transport is not enough: the session itself has to end.
+    // There is no abort signal here, so assistant-ui has NOT disposed it — the
+    // helpers still work, and skipping them leaves it reporting `starting` for
+    // ever while the runtime still believes a call is coming up.
+    expect(session.status.type, "the session was left connecting for ever").toBe("ended");
   });
 
   it("does not start a session whose host left while it was connecting", async () => {

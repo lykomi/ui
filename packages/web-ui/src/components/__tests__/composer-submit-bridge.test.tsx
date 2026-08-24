@@ -281,4 +281,42 @@ describe("composer submit store", () => {
       "half a thought, now finished",
     );
   });
+
+  it("serialises across bridges, not just within one", async () => {
+    // Several bridges can be mounted, and one that unmounts mid-sequence hands
+    // nothing over. With a queue per component the next bridge's turn simply
+    // overtakes the one still in flight, attaching the restored file to the
+    // wrong turn. What has to be serialised is the composer, and there is one.
+    const first = document.createElement("div");
+    document.body.appendChild(first);
+    const firstRoot = createRoot(first);
+    await act(async () => firstRoot.render(<ComposerSubmitBridge />));
+
+    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
+    attachments = [{ id: "contract.pdf", file }];
+
+    let open: (() => void) | null = null;
+    gate = new Promise<void>((resolve) => {
+      open = () => resolve();
+    });
+
+    await act(async () => submitComposerText("first spoken turn"));
+    await settle();
+    expect(sentWith).toHaveLength(0); // parked inside the attachment work
+
+    // That bridge goes away; a different one picks up the next turn.
+    await act(async () => firstRoot.unmount());
+    first.remove();
+    await mount(<ComposerSubmitBridge />);
+    await act(async () => submitComposerText("second spoken turn"));
+    await settle();
+    expect(sentWith, "a second bridge overtook the first").toHaveLength(0);
+
+    gate = null;
+    open!();
+    for (let i = 0; i < 8; i++) await settle();
+
+    expect(sentWith.map((t) => t.text)).toEqual(["first spoken turn", "second spoken turn"]);
+    expect(attachments.map((a) => a.id)).toEqual(["contract.pdf"]);
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAui } from "@assistant-ui/react";
 import { useComposerSubmitStore } from "../lib/composer-submit-store.ts";
 
@@ -16,12 +16,18 @@ import { useComposerSubmitStore } from "../lib/composer-submit-store.ts";
  * the same submission being sent twice; it says nothing about two DIFFERENT
  * submissions overlapping, and two overlapping save/restore sequences trample
  * each other's snapshots.
+ *
+ * The queue is module-level rather than per-component on purpose. Several
+ * bridges can be mounted at once, and a bridge that unmounts mid-sequence
+ * hands nothing over — with a queue each, the next bridge's turn simply
+ * overtakes the one still in flight. What has to be serialised is access to
+ * the composer, and there is one of those.
  */
+let composerQueue: Promise<void> = Promise.resolve();
+
 export function ComposerSubmitBridge() {
   const aui = useAui();
   const pending = useComposerSubmitStore((s) => s.pending);
-  const queue = useRef<Promise<void>>(Promise.resolve());
-
   useEffect(() => {
     if (!pending) return;
     // Claim first, send second. Several bridges may be mounted at once, and
@@ -29,7 +35,7 @@ export function ComposerSubmitBridge() {
     // text before either had cleared it.
     if (!useComposerSubmitStore.getState().claim(pending.id)) return;
 
-    queue.current = queue.current
+    composerQueue = composerQueue
       .then(async () => {
         const { attachments } = aui.composer.getState();
 

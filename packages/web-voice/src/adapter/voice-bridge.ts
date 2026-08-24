@@ -381,27 +381,26 @@ export class VoiceBridge {
    * already finished.
    */
   handleClosed(): void {
-    // `connected` is only set once `connect()` resolves, so a host that goes
-    // away while the transport is still coming up would slip past this guard
-    // and leave the pending setup free to mark itself running afterwards —
-    // against controls whose host no longer exists. `abandon()` covers that
-    // half; this one covers a call that had actually started.
+    // `connected` is only true once `connect()` resolves, so it cannot tell
+    // "no call yet" from "a call still coming up" — and only the second of
+    // those has anything to tear down.
     this.abandoned = true;
-    if (!this.connected) {
-      // Nothing to end — but a connection may still be on its way up with
-      // nothing left to control it. Take it down now, and again when it
-      // finally settles, exactly as the cancellation path does.
-      // A connection may still be on its way up with nothing left to control
-      // it. Take it down now. A connection that LATER resolves is already
-      // handled inside `setup`, which re-checks `abandoned` past its await —
-      // the case that path cannot reach is the one that never resolves at all.
-      const pending = this.pendingConnect;
-      if (pending) {
-        this.pendingConnect = null;
-        pending.controls.disconnect();
-      }
-      return;
+
+    // A connection may still be on its way up with nothing left to control it.
+    // Take it down now; one that resolves LATER is caught inside `setup`,
+    // which re-checks `abandoned` past its await. The case that path cannot
+    // reach is the one that never resolves at all, which is this.
+    const pending = this.pendingConnect;
+    if (pending) {
+      this.pendingConnect = null;
+      pending.controls.disconnect();
     }
+
+    // Everything below runs for an abandoned setup too. Stopping at the
+    // transport left the session in `starting` for ever and the speech queue
+    // holding whatever it held, which then swallowed the next call — the very
+    // failure `endCall()` exists to prevent, reintroduced by an early return.
+    if (!this.connected && !pending) return;
     this.endCall();
     this.helpers?.end("finished");
   }
