@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAui } from "@assistant-ui/react";
 import { useComposerSubmitStore } from "../lib/composer-submit-store.ts";
 
@@ -6,16 +6,21 @@ import { useComposerSubmitStore } from "../lib/composer-submit-store.ts";
  * Sends text a module submitted on the user's behalf — a spoken turn, most of
  * the time — through the ordinary composer.
  *
- * The composer stays editable while a voice call runs, so the user's own draft
- * can be sitting in it when a spoken turn arrives. Sending then takes the
- * composer as it stands: the transcript is posted with their half-written text
- * replaced and their attachment carried along with a sentence it has nothing
- * to do with. Text is saved and restored; attachments are lifted out first and
- * put back after, but only when every one of them can be put back.
+ * The composer stays editable while a module is using it, so the user's own
+ * work can be sitting in it when a turn arrives. Sending takes the composer as
+ * it stands: their half-written text replaced, and their attachment carried
+ * along with a sentence it has nothing to do with. Both are put back.
+ *
+ * Doing that spans ticks — attachments are lifted out and re-added
+ * asynchronously — which is why submissions run one at a time. `claim()` stops
+ * the same submission being sent twice; it says nothing about two DIFFERENT
+ * submissions overlapping, and two overlapping save/restore sequences trample
+ * each other's snapshots.
  */
 export function ComposerSubmitBridge() {
   const aui = useAui();
   const pending = useComposerSubmitStore((s) => s.pending);
+  const queue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (!pending) return;
@@ -24,32 +29,40 @@ export function ComposerSubmitBridge() {
     // text before either had cleared it.
     if (!useComposerSubmitStore.getState().claim(pending.id)) return;
 
-    void (async () => {
-      const { text: draft, attachments } = aui.composer.getState();
+    queue.current = queue.current
+      .then(async () => {
+        const { attachments } = aui.composer.getState();
 
-      // Re-adding needs the original File. Anything the user just attached has
-      // one; an attachment that has been through an adapter may not. Lifting
-      // out a set we cannot fully restore would turn "sent with the wrong
-      // message" into "lost", so in that case leave them where they are — no
-      // worse than before, and never destructive.
-      const files = attachments.map((a) => a.file).filter((f): f is File => f instanceof File);
-      const restorable = files.length === attachments.length;
-      // No bail-out past this point. Once the attachments are out of the
-      // composer the sequence has to finish, or they are lost and nothing is
-      // sent — worse than either thing it was guarding against. `claim()`
-      // already guarantees a single runner, so there is nothing to race.
-      if (restorable && attachments.length > 0) await aui.composer.clearAttachments();
+        // Re-adding needs the original File. Anything the user just attached
+        // has one; an attachment that has been through an adapter may not.
+        // Lifting out a set we cannot fully restore would turn "sent with the
+        // wrong message" into "lost", so leave those in place — no worse than
+        // before, and never destructive.
+        const files = attachments.map((a) => a.file).filter((f): f is File => f instanceof File);
+        const restorable = files.length === attachments.length;
 
-      // send() starts the run for the queued text; steering/queueing semantics
-      // are handled by the composer client (assistant-ui >= 0.15).
-      aui.composer.setText(pending.text);
-      aui.composer.send();
+        // No bail-out past this point. Once the attachments are out of the
+        // composer the sequence has to finish, or they are lost and nothing is
+        // sent — worse than either thing a cancellation check would guard.
+        if (restorable && attachments.length > 0) await aui.composer.clearAttachments();
 
-      // send() clears the composer, so this restores the user's own work into
-      // an empty box rather than appending it to the turn just sent.
-      if (draft) aui.composer.setText(draft);
-      if (restorable) for (const file of files) await aui.composer.addAttachment(file);
-    })();
+        // Snapshotted as late as possible: the user can keep typing while the
+        // attachments are being lifted out, and an earlier snapshot would put
+        // stale text back over what they have since written.
+        const draft = aui.composer.getState().text;
+
+        // send() starts the run for the queued text; steering/queueing
+        // semantics are handled by the composer client (assistant-ui >= 0.15).
+        aui.composer.setText(pending.text);
+        aui.composer.send();
+
+        // send() clears the composer, so this restores the user's own work
+        // into an empty box rather than appending it to the turn just sent.
+        if (draft) aui.composer.setText(draft);
+        if (restorable) for (const file of files) await aui.composer.addAttachment(file);
+      })
+      // One failure must not wedge the chain for every later submission.
+      .catch(() => {});
   }, [aui, pending]);
 
   return null;

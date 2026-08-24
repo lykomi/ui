@@ -19,6 +19,7 @@ import { submitComposerText, useComposerSubmitStore } from "../../lib/composer-s
 const sent: string[] = [];
 
 let draft = "";
+let gate: Promise<void> | null = null;
 let attachments: { id: string; file?: File }[] = [];
 const sentWith: { text: string; attachments: string[] }[] = [];
 
@@ -29,9 +30,16 @@ const composer = {
     sent.push(t);
   },
   clearAttachments: async () => {
+    // Real attachment work spans ticks; that is what lets two submissions
+    // overlap at all. `gate` lets a test hold the bridge INSIDE that window,
+    // which is the only way to observe interleaving — awaiting a few ticks
+    // and hoping is how the first version of these tests passed against the
+    // very defects they were written for.
+    if (gate) await gate;
     attachments = [];
   },
   addAttachment: async (file: File) => {
+    await Promise.resolve();
     attachments = [...attachments, { id: file.name, file }];
   },
   // The real composer clears text AND attachments on send.
@@ -64,6 +72,7 @@ afterEach(async () => {
   sent.length = 0;
   sentWith.length = 0;
   draft = "";
+  gate = null;
   attachments = [];
   useComposerSubmitStore.setState({ pending: null });
 });
@@ -201,5 +210,75 @@ describe("composer submit store", () => {
     expect(sentWith[0]!.attachments, "it was silently dropped rather than sent").toEqual([
       "already-uploaded",
     ]);
+  });
+
+  it("runs a second submission after the first, not interleaved with it", async () => {
+    // `claim()` stops the same submission being sent twice; it says nothing
+    // about two DIFFERENT ones overlapping. The gate holds the first inside
+    // its attachment work while the second arrives, which is the actual
+    // failure: two save/restore sequences trampling each other's snapshot.
+    // (Two submissions in the same TICK is a different matter — the store has
+    // one pending slot, so the first is replaced before any consumer sees it.
+    // That needs a queue in the store, and VAD cannot finalise two transcripts
+    // in one tick, so it is deliberately left alone.)
+    await mount(<ComposerSubmitBridge />);
+    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
+    attachments = [{ id: "contract.pdf", file }];
+
+    let open: (() => void) | null = null;
+    gate = new Promise<void>((resolve) => {
+      open = () => resolve();
+    });
+
+    await act(async () => submitComposerText("first spoken turn"));
+    await settle();
+    // The first is now parked inside clearAttachments. Nothing sent yet.
+    expect(sentWith).toHaveLength(0);
+
+    await act(async () => submitComposerText("second spoken turn"));
+    await settle();
+    expect(sentWith, "the second turn overtook the first").toHaveLength(0);
+
+    gate = null;
+    open!();
+    for (let i = 0; i < 6; i++) await settle();
+
+    expect(sentWith.map((t) => t.text)).toEqual(["first spoken turn", "second spoken turn"]);
+    for (const turn of sentWith) {
+      expect(turn.attachments, "an attachment rode along with a turn").toEqual([]);
+    }
+    expect(
+      attachments.map((a) => a.id),
+      "the attachment was lost between the two turns",
+    ).toEqual(["contract.pdf"]);
+  });
+
+  it("does not put a stale draft back over newer typing", async () => {
+    // The user keeps typing while the attachments are being lifted out. A
+    // draft snapshotted at the START of that sequence is written back over
+    // whatever they have since added. The gate is what makes "while" real.
+    await mount(<ComposerSubmitBridge />);
+    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
+    attachments = [{ id: "contract.pdf", file }];
+    draft = "half a thought";
+
+    let open: (() => void) | null = null;
+    gate = new Promise<void>((resolve) => {
+      open = () => resolve();
+    });
+
+    await act(async () => submitComposerText("spoken turn"));
+    await settle();
+
+    // Typed while the bridge is parked mid-sequence.
+    draft = "half a thought, now finished";
+
+    gate = null;
+    open!();
+    for (let i = 0; i < 6; i++) await settle();
+
+    expect(draft, "a stale draft was written back over newer typing").toBe(
+      "half a thought, now finished",
+    );
   });
 });
