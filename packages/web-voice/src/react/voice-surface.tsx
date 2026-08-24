@@ -21,7 +21,11 @@ import type {
   VoiceLiveSessionConfig,
 } from "@iloveagents/foundry-voice-live-react";
 import { clientToolRegistry } from "@iloveagents/foundry-agent";
-import { registerChatSlots, submitComposerText } from "@iloveagents/foundry-web-ui";
+import {
+  registerChatSlots,
+  submitComposerText,
+  useChatSlotsStore,
+} from "@iloveagents/foundry-web-ui";
 import { buildVoiceSession } from "../adapter/session-config.ts";
 import { createRegistryToolExecutor } from "../adapter/tool-bridge.ts";
 import { ToolSync } from "../adapter/tool-sync.ts";
@@ -244,8 +248,18 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   const callLive = live.connectionState === "connected" || live.connectionState === "reconnecting";
   useEffect(() => {
     if (!stage) return;
-    registerChatSlots({ threadSurface: callLive ? VoiceStage : null });
-    return () => registerChatSlots({ threadSurface: null });
+    // Last-registration-wins: another module may take the slot while a call is
+    // running, so every path that CLEARS has to check we still own it. Guarding
+    // only the cleanup was not enough — ending a call re-runs this effect with
+    // `callLive` false, and the body cleared the slot on the way past.
+    const releaseIfOurs = () => {
+      if (useChatSlotsStore.getState().threadSurface === VoiceStage) {
+        registerChatSlots({ threadSurface: null });
+      }
+    };
+    if (callLive) registerChatSlots({ threadSurface: VoiceStage });
+    else releaseIfOurs();
+    return releaseIfOurs;
   }, [stage, callLive]);
 
   // Surface a session-fatal error once. `error` stays set until the next

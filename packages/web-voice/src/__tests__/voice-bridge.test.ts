@@ -585,6 +585,196 @@ describe("session lifecycle", () => {
     await vi.waitFor(() => expect(controls.sent.length).toBe(afterBStarted + 1));
   });
 
+  it("leaves nothing pending behind after a cancelled connect", async () => {
+    // The cancellation branch used to leave `pendingConnect` set. A later
+    // close then acted on the controls of a call that had already ended —
+    // disconnecting a transport it did not own.
+    const controls = fakeControls();
+    let release: (() => void) | null = null;
+    controls.connect = () =>
+      new Promise<void>((resolve) => {
+        release = () => resolve();
+      });
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(controls);
+    const abort = new AbortController();
+    bridge.createAdapter().connect({ abortSignal: abort.signal });
+    await vi.waitFor(() => expect(release).not.toBeNull());
+
+    abort.abort();
+    release!();
+    await vi.waitFor(() => expect(controls.connected).toBe(false));
+    // Let the abort path's own late teardown finish first — counting from
+    // before it lands would blame the stale-pending bug for a legitimate
+    // disconnect and pass for the wrong reason.
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+
+    // The call is over. A later close must find nothing to act on.
+    let disconnectsAfter = 0;
+    const stop = controls.disconnect;
+    controls.disconnect = () => {
+      disconnectsAfter += 1;
+      stop();
+    };
+    bridge.handleClosed();
+
+    expect(disconnectsAfter, "a stale pending connect was acted on").toBe(0);
+  });
+
+  it("does not let a stale attempt erase a newer one's pending record", async () => {
+    // The other half of the shared-flag bug: when the superseded connection
+    // finally settles it used to clear `pendingConnect` unconditionally — the
+    // record belonging to a NEWER attempt that was itself still connecting. A
+    // later close then found nothing pending and left that transport coming up
+    // with no host.
+    const stale = fakeControls();
+    let releaseStale: (() => void) | null = null;
+    stale.connect = () =>
+      new Promise<void>((resolve) => {
+        releaseStale = () => resolve();
+      });
+
+    const fresh = fakeControls();
+    let freshDisconnects = 0;
+    const stopFresh = fresh.disconnect;
+    fresh.disconnect = () => {
+      freshDisconnects += 1;
+      stopFresh();
+    };
+    let freshStarted = false;
+    fresh.connect = () => {
+      freshStarted = true;
+      return new Promise<void>(() => {}); // still connecting
+    };
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(stale);
+    bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(releaseStale).not.toBeNull());
+
+    bridge.attach(fresh);
+    bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(freshStarted).toBe(true));
+
+    // The superseded one settles. It must not touch the newer attempt.
+    releaseStale!();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+
+    bridge.handleClosed();
+
+    expect(freshDisconnects, "the newer pending transport was left coming up").toBe(1);
+  });
+
+  it("does not let a superseded connection come up behind a newer call", async () => {
+    // Abandonment used to be a boolean on the bridge, so starting a second
+    // call reset it. If the FIRST transport then came up, its continuation saw
+    // "not abandoned", marked itself connected and started its meter — a
+    // microphone open with no host, and the newer attempt's pending record
+    // cleared out from under it. The token makes each attempt answer only for
+    // itself.
+    const stale = fakeControls();
+    let releaseStale: (() => void) | null = null;
+    stale.connect = () =>
+      new Promise<void>((resolve) => {
+        releaseStale = () => {
+          stale.connected = true;
+          resolve();
+        };
+      });
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(stale);
+    const first = bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(releaseStale).not.toBeNull());
+
+    // A second call supersedes it before the first transport ever came up.
+    const fresh = fakeControls();
+    bridge.attach(fresh);
+    const second = bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(second.status.type).toBe("running"));
+
+    // Only now does the stale transport finish connecting.
+    releaseStale!();
+
+    await vi.waitFor(() => expect(stale.connected, "a superseded mic went live").toBe(false));
+    expect(first.status.type, "the superseded session started anyway").not.toBe("running");
+    // The newer call is untouched by the old one settling.
+    expect(second.status.type).toBe("running");
+    expect(fresh.connected).toBe(true);
+  });
+
+  it("takes down a connection that never settles when the host leaves", async () => {
+    // `setup` re-checks `abandoned` past its await, so a connection that
+    // arrives late is already handled. The case that path cannot reach is the
+    // one that never arrives — an unanswered permission prompt, a stalled
+    // transport — where the await simply never returns. `handleClosed()`
+    // returned early because `connected` was still false, and the transport
+    // was left coming up with nothing able to stop it.
+    const controls = fakeControls();
+    let disconnects = 0;
+    const stop = controls.disconnect;
+    controls.disconnect = () => {
+      disconnects += 1;
+      stop();
+    };
+    let connectStarted = false;
+    controls.connect = () => {
+      connectStarted = true;
+      return new Promise<void>(() => {}); // never settles
+    };
+
+    const bridge = new VoiceBridge(relay());
+    const detach = bridge.attach(controls);
+    const session = bridge.createAdapter().connect({});
+    // `setup` awaits the host's controls before it calls connect(), so the
+    // transport is not pending yet on the synchronous path.
+    await vi.waitFor(() => expect(connectStarted).toBe(true));
+
+    detach();
+    bridge.handleClosed();
+
+    expect(disconnects, "a transport that never settles was left coming up").toBe(1);
+
+    // Stopping at the transport is not enough: the session itself has to end.
+    // There is no abort signal here, so assistant-ui has NOT disposed it — the
+    // helpers still work, and skipping them leaves it reporting `starting` for
+    // ever while the runtime still believes a call is coming up.
+    expect(session.status.type, "the session was left connecting for ever").toBe("ended");
+  });
+
+  it("does not start a session whose host left while it was connecting", async () => {
+    // `connected` is only set once connect() resolves, so it is false both
+    // BEFORE a call and DURING one that is still coming up — and only one of
+    // those may go on to run. Unmounting in that window slipped past the
+    // guard and left the pending setup free to mark itself running against
+    // controls whose host no longer existed.
+    const controls = fakeControls();
+    let release: (() => void) | null = null;
+    controls.connect = () =>
+      new Promise<void>((resolve) => {
+        release = () => {
+          controls.connected = true;
+          resolve();
+        };
+      });
+
+    const bridge = new VoiceBridge(relay());
+    const detach = bridge.attach(controls);
+    const session = bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(release).not.toBeNull());
+
+    // The host unmounts: retract the controls and end the call.
+    detach();
+    bridge.handleClosed();
+
+    // Only now does the transport finish coming up.
+    release!();
+
+    await vi.waitFor(() => expect(controls.connected, "transport left live").toBe(false));
+    expect(session.status.type, "a session started without a host").not.toBe("running");
+  });
+
   it("ends the session when the transport closes on its own", async () => {
     // `handleClosed` had no caller anywhere in the repo. After a clean remote
     // close or exhausted reconnects the SDK reaches `disconnected` without an

@@ -40,3 +40,36 @@ describe("voice surface audio routing", () => {
     expect(source).toContain("chromaKeyConfig={config.chromaKey ?? undefined}");
   });
 });
+
+describe("thread surface ownership", () => {
+  it("clears the surface only while it is still ours", () => {
+    // Last-registration-wins: another module may take the slot during a call,
+    // and clearing unconditionally removes ITS surface rather than ours.
+    expect(source).toContain("useChatSlotsStore.getState().threadSurface === VoiceStage");
+  });
+});
+
+describe("VoiceStage stream overrides", () => {
+  const stage = readFileSync(join(import.meta.dirname, "..", "react", "voice-stage.tsx"), "utf8");
+
+  it("treats an explicit null as a suppression, not an omission", () => {
+    // The props contract allows null to mean "show nothing here". `??` treats
+    // that identically to an omitted prop and hands back the live stream.
+    expect(stage).toContain("props.videoStream === undefined ? liveVideo : props.videoStream");
+    expect(stage).toContain("props.audioStream === undefined ? liveAudio : props.audioStream");
+    expect(stage).not.toMatch(/props\.videoStream \?\? liveVideo/);
+  });
+});
+
+describe("thread surface release", () => {
+  it("checks ownership on every path that clears, not just the cleanup", () => {
+    // Ending a call re-runs the effect with callLive false, and an
+    // unconditional register in the BODY cleared whatever was in the slot —
+    // so guarding only the cleanup left the exact case it was written for.
+    expect(source).toContain("const releaseIfOurs = ()");
+    expect(source).toContain("if (callLive) registerChatSlots({ threadSurface: VoiceStage });");
+    expect(source).toContain("else releaseIfOurs();");
+    expect(source).toContain("return releaseIfOurs;");
+    expect(source).not.toContain("threadSurface: callLive ? VoiceStage : null");
+  });
+});

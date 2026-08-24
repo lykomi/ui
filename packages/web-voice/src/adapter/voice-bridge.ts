@@ -120,6 +120,27 @@ export class VoiceBridge {
    * after such a cancel names the response that was cancelled.
    */
   private cancelledBeforeCreated = false;
+  /**
+   * The connection attempt currently allowed to become a session.
+   *
+   * A token per attempt, not a boolean on the bridge. A boolean is shared, so
+   * starting a second call reset it — and if the FIRST transport then came up,
+   * its continuation saw "not abandoned", marked itself connected, and left a
+   * microphone open with no host, while also clearing the newer attempt's
+   * pending record. Each attempt compares its own token, so an obsolete
+   * continuation can never mistake a later call's state for permission.
+   */
+  private attempt: symbol | null = null;
+  /**
+   * A connection that has been asked for but has not settled.
+   *
+   * Held so that abandoning a call can take the transport down NOW rather than
+   * waiting on a promise that may never resolve — a permission prompt left
+   * open, a transport that stalls. `setup` re-checks its attempt token past
+   * the await and covers a connection that arrives late; the case it cannot reach
+   * is the one that never arrives, which is exactly this.
+   */
+  private pendingConnect: { controls: VoiceTransportControls } | null = null;
 
   /** Injected so the bridge never imports the React chat surface. */
   private submitText: ((text: string) => void) | null = null;
@@ -181,7 +202,10 @@ export class VoiceBridge {
           // does not exist. Awaiting first therefore left a discarded session
           // able to acquire the microphone minutes later with no control able
           // to stop it.
+          const attempt = Symbol("voice-connect");
+          this.attempt = attempt;
           const connecting = controls.connect();
+          this.pendingConnect = { controls };
           if (abortSignal) {
             const cancelled = new Promise<"cancelled">((resolve) => {
               if (abortSignal.aborted) resolve("cancelled");
@@ -215,6 +239,18 @@ export class VoiceBridge {
             }
           } else {
             await connecting;
+          }
+
+          if (this.attempt === attempt) this.pendingConnect = null;
+          if (this.attempt !== attempt) {
+            // Abandoned: the host went away, or a newer call superseded this
+            // one. Either way nothing remains that would control this
+            // transport, so it must not become a live session. `endCall()` is
+            // NOT called here — a newer attempt may already own the bridge,
+            // and tearing its state down is exactly the confusion a shared
+            // flag caused.
+            controls.disconnect();
+            throw new Error("Voice connection superseded before it completed");
           }
 
           this.connected = true;
@@ -354,7 +390,26 @@ export class VoiceBridge {
    * already finished.
    */
   handleClosed(): void {
-    if (!this.connected) return;
+    // `connected` is only true once `connect()` resolves, so it cannot tell
+    // "no call yet" from "a call still coming up" — and only the second of
+    // those has anything to tear down.
+    this.attempt = null;
+
+    // A connection may still be on its way up with nothing left to control it.
+    // Take it down now; one that resolves LATER is caught inside `setup`,
+    // which re-checks `abandoned` past its await. The case that path cannot
+    // reach is the one that never resolves at all, which is this.
+    const pending = this.pendingConnect;
+    if (pending) {
+      this.pendingConnect = null;
+      pending.controls.disconnect();
+    }
+
+    // Everything below runs for an abandoned setup too. Stopping at the
+    // transport left the session in `starting` for ever and the speech queue
+    // holding whatever it held, which then swallowed the next call — the very
+    // failure `endCall()` exists to prevent, reintroduced by an early return.
+    if (!this.connected && !pending) return;
     this.endCall();
     this.helpers?.end("finished");
   }
@@ -373,6 +428,11 @@ export class VoiceBridge {
    */
   private endCall(): void {
     this.connected = false;
+    // Cleared here rather than on each exit path: the cancellation branch left
+    // it set, and a later `handleClosed()` would then act on the controls of a
+    // call that ended long ago — disconnecting a transport it does not own and
+    // ending a session it did not start.
+    this.pendingConnect = null;
     this.activeResponseId = null;
     this.cancelledResponses.clear();
     this.cancelledBeforeCreated = false;
@@ -419,7 +479,10 @@ export class VoiceBridge {
       return;
     }
 
-    const speakable = toSpeakableText(text);
+    // Once the answer has settled, nothing can still change a trailing
+    // bracket, so it must not be held back — holding it at that point drops
+    // it, since `flush()` sees only what was pushed.
+    const speakable = toSpeakableText(text, { final: isComplete });
     for (const utterance of this.sentences.push(speakable)) this.speech.enqueue(utterance);
 
     if (isComplete) {
