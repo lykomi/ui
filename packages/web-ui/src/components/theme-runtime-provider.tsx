@@ -17,6 +17,9 @@ import {
 
 const ThemeRuntimeContext = createContext<ResolvedThemeRuntime | null>(null);
 
+/** True inside a ThemeScope — the outermost one owns the document. */
+const ThemeScopeNestedContext = createContext(false);
+
 export function ThemeRuntimeProvider({
   layers,
   mode,
@@ -71,13 +74,44 @@ export function ThemeScope({
   style?: CSSProperties;
 }) {
   const runtime = useThemeRuntime();
+  const nested = useContext(ThemeScopeNestedContext);
+
+  // Variables on this div alone reach only what renders INSIDE it. Radix
+  // portals mount into document.body, outside it, so every dropdown,
+  // popover, select and tooltip fell back to :root — the base preset —
+  // while the page around them wore the customer's theme. `dialog` papered
+  // over its own case with a nested ThemeScope; that fixes one portal and
+  // leaves the next one to rediscover the bug.
+  //
+  // The outermost scope publishes to the document element instead, so
+  // anything portalled anywhere inherits. Nested scopes keep the div only:
+  // they exist to theme a subtree differently, and must not overwrite the
+  // document with their own values.
+  useEffect(() => {
+    if (nested || typeof document === "undefined") return;
+    const root = document.documentElement;
+    const applied = Object.entries(runtime.variables as Record<string, string>);
+    const previous = applied.map(([name]) => [name, root.style.getPropertyValue(name)] as const);
+    for (const [name, value] of applied) root.style.setProperty(name, String(value));
+    return () => {
+      // Restore, rather than remove: another provider may have set these
+      // before us, and clearing them would strip a theme we did not own.
+      for (const [name, value] of previous) {
+        if (value) root.style.setProperty(name, value);
+        else root.style.removeProperty(name);
+      }
+    };
+  }, [nested, runtime.variables]);
+
   return (
-    <div
-      className={className}
-      style={{ ...runtime.variables, fontFamily: "var(--font-body)", ...style }}
-    >
-      {children}
-    </div>
+    <ThemeScopeNestedContext.Provider value={true}>
+      <div
+        className={className}
+        style={{ ...runtime.variables, fontFamily: "var(--font-body)", ...style }}
+      >
+        {children}
+      </div>
+    </ThemeScopeNestedContext.Provider>
   );
 }
 
