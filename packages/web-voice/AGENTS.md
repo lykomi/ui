@@ -16,7 +16,9 @@ src/
                             registers the stage as threadSurface while a call is live
     relay-answer-watcher.tsx render-less; relay only; feeds the streaming answer to the bridge
     voice-stage.tsx         replaces the thread during a call (visualiser or avatar + caption)
-    voice-visualizer.tsx    theme-token canvas rings; self-observes theme changes
+    voice-visualizer.tsx    theme-token canvas rings; observes theme changes on every
+                            ancestor (ThemeScope is not <html>) and repaints when static
+    voice-launcher-badge.tsx live-call indicator + end control on the collapsed launcher
     use-direct-audio-output.ts plays decoded PCM via Web Audio (analyser → destination)
     voice-audio-sink.tsx    <audio> element for remote (WebRTC) tracks only
     voice-mic-button.tsx    composer control — pure assistant-ui state
@@ -93,7 +95,19 @@ src/
   `VoiceConfig.chromaKey`.
 
 - **Page tools change on navigation.** The session's tool catalogue is re-sent on every
-  `clientToolRegistry` change, or the model is left calling tools that no longer exist.
+  `clientToolRegistry` change, or the model is left calling tools that no longer exist. What is
+  re-sent is the MERGED catalogue (`sessionTools`), never the registry's half: `session.update`
+  REPLACES the list, so sending client tools alone withdraws every MCP and Foundry agent tool the
+  host configured.
+
+- **Both composers, or neither.** A module registers into the chat slots once, and `ChatContent`
+  and `ChatBubble` are separate trees that must both honour them. The bubble gaining
+  `composerActions` without `threadSurface` meant a call could be started there and then ran with
+  the transcript still showing. Guarded by `composer-surface-parity.test.ts` in web-ui.
+
+- **A call outlives the panel that started it.** `VoiceSurface` is a layout extra, so closing the
+  bubble takes every control away while the microphone stays open. `VoiceLauncherBadge` fills the
+  `launcherBadge` slot so the collapsed launcher shows the call and can end it.
 
 # Boundaries
 

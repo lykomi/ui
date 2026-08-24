@@ -31,6 +31,7 @@ import {
   ChatComposerActionsSlot,
   ChatComposerBannerSlot,
   ChatLauncherBadgeSlot,
+  useChatThreadSurface,
   useComposerActionsOwnSend,
 } from "./chat-slots.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
@@ -117,6 +118,7 @@ function BubbleScrollToBottomButton() {
 }
 
 export function ChatBubble() {
+  const ThreadSurface = useChatThreadSurface();
   const isOpen = useChatBubbleStore((s) => s.isOpen);
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const openBubble = useChatBubbleStore((s) => s.open);
@@ -295,7 +297,21 @@ export function ChatBubble() {
           {/* Thread */}
           <ThreadPrimitive.Root className="flex flex-col flex-1 overflow-hidden">
             <div className="relative flex-1 overflow-hidden">
-              <ThreadPrimitive.Viewport className="absolute inset-0 overflow-y-auto">
+              {/* A module can take the conversation's place here exactly as it
+                  can in the expanded chat. The bubble carries the same
+                  composer actions, so a call can START here — and without
+                  this it would run with the ordinary transcript showing and
+                  no visualiser, because the surface suppresses its own
+                  floating panel while the stage is registered. */}
+              {ThreadSurface && (
+                <div className="absolute inset-0 z-10 overflow-hidden bg-background">
+                  <ThreadSurface />
+                </div>
+              )}
+              <ThreadPrimitive.Viewport
+                className={cn("absolute inset-0 overflow-y-auto", ThreadSurface && "invisible")}
+                aria-hidden={ThreadSurface ? true : undefined}
+              >
                 <ThreadPrimitive.Empty>
                   <div className="flex h-full items-center justify-center p-4">
                     <p className="text-sm text-muted-foreground text-center">

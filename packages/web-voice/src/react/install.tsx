@@ -23,6 +23,7 @@ import { VoiceBridge } from "../adapter/voice-bridge.ts";
 import type { VoiceConfig } from "../adapter/types.ts";
 import { VoiceMicButton } from "./voice-mic-button.tsx";
 import { VoiceStatusStrip } from "./voice-status-strip.tsx";
+import { VoiceLauncherBadge } from "./voice-launcher-badge.tsx";
 import { VoiceSurface } from "./voice-surface.tsx";
 
 export interface VoiceInstallOptions extends VoiceConfig {
@@ -59,6 +60,10 @@ export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
     registerChatSlots({
       composerActions: VoiceMicButton,
       composerBanner: VoiceStatusStrip,
+      // A call outlives the panel that started it, so the collapsed launcher
+      // has to show one is running and offer a way out. Renders nothing while
+      // idle, so a chat with no call looks exactly as it did.
+      launcherBadge: VoiceLauncherBadge,
       // Nothing typed means Send has nothing to do; the corner is
       // better spent on the other way of asking.
       composerActionsReplaceSend: true,
@@ -79,6 +84,7 @@ export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
         registerChatSlots({
           composerActions: null,
           composerBanner: null,
+          launcherBadge: null,
           composerActionsReplaceSend: false,
           threadSurface: null,
         });

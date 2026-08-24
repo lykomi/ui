@@ -18,6 +18,7 @@ import {
 import { useChatSlotsStore, useVoiceAdapterStore } from "@iloveagents/foundry-web-ui";
 import { FoundryVoice } from "../react/install.tsx";
 import { VoiceMicButton } from "../react/voice-mic-button.tsx";
+import { VoiceLauncherBadge } from "../react/voice-launcher-badge.tsx";
 
 const stubModel: ChatModelAdapter = {
   async *run() {
@@ -84,6 +85,10 @@ describe("FoundryVoice", () => {
     const slots = useChatSlotsStore.getState();
     expect(slots.composerActions).toBe(VoiceMicButton);
     expect(slots.composerActionsReplaceSend).toBe(true);
+    // A call outlives the panel that started it: closing the bubble leaves the
+    // microphone open with every control gone, so the collapsed launcher has
+    // to say a call is running and offer a way to end it.
+    expect(slots.launcherBadge).toBe(VoiceLauncherBadge);
   });
 
   it("mutates no store during render", async () => {
@@ -122,5 +127,6 @@ describe("FoundryVoice", () => {
     root = null;
     expect(useVoiceAdapterStore.getState().voice).toBeNull();
     expect(useChatSlotsStore.getState().composerActions).toBeNull();
+    expect(useChatSlotsStore.getState().launcherBadge).toBeNull();
   });
 });
