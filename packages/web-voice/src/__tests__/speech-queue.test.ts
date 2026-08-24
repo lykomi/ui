@@ -64,6 +64,52 @@ describe("SentenceStream", () => {
     expect(after).toBe("Figure the governor housing");
   });
 
+  it("speaks bracketed prose an answer ends on", () => {
+    // The cost of holding a trailing bracket back. While streaming it is
+    // right — one more character could make it a link. Once the answer has
+    // SETTLED nothing more can arrive, so holding it no longer defers the
+    // words, it deletes them: `flush()` only ever sees what was pushed, so
+    // "…and then choose [yes/no]" was spoken without the options.
+    const stream = new SentenceStream();
+    const raw = "Please confirm the schedule and then choose [yes/no]";
+    const spoken = [...stream.push(toSpeakableText(raw, { final: true })), ...stream.flush()].join(
+      " ",
+    );
+    expect(spoken).toContain("yes/no");
+  });
+
+  it("says the words without reading the brackets aloud", () => {
+    // A voice reads "[yes/no]" as "open bracket yes slash no close bracket",
+    // which is why citations are stripped in the first place.
+    expect(toSpeakableText("choose [yes/no]", { final: true })).toBe("choose yes/no");
+  });
+
+  it("still strips a completed citation at the end of a settled answer", () => {
+    expect(toSpeakableText("See the note [12, 34]", { final: true })).toBe("See the note");
+  });
+
+  it("still holds a trailing bracket back WHILE streaming", () => {
+    // The other half: the same text mid-stream must not be spoken yet, or the
+    // link case re-reads it.
+    expect(toSpeakableText("Please choose [yes/no]")).toBe("Please choose");
+  });
+
+  it("speaks an answer ending in bracketed prose exactly once", () => {
+    // End to end, the way the bridge drives it: stream to completion, then the
+    // settled update, then flush.
+    const raw = "Please confirm the schedule and then choose [yes/no]";
+    const stream = new SentenceStream();
+    const spoken: string[] = [];
+    for (let i = 1; i <= raw.length; i++)
+      spoken.push(...stream.push(toSpeakableText(raw.slice(0, i))));
+    spoken.push(...stream.push(toSpeakableText(raw, { final: true })));
+    spoken.push(...stream.flush());
+
+    const text = spoken.join(" ");
+    expect(text).toContain("yes/no");
+    expect(text.match(/choose/g) ?? [], "the sentence was spoken twice").toHaveLength(1);
+  });
+
   it("waits at a closed label until it is known whether a link follows", () => {
     // The chunk boundary immediately before "(": "[label]" looks finished, but
     // one more character turns it into a link whose speakable form is four

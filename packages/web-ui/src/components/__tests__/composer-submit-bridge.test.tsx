@@ -18,11 +18,19 @@ import { submitComposerText, useComposerSubmitStore } from "../../lib/composer-s
 
 const sent: string[] = [];
 
+let draft = "";
 vi.mock("@assistant-ui/react", () => ({
   useAui: () => ({
     composer: {
-      setText: (t: string) => sent.push(t),
-      send: () => {},
+      getState: () => ({ text: draft }),
+      setText: (t: string) => {
+        draft = t;
+        sent.push(t);
+      },
+      // The real composer clears itself on send.
+      send: () => {
+        draft = "";
+      },
     },
   }),
 }));
@@ -44,6 +52,7 @@ afterEach(async () => {
   root = null;
   container = null;
   sent.length = 0;
+  draft = "";
   useComposerSubmitStore.setState({ pending: null });
 });
 
@@ -98,5 +107,26 @@ describe("composer submit store", () => {
     const id = useComposerSubmitStore.getState().pending!.id;
     const claim = () => useComposerSubmitStore.getState().claim(id);
     expect([claim(), claim(), claim()]).toEqual([true, false, false]);
+  });
+
+  it("puts the user's draft back after sending a spoken turn", async () => {
+    // The composer stays editable during a call. Overwriting a half-written
+    // message with the transcript and sending posts the transcript AND takes
+    // the draft — and any attachment — with it.
+    await mount(<ComposerSubmitBridge />);
+    draft = "a half-written question about clause 9";
+
+    await act(async () => submitComposerText("what is the notice period?"));
+
+    expect(sent).toContain("what is the notice period?");
+    expect(draft, "the draft was eaten by the spoken turn").toBe(
+      "a half-written question about clause 9",
+    );
+  });
+
+  it("leaves the composer empty when there was no draft", async () => {
+    await mount(<ComposerSubmitBridge />);
+    await act(async () => submitComposerText("spoken turn"));
+    expect(draft).toBe("");
   });
 });

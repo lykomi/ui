@@ -120,6 +120,12 @@ export class VoiceBridge {
    * after such a cancel names the response that was cancelled.
    */
   private cancelledBeforeCreated = false;
+  /**
+   * The host went away. Set even while connecting, which `connected` cannot
+   * express — it is false both before a call and during one that is still
+   * being set up, and only one of those may go on to start a session.
+   */
+  private abandoned = false;
 
   /** Injected so the bridge never imports the React chat surface. */
   private submitText: ((text: string) => void) | null = null;
@@ -181,6 +187,7 @@ export class VoiceBridge {
           // does not exist. Awaiting first therefore left a discarded session
           // able to acquire the microphone minutes later with no control able
           // to stop it.
+          this.abandoned = false;
           const connecting = controls.connect();
           if (abortSignal) {
             const cancelled = new Promise<"cancelled">((resolve) => {
@@ -215,6 +222,14 @@ export class VoiceBridge {
             }
           } else {
             await connecting;
+          }
+
+          if (this.abandoned) {
+            // The host unmounted while this was connecting. Nothing is left to
+            // control the transport, so do not let it become a live session.
+            controls.disconnect();
+            this.endCall();
+            throw new Error("Voice host unmounted while connecting");
           }
 
           this.connected = true;
@@ -354,6 +369,12 @@ export class VoiceBridge {
    * already finished.
    */
   handleClosed(): void {
+    // `connected` is only set once `connect()` resolves, so a host that goes
+    // away while the transport is still coming up would slip past this guard
+    // and leave the pending setup free to mark itself running afterwards —
+    // against controls whose host no longer exists. `abandon()` covers that
+    // half; this one covers a call that had actually started.
+    this.abandoned = true;
     if (!this.connected) return;
     this.endCall();
     this.helpers?.end("finished");
@@ -419,7 +440,10 @@ export class VoiceBridge {
       return;
     }
 
-    const speakable = toSpeakableText(text);
+    // Once the answer has settled, nothing can still change a trailing
+    // bracket, so it must not be held back — holding it at that point drops
+    // it, since `flush()` sees only what was pushed.
+    const speakable = toSpeakableText(text, { final: isComplete });
     for (const utterance of this.sentences.push(speakable)) this.speech.enqueue(utterance);
 
     if (isComplete) {

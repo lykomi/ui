@@ -84,6 +84,10 @@ const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*\]?$/;
  * One character is enough — the rewind is by utterance, not by character.
  */
 const UNCLOSED_LINK = /!?\[([^\]]*)\]\([^)]*$/;
+/** Matches nothing, so a rule can be switched off without branching the chain. */
+const NOTHING = /(?!)/;
+/** A bracketed run at the end of a SETTLED answer: keep the words, lose the brackets. */
+const TRAILING_BRACKETED = /\[([^\]]*)\]?$/;
 const HEADING = /^\s{0,3}#{1,6}\s+/gm;
 const BLOCKQUOTE = /^\s{0,3}>\s?/gm;
 const LIST_BULLET = /^\s{0,3}([-*+]|\d+[.)])\s+/gm;
@@ -100,7 +104,12 @@ const TABLE_DIVIDER = /^\s*\|?[\s:|-]{3,}\|?\s*$/gm;
  * spelled out, because hearing punctuation read aloud is worse than not
  * hearing it at all. What survives is the prose.
  */
-export function toSpeakableText(markdown: string): string {
+export function toSpeakableText(markdown: string, options: { final?: boolean } = {}): string {
+  // `final` means the answer has settled, so nothing can arrive to change what
+  // a trailing bracket turns out to be. Holding it back THEN does not defer
+  // speech, it drops it: "…and then choose [yes/no]" was spoken without the
+  // options, because `flush()` only ever sees this already-shortened text.
+  const settled = options.final === true;
   return (
     markdown
       .replace(FENCED_CODE, " ")
@@ -120,7 +129,11 @@ export function toSpeakableText(markdown: string): string {
       .replace(/`/g, "")
       .replace(EMPHASIS, "")
       .replace(UNCLOSED_LINK, "$1")
-      .replace(UNCLOSED_BRACKET, "")
+      .replace(settled ? NOTHING : UNCLOSED_BRACKET, "")
+      // Settled: keep the words, drop the delimiters. A voice reads "[yes/no]"
+      // as "open bracket yes slash no close bracket", which is the reason
+      // citations are stripped in the first place.
+      .replace(settled ? TRAILING_BRACKETED : NOTHING, "$1")
       .replace(/[ \t]+/g, " ")
       .replace(/\s*\n\s*/g, "\n")
       .trim()

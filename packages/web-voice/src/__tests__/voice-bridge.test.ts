@@ -585,6 +585,38 @@ describe("session lifecycle", () => {
     await vi.waitFor(() => expect(controls.sent.length).toBe(afterBStarted + 1));
   });
 
+  it("does not start a session whose host left while it was connecting", async () => {
+    // `connected` is only set once connect() resolves, so it is false both
+    // BEFORE a call and DURING one that is still coming up — and only one of
+    // those may go on to run. Unmounting in that window slipped past the
+    // guard and left the pending setup free to mark itself running against
+    // controls whose host no longer existed.
+    const controls = fakeControls();
+    let release: (() => void) | null = null;
+    controls.connect = () =>
+      new Promise<void>((resolve) => {
+        release = () => {
+          controls.connected = true;
+          resolve();
+        };
+      });
+
+    const bridge = new VoiceBridge(relay());
+    const detach = bridge.attach(controls);
+    const session = bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(release).not.toBeNull());
+
+    // The host unmounts: retract the controls and end the call.
+    detach();
+    bridge.handleClosed();
+
+    // Only now does the transport finish coming up.
+    release!();
+
+    await vi.waitFor(() => expect(controls.connected, "transport left live").toBe(false));
+    expect(session.status.type, "a session started without a host").not.toBe("running");
+  });
+
   it("ends the session when the transport closes on its own", async () => {
     // `handleClosed` had no caller anywhere in the repo. After a clean remote
     // close or exhausted reconnects the SDK reaches `disconnected` without an

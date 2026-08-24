@@ -457,14 +457,33 @@ if (buildOutput.includes("Some chunks are larger than 500 kB")) {
   throw new Error("Starter production build emitted Vite's large chunk warning.");
 }
 
-// The build above is the DEFAULT scaffold, where voice is switched off and
-// tree-shaken out entirely. That is worth proving, but on its own it can only
-// ever exercise the half of the template where voice does not exist — which is
-// how a missing Tailwind @source for the voice package survived review: with
-// the feature off, none of its classes are referenced, so none are missing.
-//
-// Build it again with the feature ON and check the CSS actually carries the
-// utilities those components use.
+// Read the DEFAULT build before anything overwrites it. This is the assertion
+// that "optional" means what the README says: with the feature unset, none of
+// the voice package reaches the bundle. It has to happen here, because the
+// voice-enabled build below writes to the same `dist` — reading afterwards
+// would inspect that bundle instead and pass no matter how badly tree-shaking
+// had regressed.
+const assetsDir = join(appDir, "dist", "assets");
+const readAssets = (ext) =>
+  readdirSync(assetsDir)
+    .filter((f) => f.endsWith(ext))
+    .map((f) => readFileSync(join(assetsDir, f), "utf8"))
+    .join("\n");
+
+const defaultJs = readAssets(".js");
+for (const marker of ["VoiceLiveAvatar", "createVoiceModule", "getUserMedia", "AudioWorklet"]) {
+  if (defaultJs.includes(marker)) {
+    throw new Error(
+      `Default scaffold bundle contains "${marker}" — voice is meant to be tree-shaken out ` +
+        `entirely when VITE_VOICE_PROXY_URL is unset.`,
+    );
+  }
+}
+
+// That build could only ever exercise the half of the template where voice
+// does not exist — which is how a missing Tailwind @source for the voice
+// package survived review: with the feature off, none of its classes are
+// referenced, so none are missing. Build it again with the feature ON.
 const voiceBuild = await runPnpmLiveOutput(["build"], {
   cwd: appDir,
   timeoutMs: 3 * 60_000,
@@ -474,11 +493,8 @@ if (voiceBuild.includes("Some chunks are larger than 500 kB")) {
   throw new Error("Voice-enabled starter build emitted Vite's large chunk warning.");
 }
 
-const voiceAssets = join(appDir, "dist", "assets");
-const cssFiles = readdirSync(voiceAssets).filter((f) => f.endsWith(".css"));
-const css = cssFiles.map((f) => readFileSync(join(voiceAssets, f), "utf8")).join("\n");
-const jsFiles = readdirSync(voiceAssets).filter((f) => f.endsWith(".js"));
-const js = jsFiles.map((f) => readFileSync(join(voiceAssets, f), "utf8")).join("\n");
+const css = readAssets(".css");
+const js = readAssets(".js");
 
 if (!js.includes("VoiceLive") && !js.includes("voice-live")) {
   throw new Error(

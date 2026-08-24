@@ -30,8 +30,12 @@ export function VoiceStage(props: VoiceStageProps = {}) {
   // re-registered every time a stream arrives.
   const liveVideo = useVoiceUiStore((s) => s.videoStream);
   const liveAudio = useVoiceUiStore((s) => s.audioStream);
-  const videoStream = props.videoStream ?? liveVideo;
-  const audioStream = props.audioStream ?? liveAudio;
+  // `undefined` means "not specified, use the live session". An explicit
+  // `null` is a host saying "show no avatar / play no audio here", which the
+  // props contract allows and `??` silently ignored — it treats both the same
+  // and handed the live streams back either way.
+  const videoStream = props.videoStream === undefined ? liveVideo : props.videoStream;
+  const audioStream = props.audioStream === undefined ? liveAudio : props.audioStream;
   const voice = useVoiceState();
   const analyser = useVoiceUiStore((s) => s.analyser);
   const sessionState = useVoiceUiStore((s) => s.sessionState);

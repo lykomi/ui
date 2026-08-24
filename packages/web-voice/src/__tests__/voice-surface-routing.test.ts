@@ -40,3 +40,23 @@ describe("voice surface audio routing", () => {
     expect(source).toContain("chromaKeyConfig={config.chromaKey ?? undefined}");
   });
 });
+
+describe("thread surface ownership", () => {
+  it("clears the surface only while it is still ours", () => {
+    // Last-registration-wins: another module may take the slot during a call,
+    // and clearing unconditionally removes ITS surface rather than ours.
+    expect(source).toContain("useChatSlotsStore.getState().threadSurface === VoiceStage");
+  });
+});
+
+describe("VoiceStage stream overrides", () => {
+  const stage = readFileSync(join(import.meta.dirname, "..", "react", "voice-stage.tsx"), "utf8");
+
+  it("treats an explicit null as a suppression, not an omission", () => {
+    // The props contract allows null to mean "show nothing here". `??` treats
+    // that identically to an omitted prop and hands back the live stream.
+    expect(stage).toContain("props.videoStream === undefined ? liveVideo : props.videoStream");
+    expect(stage).toContain("props.audioStream === undefined ? liveAudio : props.audioStream");
+    expect(stage).not.toMatch(/props\.videoStream \?\? liveVideo/);
+  });
+});
