@@ -37,6 +37,7 @@ const packages = [
   "packages/web-primitives",
   "packages/web-ui",
   "packages/web-shell",
+  "packages/web-voice",
 ];
 
 function resolvePnpmCommand() {
