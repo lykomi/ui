@@ -417,8 +417,22 @@ describe("session lifecycle", () => {
 });
 
 describe("readLevel", () => {
+  /** The bridge's real provider: one buffer, resized only when fftSize changes. */
+  function pool() {
+    let buf: Uint8Array<ArrayBuffer> | null = null;
+    const get = (size: number) => {
+      if (buf === null || buf.length !== size) {
+        buf = new Uint8Array(new ArrayBuffer(size));
+        get.allocations++;
+      }
+      return buf;
+    };
+    get.allocations = 0;
+    return get;
+  }
+
   it("is zero without an analyser", () => {
-    expect(readLevel(null, new Uint8Array(new ArrayBuffer(4)))).toBe(0);
+    expect(readLevel(null, pool())).toBe(0);
   });
 
   it("reports peak deviation from silence, normalised", () => {
@@ -426,12 +440,47 @@ describe("readLevel", () => {
       fftSize: 4,
       getByteTimeDomainData: (b: Uint8Array) => b.set([128, 192, 128, 64]),
     } as unknown as AnalyserNode;
-    expect(readLevel(analyser, new Uint8Array(new ArrayBuffer(4)))).toBeCloseTo(0.5, 5);
+    expect(readLevel(analyser, pool())).toBeCloseTo(0.5, 5);
+  });
+
+  it("asks for a buffer the size of the analyser's window", () => {
+    // The coupling this removes: a buffer sized by a constant of ours rather
+    // than by the analyser reads only the oldest slice of a larger window and
+    // under-reports the level. Nothing throws — `getByteTimeDomainData` drops
+    // the excess per spec (verified in Chromium) — so the meter would just be
+    // quietly wrong. The size must come from the analyser.
+    const sizes: number[] = [];
+    const analyser = {
+      fftSize: 2048,
+      getByteTimeDomainData: (b: Uint8Array) => b.fill(128),
+    } as unknown as AnalyserNode;
+    readLevel(analyser, (size) => {
+      sizes.push(size);
+      return new Uint8Array(new ArrayBuffer(size));
+    });
+    expect(sizes).toEqual([2048]);
+  });
+
+  it("reuses one buffer across ticks and reallocates only when fftSize changes", () => {
+    // 20 reads a second for the length of a call: the reuse is the point of a
+    // provider, and a resize must still be possible.
+    const get = pool();
+    const analyser = {
+      fftSize: 256,
+      getByteTimeDomainData: (b: Uint8Array) => b.fill(128),
+    } as unknown as AnalyserNode;
+    for (let i = 0; i < 10; i++) readLevel(analyser, get);
+    expect(get.allocations).toBe(1);
+
+    (analyser as { fftSize: number }).fftSize = 512;
+    readLevel(analyser, get);
+    expect(get.allocations).toBe(2);
   });
 
   it("never reads past the analyser's own sample count", () => {
-    // A buffer larger than fftSize keeps stale samples in its tail; reading
-    // them would report a level from a previous, louder moment forever.
+    // A provider that hands back something larger than the window leaves stale
+    // samples in the tail; reading them would report a level from a previous,
+    // louder moment forever.
     const buffer = new Uint8Array(new ArrayBuffer(8));
     buffer.fill(255);
     const analyser = {
@@ -441,6 +490,6 @@ describe("readLevel", () => {
         b[1] = 128;
       },
     } as unknown as AnalyserNode;
-    expect(readLevel(analyser, buffer)).toBe(0);
+    expect(readLevel(analyser, () => buffer)).toBe(0);
   });
 });

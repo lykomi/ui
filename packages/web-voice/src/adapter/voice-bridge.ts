@@ -374,14 +374,20 @@ export class VoiceBridge {
         this.stopVolumeMeter();
         return;
       }
-      helpers.emitVolume(readLevel(controls.getAnalyser(), this.ensureVolumeBuffer()));
+      helpers.emitVolume(readLevel(controls.getAnalyser(), (size) => this.ensureVolumeBuffer(size)));
     }, VOLUME_INTERVAL_MS);
   }
 
-  private ensureVolumeBuffer(): Uint8Array<ArrayBuffer> {
+  private ensureVolumeBuffer(size: number): Uint8Array<ArrayBuffer> {
     // Reused across ticks: allocating a fresh array 20× a second for the
-    // life of a call is pure garbage-collector pressure.
-    this.volumeBuffer ??= new Uint8Array(new ArrayBuffer(256));
+    // life of a call is pure garbage-collector pressure. Sized from the
+    // analyser rather than a constant of our own — the SDK pins fftSize to
+    // 256 today, and a buffer that quietly disagreed with it would read only
+    // the oldest slice of each window and under-report the level, with
+    // nothing failing to make that visible.
+    if (this.volumeBuffer === null || this.volumeBuffer.length !== size) {
+      this.volumeBuffer = new Uint8Array(new ArrayBuffer(size));
+    }
     return this.volumeBuffer;
   }
 
@@ -400,10 +406,16 @@ export class VoiceBridge {
  * assistant's speaking level, not the microphone's — the honest meaning of
  * the number a consumer reads from `useVoiceVolume()`.
  */
-export function readLevel(analyser: AnalyserNode | null, buffer: Uint8Array<ArrayBuffer>): number {
+export function readLevel(
+  analyser: AnalyserNode | null,
+  getBuffer: (size: number) => Uint8Array<ArrayBuffer>,
+): number {
   if (!analyser) return 0;
-  const samples = Math.min(buffer.length, analyser.fftSize);
+  const buffer = getBuffer(analyser.fftSize);
   analyser.getByteTimeDomainData(buffer);
+  // A provider may still hand back something larger; the tail of an oversized
+  // buffer holds samples the analyser did not overwrite.
+  const samples = Math.min(buffer.length, analyser.fftSize);
   let peak = 0;
   for (let i = 0; i < samples; i++) {
     const deviation = Math.abs(buffer[i]! - 128);
