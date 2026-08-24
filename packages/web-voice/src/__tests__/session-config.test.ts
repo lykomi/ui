@@ -149,4 +149,42 @@ describe("buildVoiceSession", () => {
     expect(session.voice).toBe("en-US-AvaMultilingualNeural");
     expect(session.turnDetection).toMatchObject({ createResponse: false });
   });
+
+  describe("keyable avatar background", () => {
+    // The avatar arrives composited by the service. Only the SESSION can ask
+    // for a green screen, and `VoiceLiveAvatar` chroma-keys by default — so
+    // without this the service composites onto opaque white, the key has
+    // nothing to remove, and the avatar renders as a white box on the page.
+    // Found in a live run; it had no test until a mutation sweep said so.
+    const avatar = { character: "lisa", style: "casual-sitting" } as never;
+
+    it("asks for a green screen when a host configures an avatar", () => {
+      const session = buildVoiceSession({ mode: "realtime", overrides: { avatar } });
+      expect(session.avatar?.video?.background).toEqual({ color: "#00FF00FF" });
+    });
+
+    it("asks for it on the no-overrides path too", () => {
+      // Two return paths build a session; both must inject it.
+      const session = buildVoiceSession({
+        mode: "relay",
+        overrides: { avatar },
+      });
+      expect(session.avatar?.video?.background).toEqual({ color: "#00FF00FF" });
+    });
+
+    it("leaves a background the host chose alone", () => {
+      const session = buildVoiceSession({
+        mode: "realtime",
+        overrides: {
+          avatar: { ...(avatar as object), video: { background: { color: "#123456FF" } } } as never,
+        },
+      });
+      expect(session.avatar?.video?.background).toEqual({ color: "#123456FF" });
+    });
+
+    it("adds nothing when there is no avatar", () => {
+      const session = buildVoiceSession({ mode: "relay" });
+      expect(session.avatar).toBeUndefined();
+    });
+  });
 });
