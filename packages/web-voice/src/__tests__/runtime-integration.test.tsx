@@ -18,8 +18,10 @@ import {
   type RealtimeVoiceAdapter,
   type ThreadMessage,
 } from "@assistant-ui/react";
+import { TooltipProvider } from "@iloveagents/foundry-web-ui";
 import { VoiceBridge, type VoiceTransportControls } from "../adapter/voice-bridge.ts";
 import type { VoiceConfig } from "../adapter/types.ts";
+import { VoiceMicButton } from "../react/voice-mic-button.tsx";
 
 const stubModel: ChatModelAdapter = {
   async *run() {
@@ -68,7 +70,10 @@ function Harness({ voice }: { voice?: RealtimeVoiceAdapter }) {
   });
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <Probe />
+      <TooltipProvider>
+        <Probe />
+        <VoiceMicButton />
+      </TooltipProvider>
     </AssistantRuntimeProvider>
   );
 }
@@ -213,5 +218,33 @@ describe("runtime integration", () => {
       probe.disconnect();
     });
     expect(probe.messages).toEqual([]);
+  });
+
+  it("shows no mic button when the runtime has no voice", async () => {
+    await mount();
+    expect(container!.querySelector("button")).toBeNull();
+  });
+
+  it("offers to start, then to mute and end, once voice is available", async () => {
+    const bridge = new VoiceBridge(config("relay"));
+    bridge.attach(fakeControls());
+    await mount(bridge.createAdapter());
+
+    // TooltipIconButton names itself with an `sr-only` span, not aria-label.
+    const labels = () =>
+      [...container!.querySelectorAll("button")].map((b) => b.textContent?.trim());
+    expect(labels()).toEqual(["Start voice conversation"]);
+
+    await act(async () => {
+      probe.connect();
+    });
+    await settle();
+
+    expect(labels()).toEqual(["Mute microphone", "End voice conversation"]);
+
+    await act(async () => {
+      probe.disconnect();
+    });
+    expect(labels()).toEqual(["Start voice conversation"]);
   });
 });
