@@ -20,6 +20,14 @@ export interface VoiceAvatarPanelProps {
   audioStream: MediaStream | null;
   /** Replaces the default centred placement entirely. */
   className?: string;
+  /**
+   * Classes for the video canvas itself.
+   *
+   * The SDK sets `height:auto; object-fit:contain` as an inline style, which
+   * a plain class cannot beat — pass Tailwind's important modifier
+   * (`object-cover!`) to override it.
+   */
+  canvasClassName?: string;
 }
 
 const LAYER =
@@ -30,10 +38,21 @@ const LAYER =
  */
 const CARD = "pointer-events-auto w-[26rem] max-w-[80vw]";
 
-export function VoiceAvatarPanel({ videoStream, audioStream, className }: VoiceAvatarPanelProps) {
+export function VoiceAvatarPanel({
+  videoStream,
+  audioStream,
+  className,
+  canvasClassName,
+}: VoiceAvatarPanelProps) {
   if (!videoStream) return null;
 
-  const avatar = <VoiceLiveAvatar videoStream={videoStream} audioStream={audioStream} />;
+  const avatar = (
+    <VoiceLiveAvatar
+      videoStream={videoStream}
+      audioStream={audioStream}
+      canvasClassName={canvasClassName}
+    />
+  );
 
   if (className) return <div className={className}>{avatar}</div>;
 

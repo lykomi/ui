@@ -25,8 +25,24 @@ const RING_COUNT = 5;
 const RING_GAP = 22;
 const CORE_RADIUS = 20;
 
-/** Level smoothing — the raw average is jittery enough to look like noise. */
-const SMOOTHING = 0.22;
+/**
+ * Level smoothing, asymmetric on purpose.
+ *
+ * A single factor tracks speech syllable-for-syllable and the rings punch in
+ * and out on every one — a thud rather than a presence. Rising quickly and
+ * falling slowly turns the same signal into a swell that follows the shape
+ * of a phrase instead of its consonants.
+ */
+const ATTACK = 0.09;
+const RELEASE = 0.035;
+
+/**
+ * How far the rings travel at full level, in px.
+ *
+ * Deliberately small. The eye reads a gentle change as "alive"; a large one
+ * as an alarm, and at speech rates it is simply hectic.
+ */
+const SWELL = 14;
 
 export interface VoiceVisualizerProps {
   /** Analyser from the live session; `null` renders the idle state. */
@@ -93,10 +109,9 @@ export function VoiceVisualizer({
         let sum = 0;
         for (let i = 0; i < buffer.length; i++) sum += buffer[i]!;
         const next = sum / buffer.length / 255;
-        // Ease toward the new level so the rings breathe instead of flicker.
-        level += (next - level) * SMOOTHING;
+        level += (next - level) * (next > level ? ATTACK : RELEASE);
       } else {
-        level += (0 - level) * SMOOTHING;
+        level += (0 - level) * RELEASE;
       }
 
       // Transparent: the surface behind decides the background, which is what
@@ -106,19 +121,19 @@ export function VoiceVisualizer({
       ctx.fillStyle = analyser ? colors.active : colors.idle;
 
       for (let i = 0; i < RING_COUNT; i++) {
-        const radius = CORE_RADIUS + i * RING_GAP + level * 40;
+        const radius = CORE_RADIUS + i * RING_GAP + level * SWELL;
         const alpha = Math.max(0, 0.45 - i * 0.09);
         if (alpha <= 0) continue;
         ctx.globalAlpha = alpha;
-        ctx.lineWidth = 2 + level * 2;
+        ctx.lineWidth = 1.5 + level * 1.2;
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      ctx.globalAlpha = 0.3 + level * 0.45;
+      ctx.globalAlpha = 0.32 + level * 0.3;
       ctx.beginPath();
-      ctx.arc(cx, cy, CORE_RADIUS * (0.8 + level * 0.4), 0, Math.PI * 2);
+      ctx.arc(cx, cy, CORE_RADIUS * (0.9 + level * 0.2), 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
     };

@@ -453,7 +453,10 @@ export function ChatContent({
               thread is not unmounted, only hidden, so its scroll position
               and any in-flight run survive the round trip. */}
           {ThreadSurface && (
-            <div className="absolute inset-0 z-10 overflow-y-auto bg-background">
+            // `overflow-hidden`, not scroll: a surface owns its own layout,
+            // and a full-bleed one (an avatar cropped to the frame) must be
+            // able to reach the edges rather than sit in a scroll box.
+            <div className="absolute inset-0 z-10 overflow-hidden bg-background">
               <ThreadSurface />
             </div>
           )}

@@ -62,35 +62,50 @@ export function VoiceStage(props: VoiceStageProps = {}) {
   const caption = sessionState === "speaking" ? assistantText : userText;
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center gap-6 px-6 py-10">
-      {videoStream ? (
-        // No card: the avatar is chroma-keyed to a cut-out, and a panel
-        // around it re-introduces exactly the rectangle the keying removed.
-        <VoiceAvatarPanel
-          videoStream={videoStream}
-          audioStream={audioStream}
-          className="w-[26rem] max-w-[80vw]"
-        />
-      ) : (
-        <VoiceVisualizer
-          analyser={connecting || muted ? null : analyser}
-          themeKey={themeMode}
-          label={`Voice conversation — ${status}`}
-          className="h-56 w-full max-w-md"
-        />
-      )}
+    <div className="relative flex h-full min-h-full flex-col">
+      {/* The visual takes all the room there is; the caption block below has
+          a reserved height so a one-line answer growing to two does not shove
+          the visual up the screen mid-sentence. */}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {videoStream ? (
+          // Full-bleed and anchored to the top, so the avatar is framed head
+          // and torso with the legs running off the lower edge — the framing
+          // a person on a call has, rather than a full-length figure floating
+          // in the middle of the page. The `!` overrides the SDK canvas's
+          // inline `height:auto; object-fit:contain`.
+          <VoiceAvatarPanel
+            videoStream={videoStream}
+            audioStream={audioStream}
+            className="absolute inset-0"
+            canvasClassName="h-full! w-full! max-h-none! max-w-none! object-cover! object-top!"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <VoiceVisualizer
+              analyser={connecting || muted ? null : analyser}
+              themeKey={themeMode}
+              label={`Voice conversation — ${status}`}
+              className="h-full max-h-80 w-full max-w-md"
+            />
+          </div>
+        )}
+      </div>
 
-      <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
-        {status}
-      </p>
-
-      {caption ? (
-        <p className="max-w-xl text-center text-lg leading-relaxed text-foreground/90">{caption}</p>
-      ) : (
-        <p className="max-w-xl text-center text-sm text-muted-foreground/70">
-          Say something to get started.
+      <div className="relative shrink-0 px-6 pb-8 pt-4 text-center">
+        <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
+          {status}
         </p>
-      )}
+        {/* Two lines reserved, always. */}
+        <p
+          className={
+            "mx-auto mt-2 flex h-14 max-w-xl items-start justify-center overflow-hidden " +
+            "text-lg leading-7 " +
+            (caption ? "text-foreground/90" : "text-sm leading-7 text-muted-foreground/70")
+          }
+        >
+          <span className="line-clamp-2">{caption || "Say something to get started."}</span>
+        </p>
+      </div>
     </div>
   );
 }
