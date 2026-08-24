@@ -585,6 +585,43 @@ describe("session lifecycle", () => {
     await vi.waitFor(() => expect(controls.sent.length).toBe(afterBStarted + 1));
   });
 
+  it("leaves nothing pending behind after a cancelled connect", async () => {
+    // The cancellation branch used to leave `pendingConnect` set. A later
+    // close then acted on the controls of a call that had already ended —
+    // disconnecting a transport it did not own.
+    const controls = fakeControls();
+    let release: (() => void) | null = null;
+    controls.connect = () =>
+      new Promise<void>((resolve) => {
+        release = () => resolve();
+      });
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(controls);
+    const abort = new AbortController();
+    bridge.createAdapter().connect({ abortSignal: abort.signal });
+    await vi.waitFor(() => expect(release).not.toBeNull());
+
+    abort.abort();
+    release!();
+    await vi.waitFor(() => expect(controls.connected).toBe(false));
+    // Let the abort path's own late teardown finish first — counting from
+    // before it lands would blame the stale-pending bug for a legitimate
+    // disconnect and pass for the wrong reason.
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+
+    // The call is over. A later close must find nothing to act on.
+    let disconnectsAfter = 0;
+    const stop = controls.disconnect;
+    controls.disconnect = () => {
+      disconnectsAfter += 1;
+      stop();
+    };
+    bridge.handleClosed();
+
+    expect(disconnectsAfter, "a stale pending connect was acted on").toBe(0);
+  });
+
   it("takes down a connection that never settles when the host leaves", async () => {
     // `setup` re-checks `abandoned` past its await, so a connection that
     // arrives late is already handled. The case that path cannot reach is the

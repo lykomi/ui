@@ -419,6 +419,11 @@ export class VoiceBridge {
    */
   private endCall(): void {
     this.connected = false;
+    // Cleared here rather than on each exit path: the cancellation branch left
+    // it set, and a later `handleClosed()` would then act on the controls of a
+    // call that ended long ago — disconnecting a transport it does not own and
+    // ending a session it did not start.
+    this.pendingConnect = null;
     this.activeResponseId = null;
     this.cancelledResponses.clear();
     this.cancelledBeforeCreated = false;
