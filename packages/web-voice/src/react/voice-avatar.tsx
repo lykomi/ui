@@ -13,7 +13,9 @@
  * positioning layer takes no pointer events, only the card does.
  */
 
+import { useEffect } from "react";
 import { VoiceLiveAvatar } from "@iloveagents/foundry-voice-live-react";
+import { trackAvatarPanel } from "./voice-ui-store.ts";
 import type { ChromaKeyConfig } from "@iloveagents/foundry-voice-live-react";
 
 export interface VoiceAvatarPanelProps {
@@ -82,6 +84,17 @@ export function VoiceAvatarPanel({
   canvasClassName,
   chromaKeyConfig = AVATAR_CHROMA_KEY,
 }: VoiceAvatarPanelProps) {
+  // Announce that an avatar element exists, so the surface knows it does not
+  // also need a bare audio sink. Configuration cannot answer that question:
+  // this panel may be rendered by the stage, and the chat surface decides
+  // whether the stage is on screen at all.
+  const rendering = !!videoStream;
+  useEffect(() => {
+    if (!rendering) return;
+    trackAvatarPanel(1);
+    return () => trackAvatarPanel(-1);
+  }, [rendering]);
+
   if (!videoStream) return null;
 
   const avatar = (

@@ -257,8 +257,14 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   const needsElement = hasAvatar || isWebRtc;
   useDirectAudioOutput(!needsElement, live.audioContext, live.audioAnalyser);
 
-  // The stage draws the avatar itself, so an element already exists there.
-  const needsAudioOnlySink = needsElement && !showAvatar;
+  // Whether a sink is needed depends on whether an avatar element is ACTUALLY
+  // mounted, not on whether we intended one. With `stage: true` the avatar is
+  // drawn by the registered stage, and the chat surface can take that stage
+  // down — closing the floating panel does exactly that — while the call
+  // deliberately continues. Keyed off intent, the sink stayed absent and the
+  // assistant went silent until the panel was reopened.
+  const avatarPanels = useVoiceUiStore((s) => s.avatarPanels);
+  const needsAudioOnlySink = needsElement && avatarPanels === 0;
 
   return (
     <>

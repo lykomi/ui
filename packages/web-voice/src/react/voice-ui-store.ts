@@ -42,6 +42,16 @@ interface VoiceUiState {
   audioStream: MediaStream | null;
   /** Host chroma-key tuning, forwarded to the avatar wherever it renders. */
   chromaKey: ChromaKeyConfig | null;
+  /**
+   * How many `VoiceAvatarPanel`s are mounted right now.
+   *
+   * Who plays the audio cannot be decided from configuration alone. The stage
+   * is registered as a chat slot, so the surrounding chat surface decides
+   * whether it is rendered — and a floating panel closing while the call
+   * deliberately continues takes the avatar's element down with it. A count
+   * kept by the panels themselves is the only thing that knows.
+   */
+  avatarPanels: number;
 }
 
 export const useVoiceUiStore = create<VoiceUiState>(() => ({
@@ -55,6 +65,7 @@ export const useVoiceUiStore = create<VoiceUiState>(() => ({
   videoStream: null,
   audioStream: null,
   chromaKey: null,
+  avatarPanels: 0,
 }));
 
 /**
@@ -70,4 +81,9 @@ export function resetVoiceSessionState(): void {
     videoStream: null,
     audioStream: null,
   });
+}
+
+/** Called by `VoiceAvatarPanel` as it mounts and unmounts. */
+export function trackAvatarPanel(delta: 1 | -1): void {
+  useVoiceUiStore.setState((s) => ({ avatarPanels: Math.max(0, s.avatarPanels + delta) }));
 }

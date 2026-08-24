@@ -21,9 +21,15 @@ describe("voice surface audio routing", () => {
     expect(source).not.toContain("const needsElement = showAvatar || isWebRtc;");
   });
 
-  it("mounts an audio-only sink when an avatar is configured but hidden", () => {
-    expect(source).toContain("const needsAudioOnlySink = needsElement && !showAvatar;");
+  it("mounts an audio-only sink whenever no avatar element is actually mounted", () => {
+    // Not "when the host hid the panel": with `stage: true` the avatar is
+    // drawn by the registered stage, and the chat surface can take that stage
+    // down — closing the floating panel does — while the call continues.
+    // Keyed off intent rather than fact, the sink stayed absent and the
+    // assistant went silent until the panel was reopened.
+    expect(source).toContain("const needsAudioOnlySink = needsElement && avatarPanels === 0;");
     expect(source).toContain("needsAudioOnlySink ? (");
+    expect(source).not.toContain("needsElement && !showAvatar");
   });
 
   it("forwards the host's chroma-key tuning to the floating avatar too", () => {

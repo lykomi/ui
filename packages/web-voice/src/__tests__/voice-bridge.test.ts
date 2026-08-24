@@ -399,6 +399,66 @@ describe("session lifecycle", () => {
     expect(session.status).toMatchObject({ type: "ended", reason: "error" });
   });
 
+  it("frees the speech queue when the transport dies mid-utterance", async () => {
+    // The bridge is installed once for the life of the app, so its state
+    // outlives a call. The speech queue releases on `response.done`, which a
+    // dead transport will never send — left `speaking`, it swallows every
+    // utterance of every LATER call: the next session connects, the agent
+    // answers, and nothing is ever heard again. `disconnect()` always cleaned
+    // up; a remote close did not, and that is the route on which the transport
+    // dies mid-utterance.
+    const bridge = new VoiceBridge(relay());
+    const controls = fakeControls();
+    await connect(bridge, controls);
+
+    bridge.trackAnswer("a1", FIRST, true);
+    await vi.waitFor(() => expect(controls.sent.length).toBeGreaterThan(0));
+    const spokenBeforeDeath = controls.sent.length;
+
+    // The transport dies without ever sending response.done.
+    bridge.handleClosed();
+
+    // A fresh call on the same bridge must speak again.
+    const controls2 = fakeControls();
+    await connect(bridge, controls2);
+    bridge.trackAnswer("a2", FIRST, true);
+
+    await vi.waitFor(() => expect(controls2.sent.length).toBeGreaterThan(0));
+    expect(spokenBeforeDeath).toBeGreaterThan(0);
+  });
+
+  it("takes the transport down when the call is cancelled while connecting", async () => {
+    // Cancelling after the host attached but before `connect()` resolves is
+    // observed by nothing else: `awaitControls` has returned, `connect()` takes
+    // no signal, and the cleanup that owns `controls.disconnect()` does not
+    // exist yet. Unchecked, the transport that has just come up is marked
+    // running on a session the runtime already discarded — microphone open,
+    // no control able to close it.
+    const controls = fakeControls();
+    let releaseConnect: (() => void) | null = null;
+    controls.connect = () =>
+      new Promise<void>((resolve) => {
+        // The transport DOES come up — that is the whole danger. It must then
+        // be taken back down, which is what this test is for.
+        releaseConnect = () => {
+          controls.connected = true;
+          resolve();
+        };
+      });
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(controls);
+    const abort = new AbortController();
+    const session = bridge.createAdapter().connect({ abortSignal: abort.signal });
+
+    await vi.waitFor(() => expect(releaseConnect).not.toBeNull());
+    abort.abort();
+    releaseConnect!();
+
+    await vi.waitFor(() => expect(session.status.type).not.toBe("running"));
+    expect(controls.connected, "transport must not be left live").toBe(false);
+  });
+
   it("ends the session when the transport closes on its own", async () => {
     // `handleClosed` had no caller anywhere in the repo. After a clean remote
     // close or exhausted reconnects the SDK reaches `disconnected` without an

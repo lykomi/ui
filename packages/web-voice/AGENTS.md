@@ -112,11 +112,22 @@ src/
   turn spoken while collapsed lands in the pending store and is never sent. Several bridges can
   therefore be mounted at once, which is why the store hands out an atomic `claim()`.
 
+- **Normalisation must never SHORTEN as the answer grows.** `toSpeakableText` strips an unclosed
+  bracket and an unmatched backtick as well as their completed forms, so the arrival of the closing
+  character changes nothing. Without that, text already voiced had to be re-read when a citation
+  closed. Growth is harmless; only shrinkage forces a rewind.
+
+- **Every route out of a call must free the speech queue.** The bridge is installed once for the
+  life of the app, so its state outlives a call. The queue releases on `response.done`, which a
+  dead transport never sends — left `speaking` it swallows every utterance of every LATER call.
+  `endCall()` is the one definition, used by `disconnect()`, `handleError()` and `handleClosed()`.
+
 - **Audio routing follows the SESSION, not the display choice.** A host may configure an avatar and
   hide its panel (`avatar: false`); the voice still arrives as a remote track that only an element
   can play, so `needsElement` derives from `session.avatar`, and an audio-only `VoiceAudioSink`
   mounts when the panel is off. Deriving it from `showAvatar` makes the assistant silent with no
-  error anywhere.
+  error anywhere. Sink ownership then keys off `avatarPanels` — a count the panels keep — because
+  the stage is a chat slot and the surrounding surface decides whether it is rendered at all.
 
 # Boundaries
 

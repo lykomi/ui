@@ -49,6 +49,21 @@ const LINK = /\[([^\]]*)\]\([^)]*\)/g;
  * "net 30 <pause> ." once the marker is gone.
  */
 const CITATION = /[ \t]*\[\d+(?:\s*,\s*\d+)*\]/g;
+/**
+ * An unclosed bracket at the very end of the text — "[", "[2", "[2, 3", "[no".
+ *
+ * Anything still missing its "]" is unfinished by definition, since nothing
+ * has arrived after it yet. Dropping it keeps normalisation MONOTONIC: a
+ * half-arrived citation and the complete one reduce to the same text, so the
+ * closing bracket changes nothing. Were only the complete form stripped, the
+ * speakable text would SHORTEN as the raw answer grew, and any span already
+ * voiced across it would have to be read a second time.
+ *
+ * Text that later turns out not to be a citation — "[note]", a markdown link —
+ * simply reappears once it closes. Growth is harmless; only shrinkage forces
+ * a rewind.
+ */
+const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*$/;
 const HEADING = /^\s{0,3}#{1,6}\s+/gm;
 const BLOCKQUOTE = /^\s{0,3}>\s?/gm;
 const LIST_BULLET = /^\s{0,3}([-*+]|\d+[.)])\s+/gm;
@@ -66,22 +81,29 @@ const TABLE_DIVIDER = /^\s*\|?[\s:|-]{3,}\|?\s*$/gm;
  * hearing it at all. What survives is the prose.
  */
 export function toSpeakableText(markdown: string): string {
-  return markdown
-    .replace(FENCED_CODE, " ")
-    .replace(IMAGE, "$1")
-    .replace(LINK, "$1")
-    .replace(CITATION, "")
-    .replace(TABLE_DIVIDER, " ")
-    .replace(TABLE_PIPES, "$1")
-    .replace(RULE, " ")
-    .replace(HEADING, "")
-    .replace(BLOCKQUOTE, "")
-    .replace(LIST_BULLET, "")
-    .replace(INLINE_CODE, "$1")
-    .replace(EMPHASIS, "")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\s*\n\s*/g, "\n")
-    .trim();
+  return (
+    markdown
+      .replace(FENCED_CODE, " ")
+      .replace(IMAGE, "$1")
+      .replace(LINK, "$1")
+      .replace(CITATION, "")
+      .replace(TABLE_DIVIDER, " ")
+      .replace(TABLE_PIPES, "$1")
+      .replace(RULE, " ")
+      .replace(HEADING, "")
+      .replace(BLOCKQUOTE, "")
+      .replace(LIST_BULLET, "")
+      .replace(INLINE_CODE, "$1")
+      // Whatever backtick is left is unmatched — an inline-code span whose
+      // closing tick has not arrived. Dropping it now means the arrival of that
+      // tick changes nothing, which is the same monotonicity argument as above.
+      .replace(/`/g, "")
+      .replace(EMPHASIS, "")
+      .replace(UNCLOSED_BRACKET, "")
+      .replace(/[ \t]+/g, " ")
+      .replace(/\s*\n\s*/g, "\n")
+      .trim()
+  );
 }
 
 /**
@@ -132,11 +154,7 @@ export class SentenceStream {
       this.advanceTo(cumulative, at);
     }
 
-    // Only up to the point where the text can still change under us. Speech
-    // cannot be unsaid, so voicing a span whose normalisation is not settled
-    // yet is what forces a rewind and a re-read later.
-    const settled = settledEnd(cumulative, this.consumed);
-    return this.take(segment(cumulative.slice(this.consumed, settled), false), cumulative);
+    return this.take(segment(cumulative.slice(this.consumed), false), cumulative);
   }
 
   /** Emit whatever is left, complete sentence or not. Call when the answer ends. */
@@ -163,42 +181,6 @@ export class SentenceStream {
     this.consumed = position;
     this.consumedText = source.slice(0, position);
   }
-}
-
-/**
- * Where the text stops being safe to speak.
- *
- * `toSpeakableText` is not monotonic: it strips a COMPLETE citation and keeps a
- * half-arrived one, so "… detail [2," is still four characters that vanish the
- * moment the "]" lands. Voice the span before then and the answer changes
- * behind the watermark — the stream rewinds to the last seam and re-reads it,
- * which is audible as a repeat. Inline code behaves the same way while its
- * closing backtick is missing.
- *
- * So a marker that is still open acts as a wall: everything after it waits for
- * the next update, and `flush()` speaks it regardless at the end of the answer.
- *
- * The wall only applies near the tail. A marker still arriving has nothing
- * after it yet, whereas a bracket with a paragraph behind it is ordinary prose
- * — "[sic]" never closed, a stray character. Treating that as in-flight would
- * hold back every remaining word of the answer until the very end, turning
- * streamed speech back into one late block, and would re-scan the whole
- * remainder on every update.
- */
-const SETTLE_WINDOW = 48;
-
-function settledEnd(text: string, from: number): number {
-  let wall = text.length;
-  for (const [open, close] of [
-    ["[", "]"],
-    ["`", "`"],
-  ] as const) {
-    const at = text.lastIndexOf(open);
-    if (at < from) continue;
-    if (text.length - at > SETTLE_WINDOW) continue;
-    if (text.indexOf(close, at + 1) < 0) wall = Math.min(wall, at);
-  }
-  return wall;
 }
 
 interface Segmented {

@@ -53,6 +53,36 @@ describe("toSpeakableText", () => {
 });
 
 describe("SentenceStream", () => {
+  it("reads a citation the same before and after its bracket closes", () => {
+    // Monotonicity, stated directly: a half-arrived citation and the complete
+    // one must normalise to the SAME text. If only the complete form were
+    // stripped, the speakable text would shrink as the raw answer grew, and
+    // any span already voiced across it would have to be read again.
+    const before = toSpeakableText("Clause four applies to the works [12, 34");
+    const after = toSpeakableText("Clause four applies to the works [12, 34]");
+    expect(before).toBe(after);
+    expect(after).toBe("Clause four applies to the works");
+  });
+
+  it("reads an inline-code span the same before and after its closing tick", () => {
+    const before = toSpeakableText("Call `configureGovernor(alpha, beta)");
+    const after = toSpeakableText("Call `configureGovernor(alpha, beta)`");
+    expect(before).toBe(after);
+  });
+
+  it("never shortens as a streamed answer grows", () => {
+    // The property both of the above serve. Checked character by character,
+    // because the shrink that caused a repeat was four characters wide.
+    const answer =
+      "Clause four applies to the whole of the works [12, 34] and to `everyPart(x)` of them.";
+    let previous = "";
+    for (let i = 1; i <= answer.length; i++) {
+      const current = toSpeakableText(answer.slice(0, i));
+      expect(current.length, `shrank at character ${i}`).toBeGreaterThanOrEqual(previous.length);
+      previous = current;
+    }
+  });
+
   it("does not re-speak when a streaming citation completes", () => {
     // The failure: `toSpeakableText` keeps a half-arrived citation ("[1") and
     // strips the complete one ("[1]"), so the SPEAKABLE text gets shorter as

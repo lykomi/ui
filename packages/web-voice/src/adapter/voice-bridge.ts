@@ -152,6 +152,22 @@ export class VoiceBridge {
           this.helpers = helpers;
           const controls = await this.awaitControls(abortSignal);
           await controls.connect();
+
+          // Cancelling while the transport was still connecting is not
+          // observed by anything else: `awaitControls` has already returned,
+          // `controls.connect()` takes no signal, and the cleanup below —
+          // the only thing that can call `controls.disconnect()` — does not
+          // exist yet. Without this check the transport that has just come up
+          // is marked running on a session the runtime already discarded,
+          // leaving the microphone open with no control able to close it.
+          if (abortSignal?.aborted) {
+            controls.disconnect();
+            this.endCall();
+            throw abortSignal.reason instanceof Error
+              ? abortSignal.reason
+              : new Error("Voice connection cancelled");
+          }
+
           this.connected = true;
 
           // `createVoiceSession` starts every session in `starting`; nothing
@@ -162,13 +178,7 @@ export class VoiceBridge {
 
           return {
             disconnect: () => {
-              this.connected = false;
-              this.userMuted = false;
-              this.stopVolumeMeter();
-              this.speech.cancel();
-              this.sentences.reset();
-              this.answerId = null;
-              this.answerDone = false;
+              this.endCall();
               controls.disconnect();
             },
             mute: () => {
@@ -252,10 +262,9 @@ export class VoiceBridge {
 
   /** A session-fatal error: report it, and end the session so the UI leaves the live state. */
   handleError(message: string): void {
-    this.connected = false;
+    this.endCall();
     this.config.onError?.(message);
     this.helpers?.end("error", new Error(message));
-    this.stopVolumeMeter();
   }
 
   /**
@@ -269,9 +278,30 @@ export class VoiceBridge {
    */
   handleClosed(): void {
     if (!this.connected) return;
-    this.connected = false;
+    this.endCall();
     this.helpers?.end("finished");
+  }
+
+  /**
+   * Everything a finished call must let go of, whichever way it ended.
+   *
+   * This bridge is installed once for the life of the app, so its state
+   * outlives any single call. The speech queue is the dangerous part: it
+   * releases on `response.done`, and a transport that has died will never send
+   * one. Left `speaking`, it swallows every utterance of every LATER call —
+   * the session connects, the agent answers, and nothing is ever heard again.
+   *
+   * `disconnect()` always did this; an error or a remote close did not, which
+   * is exactly the pair of routes on which the transport dies mid-utterance.
+   */
+  private endCall(): void {
+    this.connected = false;
+    this.userMuted = false;
     this.stopVolumeMeter();
+    this.speech.cancel();
+    this.sentences.reset();
+    this.answerId = null;
+    this.answerDone = false;
   }
 
   // ---- relay: speak the agent's answer --------------------------------------
