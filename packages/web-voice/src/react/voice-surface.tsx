@@ -29,6 +29,7 @@ import type { VoiceConfig } from "../adapter/types.ts";
 import { RelayAnswerWatcher } from "./relay-answer-watcher.tsx";
 import { VoiceAvatarPanel } from "./voice-avatar.tsx";
 import { VoiceAudioSink } from "./voice-audio-sink.tsx";
+import { useDirectAudioOutput } from "./use-direct-audio-output.ts";
 import { useVoiceUiStore } from "./voice-ui-store.ts";
 
 export interface VoiceSurfaceProps {
@@ -166,19 +167,26 @@ export function VoiceSurface({ bridge, config, avatar = true }: VoiceSurfaceProp
     }
   }, [bridge, live.error]);
 
-  // `VoiceLiveAvatar` owns the audio element in avatar mode; in voice-only
-  // mode nothing does, and the SDK's playback graph terminates in a
-  // MediaStream that has to be attached to be heard.
+  // Who plays the audio, and how.
+  //
+  // Avatar: `VoiceLiveAvatar` owns an element and the audio arrives with the
+  // video. WebRTC: the stream is a remote track, which only an element can
+  // play. Otherwise the audio is PCM this browser decoded itself, and it
+  // goes straight out through Web Audio — see `useDirectAudioOutput` for why
+  // that is worth doing rather than attaching the MediaStream.
   const showAvatar = avatar && !!session.avatar;
+  const isWebRtc = config.connection.transport === "webrtc";
+  const needsElement = showAvatar || isWebRtc;
+  useDirectAudioOutput(!needsElement, live.audioContext, live.audioAnalyser);
 
   return (
     <>
       {mode === "relay" ? <RelayAnswerWatcher bridge={bridge} /> : null}
       {showAvatar ? (
         <VoiceAvatarPanel videoStream={live.videoStream} audioStream={live.audioStream} />
-      ) : (
+      ) : isWebRtc ? (
         <VoiceAudioSink stream={live.audioStream} />
-      )}
+      ) : null}
     </>
   );
 }
