@@ -17,7 +17,6 @@ import {
   ChevronDown,
   Copy,
   Check,
-  Paperclip,
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
@@ -26,10 +25,13 @@ import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { ContextPins } from "./context-bar.tsx";
 import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
+import { ComposerAddMenu } from "./composer-add-menu.tsx";
+import { DEFAULT_COMPOSER_PLACEHOLDER } from "./assistant-chat.tsx";
 import {
   ChatComposerActionsSlot,
   ChatComposerBannerSlot,
   ChatLauncherBadgeSlot,
+  useComposerActionsOwnSend,
 } from "./chat-slots.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
@@ -126,6 +128,8 @@ export function ChatBubble() {
   const pageLabel = useAppStore((s) => s.navContext.label);
   const currentPage = useAppStore((s) => s.currentPage);
   const threadActive = useAppStore((s) => s.threadActive);
+  // With nothing typed, a module-supplied control may hold the send corner.
+  const actionsOwnSend = useComposerActionsOwnSend();
 
   // Draggable position: null = use default CSS anchored with equal left/bottom inset.
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -343,24 +347,17 @@ export function ChatBubble() {
                 <ComposerSubmitBridge />
                 <ComposerContextBadges />
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center -space-x-1 shrink-0">
-                    <ComposerPrimitive.AddAttachment asChild>
-                      <TooltipIconButton
-                        tooltip="Attach file"
-                        size="icon"
-                        className="size-7 shrink-0"
-                      >
-                        <Paperclip className="size-3.5" />
-                      </TooltipIconButton>
-                    </ComposerPrimitive.AddAttachment>
+                  <div className="flex shrink-0 items-center gap-0.5">
                     {/* The bubble is the chat you use WHILE reading a
                         document, so it needs the pin at least as much as
-                        the expanded composer does. */}
-                    <ContextPins compact showPinButton />
+                        the expanded composer does — it just lives in the
+                        menu now rather than owning a permanent icon. */}
+                    <ComposerAddMenu compact />
+                    <ContextPins compact />
                   </div>
                   <ComposerPrimitive.Input
                     autoFocus
-                    placeholder="Message..."
+                    placeholder={DEFAULT_COMPOSER_PLACEHOLDER}
                     rows={1}
                     className={cn(
                       "flex-1 bg-transparent",
@@ -373,10 +370,10 @@ export function ChatBubble() {
                   {/* Right-hand slot, mirroring the expanded composer:
                       settings sit beside Send, not among the attachment
                       icons. Hidden while running, like the expanded one. */}
-                  <ChatComposerActionsSlot />
                   <ThreadPrimitive.If running={false}>
                     <ReasoningEffortPicker />
                   </ThreadPrimitive.If>
+                  <ChatComposerActionsSlot />
                   <ThreadPrimitive.If running>
                     <ComposerPrimitive.Cancel asChild>
                       <Button
@@ -389,17 +386,19 @@ export function ChatBubble() {
                       </Button>
                     </ComposerPrimitive.Cancel>
                   </ThreadPrimitive.If>
-                  <ThreadPrimitive.If running={false}>
-                    <ComposerPrimitive.Send asChild>
-                      <Button
-                        size="icon"
-                        className="rounded-full size-8 shrink-0"
-                        aria-label="Send"
-                      >
-                        <ArrowUp className="size-4" />
-                      </Button>
-                    </ComposerPrimitive.Send>
-                  </ThreadPrimitive.If>
+                  {!actionsOwnSend && (
+                    <ThreadPrimitive.If running={false}>
+                      <ComposerPrimitive.Send asChild>
+                        <Button
+                          size="icon"
+                          className="rounded-full size-8 shrink-0"
+                          aria-label="Send"
+                        >
+                          <ArrowUp className="size-4" />
+                        </Button>
+                      </ComposerPrimitive.Send>
+                    </ThreadPrimitive.If>
+                  )}
                 </div>
                 </ComposerPrimitive.Root>
               </div>

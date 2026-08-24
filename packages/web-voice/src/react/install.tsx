@@ -50,7 +50,13 @@ export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
 
   registerVoiceAdapter(bridge.createAdapter());
   if (chrome) {
-    registerChatSlots({ composerActions: VoiceMicButton, composerBanner: VoiceStatusStrip });
+    registerChatSlots({
+      composerActions: VoiceMicButton,
+      composerBanner: VoiceStatusStrip,
+      // Nothing typed means Send has nothing to do; the corner is
+      // better spent on the other way of asking.
+      composerActionsReplaceSend: true,
+    });
   }
 
   const Host: ComponentType = () => (
@@ -63,7 +69,13 @@ export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
     Host,
     dispose: () => {
       registerVoiceAdapter(null);
-      if (chrome) registerChatSlots({ composerActions: null, composerBanner: null });
+      if (chrome) {
+        registerChatSlots({
+          composerActions: null,
+          composerBanner: null,
+          composerActionsReplaceSend: false,
+        });
+      }
     },
   };
 }

@@ -23,21 +23,32 @@
  *     For controls that are an alternative *way to send* rather than
  *     content about the thread — a push-to-talk mic, say. Leading-edge
  *     controls (attach, context pins) stay owned by the composer itself.
+ *
+ * A module that registers ``composerActions`` may also claim the Send
+ * position while the composer is empty (``composerActionsReplaceSend``).
+ * That is the shape a voice control wants: nothing has been typed, so Send
+ * has nothing to do, and the corner belongs to the other way of asking.
+ * Type one character and Send comes back. Opt-in, because a slot holding
+ * something unrelated must not make Send disappear.
  */
 
 import type { ComponentType } from "react";
 import { create } from "zustand";
+import { useAuiState } from "@assistant-ui/react";
 
 interface ChatSlotsState {
   composerBanner: ComponentType | null;
   launcherBadge: ComponentType | null;
   composerActions: ComponentType | null;
+  /** Let ``composerActions`` stand in for Send while the composer is empty. */
+  composerActionsReplaceSend: boolean;
 }
 
 export const useChatSlotsStore = create<ChatSlotsState>(() => ({
   composerBanner: null,
   launcherBadge: null,
   composerActions: null,
+  composerActionsReplaceSend: false,
 }));
 
 /**
@@ -51,6 +62,9 @@ export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
   if (slots.composerBanner !== undefined) next.composerBanner = slots.composerBanner;
   if (slots.launcherBadge !== undefined) next.launcherBadge = slots.launcherBadge;
   if (slots.composerActions !== undefined) next.composerActions = slots.composerActions;
+  if (slots.composerActionsReplaceSend !== undefined) {
+    next.composerActionsReplaceSend = slots.composerActionsReplaceSend;
+  }
   useChatSlotsStore.setState(next);
 }
 
@@ -67,4 +81,14 @@ export function ChatLauncherBadgeSlot() {
 export function ChatComposerActionsSlot() {
   const Actions = useChatSlotsStore((s) => s.composerActions);
   return Actions ? <Actions /> : null;
+}
+
+/**
+ * True when Send should stand aside for the ``composerActions`` slot: a
+ * module claimed the position and there is nothing to send.
+ */
+export function useComposerActionsOwnSend(): boolean {
+  const claimed = useChatSlotsStore((s) => s.composerActionsReplaceSend && !!s.composerActions);
+  const isEmpty = useAuiState((s) => s.optional.composer?.isEmpty ?? true);
+  return claimed && isEmpty;
 }

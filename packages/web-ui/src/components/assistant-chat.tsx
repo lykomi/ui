@@ -21,7 +21,6 @@ import {
   ChevronDown,
   Square,
   Bot,
-  Paperclip,
   Minimize2,
   PanelRightClose,
   PanelRightOpen,
@@ -31,9 +30,14 @@ import { Button } from "@iloveagents/foundry-web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { userAttachmentComponents, composerAttachmentComponents } from "./chat-attachments.tsx";
 import { SentContextBadges, ComposerContextBadges } from "./context-badges.tsx";
+import { ComposerAddMenu } from "./composer-add-menu.tsx";
 import { ContextPins } from "./context-bar.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
-import { ChatComposerActionsSlot, ChatComposerBannerSlot } from "./chat-slots.tsx";
+import {
+  ChatComposerActionsSlot,
+  ChatComposerBannerSlot,
+  useComposerActionsOwnSend,
+} from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
@@ -195,14 +199,15 @@ const EditComposer: FC = () => (
 );
 
 const ComposerActionButton: FC = () => {
+  // With nothing typed, a module-supplied control (a voice button) may hold
+  // the send corner instead of a Send that has nothing to send.
+  const actionsOwnSend = useComposerActionsOwnSend();
   return (
     <>
-      {/* Module-supplied send affordances (e.g. a mic) lead the trailing
-          group, so Send stays the rightmost control in both composers. */}
-      <ChatComposerActionsSlot />
       <ThreadPrimitive.If running={false}>
         <ReasoningEffortPicker />
       </ThreadPrimitive.If>
+      <ChatComposerActionsSlot />
       <ThreadPrimitive.If running>
         <ComposerPrimitive.Cancel asChild>
           <Button
@@ -216,17 +221,19 @@ const ComposerActionButton: FC = () => {
         </ComposerPrimitive.Cancel>
       </ThreadPrimitive.If>
 
-      <ThreadPrimitive.If running={false}>
-        <ComposerPrimitive.Send asChild>
-          <Button
-            size="icon"
-            className="rounded-full size-10 flex-shrink-0"
-            aria-label="Send message"
-          >
-            <ArrowUp className="size-5" />
-          </Button>
-        </ComposerPrimitive.Send>
-      </ThreadPrimitive.If>
+      {!actionsOwnSend && (
+        <ThreadPrimitive.If running={false}>
+          <ComposerPrimitive.Send asChild>
+            <Button
+              size="icon"
+              className="rounded-full size-10 flex-shrink-0"
+              aria-label="Send message"
+            >
+              <ArrowUp className="size-5" />
+            </Button>
+          </ComposerPrimitive.Send>
+        </ThreadPrimitive.If>
+      )}
     </>
   );
 };
@@ -380,7 +387,18 @@ export interface ChatContentProps {
    * a bare composer opts OUT.
    */
   showPinButton?: boolean;
+  /**
+   * Composer placeholder. Defaults to `DEFAULT_COMPOSER_PLACEHOLDER`.
+   */
+  placeholder?: string;
 }
+
+/**
+ * "Message Assistant..." named the machine and told the user nothing. The
+ * invitation is what belongs here: it says the box takes anything, which is
+ * the one thing a first-time user does not know.
+ */
+export const DEFAULT_COMPOSER_PLACEHOLDER = "Ask anything";
 
 /**
  * Reusable chat content — used by ChatPage and ChatBubble.
@@ -389,6 +407,7 @@ export interface ChatContentProps {
 export function ChatContent({
   starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
   showPinButton = true,
+  placeholder = DEFAULT_COMPOSER_PLACEHOLDER,
 }: ChatContentProps = {}) {
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const collapseChat = useChatBubbleStore((s) => s.collapse);
@@ -503,36 +522,43 @@ export function ChatContent({
               <ComposerSubmitBridge />
               <ComposerContextBadges />
               <ComposerPrimitive.Attachments components={composerAttachmentComponents} />
-              {/* Text on its own row, controls in a dedicated bottom row.
-                  With everything in ONE row, the trailing controls sit
-                  vertically centered beside the input — fine for one line,
-                  but wrapped text in a narrow window turns into a tall block
-                  with the picker and Send floating mid-height next to it.
-                  Splitting rows means text wraps freely across the full
-                  width and the controls keep one stable, predictable line. */}
-              <ComposerPrimitive.Input
-                autoFocus
-                placeholder="Message Assistant..."
-                rows={1}
-                className={cn(
-                  "w-full bg-transparent",
-                  "pt-2 text-base",
-                  "text-foreground outline-none",
-                  "placeholder:text-muted-foreground",
-                  "resize-none max-h-32",
-                )}
-              />
-              <div className="flex items-center gap-2 pb-1">
-                <div className="flex items-center -space-x-1 shrink-0">
-                  <ComposerPrimitive.AddAttachment asChild>
-                    <TooltipIconButton tooltip="Attach file" variant="ghost" className="shrink-0">
-                      <Paperclip className="size-5" />
-                    </TooltipIconButton>
-                  </ComposerPrimitive.AddAttachment>
-                  <ContextPins showPinButton={showPinButton} />
+              {/* One row when there is room, two when there is not — and the
+                  wrap does it, not a breakpoint.
+
+                  A single row is right until the text is long: wrapped text
+                  in a narrow composer becomes a tall block with the controls
+                  floating mid-height beside it. So the input keeps `w-full`
+                  while narrow, which forces it onto its own line and leaves
+                  the `+` and the trailing controls sharing the line below —
+                  exactly the two-row layout, without asking anyone's width.
+                  Past the container's `md`, it goes nowrap and everything
+                  sits on one line. `order-*` is what lets the `+` lead the
+                  single row but head the control row when stacked. */}
+              <div className="flex flex-wrap items-center gap-2 @md:flex-nowrap">
+                <div className="order-2 flex shrink-0 items-center gap-1 @md:order-1">
+                  <ComposerAddMenu showPin={showPinButton} />
+                  {/* Renders only once something is pinned — the affordance
+                      to pin now lives in the menu. */}
+                  <ContextPins />
                 </div>
-                <div className="flex-1" />
-                <ComposerActionButton />
+
+                <ComposerPrimitive.Input
+                  autoFocus
+                  placeholder={placeholder}
+                  rows={1}
+                  className={cn(
+                    "order-1 w-full bg-transparent",
+                    "py-2 text-base",
+                    "text-foreground outline-none",
+                    "placeholder:text-muted-foreground",
+                    "resize-none max-h-32",
+                    "@md:order-2 @md:w-auto @md:flex-1",
+                  )}
+                />
+
+                <div className="order-3 ml-auto flex shrink-0 items-center gap-2 @md:ml-0">
+                  <ComposerActionButton />
+                </div>
               </div>
             </ComposerPrimitive.Root>
           </div>

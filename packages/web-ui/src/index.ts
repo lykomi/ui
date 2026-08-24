@@ -9,7 +9,15 @@ export type {
   AGUIChatConversationFactoryArgs,
   AGUIHistoryAdapterFactory,
 } from "./components/ag-ui-runtime-provider.tsx";
-export { ChatContent, DEFAULT_STARTER_SUGGESTIONS } from "./components/assistant-chat.tsx";
+export {
+  ChatContent,
+  DEFAULT_STARTER_SUGGESTIONS,
+  DEFAULT_COMPOSER_PLACEHOLDER,
+} from "./components/assistant-chat.tsx";
+export {
+  ComposerAddMenu,
+  type ComposerAddMenuProps,
+} from "./components/composer-add-menu.tsx";
 export type { ChatContentProps } from "./components/assistant-chat.tsx";
 export { ChatBubble } from "./components/chat-bubble.tsx";
 export {
@@ -18,6 +26,7 @@ export {
   ChatComposerBannerSlot,
   ChatLauncherBadgeSlot,
   ChatComposerActionsSlot,
+  useComposerActionsOwnSend,
 } from "./components/chat-slots.tsx";
 export { ChatHeader } from "./components/chat-header.tsx";
 export {
@@ -33,7 +42,7 @@ export { ToolFallback } from "./components/tool-fallback.tsx";
 export { ConfirmationCard } from "./components/confirmation-card.tsx";
 export { TooltipIconButton } from "./components/tooltip-icon-button.tsx";
 export { ComposerContextBadges, SentContextBadges } from "./components/context-badges.tsx";
-export { ContextPins } from "./components/context-bar.tsx";
+export { ContextPins, usePagePin } from "./components/context-bar.tsx";
 export { SelectionPopover } from "./components/selection-popover.tsx";
 export { GlobalSelectionPopover } from "./components/global-selection-popover.tsx";
 export { LoadingIndicator } from "./components/loading-indicator.tsx";

@@ -79,6 +79,45 @@ export function getNavigablePath(item: ContextItem): string | null {
   return null;
 }
 
+/**
+ * The "is this page pinned, and how do I flip that" logic, shared by the
+ * pin badge here and the composer's add-menu. Two call sites deciding
+ * independently what "pinned" means is how they end up disagreeing.
+ */
+export function usePagePin() {
+  const items = useAppStore((s) => s.contextItems);
+  const removeItem = useAppStore((s) => s.removeContextItem);
+  const addContextItem = useAppStore((s) => s.addContextItem);
+  const currentPage = useAppStore((s) => s.currentPage);
+  const pageLabel = useAppStore((s) => s.navContext.label);
+  const navMeta = useAppStore((s) => s.navContext.meta);
+
+  const currentPagePin = items.find(
+    (i) =>
+      i.persistence === "persistent" &&
+      i.type === "page" &&
+      i.payload.kind === "page" &&
+      i.payload.path === currentPage,
+  );
+
+  return {
+    isPinned: !!currentPagePin,
+    toggle: () => {
+      if (currentPagePin) {
+        removeItem(currentPagePin.id);
+        return;
+      }
+      addContextItem({
+        type: "page",
+        label: pageLabel,
+        payload: { kind: "page", path: currentPage, label: pageLabel, meta: navMeta },
+        sourcePage: currentPage,
+        persistence: "persistent",
+      });
+    },
+  };
+}
+
 export const ContextPins: FC<ContextPinsProps> = ({
   showPinButton = false,
   compact = false,
@@ -86,26 +125,14 @@ export const ContextPins: FC<ContextPinsProps> = ({
 }) => {
   const items = useAppStore((s) => s.contextItems);
   const removeItem = useAppStore((s) => s.removeContextItem);
-  const addContextItem = useAppStore((s) => s.addContextItem);
   const currentPage = useAppStore((s) => s.currentPage);
-  const pageLabel = useAppStore((s) => s.navContext.label);
-  const navMeta = useAppStore((s) => s.navContext.meta);
+  const { isPinned: isCurrentPagePinned, toggle: handleTogglePin } = usePagePin();
   const navigate = useNavigate();
   const [flyoutOpen, setFlyoutOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const pinned = items.filter((i) => i.persistence === "persistent");
-
-  // Check if current page is already pinned
-  const isCurrentPagePinned = pinned.some(
-    (i) => i.type === "page" && i.payload.kind === "page" && i.payload.path === currentPage,
-  );
-
-  // Find the pin item for current page (to unpin)
-  const currentPagePin = pinned.find(
-    (i) => i.type === "page" && i.payload.kind === "page" && i.payload.path === currentPage,
-  );
 
   // Close flyout on outside click
   useEffect(() => {
@@ -118,20 +145,6 @@ export const ContextPins: FC<ContextPinsProps> = ({
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [flyoutOpen]);
-
-  const handleTogglePin = () => {
-    if (isCurrentPagePinned && currentPagePin) {
-      removeItem(currentPagePin.id);
-    } else {
-      addContextItem({
-        type: "page",
-        label: pageLabel,
-        payload: { kind: "page", path: currentPage, label: pageLabel, meta: navMeta },
-        sourcePage: currentPage,
-        persistence: "persistent",
-      });
-    }
-  };
 
   const handleMouseEnter = () => {
     clearTimeout(hoverTimeout.current);
