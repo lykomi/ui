@@ -1,5 +1,48 @@
 # create-foundry-ui-app
 
+## 0.6.0
+
+### Minor Changes
+
+- 8f2c829: Scaffolded apps can talk, switched on by configuration rather than a flag.
+
+  `VITE_VOICE_PROXY_URL` is the switch: set it and a microphone appears in the
+  composer; leave it unset and `createVoiceModule` is never referenced, so the
+  whole voice tier — and the Voice Live SDK behind it — is tree-shaken out of
+  the build. Verified: no Voice Live code appears in a default scaffold's
+  bundle.
+
+  That is why there is no `--voice` flag. A flag makes you choose at scaffold
+  time, before you know whether you want it, and choosing wrong means editing
+  the app later. Configuration means the decision is reversible, costs nothing
+  until made, and cannot produce a first run where clicking a microphone errors
+  because no proxy exists.
+
+  The default is `relay`, so a spoken turn is an ordinary turn answered by the
+  app's own agent, with its tools and history intact.
+
+### Patch Changes
+
+- 6fe3159: Check the default scaffold bundle before the second build overwrites it.
+
+  `smoke:starter` builds twice — once as generated, once with voice enabled — and
+  was reading `dist` only after the second. The assertion that voice is absent
+  from a default build was therefore inspecting the voice-ENABLED bundle, and
+  would have passed however badly tree-shaking regressed.
+
+- 0d58a1a: Scan the voice package for Tailwind classes.
+
+  Voice is optional at runtime, not at build time — the package is always a
+  dependency — so a scaffolded app that sets `VITE_VOICE_PROXY_URL` rendered a
+  microphone, stage and launcher badge whose utilities Tailwind had never been
+  told to look for, and they came out unstyled. Scanning it costs nothing when
+  voice is off, since Tailwind emits only what something references.
+
+  `smoke:starter` now builds the scaffold twice — once as generated, and once
+  with voice switched on — and checks the CSS actually carries those utilities.
+  The single default build could only ever exercise the half of the template
+  where voice does not exist, which is how this got through.
+
 ## 0.5.2
 
 ### Patch Changes
