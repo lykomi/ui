@@ -26,7 +26,11 @@ import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { ContextPins } from "./context-bar.tsx";
 import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
-import { ChatComposerBannerSlot, ChatLauncherBadgeSlot } from "./chat-slots.tsx";
+import {
+  ChatComposerActionsSlot,
+  ChatComposerBannerSlot,
+  ChatLauncherBadgeSlot,
+} from "./chat-slots.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
@@ -369,6 +373,7 @@ export function ChatBubble() {
                   {/* Right-hand slot, mirroring the expanded composer:
                       settings sit beside Send, not among the attachment
                       icons. Hidden while running, like the expanded one. */}
+                  <ChatComposerActionsSlot />
                   <ThreadPrimitive.If running={false}>
                     <ReasoningEffortPicker />
                   </ThreadPrimitive.If>

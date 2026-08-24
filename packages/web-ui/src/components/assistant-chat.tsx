@@ -33,7 +33,7 @@ import { userAttachmentComponents, composerAttachmentComponents } from "./chat-a
 import { SentContextBadges, ComposerContextBadges } from "./context-badges.tsx";
 import { ContextPins } from "./context-bar.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
-import { ChatComposerBannerSlot } from "./chat-slots.tsx";
+import { ChatComposerActionsSlot, ChatComposerBannerSlot } from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
@@ -197,6 +197,9 @@ const EditComposer: FC = () => (
 const ComposerActionButton: FC = () => {
   return (
     <>
+      {/* Module-supplied send affordances (e.g. a mic) lead the trailing
+          group, so Send stays the rightmost control in both composers. */}
+      <ChatComposerActionsSlot />
       <ThreadPrimitive.If running={false}>
         <ReasoningEffortPicker />
       </ThreadPrimitive.If>

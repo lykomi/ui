@@ -1,0 +1,71 @@
+{
+  "name": "@iloveagents/foundry-web-voice",
+  "version": "0.0.0",
+  "description": "Optional spoken-conversation tier for Foundry UI — Azure Voice Live wired into assistant-ui's realtime voice contract",
+  "keywords": [
+    "foundry",
+    "voice-live",
+    "assistant-ui",
+    "ag-ui",
+    "azure",
+    "voice",
+    "realtime",
+    "avatar"
+  ],
+  "license": "MIT",
+  "author": "iLoveAgents",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iLoveAgents/foundry-ui.git",
+    "directory": "packages/web-voice"
+  },
+  "homepage": "https://github.com/iLoveAgents/foundry-ui/tree/main/packages/web-voice#readme",
+  "bugs": {
+    "url": "https://github.com/iLoveAgents/foundry-ui/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@iloveagents/foundry-agent": "workspace:^",
+    "@iloveagents/foundry-web-ui": "workspace:^",
+    "@iloveagents/foundry-voice-live-react": "^0.5.0"
+  },
+  "peerDependencies": {
+    "@assistant-ui/react": "^0.15.1",
+    "lucide-react": ">=0.400.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@assistant-ui/react": "^0.15.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "jsdom": "^28.1.0",
+    "lucide-react": ">=0.400.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.4",
+    "zustand": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -7,8 +7,14 @@ packages/agent/           → @iloveagents/foundry-agent (cross-runtime transpor
 packages/web-primitives/  → @iloveagents/foundry-web-primitives (leaf primitives — Button, Checkbox, Input, Textarea, Field, FieldSet, cn)
 packages/web-ui/          → @iloveagents/foundry-web-ui (React UI core — hooks, registries, assistant-ui adapter shim, ChatPanel, sidebar)
 packages/web-shell/       → @iloveagents/foundry-web-shell (browser bootstrap — bootstrapShell + ChatModule protocol)
+packages/web-voice/       → @iloveagents/foundry-web-voice (OPTIONAL spoken conversation — Azure Voice Live as an assistant-ui RealtimeVoiceAdapter)
 packages/create-foundry-ui-app/ → create-foundry-ui-app (scaffolding CLI — `npm create foundry-ui-app`)
 ```
+
+**`web-voice` is optional and versions on its own.** Nothing in this repo imports it, it is not in
+the scaffold template, and it is deliberately outside the `fixed` changesets group — a voice
+release must not bump the coordinated four. An app that never installs it has an unchanged
+composer and an unchanged runtime.
 
 **Tier convention:** `foundry-` prefix on every package projects the brand. `foundry-agent` has no runtime-tier suffix because it's pure cross-runtime transport (zero React, zero DOM). `foundry-web-*` packages are React-DOM tier. Future tiers reserved by convention: `foundry-native-*` (React Native), `foundry-unity-*` (Unity), `foundry-outlook-shell`, `foundry-teams-shell`.
 
@@ -98,6 +104,7 @@ Foundry UI was extracted from a commercial product on 2026-04-26. The four packa
 
 - Per-package architecture → each package's own `AGENTS.md`
 - AG-UI runner contract → [`packages/agent/AGENTS.md`](packages/agent/AGENTS.md)
+- Voice (modes, proxy, the assistant-ui voice contract) → [`docs/VOICE.md`](docs/VOICE.md)
 - Browser bootstrap + ChatModule protocol → [`packages/web-shell/AGENTS.md`](packages/web-shell/AGENTS.md)
 - Open-core import-direction graph + guard tests → [`packages/web-ui/src/__tests__/open-core-guards.test.ts`](packages/web-ui/src/__tests__/open-core-guards.test.ts)
 - AG-UI protocol → https://github.com/ag-ui-protocol/ag-ui

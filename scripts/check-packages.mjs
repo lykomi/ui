@@ -23,6 +23,10 @@ const packages = [
     runtime: true,
   },
   {
+    dir: "packages/web-voice",
+    runtime: true,
+  },
+  {
     dir: "packages/create-foundry-ui-app",
     runtime: false,
   },

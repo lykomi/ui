@@ -16,6 +16,10 @@ const RUNTIME_PACKAGE_DIRS = [
   "packages/web-primitives",
   "packages/web-ui",
   "packages/web-shell",
+  // Not in the scaffold template (voice is opt-in), but listed so a preset
+  // that DOES pin it can never drift from the published version — which is
+  // the one thing this file exists to prevent.
+  "packages/web-voice",
 ];
 
 const CLI_ROOT = "packages/create-foundry-ui-app";

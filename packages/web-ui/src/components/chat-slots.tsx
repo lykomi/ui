@@ -18,6 +18,11 @@
  *     wrapper (a positioned ``group`` container around the round button),
  *     so a badge can position itself absolutely over the button and use
  *     ``group-hover:`` styles for a hover flyout.
+ *   - ``composerActions`` — in the composer's trailing control row, just
+ *     before Send, in BOTH the full chat and the floating bubble panel.
+ *     For controls that are an alternative *way to send* rather than
+ *     content about the thread — a push-to-talk mic, say. Leading-edge
+ *     controls (attach, context pins) stay owned by the composer itself.
  */
 
 import type { ComponentType } from "react";
@@ -26,11 +31,13 @@ import { create } from "zustand";
 interface ChatSlotsState {
   composerBanner: ComponentType | null;
   launcherBadge: ComponentType | null;
+  composerActions: ComponentType | null;
 }
 
 export const useChatSlotsStore = create<ChatSlotsState>(() => ({
   composerBanner: null,
   launcherBadge: null,
+  composerActions: null,
 }));
 
 /**
@@ -43,6 +50,7 @@ export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
   const next: Partial<ChatSlotsState> = {};
   if (slots.composerBanner !== undefined) next.composerBanner = slots.composerBanner;
   if (slots.launcherBadge !== undefined) next.launcherBadge = slots.launcherBadge;
+  if (slots.composerActions !== undefined) next.composerActions = slots.composerActions;
   useChatSlotsStore.setState(next);
 }
 
@@ -54,4 +62,9 @@ export function ChatComposerBannerSlot() {
 export function ChatLauncherBadgeSlot() {
   const Badge = useChatSlotsStore((s) => s.launcherBadge);
   return Badge ? <Badge /> : null;
+}
+
+export function ChatComposerActionsSlot() {
+  const Actions = useChatSlotsStore((s) => s.composerActions);
+  return Actions ? <Actions /> : null;
 }

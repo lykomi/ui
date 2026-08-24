@@ -17,6 +17,7 @@ export {
   useChatSlotsStore,
   ChatComposerBannerSlot,
   ChatLauncherBadgeSlot,
+  ChatComposerActionsSlot,
 } from "./components/chat-slots.tsx";
 export { ChatHeader } from "./components/chat-header.tsx";
 export {
@@ -272,6 +273,11 @@ export { useNewConversation } from "./lib/use-new-conversation.ts";
 export { AGUIAdapterSDK } from "./lib/ag-ui-adapter.ts";
 export { FileAttachmentAdapter, resolveMimeType } from "./lib/attachment-adapter.ts";
 export { registerAttachmentAdapter, useAttachmentAdapterStore } from "./lib/attachment-registry.ts";
+export {
+  registerVoiceAdapter,
+  registerSpeechAdapter,
+  useVoiceAdapterStore,
+} from "./lib/voice-adapter-registry.ts";
 export { ReasoningPart, ReasoningMessagePartComponent } from "./components/reasoning-part.tsx";
 export { ReasoningEffortPicker } from "./components/reasoning-effort-picker.tsx";
 

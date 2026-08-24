@@ -1,12 +1,14 @@
 /**
  * Chat slot registry — the contract modules rely on to inject UI into
- * shell-owned chat chrome (composer banner + launcher badge).
+ * shell-owned chat chrome (composer banner, launcher badge, composer
+ * actions).
  */
 
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  ChatComposerActionsSlot,
   ChatComposerBannerSlot,
   ChatLauncherBadgeSlot,
   registerChatSlots,
@@ -21,6 +23,10 @@ function Badge() {
   return <span data-testid="badge" />;
 }
 
+function Actions() {
+  return <button data-testid="actions">mic</button>;
+}
+
 describe("chat slots", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -29,7 +35,11 @@ describe("chat slots", () => {
   beforeEach(() => {
     originalActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-    useChatSlotsStore.setState({ composerBanner: null, launcherBadge: null });
+    useChatSlotsStore.setState({
+      composerBanner: null,
+      launcherBadge: null,
+      composerActions: null,
+    });
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -47,6 +57,7 @@ describe("chat slots", () => {
         <>
           <ChatComposerBannerSlot />
           <ChatLauncherBadgeSlot />
+          <ChatComposerActionsSlot />
         </>,
       ),
     );
@@ -57,10 +68,11 @@ describe("chat slots", () => {
   });
 
   it("renders registered components in their slots", () => {
-    registerChatSlots({ composerBanner: Banner, launcherBadge: Badge });
+    registerChatSlots({ composerBanner: Banner, launcherBadge: Badge, composerActions: Actions });
     renderSlots();
     expect(container.querySelector('[data-testid="banner"]')?.textContent).toBe("tasks");
     expect(container.querySelector('[data-testid="badge"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="actions"]')?.textContent).toBe("mic");
   });
 
   it("registration after mount re-renders the slot live", () => {
@@ -70,11 +82,12 @@ describe("chat slots", () => {
     expect(container.querySelector('[data-testid="banner"]')).not.toBeNull();
   });
 
-  it("partial registration keeps the other slot untouched", () => {
-    registerChatSlots({ composerBanner: Banner, launcherBadge: Badge });
+  it("partial registration keeps the other slots untouched", () => {
+    registerChatSlots({ composerBanner: Banner, launcherBadge: Badge, composerActions: Actions });
     registerChatSlots({ composerBanner: null });
     expect(useChatSlotsStore.getState().composerBanner).toBeNull();
     expect(useChatSlotsStore.getState().launcherBadge).toBe(Badge);
+    expect(useChatSlotsStore.getState().composerActions).toBe(Actions);
   });
 
   it("ignores explicit undefined values instead of corrupting state", () => {
