@@ -74,6 +74,14 @@ Rules:
 - Add backward-compatibility shims pre-1.0 — every caller updates lock-step in the same PR.
 - Import `react`, `react-dom`, `@assistant-ui/*`, or bare `"zustand"` inside `packages/agent/src/` (msal subpath excepted for `@azure/msal-browser`).
 - **Re-introduce sibling `@iloveagents/foundry-*` packages into `peerDependencies`.** They belong in `dependencies` with `workspace:*` — the four ship together as a coordinated `fixed` changesets group, and pnpm hoists by name so consumers still get a single instance. As peerDeps they trigger changesets' `shouldBumpMajor` cascade: one `minor` on any sibling exits the strict `^0.x.y` peer range, promotes every dependent to a major bump, and the `fixed` group then syncs all four to it. This has fired once — `1.0.0` and `1.0.1` exist on npm as a result and can never be reused, which is why the version line skips them. Enforced by [`open-core-guards.test.ts`](packages/web-ui/src/__tests__/open-core-guards.test.ts).
+- **Publish by hand with `npm publish`.** The sibling `@iloveagents/foundry-*` deps carry
+  `workspace:^`, and only pnpm rewrites that into a real range when packing — `npm publish` uploads
+  the protocol string verbatim, and every install of the result fails with
+  `ERR_PNPM_WORKSPACE_PKG_NOT_FOUND`. It also skips `pack:check`, which already refuses workspace
+  ranges in a packed tarball. Releases go through the Release npm workflow; a version published
+  around it cannot be taken back, only superseded. This has fired once, on
+  `@iloveagents/foundry-web-voice@0.1.0`.
+
 - **Name a private deployment** — an organisation, tenant, or internal project — anywhere in this repo, including code comments, changesets, generated changelogs, docs, and **commit messages**. Enforced by `pnpm check:sensitive` (in `pnpm test` and CI). Phrase it generically instead: "a downstream app", "a production deployment". Commit messages are checked too, because anything reachable from a pull-request ref is retained by the forge indefinitely — a later branch rewrite does not undo it.
 
 # Code Style
