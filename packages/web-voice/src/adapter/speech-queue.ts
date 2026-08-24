@@ -92,87 +92,115 @@ export function toSpeakableText(markdown: string): string {
  * has not been emitted yet.
  */
 export class SentenceStream {
-  private consumed = 0;
-  private buffer = "";
+  /** Utterances already handed out, in order. */
+  private emitted: string[] = [];
+  /** The last cumulative answer seen, kept so `flush()` can re-segment it. */
+  private text = "";
 
   /**
-   * @param cumulative the full answer text so far
+   * @param cumulative the full answer so far, already run through `toSpeakableText`
    * @returns complete utterances that became available with this update
    */
   push(cumulative: string): string[] {
-    if (cumulative.length < this.consumed) {
-      // The answer was replaced rather than extended (a retry, or a
-      // messages-snapshot rewrite). Start over instead of emitting a
-      // slice of the old text spliced onto the new.
-      this.reset();
-    }
-    this.buffer += cumulative.slice(this.consumed);
-    this.consumed = cumulative.length;
-    return this.drain(false);
+    this.text = cumulative;
+    return this.take(segment(cumulative, false));
   }
 
   /** Emit whatever is left, complete sentence or not. Call when the answer ends. */
   flush(): string[] {
-    return this.drain(true);
+    return this.take(segment(this.text, true));
   }
 
   reset(): void {
-    this.consumed = 0;
-    this.buffer = "";
+    this.emitted = [];
+    this.text = "";
   }
 
-  private drain(final: boolean): string[] {
-    const out: string[] = [];
-    // Complete sentences waiting to be grouped into one utterance.
-    let group = "";
-    const flushGroup = () => {
-      if (group) out.push(group);
-      group = "";
-    };
-    for (;;) {
-      const match = SENTENCE_END.exec(this.buffer);
-      if (match) {
-        const end = match.index + match[1].length;
-        const utterance = this.buffer.slice(0, end).trim();
-        this.buffer = this.buffer.slice(end + match[2].length);
-        if (utterance) {
-          group = group ? `${group} ${utterance}` : utterance;
-          if (group.length >= MIN_UTTERANCE_CHARS) flushGroup();
-        }
-        continue;
-      }
-      // No sentence end in sight. Once the buffer is long enough that
-      // waiting would be a noticeable silence, cut at the last word
-      // boundary — a long bulleted answer can run for a paragraph without
-      // a single period.
-      if (!final && this.buffer.length > MAX_UTTERANCE_CHARS) {
-        const cut = this.buffer.lastIndexOf(" ", MAX_UTTERANCE_CHARS);
-        if (cut <= 0) break;
-        const utterance = this.buffer.slice(0, cut).trim();
-        this.buffer = this.buffer.slice(cut + 1);
-        if (utterance) {
-          group = group ? `${group} ${utterance}` : utterance;
-          flushGroup();
-        }
-        continue;
-      }
-      break;
+  /**
+   * Hand out whatever the new segmentation has beyond what was already said.
+   *
+   * The whole answer is re-segmented on every update rather than appended to
+   * incrementally, because the text this receives is *normalised* and
+   * normalisation is not monotonic: `toSpeakableText` keeps a half-arrived
+   * citation ("[1") and strips the complete one ("[1]"), so the speakable text
+   * gets SHORTER as the raw answer grows. A model that measured progress by
+   * length read that shrink as "the answer was replaced", started over, and
+   * spoke every sentence a second time — a repeat with no bad state anywhere
+   * to point at.
+   *
+   * Re-segmenting is safe because it is prefix-stable: how a span is grouped
+   * depends only on the text before it, so already-spoken utterances stay a
+   * prefix and only genuinely new ones come out.
+   *
+   * What comes out is everything past the longest common prefix, which is the
+   * whole story for all three cases. A tail edit shares the entire prefix and
+   * yields nothing. A wholesale replacement (a retry, or a messages-snapshot
+   * rewrite) shares none and yields the new answer entire. A revision partway
+   * in yields only the part that actually changed — where a reset-and-restart
+   * rule would re-say an opening that was still perfectly correct.
+   */
+  private take(all: string[]): string[] {
+    let same = 0;
+    while (same < this.emitted.length && same < all.length && this.emitted[same] === all[same]) {
+      same++;
     }
-
-    if (final) {
-      // Nothing more is coming: the trailing fragment joins the group rather
-      // than becoming an utterance of its own, so an answer never ends on a
-      // needless extra seam.
-      const tail = this.buffer.trim();
-      this.buffer = "";
-      if (tail) group = group ? `${group} ${tail}` : tail;
-      flushGroup();
-    } else if (group) {
-      // Too short to be worth a seam yet — put it back and wait for company.
-      this.buffer = `${group} ${this.buffer}`;
-    }
-    return out;
+    this.emitted = all;
+    return all.slice(same);
   }
+}
+
+/**
+ * Split speakable text into utterances. Pure: the same text always segments
+ * the same way, which is what lets `SentenceStream` re-run it per update.
+ *
+ * `final` means nothing more is coming, so the trailing fragment joins the
+ * last group rather than becoming an utterance of its own — an answer never
+ * ends on a needless extra seam.
+ */
+function segment(text: string, final: boolean): string[] {
+  const out: string[] = [];
+  let buffer = text;
+  // Complete sentences waiting to be grouped into one utterance.
+  let group = "";
+  const flushGroup = () => {
+    if (group) out.push(group);
+    group = "";
+  };
+  for (;;) {
+    const match = SENTENCE_END.exec(buffer);
+    if (match) {
+      const end = match.index + match[1].length;
+      const utterance = buffer.slice(0, end).trim();
+      buffer = buffer.slice(end + match[2].length);
+      if (utterance) {
+        group = group ? `${group} ${utterance}` : utterance;
+        if (group.length >= MIN_UTTERANCE_CHARS) flushGroup();
+      }
+      continue;
+    }
+    // No sentence end in sight. Once the buffer is long enough that waiting
+    // would be a noticeable silence, cut at the last word boundary — a long
+    // bulleted answer can run for a paragraph without a single period.
+    if (!final && buffer.length > MAX_UTTERANCE_CHARS) {
+      const cut = buffer.lastIndexOf(" ", MAX_UTTERANCE_CHARS);
+      if (cut <= 0) break;
+      const utterance = buffer.slice(0, cut).trim();
+      buffer = buffer.slice(cut + 1);
+      if (utterance) {
+        group = group ? `${group} ${utterance}` : utterance;
+        flushGroup();
+      }
+      continue;
+    }
+    break;
+  }
+
+  if (final) {
+    const tail = buffer.trim();
+    if (tail) group = group ? `${group} ${tail}` : tail;
+    flushGroup();
+  }
+  return out;
 }
 
 /**
