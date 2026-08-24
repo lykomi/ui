@@ -69,6 +69,9 @@ export class VoiceBridge {
     isDisposed: () => boolean;
   } | null = null;
 
+  private connected = false;
+  /** An answer that was already on screen when voice connected — not ours to speak. */
+  private skipAnswerId: string | null = null;
   private volumeTimer: ReturnType<typeof setInterval> | null = null;
   private volumeBuffer: Uint8Array<ArrayBuffer> | null = null;
 
@@ -85,9 +88,17 @@ export class VoiceBridge {
     this.speech = new SpeechQueue((text) => this.sendSpokenText(text));
   }
 
-  /** True while assistant-ui holds an undisposed session from this bridge. */
+  /**
+   * True only once the transport is actually carrying a session.
+   *
+   * `helpers` exists from the first line of `setup`, which is *before*
+   * `controls.connect()` resolves. Speaking in that window sends into a
+   * socket that is not open yet: the utterance is lost, and because the
+   * queue is now "speaking" it never receives the `response.done` that
+   * would release it — the session goes silent for good.
+   */
   private get isLive(): boolean {
-    return this.helpers !== null && !this.helpers.isDisposed();
+    return this.connected && this.helpers !== null && !this.helpers.isDisposed();
   }
 
   // ---- wiring ---------------------------------------------------------------
@@ -117,6 +128,7 @@ export class VoiceBridge {
           this.helpers = helpers;
           const controls = await this.awaitControls(abortSignal);
           await controls.connect();
+          this.connected = true;
 
           // `createVoiceSession` starts every session in `starting`; nothing
           // else moves it on, so a session that never says `running` shows
@@ -126,6 +138,7 @@ export class VoiceBridge {
 
           return {
             disconnect: () => {
+              this.connected = false;
               this.stopVolumeMeter();
               this.speech.cancel();
               this.sentences.reset();
@@ -201,6 +214,7 @@ export class VoiceBridge {
 
   /** A session-fatal error: report it, and end the session so the UI leaves the live state. */
   handleError(message: string): void {
+    this.connected = false;
     this.config.onError?.(message);
     this.helpers?.end("error", new Error(message));
     this.stopVolumeMeter();
@@ -208,6 +222,7 @@ export class VoiceBridge {
 
   /** The transport closed on its own (not via `disconnect()`). */
   handleClosed(): void {
+    this.connected = false;
     this.helpers?.end("finished");
     this.stopVolumeMeter();
   }
@@ -222,11 +237,21 @@ export class VoiceBridge {
    * @param text cumulative answer text so far (markdown)
    * @param isComplete the turn has settled
    */
+  /**
+   * Mark an answer as already-delivered, so connecting voice does not read
+   * the last thing on screen back to the user. Called by the relay watcher
+   * the moment the session goes live.
+   */
+  primeAnswer(messageId: string | null): void {
+    this.skipAnswerId = messageId;
+  }
+
   trackAnswer(messageId: string, text: string, isComplete: boolean): void {
     // The watcher is mounted for the whole app lifetime, but an answer is
     // only spoken while a voice session is actually live — otherwise every
     // typed conversation would queue speech at a disconnected transport.
     if (this.mode !== "relay" || !this.isLive) return;
+    if (messageId === this.skipAnswerId) return;
 
     if (this.answerId !== messageId) {
       this.answerId = messageId;

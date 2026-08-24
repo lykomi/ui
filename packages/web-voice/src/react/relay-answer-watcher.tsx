@@ -11,8 +11,8 @@
  * either aloud would be worse than saying nothing.
  */
 
-import { useEffect } from "react";
-import { useAuiState } from "@assistant-ui/react";
+import { useEffect, useRef } from "react";
+import { useAuiState, useVoiceState } from "@assistant-ui/react";
 import type { ThreadMessage } from "@assistant-ui/react";
 import type { VoiceBridge } from "../adapter/voice-bridge.ts";
 
@@ -21,6 +21,18 @@ export function RelayAnswerWatcher({ bridge }: { bridge: VoiceBridge }) {
   // the update this component exists to observe. It renders nothing, so the
   // re-render costs a comparison and a `useEffect`.
   const messages = useAuiState((s) => s.thread.messages) as readonly ThreadMessage[];
+  const status = useVoiceState()?.status.type;
+
+  // Whatever is on screen when the session goes live was answered before the
+  // user asked for voice. Reading it back at them is not a greeting, it is a
+  // non-sequitur.
+  const latest = useRef(messages);
+  latest.current = messages;
+  useEffect(() => {
+    if (status !== "running") return;
+    const lastAssistant = [...latest.current].reverse().find((m) => m.role === "assistant");
+    bridge.primeAnswer(lastAssistant?.id ?? null);
+  }, [bridge, status]);
 
   useEffect(() => {
     const last = messages[messages.length - 1];

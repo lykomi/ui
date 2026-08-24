@@ -227,6 +227,46 @@ describe("relay mode", () => {
     expect(spoken).toBe("The notice period is thirty days.");
   });
 
+  it("does not speak before the transport is actually connected", async () => {
+    // `helpers` exists from the first line of setup, well before connect()
+    // resolves. Speaking into that window loses the utterance AND wedges the
+    // queue, because the response.done that would release it never comes.
+    const controls = fakeControls();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const slowControls = { ...controls, connect: () => gate };
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(slowControls);
+    bridge.createAdapter().connect({});
+    await Promise.resolve();
+
+    bridge.trackAnswer("m1", "Too early. ", true);
+    expect(controls.sent).toHaveLength(0);
+
+    // Once the transport is up the same answer is speakable again, so the
+    // guard delays speech rather than dropping it on the floor.
+    release();
+    await vi.waitFor(() => expect(controls.sent).toHaveLength(0));
+    bridge.trackAnswer("m2", "Now we are connected. ", true);
+    await vi.waitFor(() => expect(controls.sent).toHaveLength(1));
+  });
+
+  it("does not read back the answer that was already on screen", async () => {
+    // Connecting voice after reading a reply must not recite it.
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(relay());
+    await connect(bridge, controls);
+
+    bridge.primeAnswer("m1");
+    bridge.trackAnswer("m1", "An answer from before voice was on. ", true);
+    expect(controls.sent).toHaveLength(0);
+
+    // The next answer is fair game again.
+    bridge.trackAnswer("m2", "This one was asked by voice. ", true);
+    expect(controls.sent).toHaveLength(1);
+  });
+
   it("does not speak while no voice session is live", () => {
     // The relay watcher is mounted for the whole app lifetime; typed
     // conversations must not queue speech at a disconnected transport.
