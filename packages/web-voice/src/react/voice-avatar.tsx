@@ -29,7 +29,7 @@ export interface VoiceAvatarPanelProps {
    * (`object-cover!`) to override it.
    */
   canvasClassName?: string;
-  /** Chroma-key tuning; defaults to a softer edge than the SDK's (see `SOFT_KEY`). */
+  /** Chroma-key tuning; defaults to a tighter edge than the SDK's (see `AVATAR_CHROMA_KEY`). */
   chromaKeyConfig?: ChromaKeyConfig;
 }
 
@@ -42,17 +42,37 @@ const LAYER =
 const CARD = "pointer-events-auto w-[26rem] max-w-[80vw]";
 
 /**
- * Softer-edged keying than the SDK default (`similarity 0.4, smoothness
- * 0.1`), which left a visible green fringe on the avatar's outline in live
- * runs. More smoothness blends the boundary pixels instead of hard-cutting
- * them; the small similarity bump removes the near-green spill the light
- * picks up at the silhouette. Hosts with different lighting override via
- * `chromaKeyConfig` (plumbed from `VoiceConfig.chromaKey`).
+ * Keying tuned against the SDK's actual shader rather than by eye.
+ *
+ * That shader is `alpha = smoothstep(similarity, similarity + smoothness, d)`,
+ * where `d` is the distance from the key colour in UV (chrominance) space. The
+ * decisive numbers: a green screen sits at `d = 0`, edge pixels smeared by
+ * 4:2:0 chroma subsampling land around `0.17`–`0.47`, and the SUBJECT is only
+ * as far out as `d ≈ 0.53` — white and light grey are the closest, skin around
+ * `0.58`. Subject and fringe are much nearer each other than they look.
+ *
+ * So `similarity + smoothness` is a hard ceiling: put it above ~0.52 and the
+ * upper end of the smoothstep starts inside the subject, which does not read
+ * as a soft edge — it turns the whole figure semi-transparent. An earlier
+ * attempt to soften the fringe with `0.42 / 0.25` did exactly that: a grey
+ * t-shirt came out 46% opaque, white 43%, skin ~70%, and the avatar rendered
+ * as a washed-out ghost with a halo.
+ *
+ * The fringe wants the opposite move. Widening `smoothness` never removed
+ * green — fringe pixels sit below `similarity` and were already fully cut —
+ * it only ate the subject. Raising `similarity` while keeping the band narrow
+ * is what tightens the edge: at `0.44 / 0.08` an 80%-subject edge pixel drops
+ * to alpha 0.24 (the SDK default leaves it at 0.73, still visibly green) while
+ * every subject colour stays fully opaque.
+ *
+ * Hosts with different lighting override via `chromaKeyConfig` (plumbed from
+ * `VoiceConfig.chromaKey`). `chroma-key.test.ts` re-derives all of the above
+ * from the shader, so a future tweak cannot quietly reintroduce the ghost.
  */
-const SOFT_KEY: ChromaKeyConfig = {
+export const AVATAR_CHROMA_KEY: ChromaKeyConfig = {
   keyColor: [0, 1, 0],
-  similarity: 0.42,
-  smoothness: 0.25,
+  similarity: 0.44,
+  smoothness: 0.08,
 };
 
 export function VoiceAvatarPanel({
@@ -60,7 +80,7 @@ export function VoiceAvatarPanel({
   audioStream,
   className,
   canvasClassName,
-  chromaKeyConfig = SOFT_KEY,
+  chromaKeyConfig = AVATAR_CHROMA_KEY,
 }: VoiceAvatarPanelProps) {
   if (!videoStream) return null;
 
