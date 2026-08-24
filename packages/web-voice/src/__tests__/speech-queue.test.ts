@@ -53,24 +53,46 @@ describe("toSpeakableText", () => {
 });
 
 describe("SentenceStream", () => {
-  it("emits each sentence once as cumulative text grows", () => {
+  // Utterances are grouped to at least ~140 chars, because each one is a
+  // separate synthesis and every boundary is an audible seam.
+  const LONG =
+    "The notice period is thirty days and it runs from the date the written notice is actually received by the other party, not the date on which it was sent.";
+
+  it("groups short sentences instead of speaking each one", () => {
     const s = new SentenceStream();
-    expect(s.push("Hello there.")).toEqual([]);
-    expect(s.push("Hello there. How are")).toEqual(["Hello there."]);
-    expect(s.push("Hello there. How are you? I am")).toEqual(["How are you?"]);
-    expect(s.flush()).toEqual(["I am"]);
+    // Three short sentences, none worth a seam on its own.
+    expect(s.push("One. Two. Three. ")).toEqual([]);
+    expect(s.flush()).toEqual(["One. Two. Three."]);
+  });
+
+  it("emits as soon as a group is long enough to be worth the seam", () => {
+    const s = new SentenceStream();
+    // Each of these already clears the threshold on its own.
+    expect(s.push(`${LONG} ${LONG} tail`)).toEqual([LONG, LONG]);
+    expect(s.flush()).toEqual(["tail"]);
+  });
+
+  it("emits each group once as cumulative text grows", () => {
+    const s = new SentenceStream();
+    expect(s.push(LONG)).toEqual([]);
+    // The terminator needs following whitespace before it counts.
+    expect(s.push(`${LONG} `)).toEqual([LONG]);
+    expect(s.push(`${LONG} ${LONG} `)).toEqual([LONG]);
+    expect(s.flush()).toEqual([]);
   });
 
   it("needs whitespace after the terminator, so decimals stay whole", () => {
     const s = new SentenceStream();
-    expect(s.push("The rate is 3.5 percent and holds. Next")).toEqual([
-      "The rate is 3.5 percent and holds.",
-    ]);
+    const text =
+      "The rate is 3.5 percent and it holds for the whole of the initial term of this agreement unless both parties agree in writing to change it later.";
+    expect(s.push(`${text} Next`)).toEqual([text]);
   });
 
   it("keeps a closing quote with its sentence", () => {
     const s = new SentenceStream();
-    expect(s.push('He said "no." Then he left.')).toEqual(['He said "no."']);
+    const text =
+      'The clause records that the answer given at the meeting was "no." and that every party present accepted the outcome without raising any further objection.';
+    expect(s.push(`${text} Then he left.`)).toEqual([text]);
   });
 
   it("cuts at a word boundary when a run has no terminator at all", () => {
@@ -88,14 +110,14 @@ describe("SentenceStream", () => {
     // the new text onto the old offset would speak a fragment of both.
     const s = new SentenceStream();
     s.push("Original first sentence. Original second");
-    const out = s.push("Brand new answer. And more");
-    expect(out).toEqual(["Brand new answer."]);
+    s.push("Brand new answer. And more");
+    expect(s.flush()).toEqual(["Brand new answer. And more"]);
   });
 
   it("emits nothing twice across a flush", () => {
     const s = new SentenceStream();
-    const seen = [...s.push("One. Two."), ...s.flush()];
-    expect(seen).toEqual(["One.", "Two."]);
+    const seen = [...s.push(`${LONG} ${LONG} One. Two.`), ...s.flush()];
+    expect(seen).toEqual([LONG, LONG, "One. Two."]);
   });
 });
 

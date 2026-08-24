@@ -25,6 +25,18 @@
 /** Longest run of text spoken without a sentence end, before flushing at a word boundary. */
 const MAX_UTTERANCE_CHARS = 240;
 
+/**
+ * Shortest utterance worth sending on its own.
+ *
+ * Every utterance is a separate synthesis: the player's queue drains to
+ * empty between them, and the seam is audible as a click — with an avatar,
+ * a visible restart too. Speaking each sentence the instant it lands turns a
+ * four-sentence answer into four seams. Complete sentences are therefore
+ * grouped until they are worth the seam, which still starts the audio well
+ * before the answer has finished streaming.
+ */
+const MIN_UTTERANCE_CHARS = 140;
+
 /** A sentence end: `.`, `!`, `?`, `…` (optionally closed by a quote/bracket) then whitespace. */
 const SENTENCE_END = /([.!?…]["'”’)\]]*)(\s+)/;
 
@@ -101,11 +113,7 @@ export class SentenceStream {
 
   /** Emit whatever is left, complete sentence or not. Call when the answer ends. */
   flush(): string[] {
-    const out = this.drain(true);
-    const tail = this.buffer.trim();
-    this.buffer = "";
-    if (tail) out.push(tail);
-    return out;
+    return this.drain(true);
   }
 
   reset(): void {
@@ -115,13 +123,22 @@ export class SentenceStream {
 
   private drain(final: boolean): string[] {
     const out: string[] = [];
+    // Complete sentences waiting to be grouped into one utterance.
+    let group = "";
+    const flushGroup = () => {
+      if (group) out.push(group);
+      group = "";
+    };
     for (;;) {
       const match = SENTENCE_END.exec(this.buffer);
       if (match) {
         const end = match.index + match[1].length;
         const utterance = this.buffer.slice(0, end).trim();
         this.buffer = this.buffer.slice(end + match[2].length);
-        if (utterance) out.push(utterance);
+        if (utterance) {
+          group = group ? `${group} ${utterance}` : utterance;
+          if (group.length >= MIN_UTTERANCE_CHARS) flushGroup();
+        }
         continue;
       }
       // No sentence end in sight. Once the buffer is long enough that
@@ -133,10 +150,26 @@ export class SentenceStream {
         if (cut <= 0) break;
         const utterance = this.buffer.slice(0, cut).trim();
         this.buffer = this.buffer.slice(cut + 1);
-        if (utterance) out.push(utterance);
+        if (utterance) {
+          group = group ? `${group} ${utterance}` : utterance;
+          flushGroup();
+        }
         continue;
       }
       break;
+    }
+
+    if (final) {
+      // Nothing more is coming: the trailing fragment joins the group rather
+      // than becoming an utterance of its own, so an answer never ends on a
+      // needless extra seam.
+      const tail = this.buffer.trim();
+      this.buffer = "";
+      if (tail) group = group ? `${group} ${tail}` : tail;
+      flushGroup();
+    } else if (group) {
+      // Too short to be worth a seam yet — put it back and wait for company.
+      this.buffer = `${group} ${this.buffer}`;
     }
     return out;
   }

@@ -119,6 +119,24 @@ export function VoiceSurface({ bridge, config, avatar = true }: VoiceSurfaceProp
     });
   }, [wantsTools]);
 
+  // Half-duplex: hold the microphone closed while the assistant speaks, so
+  // its own voice cannot trip the service's VAD and start a conversation
+  // with itself. Only ever undoes a mute it applied — a user who muted
+  // deliberately stays muted.
+  const autoMuted = useRef(false);
+  useEffect(() => {
+    if (!config.halfDuplex) return;
+    const live = liveRef.current;
+    const speaking = live.sessionState === "speaking";
+    if (speaking && !live.isMuted) {
+      autoMuted.current = true;
+      live.toggleMute();
+    } else if (!speaking && autoMuted.current) {
+      autoMuted.current = false;
+      if (live.isMuted) live.toggleMute();
+    }
+  }, [config.halfDuplex, live.sessionState, live.isMuted]);
+
   // Publish session facts the UI reads (mic button, status strip). The
   // bridge is the adapter's channel; this store is the components'.
   const sessionState: SessionState = live.sessionState;

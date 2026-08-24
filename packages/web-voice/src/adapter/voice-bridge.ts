@@ -79,6 +79,16 @@ export class VoiceBridge {
   private readonly sentences = new SentenceStream();
   /** Id of the assistant message currently being spoken, so a new answer resets the stream. */
   private answerId: string | null = null;
+  /**
+   * Whether `answerId` has been spoken to the end.
+   *
+   * The watcher re-fires for an answer that is already finished — the
+   * thread's message array gets a new identity on any notification, not just
+   * on new text. Without a "done" marker, clearing `answerId` on completion
+   * made the very next tick look like a brand-new answer, reset the sentence
+   * stream, and speak the whole reply again. Forever.
+   */
+  private answerDone = false;
 
   /** Injected so the bridge never imports the React chat surface. */
   private submitText: ((text: string) => void) | null = null;
@@ -143,6 +153,7 @@ export class VoiceBridge {
               this.speech.cancel();
               this.sentences.reset();
               this.answerId = null;
+              this.answerDone = false;
               controls.disconnect();
             },
             mute: () => controls.mute(),
@@ -171,7 +182,13 @@ export class VoiceBridge {
     this.config.onTranscript?.({ role, text, isFinal } satisfies VoiceTranscript);
 
     if (this.mode === "realtime") {
-      this.helpers?.emitTranscript({ role, text, isFinal });
+      // A VAD misfire (room noise, the assistant's own tail) produces a
+      // final user transcript with nothing in it. Publishing it puts an
+      // empty bubble in the thread and makes the run look like a turn the
+      // user took.
+      if (!(role === "user" && isFinal && !text.trim())) {
+        this.helpers?.emitTranscript({ role, text, isFinal });
+      }
       return;
     }
 
@@ -195,7 +212,7 @@ export class VoiceBridge {
           this.controls?.cancelResponse();
         }
         this.sentences.reset();
-        this.answerId = null;
+        this.answerDone = true;
         break;
 
       case "response.done":
@@ -255,7 +272,11 @@ export class VoiceBridge {
 
     if (this.answerId !== messageId) {
       this.answerId = messageId;
+      this.answerDone = false;
       this.sentences.reset();
+    } else if (this.answerDone) {
+      // Already spoken in full; later ticks for it carry no new words.
+      return;
     }
 
     const speakable = toSpeakableText(text);
@@ -263,7 +284,7 @@ export class VoiceBridge {
 
     if (isComplete) {
       for (const utterance of this.sentences.flush()) this.speech.enqueue(utterance);
-      this.answerId = null;
+      this.answerDone = true;
     }
   }
 

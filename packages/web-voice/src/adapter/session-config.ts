@@ -98,6 +98,12 @@ export function buildVoiceSession({
   return {
     ...base,
     ...overrides,
+    // Tools MERGE rather than replace. A host declaring an MCP server or a
+    // Foundry agent tool is adding server-side capability, not withdrawing
+    // the browser's — and a plain spread would silently drop every client
+    // tool the moment one was declared, leaving the model unable to touch
+    // the UI with no error to explain why.
+    tools: mergeTools(base.tools, overrides.tools),
     turnDetection:
       overrides.turnDetection === undefined
         ? base.turnDetection
@@ -105,4 +111,24 @@ export function buildVoiceSession({
           ? null
           : { ...base.turnDetection, ...overrides.turnDetection },
   };
+}
+
+/**
+ * Combine the registry's function tools with whatever the host declared.
+ *
+ * Function tools are keyed by name so a host can deliberately override one
+ * of the registry's; everything else (MCP servers, Foundry agent tools) is
+ * additive, since those are distinct capabilities rather than replacements.
+ */
+function mergeTools(base: Tool[] | undefined, extra: Tool[] | undefined): Tool[] | undefined {
+  if (!base) return extra;
+  if (!extra) return base;
+
+  const byName = new Map<string, Tool>();
+  const others: Tool[] = [];
+  for (const tool of [...base, ...extra]) {
+    if (tool.type === "function") byName.set(tool.name, tool);
+    else others.push(tool);
+  }
+  return [...byName.values(), ...others];
 }

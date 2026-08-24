@@ -66,6 +66,22 @@ export interface VoiceConfig {
    */
   exposeClientTools?: boolean;
 
+  /**
+   * Mute the microphone while the assistant is speaking.
+   *
+   * On a laptop's speakers the assistant hears itself: its own voice trips
+   * the service's VAD, which commits a turn, which produces another reply —
+   * a conversation the user is no longer part of. Server echo cancellation
+   * removes most of it, not all, and an avatar's audio arrives over WebRTC
+   * where it helps least.
+   *
+   * The cost is barge-in: a muted microphone cannot interrupt. Leave it off
+   * when users wear headsets; turn it on for demos and speakerphone rooms.
+   *
+   * @default false
+   */
+  halfDuplex?: boolean;
+
   /** Console verbosity of the underlying SDK. @default "warn" */
   logLevel?: LogLevel;
 

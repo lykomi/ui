@@ -70,6 +70,45 @@ describe("buildVoiceSession", () => {
     expect(tools).toEqual([{ type: "function", name: "bare", description: "", parameters: {} }]);
   });
 
+  it("keeps the client tools when a host adds a server-side MCP tool", () => {
+    // The eomi case: the browser owns ui_* / page_*, while the corpus and
+    // graph live behind an MCP endpoint the service calls itself. A plain
+    // spread would drop the client tools the moment MCP was declared, and
+    // the model would lose the UI with nothing to explain why.
+    const registry = fakeRegistry([{ name: "ui_navigate" }]);
+    const session = buildVoiceSession({
+      mode: "realtime",
+      registry,
+      overrides: {
+        tools: [{ type: "mcp", serverLabel: "eomi", serverUrl: "https://example.invalid/mcp" }],
+      },
+    });
+
+    expect(session.tools).toEqual([
+      { type: "function", name: "ui_navigate", description: "", parameters: {} },
+      { type: "mcp", serverLabel: "eomi", serverUrl: "https://example.invalid/mcp" },
+    ]);
+  });
+
+  it("lets a host replace one client tool by name without losing the rest", () => {
+    const registry = fakeRegistry([{ name: "ui_navigate" }, { name: "ui_set_theme" }]);
+    const session = buildVoiceSession({
+      mode: "realtime",
+      registry,
+      overrides: {
+        tools: [{ type: "function", name: "ui_navigate", description: "Custom", parameters: {} }],
+      },
+    });
+
+    expect(session.tools).toHaveLength(2);
+    expect(session.tools).toContainEqual({
+      type: "function",
+      name: "ui_navigate",
+      description: "Custom",
+      parameters: {},
+    });
+  });
+
   it("lets a host retune VAD without silently re-enabling the model", () => {
     // The trap this guards: a host sets `turnDetection: { threshold: 0.8 }`,
     // a whole-object replace drops `createResponse: false`, and relay mode

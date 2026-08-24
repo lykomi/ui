@@ -59,6 +59,16 @@ const realtime = (over: Partial<VoiceConfig> = {}): VoiceConfig => ({
   mode: "realtime",
 });
 
+/** Long enough to clear the coalescing threshold on its own. */
+const FIRST =
+  "The notice period is thirty days and it runs from the date on which the written notice is actually received by the other party, not the date it was sent.";
+
+function spokenText(event: unknown): string {
+  return (
+    event as { response: { pre_generated_assistant_message: { content: { text: string }[] } } }
+  ).response.pre_generated_assistant_message.content[0]!.text;
+}
+
 const speechStarted = { type: "input_audio_buffer.speech_started" } as VoiceLiveServerEvent;
 const responseDone = { type: "response.done" } as VoiceLiveServerEvent;
 
@@ -112,6 +122,19 @@ describe("realtime mode", () => {
       { role: "assistant", text: "Thirty", isFinal: false },
       { role: "assistant", text: "Thirty days.", isFinal: true },
     ]);
+  });
+
+  it("ignores an empty final transcript from a VAD misfire", async () => {
+    // Room noise, or the assistant's own tail on speakers, produces a final
+    // transcript with nothing in it — an empty bubble that looks like a turn.
+    const bridge = new VoiceBridge(realtime());
+    const { transcripts } = await connect(bridge, fakeControls());
+
+    bridge.handleTranscript("user", "   ", true);
+    expect(transcripts).toEqual([]);
+
+    bridge.handleTranscript("user", "a real question", true);
+    expect(transcripts).toHaveLength(1);
   });
 
   it("never submits to the composer", async () => {
@@ -175,18 +198,20 @@ describe("relay mode", () => {
     });
   });
 
-  it("speaks the answer sentence by sentence as it streams", async () => {
+  it("speaks the answer in chunks as it streams, not one sentence at a time", async () => {
     const controls = fakeControls();
     const bridge = new VoiceBridge(relay());
     await connect(bridge, controls);
 
-    // A terminator at the very end of the buffer is still ambiguous — the
-    // next token could make it "3." of "3.5". The sentence is released once
-    // the following whitespace proves it was a sentence end.
-    bridge.trackAnswer("m1", "The notice period is thirty days.", false);
+    // Nothing yet: the sentence is unfinished, and `toSpeakableText` trims,
+    // so a terminator at the very end never carries the following
+    // whitespace that would prove it was one.
+    bridge.trackAnswer("m1", FIRST.slice(0, 60), false);
     expect(controls.sent).toHaveLength(0);
 
-    bridge.trackAnswer("m1", "The notice period is thirty days. It", false);
+    // Enough text to be worth a seam, mid-stream — speech starts before the
+    // answer has finished arriving.
+    bridge.trackAnswer("m1", `${FIRST} More`, false);
     expect(controls.sent).toHaveLength(1);
     expect(controls.sent[0]).toEqual({
       type: "response.create",
@@ -194,23 +219,17 @@ describe("relay mode", () => {
         pre_generated_assistant_message: {
           type: "message",
           role: "assistant",
-          content: [{ type: "text", text: "The notice period is thirty days." }],
+          content: [{ type: "text", text: FIRST }],
         },
       },
     });
 
-    // The second sentence waits for the first response to finish.
-    bridge.trackAnswer("m1", "The notice period is thirty days. It runs from receipt.", true);
+    // The remainder waits for the running response to finish.
+    bridge.trackAnswer("m1", `${FIRST} More to say here at the end.`, true);
     expect(controls.sent).toHaveLength(1);
     bridge.handleServerEvent(responseDone);
     expect(controls.sent).toHaveLength(2);
-    expect(
-      (
-        controls.sent[1] as {
-          response: { pre_generated_assistant_message: { content: { text: string }[] } };
-        }
-      ).response.pre_generated_assistant_message.content[0]!.text,
-    ).toBe("It runs from receipt.");
+    expect(spokenText(controls.sent[1])).toBe("More to say here at the end.");
   });
 
   it("speaks the prose, not the markdown", async () => {
@@ -264,6 +283,41 @@ describe("relay mode", () => {
 
     // The next answer is fair game again.
     bridge.trackAnswer("m2", "This one was asked by voice. ", true);
+    expect(controls.sent).toHaveLength(1);
+  });
+
+  it("speaks a finished answer exactly once, however often the watcher fires", async () => {
+    // The thread's message array gets a new identity on any notification,
+    // so the watcher re-reports a completed answer repeatedly. This used to
+    // look like a new answer each time and re-speak the whole reply, on a
+    // loop that never ended.
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(relay());
+    await connect(bridge, controls);
+
+    const answer = "The notice period is thirty days. ";
+    bridge.trackAnswer("m1", answer, true);
+    bridge.handleServerEvent(responseDone);
+    for (let i = 0; i < 5; i++) bridge.trackAnswer("m1", answer, true);
+    bridge.handleServerEvent(responseDone);
+
+    expect(controls.sent).toHaveLength(1);
+  });
+
+  it("does not re-speak an answer the user interrupted", async () => {
+    // After barge-in the interrupted reply is still the last message, so the
+    // watcher keeps reporting it.
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(relay());
+    await connect(bridge, controls);
+
+    bridge.trackAnswer("m1", `${FIRST} And`, false);
+    expect(controls.sent).toHaveLength(1);
+
+    bridge.handleServerEvent(speechStarted);
+    bridge.trackAnswer("m1", `${FIRST} And a further sentence.`, true);
+    bridge.handleServerEvent(responseDone);
+
     expect(controls.sent).toHaveLength(1);
   });
 
