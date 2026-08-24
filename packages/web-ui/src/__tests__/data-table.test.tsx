@@ -155,6 +155,14 @@ const renderedIds = () =>
     tr.getAttribute("data-row-id"),
   );
 
+
+/** How many stacked rows the toolbar's flex column currently holds. */
+function countToolbarRows(container: HTMLElement): number {
+  const column = container.querySelector("[data-slot='data-table-toolbar']")
+    ?? container.querySelector(".flex.flex-col.gap-2");
+  return column ? column.children.length : -1;
+}
+
 describe("promises the metadata makes", () => {
   it("starts a defaultHidden column hidden, and lets the caller override it", () => {
     const columns: ColumnDef<Task, unknown>[] = [
@@ -879,6 +887,38 @@ describe("useDataTable + DataTable", () => {
     act(() => table.resetRowSelection(true));
     expect(container!.querySelector("[data-selection-row]")).toBeNull();
     expect(container!.querySelector("[data-filter-row]")).not.toBeNull();
+  });
+
+  it("a facetless list does not grow when a row is ticked", () => {
+    // With no facets the toolbar takes its non-stacked layout, which never
+    // reached the swap above: the selection bar was APPENDED, so the
+    // toolbar gained a row on the first tick and the table jumped down
+    // under the cursor mid-click — the exact regression moving
+    // `selectionBar` into the toolbar was meant to end.
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          enableRowSelection
+          toolbarProps={{ selectionBar: <span data-bar="">selected</span> }}
+          onTable={(t) => (table = t)}
+        />,
+      );
+    });
+    const toolbar = container!.querySelector("[data-selection-row]");
+    expect(toolbar, "nothing ticked yet").toBeNull();
+    const rowsBefore = countToolbarRows(container!);
+
+    act(() => table.getRow("t1").toggleSelected(true));
+
+    expect(container!.querySelector("[data-bar]")?.textContent).toBe("selected");
+    expect(
+      countToolbarRows(container!),
+      "the selection bar must take toolbar space, not add to it",
+    ).toBe(rowsBefore);
   });
 
   it("layout=inline keeps one wrapping row", () => {

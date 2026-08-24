@@ -285,18 +285,34 @@ export function DataTableToolbar<T>({
     return (
       <div className={cn("flex flex-col gap-2", className)}>
         <div className="flex items-start gap-2">
+          {/* The selection bar TAKES this row rather than adding one below
+              it. Appended, it grew the toolbar the moment the first row was
+              ticked and shoved the table down under the cursor mid-click —
+              the same jump the stacked layout avoids by swapping its filter
+              row, and the reason `selectionBar` moved into the toolbar at
+              all. A list with no facets never reached that swap, so it kept
+              jumping (review catch).
+
+              Search stays put, exactly as it does when stacked: it is how
+              you narrow what you are selecting from, and only the filter
+              controls give way. */}
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             {searchNode}
-            {facetNodes}
-            {addFilterNode}
-            {children}
-            {resetNode}
+            {showSelectionBar ? (
+              <div data-selection-row="" className="min-w-0 flex-1">
+                {selectionBar}
+              </div>
+            ) : (
+              <>
+                {facetNodes}
+                {addFilterNode}
+                {children}
+                {resetNode}
+              </>
+            )}
           </div>
           {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
         </div>
-        {/* An inline list can still select rows, so its bulk actions have a
-            home too — under the one row rather than in place of it. */}
-        {showSelectionBar ? <div data-selection-row="">{selectionBar}</div> : null}
       </div>
     );
   }
