@@ -1,5 +1,108 @@
 # @iloveagents/foundry-web-ui
 
+## 0.21.0
+
+### Minor Changes
+
+- 8132205: Add two host-injectable seams that nothing in this package uses on its own.
+
+  `registerVoiceAdapter()` / `registerSpeechAdapter()` (mirroring `registerAttachmentAdapter`) let a
+  host supply assistant-ui's `RealtimeVoiceAdapter` and `SpeechSynthesisAdapter`; the AG-UI runtime
+  provider passes them through to `useLocalRuntime` only when registered, so a runtime without them
+  is byte-for-byte the runtime that existed before and assistant-ui keeps reporting the capability as
+  unavailable.
+
+  `registerChatSlots({ composerActions })` adds a third chat slot, rendered in the trailing control
+  row of both the full composer and the floating bubble — for controls that are an alternative _way
+  to send_ rather than content about the thread.
+
+- eaecd13: New `threadSurface` chat slot: a module can render _instead of_ the message
+  viewport, for a mode that replaces the conversation rather than adding to it.
+  A live voice call is the case it exists for — while you are talking, the
+  transcript scrolling past is not what you are looking at, and "How can I help
+  you today?" is the wrong question once the answer is "say it out loud".
+
+  Unlike the other slots it is set and cleared at runtime: registering the
+  component IS the takeover, clearing it hands the thread back, so there is no
+  second "is it active" flag to keep in step. The thread is hidden rather than
+  unmounted, so its scroll position and any in-flight run survive the round trip.
+
+- 908023d: Rework the composer: one row, one "+", and a corner that Send can hand over.
+
+  The leading controls were a row of single-purpose icons that grew every time
+  the product learned a trick, and each one cost the user a guess. They are now
+  one `ComposerAddMenu` — a labelled menu holding Attach file and Pin this page.
+  Pinning in particular is a power feature that did not deserve permanent
+  residency next to the text field; `ContextPins` still shows what _is_ pinned.
+
+  The composer is a single row when it has the width for one and two rows when
+  it does not, decided by wrapping rather than a breakpoint: the input keeps
+  `w-full` while narrow, which pushes it onto its own line and leaves `+` and
+  the trailing controls below it. The old always-two-rows layout existed to stop
+  controls floating mid-height beside tall wrapped text — that only ever happened
+  narrow, which still gets two rows.
+
+  `registerChatSlots({ composerActionsReplaceSend: true })` lets a module's
+  `composerActions` stand in for Send while the composer is empty, so a voice
+  button can hold the corner until there is something to send. Opt-in: a slot
+  holding something unrelated must not make Send disappear. Exposed as
+  `useComposerActionsOwnSend()`.
+
+  Placeholder default is now `DEFAULT_COMPOSER_PLACEHOLDER` ("Ask anything") and
+  overridable via `<ChatContent placeholder>`. "Message Assistant..." named the
+  machine and told the user nothing.
+
+  Also exports `usePagePin()`, so the pin badge and the add-menu cannot drift
+  apart on what "pinned" means.
+
+### Patch Changes
+
+- c1fa592: Don't send the user's draft with a submitted turn.
+
+  `ComposerSubmitBridge` sends through the ordinary composer, and the composer
+  stays editable while a module is using it. A voice call is the case: the
+  transcript replaced a half-written message and sent it. The text is saved and
+  restored around the send.
+
+  Attachments are deliberately NOT preserved. There is no way to send without
+  them, so preserving them means lifting them out and adding them back —
+  asynchronous work through a host adapter, which produced four distinct defects
+  in short order (a cancellation check that dropped them, two turns interleaving
+  their save/restore, a stalled upload wedging every later turn, and a timed-out
+  operation landing on a later turn). Keeping this synchronous is what makes it
+  easy to be sure about, so a file attached but not yet sent still goes with the
+  spoken turn, as it did before. Worth revisiting if the composer grows a way to
+  send without attachments.
+
+- 88004d2: A registered `threadSurface` now owns the whole viewport, scroll controls
+  included.
+
+  The transcript underneath keeps its scroll position — deliberate, so it comes
+  back untouched — but its scroll-to-bottom button stayed mounted, carried the
+  same `z-10` as the surface overlay, and rendered after it. DOM order put a
+  chevron on top of whatever the surface was showing, and clicking it scrolled a
+  viewport nobody could see. Both composers suppress it while a surface is set.
+
+- 27c6414: Make the floating chat bubble a full peer of the expanded chat.
+
+  `ChatBubble` renders a registered `threadSurface`, which only `ChatContent` did
+  before. Since the bubble also carries the composer action slots, a module could
+  be STARTED there and then ran with the ordinary transcript on screen — while
+  the module, seeing its surface registered, correctly stood its own UI down.
+  `composer-surface-parity.test.ts` now guards the general shape, because a
+  capability added to one composer and forgotten in the other is the recurring
+  failure rather than this one instance of it.
+
+  `ComposerSubmitBridge` is also mounted for the whole life of the bubble instead
+  of only while the panel is open. A module can keep working after the panel
+  closes — a voice call does exactly that — and its submitted text was landing in
+  the pending store with nothing left mounted to send it, each new submission
+  overwriting the last. Because that makes several bridges legitimately mountable
+  at once, the store now hands out an atomic claim so exactly one sends, which
+  also closes a StrictMode double-send.
+  - @iloveagents/foundry-agent@0.21.0
+  - @iloveagents/foundry-web-primitives@0.21.0
+
 ## 0.20.1
 
 ### Patch Changes
