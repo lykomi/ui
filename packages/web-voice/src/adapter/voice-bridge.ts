@@ -173,21 +173,48 @@ export class VoiceBridge {
         createVoiceSession({ abortSignal }, async (helpers) => {
           this.helpers = helpers;
           const controls = await this.awaitControls(abortSignal);
-          await controls.connect();
 
-          // Cancelling while the transport was still connecting is not
-          // observed by anything else: `awaitControls` has already returned,
-          // `controls.connect()` takes no signal, and the cleanup below —
-          // the only thing that can call `controls.disconnect()` — does not
-          // exist yet. Without this check the transport that has just come up
-          // is marked running on a session the runtime already discarded,
-          // leaving the microphone open with no control able to close it.
-          if (abortSignal?.aborted) {
-            controls.disconnect();
-            this.endCall();
-            throw abortSignal.reason instanceof Error
-              ? abortSignal.reason
-              : new Error("Voice connection cancelled");
+          // Race the connection against cancellation rather than waiting it
+          // out. `controls.connect()` takes no signal and is unbounded — a
+          // permission prompt left open, a transport that never settles — and
+          // until it resolves the cleanup that owns `controls.disconnect()`
+          // does not exist. Awaiting first therefore left a discarded session
+          // able to acquire the microphone minutes later with no control able
+          // to stop it.
+          const connecting = controls.connect();
+          if (abortSignal) {
+            const cancelled = new Promise<"cancelled">((resolve) => {
+              if (abortSignal.aborted) resolve("cancelled");
+              else
+                abortSignal.addEventListener("abort", () => resolve("cancelled"), { once: true });
+            });
+            const winner = await Promise.race([
+              connecting.then(() => "connected" as const),
+              cancelled,
+            ]);
+            if (winner === "cancelled") {
+              // Take it down now in case it is already up, and again whenever
+              // it finally settles — `disconnect()` on an idle transport is a
+              // no-op, a live one left running is not.
+              controls.disconnect();
+              void connecting.then(
+                () => controls.disconnect(),
+                () => {},
+              );
+              this.endCall();
+              // No `helpers.end()` here, and deliberately so: assistant-ui
+              // registers `abort -> session.disconnect() -> cleanup()`, which
+              // marks the session disposed, and every helper is a no-op after
+              // that. The status stays `starting` for ever by ITS design, not
+              // ours. What is ours is releasing the bridge so the next call
+              // starts clean, and making sure the transport cannot outlive
+              // this one. Throwing settles `setup` so nothing waits on it.
+              throw abortSignal.reason instanceof Error
+                ? abortSignal.reason
+                : new Error("Voice connection cancelled");
+            }
+          } else {
+            await connecting;
           }
 
           this.connected = true;

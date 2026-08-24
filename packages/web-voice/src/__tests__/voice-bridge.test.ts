@@ -460,8 +460,56 @@ describe("session lifecycle", () => {
     abort.abort();
     releaseConnect!();
 
-    await vi.waitFor(() => expect(session.status.type).not.toBe("running"));
-    expect(controls.connected, "transport must not be left live").toBe(false);
+    // Not asserted on `session.status`: assistant-ui hooks the abort signal to
+    // `session.disconnect()`, which disposes the session, after which every
+    // helper is a no-op and the status stays `starting` by its design. The
+    // requirement that is ours is the transport — eventually, since it may
+    // settle after the abort won the race, but never left live.
+    await vi.waitFor(() => expect(controls.connected, "transport left live").toBe(false));
+  });
+
+  it("gives up on a connection that never settles", async () => {
+    // The case awaiting-then-checking could not handle at all: a permission
+    // prompt left open, or a transport that never resolves either way. The
+    // abort was only observed AFTER that unbounded await, so the session hung
+    // as "starting" for as long as the connect did — and could still come up
+    // later with the runtime no longer holding any control over it.
+    const controls = fakeControls();
+    controls.connect = () => new Promise<void>(() => {}); // never settles
+    // Counted, because "did the setup give up?" is only observable from here:
+    // racing the abort takes the stalled transport down, awaiting it never
+    // does. Without this the test passes either way, since a second session
+    // works regardless of whether the first one is still hanging.
+    let disconnects = 0;
+    const stop = controls.disconnect;
+    controls.disconnect = () => {
+      disconnects += 1;
+      stop();
+    };
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(controls);
+    const abort = new AbortController();
+    const session = bridge.createAdapter().connect({ abortSignal: abort.signal });
+
+    abort.abort();
+
+    // The observable requirement is not a status — assistant-ui freezes that
+    // on abort — but that the BRIDGE is released rather than stuck waiting on
+    // a promise that will never settle. Prove it by using it again: a second
+    // call on the same bridge must connect and run.
+    // The stalled transport is taken down rather than waited on.
+    await vi.waitFor(() =>
+      expect(disconnects, "stalled transport never released").toBeGreaterThan(0),
+    );
+
+    const healthy = fakeControls();
+    bridge.attach(healthy);
+    const next = bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(next.status.type).toBe("running"));
+    expect(healthy.connected).toBe(true);
+    expect(controls.connected, "the stalled transport must not have come up").toBe(false);
+    void session;
   });
 
   it("ignores the completion of a response cancelled by barge-in", async () => {

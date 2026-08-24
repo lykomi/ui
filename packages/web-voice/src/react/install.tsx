@@ -18,12 +18,18 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { registerChatSlots, registerVoiceAdapter } from "@iloveagents/foundry-web-ui";
+import {
+  registerChatSlots,
+  registerVoiceAdapter,
+  useChatSlotsStore,
+  useVoiceAdapterStore,
+} from "@iloveagents/foundry-web-ui";
 import { VoiceBridge } from "../adapter/voice-bridge.ts";
 import type { VoiceConfig } from "../adapter/types.ts";
 import { VoiceMicButton } from "./voice-mic-button.tsx";
 import { VoiceStatusStrip } from "./voice-status-strip.tsx";
 import { VoiceLauncherBadge } from "./voice-launcher-badge.tsx";
+import { VoiceStage } from "./voice-stage.tsx";
 import { VoiceSurface } from "./voice-surface.tsx";
 
 export interface VoiceInstallOptions extends VoiceConfig {
@@ -51,11 +57,27 @@ export interface VoiceInstallation {
   dispose: () => void;
 }
 
+/**
+ * Which installation last claimed the chat slots.
+ *
+ * Module-level because the question is about installations, not components:
+ * every installation registers the same `VoiceMicButton`, so identity alone
+ * cannot answer "is this still mine?".
+ */
+let slotOwner: symbol | null = null;
+
 export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
   const { chrome = true, avatar = true, stage = true, ...config } = options;
   const bridge = new VoiceBridge(config);
 
-  registerVoiceAdapter(bridge.createAdapter());
+  // Kept so disposal can tell "still mine" from "someone replaced me".
+  const adapter = bridge.createAdapter();
+  registerVoiceAdapter(adapter);
+  // The slots need a token rather than component identity: two installations
+  // register the SAME `VoiceMicButton`, so comparing the component cannot tell
+  // them apart and the older one would clear the newer one's controls.
+  const token = Symbol("foundry-voice-install");
+  if (chrome) slotOwner = token;
   if (chrome) {
     registerChatSlots({
       composerActions: VoiceMicButton,
@@ -79,14 +101,23 @@ export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
     bridge,
     Host,
     dispose: () => {
-      registerVoiceAdapter(null);
-      if (chrome) {
+      // Both registries are last-registration-wins, so a later installation
+      // legitimately owns these slots. Clearing unconditionally would strip
+      // the live one when an OLDER host unmounts — swapping a conditional
+      // <FoundryVoice/> would leave the replacement with no adapter and a
+      // composer with no controls.
+      if (useVoiceAdapterStore.getState().voice === adapter) registerVoiceAdapter(null);
+      if (chrome && slotOwner === token) {
+        slotOwner = null;
+        const slots = useChatSlotsStore.getState();
         registerChatSlots({
-          composerActions: null,
-          composerBanner: null,
-          launcherBadge: null,
-          composerActionsReplaceSend: false,
-          threadSurface: null,
+          // Still identity-checked as well, so a host that put its OWN control
+          // in the slot keeps it.
+          composerActions: slots.composerActions === VoiceMicButton ? null : undefined,
+          composerBanner: slots.composerBanner === VoiceStatusStrip ? null : undefined,
+          launcherBadge: slots.launcherBadge === VoiceLauncherBadge ? null : undefined,
+          composerActionsReplaceSend: slots.composerActions === VoiceMicButton ? false : undefined,
+          threadSurface: slots.threadSurface === VoiceStage ? null : undefined,
         });
       }
     },

@@ -64,6 +64,21 @@ describe("SentenceStream", () => {
     expect(after).toBe("Figure the governor housing");
   });
 
+  it("waits at a closed label until it is known whether a link follows", () => {
+    // The chunk boundary immediately before "(": "[label]" looks finished, but
+    // one more character turns it into a link whose speakable form is four
+    // characters shorter. Speaking at that boundary costs a re-read; waiting
+    // one delta costs nothing, and flush() speaks it regardless at the end.
+    const closed = toSpeakableText("See the [commissioning log]");
+    const becomingLink = toSpeakableText("See the [commissioning log](");
+    const complete = toSpeakableText("See the [commissioning log](https://example.invalid/x)");
+
+    expect(closed).toBe("See the");
+    expect(becomingLink.startsWith(closed)).toBe(true);
+    expect(complete.startsWith(closed)).toBe(true);
+    expect(complete).toBe("See the commissioning log");
+  });
+
   it("reads a markdown link the same before and after its target closes", () => {
     // The bracket is already closed, so the unclosed-bracket rule does not
     // apply, and LINK needs the ")" before it can reduce to the label — so in

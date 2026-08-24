@@ -50,7 +50,12 @@ const LINK = /\[([^\]]*)\]\([^)]*\)/g;
  */
 const CITATION = /[ \t]*\[\d+(?:\s*,\s*\d+)*\]/g;
 /**
- * An unclosed bracket at the very end of the text — "[", "[2", "[2, 3", "[no".
+ * A bracketed run at the very end of the text — "[", "[2", "[2, 3", "[label]".
+ *
+ * The closing "]" is optional on purpose. A finished "[label]" sitting at the
+ * end is not finished at all if the next character turns out to be "(", which
+ * makes it a link and reduces it to "label" — four characters shorter. Waiting
+ * for the next delta costs nothing, and speaking early costs a re-read.
  *
  * Anything still missing its "]" is unfinished by definition, since nothing
  * has arrived after it yet. Dropping it keeps normalisation MONOTONIC: a
@@ -63,7 +68,7 @@ const CITATION = /[ \t]*\[\d+(?:\s*,\s*\d+)*\]/g;
  * simply reappears once it closes. Growth is harmless; only shrinkage forces
  * a rewind.
  */
-const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*$/;
+const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*\]?$/;
 /**
  * A markdown link whose target is still arriving: "[label](http://ex" .
  *

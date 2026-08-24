@@ -7,6 +7,11 @@
 @source "../node_modules/@iloveagents/foundry-web-primitives/dist";
 @source "../node_modules/@iloveagents/foundry-web-ui/dist";
 @source "../node_modules/@iloveagents/foundry-web-shell/dist";
+/* Voice is optional at RUNTIME, not at build time: the package is always a
+   dependency, so its utilities must be scanned or a voice-enabled app renders
+   unstyled. Scanning it costs nothing when voice is off — Tailwind emits only
+   the classes something references. */
+@source "../node_modules/@iloveagents/foundry-web-voice/dist";
 
 @plugin "tailwindcss-animate";
 

@@ -2,13 +2,13 @@ packages:
   - .
 
 onlyBuiltDependencies:
-  - '@swc/core'
+  - "@swc/core"
   - esbuild
 
 allowBuilds:
-  '@swc/core': true
+  "@swc/core": true
   esbuild: true
 
 overrides:
-  '@assistant-ui/store': 0.2.10
-  '@assistant-ui/tap': 0.5.16
+  "@assistant-ui/store": 0.2.10
+  "@assistant-ui/tap": 0.5.16

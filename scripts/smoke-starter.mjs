@@ -1,5 +1,12 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -97,7 +104,9 @@ async function runPnpmLiveOutput(args, options = {}) {
   return new Promise((resolveOutput, reject) => {
     const child = spawn(pnpmCommand.command, [...pnpmCommand.prefixArgs, ...args], {
       cwd: options.cwd ?? root,
-      env: process.env,
+      // Honour a caller-supplied environment: the voice-enabled build below
+      // is only meaningful if its feature flag actually reaches Vite.
+      env: options.env ?? process.env,
       stdio: ["ignore", "pipe", "pipe"],
     });
     let output = "";
@@ -446,6 +455,45 @@ const buildOutput = await runPnpmLiveOutput(["build"], {
 
 if (buildOutput.includes("Some chunks are larger than 500 kB")) {
   throw new Error("Starter production build emitted Vite's large chunk warning.");
+}
+
+// The build above is the DEFAULT scaffold, where voice is switched off and
+// tree-shaken out entirely. That is worth proving, but on its own it can only
+// ever exercise the half of the template where voice does not exist — which is
+// how a missing Tailwind @source for the voice package survived review: with
+// the feature off, none of its classes are referenced, so none are missing.
+//
+// Build it again with the feature ON and check the CSS actually carries the
+// utilities those components use.
+const voiceBuild = await runPnpmLiveOutput(["build"], {
+  cwd: appDir,
+  timeoutMs: 3 * 60_000,
+  env: { ...process.env, VITE_VOICE_PROXY_URL: "ws://localhost:8080/ws" },
+});
+if (voiceBuild.includes("Some chunks are larger than 500 kB")) {
+  throw new Error("Voice-enabled starter build emitted Vite's large chunk warning.");
+}
+
+const voiceAssets = join(appDir, "dist", "assets");
+const cssFiles = readdirSync(voiceAssets).filter((f) => f.endsWith(".css"));
+const css = cssFiles.map((f) => readFileSync(join(voiceAssets, f), "utf8")).join("\n");
+const jsFiles = readdirSync(voiceAssets).filter((f) => f.endsWith(".js"));
+const js = jsFiles.map((f) => readFileSync(join(voiceAssets, f), "utf8")).join("\n");
+
+if (!js.includes("VoiceLive") && !js.includes("voice-live")) {
+  throw new Error(
+    "Voice-enabled starter build contains no Voice Live code — the env gate did not switch it on.",
+  );
+}
+// Classes that exist ONLY in the voice package. If its dist is not a Tailwind
+// source, these are absent and the mic button and stage render unstyled.
+for (const utility of ["object-cover", "ring-background"]) {
+  if (!css.includes(utility)) {
+    throw new Error(
+      `Voice-enabled starter CSS is missing "${utility}" — add the voice package to the ` +
+        `template's Tailwind @source directives.`,
+    );
+  }
 }
 
 if (runBrowserSmoke) {
