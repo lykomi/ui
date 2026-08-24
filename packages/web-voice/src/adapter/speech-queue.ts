@@ -68,7 +68,7 @@ const CITATION = /[ \t]*\[\d+(?:\s*,\s*\d+)*\]/g;
  * simply reappears once it closes. Growth is harmless; only shrinkage forces
  * a rewind.
  */
-const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*\]?$/;
+const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*\]?\s*$/;
 /**
  * A markdown link whose target is still arriving: "[label](http://ex" .
  *
@@ -87,7 +87,7 @@ const UNCLOSED_LINK = /!?\[([^\]]*)\]\([^)]*$/;
 /** Matches nothing, so a rule can be switched off without branching the chain. */
 const NOTHING = /(?!)/;
 /** A bracketed run at the end of a SETTLED answer: keep the words, lose the brackets. */
-const TRAILING_BRACKETED = /\[([^\]]*)\]?$/;
+const TRAILING_BRACKETED = /\[([^\]]*)\]?\s*$/;
 const HEADING = /^\s{0,3}#{1,6}\s+/gm;
 const BLOCKQUOTE = /^\s{0,3}>\s?/gm;
 const LIST_BULLET = /^\s{0,3}([-*+]|\d+[.)])\s+/gm;

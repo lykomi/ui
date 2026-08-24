@@ -126,6 +126,16 @@ export class VoiceBridge {
    * being set up, and only one of those may go on to start a session.
    */
   private abandoned = false;
+  /**
+   * A connection that has been asked for but has not settled.
+   *
+   * Held so that abandoning a call can take the transport down NOW rather than
+   * waiting on a promise that may never resolve — a permission prompt left
+   * open, a transport that stalls. `setup` re-checks `abandoned` past its
+   * await and covers a connection that arrives late; the case it cannot reach
+   * is the one that never arrives, which is exactly this.
+   */
+  private pendingConnect: { controls: VoiceTransportControls } | null = null;
 
   /** Injected so the bridge never imports the React chat surface. */
   private submitText: ((text: string) => void) | null = null;
@@ -189,6 +199,7 @@ export class VoiceBridge {
           // to stop it.
           this.abandoned = false;
           const connecting = controls.connect();
+          this.pendingConnect = { controls };
           if (abortSignal) {
             const cancelled = new Promise<"cancelled">((resolve) => {
               if (abortSignal.aborted) resolve("cancelled");
@@ -224,6 +235,7 @@ export class VoiceBridge {
             await connecting;
           }
 
+          this.pendingConnect = null;
           if (this.abandoned) {
             // The host unmounted while this was connecting. Nothing is left to
             // control the transport, so do not let it become a live session.
@@ -375,7 +387,21 @@ export class VoiceBridge {
     // against controls whose host no longer exists. `abandon()` covers that
     // half; this one covers a call that had actually started.
     this.abandoned = true;
-    if (!this.connected) return;
+    if (!this.connected) {
+      // Nothing to end — but a connection may still be on its way up with
+      // nothing left to control it. Take it down now, and again when it
+      // finally settles, exactly as the cancellation path does.
+      // A connection may still be on its way up with nothing left to control
+      // it. Take it down now. A connection that LATER resolves is already
+      // handled inside `setup`, which re-checks `abandoned` past its await —
+      // the case that path cannot reach is the one that never resolves at all.
+      const pending = this.pendingConnect;
+      if (pending) {
+        this.pendingConnect = null;
+        pending.controls.disconnect();
+      }
+      return;
+    }
     this.endCall();
     this.helpers?.end("finished");
   }

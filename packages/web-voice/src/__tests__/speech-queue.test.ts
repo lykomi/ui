@@ -64,6 +64,18 @@ describe("SentenceStream", () => {
     expect(after).toBe("Figure the governor housing");
   });
 
+  it("unwraps the final brackets even with whitespace after them", () => {
+    // The end anchor runs BEFORE whitespace collapsing and trim(), so a
+    // trailing newline meant the pattern did not match and the delimiters
+    // survived into the speech — the voice reading "open bracket yes".
+    expect(toSpeakableText("choose [yes/no]\n", { final: true })).toBe("choose yes/no");
+    expect(toSpeakableText("choose [yes/no]  ", { final: true })).toBe("choose yes/no");
+  });
+
+  it("holds a trailing bracket back while streaming, whitespace or not", () => {
+    expect(toSpeakableText("choose [yes/no]\n")).toBe("choose");
+  });
+
   it("speaks bracketed prose an answer ends on", () => {
     // The cost of holding a trailing bracket back. While streaming it is
     // right — one more character could make it a link. Once the answer has

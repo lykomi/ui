@@ -60,3 +60,16 @@ describe("VoiceStage stream overrides", () => {
     expect(stage).not.toMatch(/props\.videoStream \?\? liveVideo/);
   });
 });
+
+describe("thread surface release", () => {
+  it("checks ownership on every path that clears, not just the cleanup", () => {
+    // Ending a call re-runs the effect with callLive false, and an
+    // unconditional register in the BODY cleared whatever was in the slot —
+    // so guarding only the cleanup left the exact case it was written for.
+    expect(source).toContain("const releaseIfOurs = ()");
+    expect(source).toContain("if (callLive) registerChatSlots({ threadSurface: VoiceStage });");
+    expect(source).toContain("else releaseIfOurs();");
+    expect(source).toContain("return releaseIfOurs;");
+    expect(source).not.toContain("threadSurface: callLive ? VoiceStage : null");
+  });
+});

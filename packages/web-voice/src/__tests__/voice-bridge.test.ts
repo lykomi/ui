@@ -585,6 +585,39 @@ describe("session lifecycle", () => {
     await vi.waitFor(() => expect(controls.sent.length).toBe(afterBStarted + 1));
   });
 
+  it("takes down a connection that never settles when the host leaves", async () => {
+    // `setup` re-checks `abandoned` past its await, so a connection that
+    // arrives late is already handled. The case that path cannot reach is the
+    // one that never arrives — an unanswered permission prompt, a stalled
+    // transport — where the await simply never returns. `handleClosed()`
+    // returned early because `connected` was still false, and the transport
+    // was left coming up with nothing able to stop it.
+    const controls = fakeControls();
+    let disconnects = 0;
+    const stop = controls.disconnect;
+    controls.disconnect = () => {
+      disconnects += 1;
+      stop();
+    };
+    let connectStarted = false;
+    controls.connect = () => {
+      connectStarted = true;
+      return new Promise<void>(() => {}); // never settles
+    };
+
+    const bridge = new VoiceBridge(relay());
+    const detach = bridge.attach(controls);
+    bridge.createAdapter().connect({});
+    // `setup` awaits the host's controls before it calls connect(), so the
+    // transport is not pending yet on the synchronous path.
+    await vi.waitFor(() => expect(connectStarted).toBe(true));
+
+    detach();
+    bridge.handleClosed();
+
+    expect(disconnects, "a transport that never settles was left coming up").toBe(1);
+  });
+
   it("does not start a session whose host left while it was connecting", async () => {
     // `connected` is only set once connect() resolves, so it is false both
     // BEFORE a call and DURING one that is still coming up — and only one of

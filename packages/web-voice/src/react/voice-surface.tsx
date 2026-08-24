@@ -248,15 +248,18 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   const callLive = live.connectionState === "connected" || live.connectionState === "reconnecting";
   useEffect(() => {
     if (!stage) return;
-    registerChatSlots({ threadSurface: callLive ? VoiceStage : null });
-    return () => {
-      // Last-registration-wins: another module may have taken the slot while
-      // the call was running, and clearing unconditionally would remove ITS
-      // surface rather than ours.
+    // Last-registration-wins: another module may take the slot while a call is
+    // running, so every path that CLEARS has to check we still own it. Guarding
+    // only the cleanup was not enough — ending a call re-runs this effect with
+    // `callLive` false, and the body cleared the slot on the way past.
+    const releaseIfOurs = () => {
       if (useChatSlotsStore.getState().threadSurface === VoiceStage) {
         registerChatSlots({ threadSurface: null });
       }
     };
+    if (callLive) registerChatSlots({ threadSurface: VoiceStage });
+    else releaseIfOurs();
+    return releaseIfOurs;
   }, [stage, callLive]);
 
   // Surface a session-fatal error once. `error` stays set until the next
