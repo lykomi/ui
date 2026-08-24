@@ -11,9 +11,13 @@ settled nothing more can arrive, so holding it no longer defers the words, it
 deletes them. Settled text keeps them (and drops the brackets, which a voice
 would otherwise read aloud).
 
-**A typed draft was destroyed by a spoken turn.** The composer stays editable
-during a call, so the transcript overwrote whatever was in it and sent that
-too, attachment included. The draft is restored afterwards.
+**A typed draft was destroyed by a spoken turn, and an attached file was sent
+with it.** The composer stays editable during a call, so the transcript took
+the composer as it stood: the draft replaced, and whatever was attached carried
+along with a sentence it had nothing to do with. Text is saved and restored;
+attachments are lifted out first and put back after — but only when every one
+of them can be put back, since an attachment with no original `File` behind it
+cannot be re-added and losing it would be worse than sending it.
 
 Also: a host unmounting while the transport was still connecting could still
 produce a live session with nothing to control it (`connected` is false both

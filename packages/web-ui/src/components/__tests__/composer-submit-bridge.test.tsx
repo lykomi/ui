@@ -19,21 +19,31 @@ import { submitComposerText, useComposerSubmitStore } from "../../lib/composer-s
 const sent: string[] = [];
 
 let draft = "";
-vi.mock("@assistant-ui/react", () => ({
-  useAui: () => ({
-    composer: {
-      getState: () => ({ text: draft }),
-      setText: (t: string) => {
-        draft = t;
-        sent.push(t);
-      },
-      // The real composer clears itself on send.
-      send: () => {
-        draft = "";
-      },
-    },
-  }),
-}));
+let attachments: { id: string; file?: File }[] = [];
+const sentWith: { text: string; attachments: string[] }[] = [];
+
+const composer = {
+  getState: () => ({ text: draft, attachments }),
+  setText: (t: string) => {
+    draft = t;
+    sent.push(t);
+  },
+  clearAttachments: async () => {
+    attachments = [];
+  },
+  addAttachment: async (file: File) => {
+    attachments = [...attachments, { id: file.name, file }];
+  },
+  // The real composer clears text AND attachments on send.
+  send: () => {
+    sentWith.push({ text: draft, attachments: attachments.map((a) => a.id) });
+    draft = "";
+    attachments = [];
+  },
+};
+// Stable, as the real client is: a fresh object per render would re-run the
+// bridge's effect on every render.
+vi.mock("@assistant-ui/react", () => ({ useAui: () => ({ composer }) }));
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -52,9 +62,19 @@ afterEach(async () => {
   root = null;
   container = null;
   sent.length = 0;
+  sentWith.length = 0;
   draft = "";
+  attachments = [];
   useComposerSubmitStore.setState({ pending: null });
 });
+
+/** The bridge lifts attachments out asynchronously, so its work spans ticks. */
+async function settle() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
 
 async function mount(node: React.ReactElement) {
   container = document.createElement("div");
@@ -67,6 +87,7 @@ describe("ComposerSubmitBridge", () => {
   it("sends a queued submission once", async () => {
     await mount(<ComposerSubmitBridge />);
     await act(async () => submitComposerText("what is the notice period?"));
+    await settle();
     expect(sent).toEqual(["what is the notice period?"]);
   });
 
@@ -80,12 +101,14 @@ describe("ComposerSubmitBridge", () => {
       </>,
     );
     await act(async () => submitComposerText("spoken turn"));
+    await settle();
     expect(sent).toEqual(["spoken turn"]);
   });
 
   it("does not resend a submission that was already taken", async () => {
     await mount(<ComposerSubmitBridge />);
     await act(async () => submitComposerText("first"));
+    await settle();
     // A late-mounting bridge must not replay what is already gone.
     await act(async () => root!.render(<ComposerSubmitBridge key="second" />));
     expect(sent).toEqual(["first"]);
@@ -95,8 +118,11 @@ describe("ComposerSubmitBridge", () => {
     // Spoken turns arrive one after another while the panel stays closed.
     await mount(<ComposerSubmitBridge />);
     await act(async () => submitComposerText("one"));
+    await settle();
     await act(async () => submitComposerText("two"));
+    await settle();
     await act(async () => submitComposerText("three"));
+    await settle();
     expect(sent).toEqual(["one", "two", "three"]);
   });
 });
@@ -117,6 +143,7 @@ describe("composer submit store", () => {
     draft = "a half-written question about clause 9";
 
     await act(async () => submitComposerText("what is the notice period?"));
+    await settle();
 
     expect(sent).toContain("what is the notice period?");
     expect(draft, "the draft was eaten by the spoken turn").toBe(
@@ -127,6 +154,52 @@ describe("composer submit store", () => {
   it("leaves the composer empty when there was no draft", async () => {
     await mount(<ComposerSubmitBridge />);
     await act(async () => submitComposerText("spoken turn"));
+    await settle();
     expect(draft).toBe("");
+  });
+
+  it("does not send the user's attachment with a spoken turn", async () => {
+    // The damaging half: text can be retyped, a file cannot be un-sent.
+    await mount(<ComposerSubmitBridge />);
+    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
+    attachments = [{ id: "contract.pdf", file }];
+
+    await act(async () => submitComposerText("what is the notice period?"));
+    await settle();
+
+    expect(sentWith).toHaveLength(1);
+    expect(sentWith[0]!.text).toBe("what is the notice period?");
+    expect(sentWith[0]!.attachments, "the user's file rode along").toEqual([]);
+  });
+
+  it("puts the attachment back afterwards", async () => {
+    await mount(<ComposerSubmitBridge />);
+    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
+    attachments = [{ id: "contract.pdf", file }];
+
+    await act(async () => submitComposerText("spoken turn"));
+    await settle();
+
+    expect(attachments.map((a) => a.id)).toEqual(["contract.pdf"]);
+  });
+
+  it("sends rather than destroys an attachment it cannot put back", async () => {
+    // Re-adding needs the original File, and an attachment that has been
+    // through an adapter may not have one. The choice is then between sending
+    // it with the wrong message and losing it outright — and losing it is
+    // worse, so it is left in place and goes with the turn, exactly as before
+    // this change. Written down because it is a deliberate limit, not an
+    // oversight: the composer clears on send, so "still there afterwards" is
+    // not an outcome available here.
+    await mount(<ComposerSubmitBridge />);
+    attachments = [{ id: "already-uploaded" }];
+
+    await act(async () => submitComposerText("spoken turn"));
+    await settle();
+
+    expect(sentWith).toHaveLength(1);
+    expect(sentWith[0]!.attachments, "it was silently dropped rather than sent").toEqual([
+      "already-uploaded",
+    ]);
   });
 });
