@@ -72,8 +72,13 @@ const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*$/;
  * between, the raw target leaks into the speakable text and then vanishes.
  * That is a shrink, and a shrink after the span has been voiced is a re-read.
  * Reduced to the label immediately instead, which is what it will become.
+ *
+ * The leading `!` is part of the match because an image is the same shape:
+ * `IMAGE` reduces the finished `![alt](url)` to `alt`, so an incomplete one
+ * that kept its `!` would shrink by that one character when the `)` landed.
+ * One character is enough — the rewind is by utterance, not by character.
  */
-const UNCLOSED_LINK = /\[([^\]]*)\]\([^)]*$/;
+const UNCLOSED_LINK = /!?\[([^\]]*)\]\([^)]*$/;
 const HEADING = /^\s{0,3}#{1,6}\s+/gm;
 const BLOCKQUOTE = /^\s{0,3}>\s?/gm;
 const LIST_BULLET = /^\s{0,3}([-*+]|\d+[.)])\s+/gm;

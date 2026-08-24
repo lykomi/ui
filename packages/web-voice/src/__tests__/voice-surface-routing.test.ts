@@ -21,28 +21,18 @@ describe("voice surface audio routing", () => {
     expect(source).not.toContain("const needsElement = showAvatar || isWebRtc;");
   });
 
-  it("mounts an audio-only sink whenever no avatar element is actually mounted", () => {
-    // Not "when the host hid the panel": with `stage: true` the avatar is
-    // drawn by the registered stage, and the chat surface can take that stage
-    // down — closing the floating panel does — while the call continues.
-    // Keyed off intent rather than fact, the sink stayed absent and the
-    // assistant went silent until the panel was reopened.
-    expect(source).toContain(
-      "const needsAudioOnlySink = needsElement && avatarPanels === 0 && noAvatarElement;",
-    );
-    expect(source).toContain("needsAudioOnlySink ? (");
-    expect(source).not.toContain("needsElement && !showAvatar");
-  });
-
-  it("does not own the stream during the handoff into a mounting avatar", () => {
-    // A panel registers itself in an effect, so on the commit where the stage
-    // mounts its avatar the count is still zero. Mounting the bare sink in
-    // that same commit gives the remote stream two owners for a frame and it
-    // starts twice. The settled flag makes the handoff one-directional.
-    expect(source).toContain("const [noAvatarElement, setNoAvatarElement] = useState(");
-    expect(source).toContain(
-      "useEffect(() => setNoAvatarElement(avatarPanels === 0), [avatarPanels]);",
-    );
+  it("delegates the decision rather than restating it", () => {
+    // The rule itself is covered exhaustively in audio-ownership.test.ts —
+    // string-matching the expression here is what let a WRONG version of it
+    // pass review, since the assertion moved along with the mistake. What
+    // belongs here is only that the surface feeds that rule real inputs: a
+    // prediction taken synchronously from the video stream, and a count
+    // observed from the panels. The absence of one or the other is what caused
+    // each of the three bugs this decision has had.
+    expect(source).toContain("needsAudioOnlySink({");
+    expect(source).toContain("const avatarElementExpected = showAvatar && !!live.videoStream;");
+    expect(source).toContain("avatarPanels,");
+    expect(source).toContain("predictionFailed,");
   });
 
   it("forwards the host's chroma-key tuning to the floating avatar too", () => {

@@ -31,6 +31,7 @@ import type { VoiceConfig } from "../adapter/types.ts";
 import { RelayAnswerWatcher } from "./relay-answer-watcher.tsx";
 import { VoiceAvatarPanel } from "./voice-avatar.tsx";
 import { VoiceStage } from "./voice-stage.tsx";
+import { needsAudioOnlySink } from "./audio-ownership.ts";
 import { VoiceAudioSink } from "./voice-audio-sink.tsx";
 import { useDirectAudioOutput } from "./use-direct-audio-output.ts";
 import { resetVoiceSessionState, useVoiceUiStore } from "./voice-ui-store.ts";
@@ -285,14 +286,38 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   // deliberately continues. Keyed off intent, the sink stayed absent and the
   // assistant went silent until the panel was reopened.
   const avatarPanels = useVoiceUiStore((s) => s.avatarPanels);
-  // Settled, not instantaneous. A panel registers itself in an effect, so on
-  // the very commit where the stage mounts its avatar the count is still zero
-  // — and mounting the bare sink in that same commit gives the stream two
-  // owners for a frame, which starts twice. Waiting one settled tick makes
-  // the handoff one-directional in both directions.
-  const [noAvatarElement, setNoAvatarElement] = useState(avatarPanels === 0);
-  useEffect(() => setNoAvatarElement(avatarPanels === 0), [avatarPanels]);
-  const needsAudioOnlySink = needsElement && avatarPanels === 0 && noAvatarElement;
+
+  // Who plays the remote stream while an avatar is appearing or disappearing.
+  //
+  // A panel registers itself in an effect, so the count cannot answer this on
+  // the commit where an avatar mounts — it is still zero while
+  // `VoiceLiveAvatar` is mounting its own audio element, and a sink mounted
+  // alongside gives the stream two owners and starts it twice. What IS known
+  // synchronously is that a panel renders exactly when there is a video
+  // stream to draw, so an element can be predicted rather than observed.
+  //
+  // The prediction can still be wrong in one direction: with `stage: true` the
+  // panel is drawn by a registered chat slot, and the surrounding surface may
+  // not be on screen at all (a closed bubble). So if nothing has registered by
+  // the next tick, the prediction is abandoned and the sink takes the audio
+  // back — which is the case that made an ongoing call go silent.
+  const avatarElementExpected = showAvatar && !!live.videoStream;
+  const [predictionFailed, setPredictionFailed] = useState(false);
+  useEffect(() => {
+    if (!avatarElementExpected || avatarPanels > 0) {
+      setPredictionFailed(false);
+      return;
+    }
+    const settle = setTimeout(() => setPredictionFailed(true), 0);
+    return () => clearTimeout(settle);
+  }, [avatarElementExpected, avatarPanels]);
+
+  const sinkNeeded = needsAudioOnlySink({
+    needsElement,
+    avatarPanels,
+    avatarElementExpected,
+    predictionFailed,
+  });
 
   return (
     <>
@@ -305,7 +330,7 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
           // Tuning must not depend on where the avatar happens to be drawn.
           chromaKeyConfig={config.chromaKey ?? undefined}
         />
-      ) : needsAudioOnlySink ? (
+      ) : sinkNeeded ? (
         <VoiceAudioSink stream={live.audioStream} />
       ) : null}
     </>

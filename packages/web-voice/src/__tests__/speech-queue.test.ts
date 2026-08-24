@@ -53,6 +53,17 @@ describe("toSpeakableText", () => {
 });
 
 describe("SentenceStream", () => {
+  it("reads a markdown image the same before and after its target closes", () => {
+    // Same shape as the link, one character apart: the completed IMAGE rule
+    // reduces "![alt](url)" to "alt", so an incomplete one that kept its "!"
+    // would shrink by exactly that character when the ")" landed. One
+    // character is enough — the rewind is by utterance, not by character.
+    const before = toSpeakableText("Figure ![the governor housing](https://example.inva");
+    const after = toSpeakableText("Figure ![the governor housing](https://example.invalid/g.png)");
+    expect(before).toBe(after);
+    expect(after).toBe("Figure the governor housing");
+  });
+
   it("reads a markdown link the same before and after its target closes", () => {
     // The bracket is already closed, so the unclosed-bracket rule does not
     // apply, and LINK needs the ")" before it can reduce to the label — so in
