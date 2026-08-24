@@ -4,11 +4,14 @@
  *
  * Three things it does that a canvas visualiser usually gets wrong:
  *
- * - **It wears the theme.** Colours are read from the app's CSS custom
- *   properties (`--primary`, `--muted-foreground`) rather than baked in, and
- *   re-read when the theme changes. Opacity comes from `globalAlpha`, not
- *   from building `rgba()` strings, so any colour format the design system
- *   uses — `oklch`, `hsl`, hex — works untouched.
+ * - **It wears the theme, and notices when the theme changes.** Colours are
+ *   read from the app's CSS custom properties (`--primary`,
+ *   `--muted-foreground`) rather than baked in, and re-read when the root
+ *   element's theme attributes change or the OS colour scheme flips — a
+ *   canvas cannot inherit a CSS variable the way a DOM node does, so it has
+ *   to watch for itself. Opacity comes from `globalAlpha`, not from building
+ *   `rgba()` strings, so any colour format the design system uses — `oklch`,
+ *   `hsl`, hex — works untouched.
  * - **It matches the device.** The backing store is sized in device pixels
  *   and scaled, so the rings are not soft on a retina display; a
  *   `ResizeObserver` keeps that true when the pane is resized.
@@ -47,7 +50,10 @@ const SWELL = 14;
 export interface VoiceVisualizerProps {
   /** Analyser from the live session; `null` renders the idle state. */
   analyser: AnalyserNode | null;
-  /** Re-reads theme colours when this changes (e.g. the theme mode). */
+  /**
+   * Extra re-read trigger for theme systems the built-in observation cannot
+   * see (root attributes and the OS scheme are watched automatically).
+   */
   themeKey?: string;
   className?: string;
   /** Accessible description of what the animation represents. */
@@ -164,12 +170,28 @@ export function VoiceVisualizer({
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    // The theme may have changed under us between renders.
-    colors = readColors(canvas);
+    // The theme can change without this component re-rendering: a class or
+    // data-theme flip on <html>, or the OS scheme changing while the app is
+    // on "system". Painted pixels do not update with a CSS variable, so
+    // watch both and repaint the static frame when the loop is not running.
+    const refreshColors = () => {
+      colors = readColors(canvas);
+      if (frame === null) draw();
+    };
+    const scheme = window.matchMedia?.("(prefers-color-scheme: dark)");
+    scheme?.addEventListener?.("change", refreshColors);
+    const themeObserver = new MutationObserver(refreshColors);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme", "style"],
+    });
+    refreshColors();
 
     return () => {
       if (frame !== null) cancelAnimationFrame(frame);
       observer.disconnect();
+      themeObserver.disconnect();
+      scheme?.removeEventListener?.("change", refreshColors);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [analyser, themeKey]);

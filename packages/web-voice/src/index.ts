@@ -37,3 +37,8 @@ export { VoiceBridge, type VoiceTransportControls } from "./adapter/voice-bridge
 export { buildVoiceSession, toVoiceLiveTools } from "./adapter/session-config.ts";
 export { createRegistryToolExecutor } from "./adapter/tool-bridge.ts";
 export { SentenceStream, SpeechQueue, toSpeakableText } from "./adapter/speech-queue.ts";
+export {
+  HalfDuplexGate,
+  type HalfDuplexAction,
+  type HalfDuplexInputs,
+} from "./adapter/half-duplex.ts";

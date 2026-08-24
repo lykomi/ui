@@ -70,6 +70,15 @@ export class VoiceBridge {
   } | null = null;
 
   private connected = false;
+  /**
+   * The user's mute intent, as expressed through the runtime's controls.
+   *
+   * Distinct from the SDK's capture-mute state on purpose: half-duplex mutes
+   * the SDK on its own behalf while the assistant speaks, and releasing that
+   * mute must never override a mute the *user* asked for — that is how a
+   * microphone ends up hot behind a UI that says muted.
+   */
+  private userMuted = false;
   /** An answer that was already on screen when voice connected — not ours to speak. */
   private skipAnswerId: string | null = null;
   private volumeTimer: ReturnType<typeof setInterval> | null = null;
@@ -111,6 +120,11 @@ export class VoiceBridge {
     return this.connected && this.helpers !== null && !this.helpers.isDisposed();
   }
 
+  /** The user's mute intent (see `userMuted`). Read by the half-duplex gate. */
+  get isUserMuted(): boolean {
+    return this.userMuted;
+  }
+
   // ---- wiring ---------------------------------------------------------------
 
   /** The React host publishes its live controls here (and retracts them on unmount). */
@@ -149,6 +163,7 @@ export class VoiceBridge {
           return {
             disconnect: () => {
               this.connected = false;
+              this.userMuted = false;
               this.stopVolumeMeter();
               this.speech.cancel();
               this.sentences.reset();
@@ -156,8 +171,14 @@ export class VoiceBridge {
               this.answerDone = false;
               controls.disconnect();
             },
-            mute: () => controls.mute(),
-            unmute: () => controls.unmute(),
+            mute: () => {
+              this.userMuted = true;
+              controls.mute();
+            },
+            unmute: () => {
+              this.userMuted = false;
+              controls.unmute();
+            },
           };
         }),
     };

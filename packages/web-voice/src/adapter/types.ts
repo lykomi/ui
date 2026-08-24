@@ -7,6 +7,7 @@
  */
 
 import type {
+  ChromaKeyConfig,
   LogLevel,
   ReconnectOptions,
   VoiceLiveConnectionConfig,
@@ -81,6 +82,16 @@ export interface VoiceConfig {
    * @default false
    */
   halfDuplex?: boolean;
+
+  /**
+   * Chroma-key tuning for the avatar's green-screen removal.
+   *
+   * The default is slightly softer-edged than the SDK's, because the stock
+   * values left a visible green fringe on the avatar's outline against
+   * light and dark surfaces alike. Raise `similarity` if green spill
+   * remains; lower it if the avatar's own dark clothing starts to key out.
+   */
+  chromaKey?: ChromaKeyConfig;
 
   /** Console verbosity of the underlying SDK. @default "warn" */
   logLevel?: LogLevel;

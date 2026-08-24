@@ -25,13 +25,14 @@ import { registerChatSlots, submitComposerText } from "@iloveagents/foundry-web-
 import { buildVoiceSession, toVoiceLiveTools } from "../adapter/session-config.ts";
 import { createRegistryToolExecutor } from "../adapter/tool-bridge.ts";
 import type { VoiceBridge, VoiceTransportControls } from "../adapter/voice-bridge.ts";
+import { HalfDuplexGate } from "../adapter/half-duplex.ts";
 import type { VoiceConfig } from "../adapter/types.ts";
 import { RelayAnswerWatcher } from "./relay-answer-watcher.tsx";
 import { VoiceAvatarPanel } from "./voice-avatar.tsx";
 import { VoiceStage } from "./voice-stage.tsx";
 import { VoiceAudioSink } from "./voice-audio-sink.tsx";
 import { useDirectAudioOutput } from "./use-direct-audio-output.ts";
-import { useVoiceUiStore } from "./voice-ui-store.ts";
+import { resetVoiceSessionState, useVoiceUiStore } from "./voice-ui-store.ts";
 
 export interface VoiceSurfaceProps {
   bridge: VoiceBridge;
@@ -134,21 +135,21 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
 
   // Half-duplex: hold the microphone closed while the assistant speaks, so
   // its own voice cannot trip the service's VAD and start a conversation
-  // with itself. Only ever undoes a mute it applied — a user who muted
-  // deliberately stays muted.
-  const autoMuted = useRef(false);
+  // with itself. The when-to-open/close decision lives in `HalfDuplexGate`
+  // (pure, tested) — the two rules that matter, releasing only what the gate
+  // took and never overriding the user's own mute, are exactly the ones an
+  // inline pair of booleans got wrong.
+  const halfDuplexGate = useRef(new HalfDuplexGate());
   useEffect(() => {
-    if (!config.halfDuplex) return;
-    const live = liveRef.current;
-    const speaking = live.sessionState === "speaking";
-    if (speaking && !live.isMuted) {
-      autoMuted.current = true;
-      live.toggleMute();
-    } else if (!speaking && autoMuted.current) {
-      autoMuted.current = false;
-      if (live.isMuted) live.toggleMute();
-    }
-  }, [config.halfDuplex, live.sessionState, live.isMuted]);
+    const action = halfDuplexGate.current.next({
+      enabled: !!config.halfDuplex,
+      speaking: live.sessionState === "speaking",
+      sdkMuted: live.isMuted,
+      userMuted: bridge.isUserMuted,
+    });
+    if (action === "mute" && !liveRef.current.isMuted) liveRef.current.toggleMute();
+    else if (action === "unmute" && liveRef.current.isMuted) liveRef.current.toggleMute();
+  }, [bridge, config.halfDuplex, live.sessionState, live.isMuted]);
 
   // Publish session facts the UI reads (mic button, status strip). The
   // bridge is the adapter's channel; this store is the components'.
@@ -175,6 +176,21 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
     live.videoStream,
     live.audioStream,
   ]);
+
+  // A finished session must not leak into the next one: stale captions, a
+  // dead analyser, and an outstanding auto-mute are all last-call state.
+  useEffect(() => {
+    if (live.connectionState === "disconnected") {
+      halfDuplexGate.current.reset();
+      resetVoiceSessionState();
+    }
+  }, [live.connectionState]);
+
+  // Host chroma-key tuning travels through the store because the stage is
+  // registered as a bare component reference, not a closure over config.
+  useEffect(() => {
+    useVoiceUiStore.setState({ chromaKey: config.chromaKey ?? null });
+  }, [config.chromaKey]);
 
   // Hand the thread over to the stage for the duration of the call, and hand
   // it straight back afterwards. Registering the component IS the takeover,

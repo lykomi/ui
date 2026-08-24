@@ -14,6 +14,7 @@
  */
 
 import { VoiceLiveAvatar } from "@iloveagents/foundry-voice-live-react";
+import type { ChromaKeyConfig } from "@iloveagents/foundry-voice-live-react";
 
 export interface VoiceAvatarPanelProps {
   videoStream: MediaStream | null;
@@ -28,6 +29,8 @@ export interface VoiceAvatarPanelProps {
    * (`object-cover!`) to override it.
    */
   canvasClassName?: string;
+  /** Chroma-key tuning; defaults to a softer edge than the SDK's (see `SOFT_KEY`). */
+  chromaKeyConfig?: ChromaKeyConfig;
 }
 
 const LAYER =
@@ -38,11 +41,26 @@ const LAYER =
  */
 const CARD = "pointer-events-auto w-[26rem] max-w-[80vw]";
 
+/**
+ * Softer-edged keying than the SDK default (`similarity 0.4, smoothness
+ * 0.1`), which left a visible green fringe on the avatar's outline in live
+ * runs. More smoothness blends the boundary pixels instead of hard-cutting
+ * them; the small similarity bump removes the near-green spill the light
+ * picks up at the silhouette. Hosts with different lighting override via
+ * `chromaKeyConfig` (plumbed from `VoiceConfig.chromaKey`).
+ */
+const SOFT_KEY: ChromaKeyConfig = {
+  keyColor: [0, 1, 0],
+  similarity: 0.42,
+  smoothness: 0.25,
+};
+
 export function VoiceAvatarPanel({
   videoStream,
   audioStream,
   className,
   canvasClassName,
+  chromaKeyConfig = SOFT_KEY,
 }: VoiceAvatarPanelProps) {
   if (!videoStream) return null;
 
@@ -51,6 +69,7 @@ export function VoiceAvatarPanel({
       videoStream={videoStream}
       audioStream={audioStream}
       canvasClassName={canvasClassName}
+      chromaKeyConfig={chromaKeyConfig}
     />
   );
 

@@ -14,7 +14,11 @@
  */
 
 import { create } from "zustand";
-import type { ConnectionState, SessionState } from "@iloveagents/foundry-voice-live-react";
+import type {
+  ChromaKeyConfig,
+  ConnectionState,
+  SessionState,
+} from "@iloveagents/foundry-voice-live-react";
 
 interface VoiceUiState {
   connectionState: ConnectionState;
@@ -36,6 +40,8 @@ interface VoiceUiState {
   /** Avatar streams, when the session was configured with one. */
   videoStream: MediaStream | null;
   audioStream: MediaStream | null;
+  /** Host chroma-key tuning, forwarded to the avatar wherever it renders. */
+  chromaKey: ChromaKeyConfig | null;
 }
 
 export const useVoiceUiStore = create<VoiceUiState>(() => ({
@@ -48,4 +54,20 @@ export const useVoiceUiStore = create<VoiceUiState>(() => ({
   assistantText: "",
   videoStream: null,
   audioStream: null,
+  chromaKey: null,
 }));
+
+/**
+ * Everything a finished session leaves behind. Without this, the next call
+ * opens on the previous call's caption and a dead analyser — stale by
+ * definition, and visibly so on the stage.
+ */
+export function resetVoiceSessionState(): void {
+  useVoiceUiStore.setState({
+    userText: "",
+    assistantText: "",
+    analyser: null,
+    videoStream: null,
+    audioStream: null,
+  });
+}

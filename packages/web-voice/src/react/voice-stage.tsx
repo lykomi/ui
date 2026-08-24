@@ -14,7 +14,6 @@
  */
 
 import { useVoiceState } from "@assistant-ui/react";
-import { useThemeStore } from "@iloveagents/foundry-web-ui";
 import { VoiceVisualizer } from "./voice-visualizer.tsx";
 import { VoiceAvatarPanel } from "./voice-avatar.tsx";
 import { useVoiceUiStore } from "./voice-ui-store.ts";
@@ -39,8 +38,7 @@ export function VoiceStage(props: VoiceStageProps = {}) {
   const connectionState = useVoiceUiStore((s) => s.connectionState);
   const userText = useVoiceUiStore((s) => s.userText);
   const assistantText = useVoiceUiStore((s) => s.assistantText);
-  // Re-read the canvas colours when the theme flips.
-  const themeMode = useThemeStore((s) => s.mode);
+  const chromaKey = useVoiceUiStore((s) => s.chromaKey);
 
   const connecting = !voice || voice.status.type === "starting";
   const muted = voice?.isMuted ?? false;
@@ -76,6 +74,7 @@ export function VoiceStage(props: VoiceStageProps = {}) {
           <VoiceAvatarPanel
             videoStream={videoStream}
             audioStream={audioStream}
+            chromaKeyConfig={chromaKey ?? undefined}
             className="absolute inset-0"
             canvasClassName="h-full! w-full! max-h-none! max-w-none! object-cover! object-top!"
           />
@@ -83,7 +82,6 @@ export function VoiceStage(props: VoiceStageProps = {}) {
           <div className="absolute inset-0 flex items-center justify-center">
             <VoiceVisualizer
               analyser={connecting || muted ? null : analyser}
-              themeKey={themeMode}
               label={`Voice conversation — ${status}`}
               className="h-full max-h-80 w-full max-w-md"
             />

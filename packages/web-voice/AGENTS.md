@@ -7,17 +7,23 @@ src/
   adapter/   ← the protocol layer. No React, no chat surface.
     types.ts          public config; connection/session shapes re-used from the SDK
     session-config.ts mode → Voice Live session; clientToolRegistry → function tools
-    speech-queue.ts   markdown → speakable text → sentences → a strict FIFO
+    speech-queue.ts   markdown → speakable text → coalesced utterances → a strict FIFO
     tool-bridge.ts    a ToolExecutor that dispatches into clientToolRegistry
-    voice-bridge.ts   VoiceBridge: the RealtimeVoiceAdapter, and both mode policies
+    half-duplex.ts    HalfDuplexGate: when the mic closes/opens around assistant speech
+    voice-bridge.ts   VoiceBridge: the RealtimeVoiceAdapter, both mode policies, user-mute intent
   react/     ← everything that needs a tree
-    voice-surface.tsx       render-less host; owns useVoiceLive, attaches controls
+    voice-surface.tsx       render-less host; owns useVoiceLive, attaches controls,
+                            registers the stage as threadSurface while a call is live
     relay-answer-watcher.tsx render-less; relay only; feeds the streaming answer to the bridge
-    voice-audio-sink.tsx    plays `audioStream` when no avatar is doing it
+    voice-stage.tsx         replaces the thread during a call (visualiser or avatar + caption)
+    voice-visualizer.tsx    theme-token canvas rings; self-observes theme changes
+    use-direct-audio-output.ts plays decoded PCM via Web Audio (analyser → destination)
+    voice-audio-sink.tsx    <audio> element for remote (WebRTC) tracks only
     voice-mic-button.tsx    composer control — pure assistant-ui state
     voice-status-strip.tsx  composer banner
-    voice-avatar.tsx        avatar panel
-    install.tsx             installVoice() + <FoundryVoice/>
+    voice-avatar.tsx        avatar surface; soft chroma-key default, no card around a cut-out
+    voice-ui-store.ts       session facts for OUR components (incl. reset between sessions)
+    install.tsx             installVoice() + <FoundryVoice/> (installs in an effect, never render)
     voice-module.tsx        createVoiceModule() → a ChatModule
 ```
 
@@ -58,9 +64,33 @@ src/
   clear `speaking` too: a cancelled response may never produce the `response.done` that would
   otherwise release the queue, and the session would go silent for good.
 
-- **Something must attach `audioStream`.** The SDK's playback graph terminates in a
-  `MediaStreamAudioDestinationNode`, not the speakers. `VoiceLiveAvatar` attaches it; in voice-only
-  mode `VoiceAudioSink` does. Remove it and the session is connected, transcribing, and inaudible.
+- **Locally-decoded PCM goes out through Web Audio, remote tracks through an element.** Attaching
+  the SDK's `audioStream` to an `<audio>` element routes it through the element's playout jitter
+  buffer, whose rate-adaptation is audible on the first reply of every session. The analyser is
+  already in the signal path, so `useDirectAudioOutput` connects it to the destination instead —
+  but ONLY for PCM the browser decoded itself. WebRTC and avatar audio are remote tracks an
+  element must play; connecting the analyser there too plays the assistant twice (guarded by
+  `direct-audio-output.test.tsx`).
+
+- **Half-duplex is a pure gate, not a pair of booleans.** `HalfDuplexGate` closes the mic while
+  the assistant speaks (speakers-mode echo protection) with two rules that inline state got
+  wrong: release only what the gate took — never a mute the USER holds, or the mic ends up hot
+  behind a UI that says muted — and engage only on the transition into speaking, so a mid-answer
+  unmute (a barge-in decision) stands. The user's intent comes from the bridge (`isUserMuted`),
+  recorded where the runtime's mute controls land.
+
+- **The stage takeover is the registration itself.** While a call is live the surface registers
+  `VoiceStage` as web-ui's `threadSurface` slot; clearing it hands the thread back. The stage
+  reads everything from `voice-ui-store` so it can be registered as a bare component reference —
+  and that store is RESET on disconnect (`resetVoiceSessionState`), or the next call opens on the
+  previous call's caption and a dead analyser.
+
+- **A configured avatar must ask Azure for a keyable background.** `VoiceLiveAvatar` chroma-keys
+  by default, but only the session can request the green screen — without it the service
+  composites onto opaque white and the key has nothing to remove. `session-config` injects it
+  unless the host chose a background; the panel applies a softer-than-SDK key
+  (`smoothness 0.25`) because the stock edge left a green fringe in live runs; hosts tune via
+  `VoiceConfig.chromaKey`.
 
 - **Page tools change on navigation.** The session's tool catalogue is re-sent on every
   `clientToolRegistry` change, or the model is left calling tools that no longer exist.
@@ -69,6 +99,10 @@ src/
 
 - `src/adapter/` MUST NOT import `react`, `react-dom`, or `@iloveagents/foundry-web-ui`. It MAY
   import `@assistant-ui/react` for the voice contract itself. Enforced by `layering.test.ts`.
+- Store writes NEVER happen during render. `installVoice` mutates zustand stores, so
+  `<FoundryVoice/>` installs in an effect — a `useState` initializer runs twice under StrictMode
+  and leaves the discarded bridge's adapter registered while the mounted host owns the other
+  (guarded by `install.test.tsx`).
 - Nothing in this repo may import **this** package — that is what "optional" means, and
   `OPEN_CORE_GRAPH` in `packages/web-ui/src/__tests__/open-core-guards.test.ts` enforces it.
 - Not in the `create-foundry-ui-app` default template, and **not** in the changesets `fixed` group

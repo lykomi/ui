@@ -94,6 +94,17 @@ mean flattening its runs straight back into transcripts, and would pull the work
 singletons from `^0.0.52` to `>=0.0.58` plus an `rxjs` peer for no behaviour gained. Worth
 revisiting if assistant-ui ever grows a run-shaped voice surface.
 
+## While the call is live
+
+The conversation is replaced by the voice stage — a theme-aware visualiser, or the avatar
+chroma-keyed straight onto the page — and comes back the moment the call ends. The thread is
+hidden, not unmounted, so nothing about it is lost. `stage: false` opts out.
+
+Two options earn their keep in a real room: `halfDuplex` mutes the microphone while the assistant
+speaks so laptop speakers cannot make it answer its own voice (it never overrides a mute the user
+set, and an explicit mid-answer unmute stands — barge-in is a decision), and `chromaKey` tunes the
+avatar's green-screen edge.
+
 ## Trying it
 
 `packages/web-voice` is fully unit-tested against a fake transport — mode policies, barge-in, the
