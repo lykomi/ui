@@ -319,4 +319,45 @@ describe("composer submit store", () => {
     expect(sentWith.map((t) => t.text)).toEqual(["first spoken turn", "second spoken turn"]);
     expect(attachments.map((a) => a.id)).toEqual(["contract.pdf"]);
   });
+
+  it("does not let one stalled attachment stop every later turn", async () => {
+    // Attachment work goes through a host adapter and can stall. Awaiting it
+    // unbounded in a SHARED chain means one hung upload silently stops every
+    // later spoken turn for the life of the page — the same shape as a speech
+    // queue waiting on a completion that never comes.
+    vi.useFakeTimers();
+    try {
+      await mount(<ComposerSubmitBridge />);
+      const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
+      attachments = [{ id: "contract.pdf", file }];
+
+      // Never resolves, and nobody opens it.
+      gate = new Promise<void>(() => {});
+
+      await act(async () => submitComposerText("first spoken turn"));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(sentWith, "it should still be parked at this point").toHaveLength(0);
+
+      // The backstop fires and the chain moves on.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(11_000);
+      });
+      expect(
+        sentWith.map((t) => t.text),
+        "a stalled attachment wedged the queue",
+      ).toEqual(["first spoken turn"]);
+
+      // And a later turn is not stuck behind it.
+      gate = null;
+      await act(async () => submitComposerText("second spoken turn"));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(11_000);
+      });
+      expect(sentWith.map((t) => t.text)).toEqual(["first spoken turn", "second spoken turn"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

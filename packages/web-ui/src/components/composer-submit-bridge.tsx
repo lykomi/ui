@@ -25,6 +25,39 @@ import { useComposerSubmitStore } from "../lib/composer-submit-store.ts";
  */
 let composerQueue: Promise<void> = Promise.resolve();
 
+/**
+ * How long one attachment operation may hold the queue.
+ *
+ * Attachment work goes through a host-supplied adapter and can stall — an
+ * upload that never completes, a network that never answers. Awaiting it
+ * unbounded inside a shared chain means one stalled file silently stops every
+ * later turn from ever being sent, for the life of the page. That is the same
+ * shape as the speech queue waiting on a `response.done` that never comes,
+ * which is the bug this codebase already learned once.
+ *
+ * Timing out degrades the restore, not the send: the turn still goes, and the
+ * worst case is attachments left where they were, which is where they were
+ * before any of this.
+ */
+const ATTACHMENT_TIMEOUT_MS = 10_000;
+
+/** Resolve when `work` does, or when it has taken too long. */
+function bounded(work: Promise<unknown>): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ATTACHMENT_TIMEOUT_MS);
+    void work.then(
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+    );
+  });
+}
+
 export function ComposerSubmitBridge() {
   const aui = useAui();
   const pending = useComposerSubmitStore((s) => s.pending);
@@ -50,7 +83,7 @@ export function ComposerSubmitBridge() {
         // No bail-out past this point. Once the attachments are out of the
         // composer the sequence has to finish, or they are lost and nothing is
         // sent — worse than either thing a cancellation check would guard.
-        if (restorable && attachments.length > 0) await aui.composer.clearAttachments();
+        if (restorable && attachments.length > 0) await bounded(aui.composer.clearAttachments());
 
         // Snapshotted as late as possible: the user can keep typing while the
         // attachments are being lifted out, and an earlier snapshot would put
@@ -65,7 +98,7 @@ export function ComposerSubmitBridge() {
         // send() clears the composer, so this restores the user's own work
         // into an empty box rather than appending it to the turn just sent.
         if (draft) aui.composer.setText(draft);
-        if (restorable) for (const file of files) await aui.composer.addAttachment(file);
+        if (restorable) for (const file of files) await bounded(aui.composer.addAttachment(file));
       })
       // One failure must not wedge the chain for every later submission.
       .catch(() => {});
