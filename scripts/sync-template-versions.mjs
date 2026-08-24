@@ -9,6 +9,15 @@
 //
 // Wired into `pnpm changeset:version` so the Version Packages PR carries the
 // template bump; `pnpm pack:check` fails the build if the two ever diverge.
+//
+// One thing this script cannot do for you: rewriting a pin does not release the
+// CLI. The pins are exact by design, so a scaffold built from an OLDER
+// create-foundry-ui-app keeps pointing at whatever version it shipped with —
+// and if that version was broken or yanked, `npx create-foundry-ui-app` stays
+// broken no matter what has been published since. Whenever a pinned package
+// gets a new version, create-foundry-ui-app needs a changeset of its own so it
+// is re-released carrying it. This has bitten once, when web-voice 0.1.0 was
+// superseded by 0.1.1 and the CLI still pinned 0.1.0.
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
