@@ -57,4 +57,12 @@ describe("composer surface parity", () => {
     expect(panel, "expected an isOpen panel branch to exist").toBeGreaterThan(-1);
     expect(bridge, "the bridge must be mounted outside the open-panel branch").toBeLessThan(panel);
   });
+
+  it.each(COMPOSERS)("%s hides its scroll control while a surface owns the view", (file) => {
+    // The transcript keeps its scroll position under the surface — deliberate,
+    // it comes back untouched — but its scroll button must not float over the
+    // surface. Both carry z-10 and the button renders later, so DOM order puts
+    // a chevron on top of the visualiser that scrolls something invisible.
+    expect(source(file)).toMatch(/\{!ThreadSurface &&/);
+  });
 });

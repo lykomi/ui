@@ -64,6 +64,16 @@ const CITATION = /[ \t]*\[\d+(?:\s*,\s*\d+)*\]/g;
  * a rewind.
  */
 const UNCLOSED_BRACKET = /[ \t]*\[[^\]]*$/;
+/**
+ * A markdown link whose target is still arriving: "[label](http://ex" .
+ *
+ * The bracket is closed, so `UNCLOSED_BRACKET` does not apply, and `LINK`
+ * needs the ")" before it can reduce the whole thing to its label — so in
+ * between, the raw target leaks into the speakable text and then vanishes.
+ * That is a shrink, and a shrink after the span has been voiced is a re-read.
+ * Reduced to the label immediately instead, which is what it will become.
+ */
+const UNCLOSED_LINK = /\[([^\]]*)\]\([^)]*$/;
 const HEADING = /^\s{0,3}#{1,6}\s+/gm;
 const BLOCKQUOTE = /^\s{0,3}>\s?/gm;
 const LIST_BULLET = /^\s{0,3}([-*+]|\d+[.)])\s+/gm;
@@ -99,6 +109,7 @@ export function toSpeakableText(markdown: string): string {
       // tick changes nothing, which is the same monotonicity argument as above.
       .replace(/`/g, "")
       .replace(EMPHASIS, "")
+      .replace(UNCLOSED_LINK, "$1")
       .replace(UNCLOSED_BRACKET, "")
       .replace(/[ \t]+/g, " ")
       .replace(/\s*\n\s*/g, "\n")

@@ -27,9 +27,22 @@ describe("voice surface audio routing", () => {
     // down — closing the floating panel does — while the call continues.
     // Keyed off intent rather than fact, the sink stayed absent and the
     // assistant went silent until the panel was reopened.
-    expect(source).toContain("const needsAudioOnlySink = needsElement && avatarPanels === 0;");
+    expect(source).toContain(
+      "const needsAudioOnlySink = needsElement && avatarPanels === 0 && noAvatarElement;",
+    );
     expect(source).toContain("needsAudioOnlySink ? (");
     expect(source).not.toContain("needsElement && !showAvatar");
+  });
+
+  it("does not own the stream during the handoff into a mounting avatar", () => {
+    // A panel registers itself in an effect, so on the commit where the stage
+    // mounts its avatar the count is still zero. Mounting the bare sink in
+    // that same commit gives the remote stream two owners for a frame and it
+    // starts twice. The settled flag makes the handoff one-directional.
+    expect(source).toContain("const [noAvatarElement, setNoAvatarElement] = useState(");
+    expect(source).toContain(
+      "useEffect(() => setNoAvatarElement(avatarPanels === 0), [avatarPanels]);",
+    );
   });
 
   it("forwards the host's chroma-key tuning to the floating avatar too", () => {

@@ -60,6 +60,11 @@ const realtime = (over: Partial<VoiceConfig> = {}): VoiceConfig => ({
 });
 
 /** Long enough to clear the coalescing threshold on its own. */
+/** A second sentence, also long enough to clear the coalescing threshold. */
+const SECOND =
+  "Either party may terminate for convenience on ninety days written notice, and the " +
+  "termination takes effect on the last day of the month in which that notice expires.";
+
 const FIRST =
   "The notice period is thirty days and it runs from the date on which the written notice is actually received by the other party, not the date it was sent.";
 
@@ -457,6 +462,41 @@ describe("session lifecycle", () => {
 
     await vi.waitFor(() => expect(session.status.type).not.toBe("running"));
     expect(controls.connected, "transport must not be left live").toBe(false);
+  });
+
+  it("ignores the completion of a response cancelled by barge-in", async () => {
+    // Cancelling cannot unsend what is already on the wire, so the interrupted
+    // response still reports `response.done` — usually after the NEXT answer
+    // has started speaking. Released then, it frees an utterance while the
+    // current one is still going and the two run together. Completions are
+    // matched to the response they belong to by id.
+    const bridge = new VoiceBridge(relay());
+    const controls = fakeControls();
+    await connect(bridge, controls);
+
+    bridge.trackAnswer("a1", `${FIRST} ${SECOND}`, true);
+    await vi.waitFor(() => expect(controls.sent.length).toBe(1));
+    bridge.handleServerEvent({ type: "response.created", response: { id: "resp_A" } } as never);
+
+    // Barge-in cancels A.
+    bridge.handleServerEvent({ type: "input_audio_buffer.speech_started" } as never);
+    expect(controls.cancelled).toBe(1);
+
+    // A new answer starts speaking.
+    bridge.trackAnswer("a2", `${FIRST} ${SECOND}`, true);
+    await vi.waitFor(() => expect(controls.sent.length).toBe(2));
+    bridge.handleServerEvent({ type: "response.created", response: { id: "resp_B" } } as never);
+    const afterBStarted = controls.sent.length;
+
+    // A's completion finally lands. It says nothing about B.
+    bridge.handleServerEvent({ type: "response.done", response: { id: "resp_A" } } as never);
+    expect(controls.sent.length, "a cancelled response released the next utterance").toBe(
+      afterBStarted,
+    );
+
+    // B's own completion does release the next one.
+    bridge.handleServerEvent({ type: "response.done", response: { id: "resp_B" } } as never);
+    await vi.waitFor(() => expect(controls.sent.length).toBe(afterBStarted + 1));
   });
 
   it("ends the session when the transport closes on its own", async () => {

@@ -98,6 +98,17 @@ export class VoiceBridge {
    * stream, and speak the whole reply again. Forever.
    */
   private answerDone = false;
+  /** The response currently being spoken, once the service has named it. */
+  private activeResponseId: string | null = null;
+  /**
+   * Responses cancelled by barge-in whose `response.done` has not arrived yet.
+   *
+   * Bounded by the number of interruptions in a call and cleared with it. A
+   * cancelled response that never reports simply leaves an unused entry — the
+   * alternative, counting completions to swallow, wedges the queue for the
+   * rest of the session when the count is wrong.
+   */
+  private readonly cancelledResponses = new Set<string>();
 
   /** Injected so the bridge never imports the React chat surface. */
   private submitText: ((text: string) => void) | null = null;
@@ -239,6 +250,13 @@ export class VoiceBridge {
         // in-flight response is cancelled by the service (`interrupt_response`),
         // and cancelling locally flushes playback that is already buffered.
         if (this.speech.isSpeaking || this.speech.pendingCount > 0) {
+          // Remember what was in flight. Cancelling cannot unsend what is
+          // already on the wire, so that response still reports `response.done`
+          // — usually after the NEXT answer has started speaking. Released
+          // then, it frees an utterance while the current one is still going
+          // and the two run together.
+          if (this.activeResponseId) this.cancelledResponses.add(this.activeResponseId);
+          this.activeResponseId = null;
           this.speech.cancel();
           this.controls?.cancelResponse();
         }
@@ -246,9 +264,18 @@ export class VoiceBridge {
         this.answerDone = true;
         break;
 
-      case "response.done":
+      case "response.created":
+        this.activeResponseId = responseIdOf(event);
+        break;
+
+      case "response.done": {
+        const id = responseIdOf(event);
+        // Only the response we are actually waiting on releases the queue.
+        if (id && this.cancelledResponses.delete(id)) break;
+        if (id && this.activeResponseId === id) this.activeResponseId = null;
         this.speech.onResponseDone();
         break;
+      }
 
       default:
         break;
@@ -296,6 +323,8 @@ export class VoiceBridge {
    */
   private endCall(): void {
     this.connected = false;
+    this.activeResponseId = null;
+    this.cancelledResponses.clear();
     this.userMuted = false;
     this.stopVolumeMeter();
     this.speech.cancel();
@@ -447,6 +476,12 @@ export class VoiceBridge {
  * assistant's speaking level, not the microphone's — the honest meaning of
  * the number a consumer reads from `useVoiceVolume()`.
  */
+/** The response id on a `response.created` / `response.done` event, if present. */
+function responseIdOf(event: unknown): string | null {
+  const response = (event as { response?: { id?: unknown } }).response;
+  return typeof response?.id === "string" ? response.id : null;
+}
+
 export function readLevel(
   analyser: AnalyserNode | null,
   getBuffer: (size: number) => Uint8Array<ArrayBuffer>,

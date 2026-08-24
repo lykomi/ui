@@ -510,9 +510,16 @@ export function ChatContent({
               </div>
             </ThreadPrimitive.If>
           </ThreadPrimitive.Viewport>
-          <ThreadPrimitive.If empty={false}>
-            <ScrollToBottomButton />
-          </ThreadPrimitive.If>
+          {/* A registered surface owns the whole viewport. The transcript
+              underneath keeps its scroll position — that is deliberate, it
+              comes back untouched — but its scroll control must not float over
+              the surface: same z-10, rendered later, so it paints on top of
+              the visualiser and scrolls something nobody can see. */}
+          {!ThreadSurface && (
+            <ThreadPrimitive.If empty={false}>
+              <ScrollToBottomButton />
+            </ThreadPrimitive.If>
+          )}
         </div>
 
         <div className="shrink-0 bg-background">

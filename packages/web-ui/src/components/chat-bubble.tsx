@@ -346,7 +346,9 @@ export function ChatBubble() {
                   </ThreadPrimitive.If>
                 </ThreadPrimitive.Viewport>
                 <ThreadPrimitive.If empty={false}>
-                  <BubbleScrollToBottomButton />
+                  {/* Hidden while a surface owns the viewport — see the same
+                      note in assistant-chat.tsx. */}
+                  {!ThreadSurface && <BubbleScrollToBottomButton />}
                 </ThreadPrimitive.If>
               </div>
 

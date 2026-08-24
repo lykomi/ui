@@ -53,6 +53,16 @@ describe("toSpeakableText", () => {
 });
 
 describe("SentenceStream", () => {
+  it("reads a markdown link the same before and after its target closes", () => {
+    // The bracket is already closed, so the unclosed-bracket rule does not
+    // apply, and LINK needs the ")" before it can reduce to the label — so in
+    // between, the raw URL leaks into the speakable text and then vanishes.
+    const before = toSpeakableText("See the [commissioning log](https://example.inva");
+    const after = toSpeakableText("See the [commissioning log](https://example.invalid/x)");
+    expect(before).toBe(after);
+    expect(after).toBe("See the commissioning log");
+  });
+
   it("reads a citation the same before and after its bracket closes", () => {
     // Monotonicity, stated directly: a half-arrived citation and the complete
     // one must normalise to the SAME text. If only the complete form were

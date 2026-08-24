@@ -12,7 +12,7 @@
  * the bridge, so none of them can go stale for the life of a session.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVoiceLive } from "@iloveagents/foundry-voice-live-react";
 import type {
   SessionState,
@@ -115,7 +115,18 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
     [],
   );
 
-  useEffect(() => bridge.attach(controls), [bridge, controls]);
+  useEffect(() => {
+    const detach = bridge.attach(controls);
+    return () => {
+      detach();
+      // Losing the host ends the call. Nothing else can do it from here: the
+      // disconnected-state effect below cannot run after unmount, so without
+      // this a conditionally-rendered <FoundryVoice/> (or any host removed
+      // mid-call) leaves assistant-ui holding a running voice session and the
+      // speech queue wedged for whatever mounts next.
+      bridge.handleClosed();
+    };
+  }, [bridge, controls]);
 
   useEffect(() => {
     bridge.setSubmitText(mode === "relay" ? submitComposerText : null);
@@ -200,6 +211,16 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   // dead analyser, and an outstanding auto-mute are all last-call state.
   useEffect(() => {
     if (live.connectionState === "disconnected") {
+      // A fatal error and the disconnect can be published together, and this
+      // effect is declared first, so it would end the session as "finished"
+      // before the error effect below ever ran — and assistant-ui's `end()` is
+      // once-only, so the reason could never be corrected. A consumer would
+      // see a clean hang-up where the call had actually failed. Report the
+      // error here, on the way past, so whichever arrives wins honestly.
+      if (live.error && live.error !== reportedError.current) {
+        reportedError.current = live.error;
+        bridge.handleError(live.error);
+      }
       // End the adapter session too, not just our own UI state. Without this
       // a clean remote close (or exhausted reconnects) left `bridge.connected`
       // true and assistant-ui's voice session `running`: the controls kept
@@ -208,7 +229,7 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
       halfDuplexGate.current.reset();
       resetVoiceSessionState();
     }
-  }, [bridge, live.connectionState]);
+  }, [bridge, live.connectionState, live.error]);
 
   // Host chroma-key tuning travels through the store because the stage is
   // registered as a bare component reference, not a closure over config.
@@ -264,7 +285,14 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   // deliberately continues. Keyed off intent, the sink stayed absent and the
   // assistant went silent until the panel was reopened.
   const avatarPanels = useVoiceUiStore((s) => s.avatarPanels);
-  const needsAudioOnlySink = needsElement && avatarPanels === 0;
+  // Settled, not instantaneous. A panel registers itself in an effect, so on
+  // the very commit where the stage mounts its avatar the count is still zero
+  // — and mounting the bare sink in that same commit gives the stream two
+  // owners for a frame, which starts twice. Waiting one settled tick makes
+  // the handoff one-directional in both directions.
+  const [noAvatarElement, setNoAvatarElement] = useState(avatarPanels === 0);
+  useEffect(() => setNoAvatarElement(avatarPanels === 0), [avatarPanels]);
+  const needsAudioOnlySink = needsElement && avatarPanels === 0 && noAvatarElement;
 
   return (
     <>
