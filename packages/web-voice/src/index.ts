@@ -27,6 +27,8 @@ export type { VoiceConfig, VoiceMode, VoiceTranscript } from "./adapter/types.ts
 // --- chrome (place these yourself with `chrome: false`) ---
 export { VoiceMicButton } from "./react/voice-mic-button.tsx";
 export { VoiceStatusStrip } from "./react/voice-status-strip.tsx";
+export { VoiceStage, type VoiceStageProps } from "./react/voice-stage.tsx";
+export { VoiceVisualizer, type VoiceVisualizerProps } from "./react/voice-visualizer.tsx";
 export { VoiceAvatarPanel, type VoiceAvatarPanelProps } from "./react/voice-avatar.tsx";
 export { useVoiceUiStore } from "./react/voice-ui-store.ts";
 

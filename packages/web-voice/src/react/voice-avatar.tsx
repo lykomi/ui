@@ -24,9 +24,11 @@ export interface VoiceAvatarPanelProps {
 
 const LAYER =
   "pointer-events-none fixed inset-x-0 top-1/2 z-40 flex -translate-y-1/2 justify-center px-4";
-const CARD =
-  "pointer-events-auto w-[22rem] max-w-[75vw] overflow-hidden rounded-3xl " +
-  "border border-border bg-background/70 shadow-2xl backdrop-blur";
+/**
+ * No background, no border. The avatar arrives chroma-keyed to a cut-out, so
+ * anything drawn behind it is the rectangle the keying just removed.
+ */
+const CARD = "pointer-events-auto w-[26rem] max-w-[80vw]";
 
 export function VoiceAvatarPanel({ videoStream, audioStream, className }: VoiceAvatarPanelProps) {
   if (!videoStream) return null;

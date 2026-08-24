@@ -32,6 +32,17 @@ import type { VoiceMode } from "./types.ts";
 const DEFAULT_TRANSCRIPTION_MODEL = "mai-transcribe" as const;
 
 /**
+ * Green screen, so the avatar can be keyed out and sit on the app's own
+ * background.
+ *
+ * `VoiceLiveAvatar` chroma-keys by default, but only the *session* can ask
+ * Azure to render a keyable background — without this the service composites
+ * the avatar onto opaque white, the chroma key finds no green, and the
+ * result is a white rectangle pasted over the page.
+ */
+const GREEN_SCREEN = "#00FF00FF";
+
+/**
  * AG-UI tool schemas → Voice Live function tools.
  *
  * The two shapes are the same object plus a discriminator, which is the
@@ -93,9 +104,9 @@ export function buildVoiceSession({
     base.toolChoice = "auto";
   }
 
-  if (!overrides) return base;
+  if (!overrides) return withKeyableAvatarBackground(base);
 
-  return {
+  return withKeyableAvatarBackground({
     ...base,
     ...overrides,
     // Tools MERGE rather than replace. A host declaring an MCP server or a
@@ -110,6 +121,24 @@ export function buildVoiceSession({
         : overrides.turnDetection === null
           ? null
           : { ...base.turnDetection, ...overrides.turnDetection },
+  });
+}
+
+/**
+ * Give a configured avatar a keyable background unless the host chose one.
+ *
+ * A host that wants the avatar composited on a colour or an image says so and
+ * is left alone; the default is the one that composes with any theme.
+ */
+function withKeyableAvatarBackground(session: VoiceLiveSessionConfig): VoiceLiveSessionConfig {
+  const avatar = session.avatar;
+  if (!avatar || avatar.video?.background !== undefined) return session;
+  return {
+    ...session,
+    avatar: {
+      ...avatar,
+      video: { ...avatar.video, background: { color: GREEN_SCREEN } },
+    },
   };
 }
 

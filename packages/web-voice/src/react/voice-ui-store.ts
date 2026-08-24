@@ -21,6 +21,21 @@ interface VoiceUiState {
   sessionState: SessionState;
   isMuted: boolean;
   isReady: boolean;
+  /** Live output analyser, for the visualiser. Null between sessions. */
+  analyser: AnalyserNode | null;
+  /**
+   * The last thing each side said, for the voice stage.
+   *
+   * Only the latest line: the stage is something you glance at while
+   * talking, not a transcript to read. The thread is where history lives —
+   * in `relay` these turns are already there, and in `realtime` assistant-ui
+   * puts them there for the life of the session.
+   */
+  userText: string;
+  assistantText: string;
+  /** Avatar streams, when the session was configured with one. */
+  videoStream: MediaStream | null;
+  audioStream: MediaStream | null;
 }
 
 export const useVoiceUiStore = create<VoiceUiState>(() => ({
@@ -28,4 +43,9 @@ export const useVoiceUiStore = create<VoiceUiState>(() => ({
   sessionState: "idle",
   isMuted: false,
   isReady: false,
+  analyser: null,
+  userText: "",
+  assistantText: "",
+  videoStream: null,
+  audioStream: null,
 }));

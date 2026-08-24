@@ -39,6 +39,7 @@ describe("chat slots", () => {
       composerBanner: null,
       launcherBadge: null,
       composerActions: null,
+      threadSurface: null,
     });
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -95,5 +96,24 @@ describe("chat slots", () => {
     registerChatSlots({ composerBanner: undefined, launcherBadge: Badge });
     expect(useChatSlotsStore.getState().composerBanner).toBe(Banner);
     expect(useChatSlotsStore.getState().launcherBadge).toBe(Badge);
+  });
+
+  it("threadSurface is set and cleared at runtime, unlike the other slots", () => {
+    // Registering the component IS the takeover and clearing it hands the
+    // thread back, so there is no second "is it active" flag to keep in step.
+    expect(useChatSlotsStore.getState().threadSurface).toBeNull();
+
+    registerChatSlots({ threadSurface: Banner });
+    expect(useChatSlotsStore.getState().threadSurface).toBe(Banner);
+
+    registerChatSlots({ threadSurface: null });
+    expect(useChatSlotsStore.getState().threadSurface).toBeNull();
+  });
+
+  it("taking the thread leaves the other slots alone", () => {
+    registerChatSlots({ composerActions: Actions, composerBanner: Banner });
+    registerChatSlots({ threadSurface: Badge });
+    expect(useChatSlotsStore.getState().composerActions).toBe(Actions);
+    expect(useChatSlotsStore.getState().composerBanner).toBe(Banner);
   });
 });

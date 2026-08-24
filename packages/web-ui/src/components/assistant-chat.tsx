@@ -36,6 +36,7 @@ import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import {
   ChatComposerActionsSlot,
   ChatComposerBannerSlot,
+  useChatThreadSurface,
   useComposerActionsOwnSend,
 } from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
@@ -409,6 +410,7 @@ export function ChatContent({
   showPinButton = true,
   placeholder = DEFAULT_COMPOSER_PLACEHOLDER,
 }: ChatContentProps = {}) {
+  const ThreadSurface = useChatThreadSurface();
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const collapseChat = useChatBubbleStore((s) => s.collapse);
   const showPagePanel = useChatBubbleStore((s) => s.showPagePanel);
@@ -446,7 +448,22 @@ export function ChatContent({
       )}
       <DropZone>
         <div className="relative flex-1 overflow-hidden">
-          <ThreadPrimitive.Viewport className="absolute inset-0 overflow-y-auto bg-background">
+          {/* A module can take the conversation's place — a live voice call
+              replaces the transcript rather than scrolling it past. The
+              thread is not unmounted, only hidden, so its scroll position
+              and any in-flight run survive the round trip. */}
+          {ThreadSurface && (
+            <div className="absolute inset-0 z-10 overflow-y-auto bg-background">
+              <ThreadSurface />
+            </div>
+          )}
+          <ThreadPrimitive.Viewport
+            className={cn(
+              "absolute inset-0 overflow-y-auto bg-background",
+              ThreadSurface && "invisible",
+            )}
+            aria-hidden={ThreadSurface ? true : undefined}
+          >
             <ThreadPrimitive.Empty>
               <div
                 className={cn("flex min-h-full flex-col", "items-center justify-center", "px-4")}

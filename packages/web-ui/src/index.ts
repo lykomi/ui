@@ -14,10 +14,7 @@ export {
   DEFAULT_STARTER_SUGGESTIONS,
   DEFAULT_COMPOSER_PLACEHOLDER,
 } from "./components/assistant-chat.tsx";
-export {
-  ComposerAddMenu,
-  type ComposerAddMenuProps,
-} from "./components/composer-add-menu.tsx";
+export { ComposerAddMenu, type ComposerAddMenuProps } from "./components/composer-add-menu.tsx";
 export type { ChatContentProps } from "./components/assistant-chat.tsx";
 export { ChatBubble } from "./components/chat-bubble.tsx";
 export {
@@ -27,6 +24,7 @@ export {
   ChatLauncherBadgeSlot,
   ChatComposerActionsSlot,
   useComposerActionsOwnSend,
+  useChatThreadSurface,
 } from "./components/chat-slots.tsx";
 export { ChatHeader } from "./components/chat-header.tsx";
 export {

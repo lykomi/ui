@@ -21,13 +21,14 @@ import type {
   VoiceLiveSessionConfig,
 } from "@iloveagents/foundry-voice-live-react";
 import { clientToolRegistry } from "@iloveagents/foundry-agent";
-import { submitComposerText } from "@iloveagents/foundry-web-ui";
+import { registerChatSlots, submitComposerText } from "@iloveagents/foundry-web-ui";
 import { buildVoiceSession, toVoiceLiveTools } from "../adapter/session-config.ts";
 import { createRegistryToolExecutor } from "../adapter/tool-bridge.ts";
 import type { VoiceBridge, VoiceTransportControls } from "../adapter/voice-bridge.ts";
 import type { VoiceConfig } from "../adapter/types.ts";
 import { RelayAnswerWatcher } from "./relay-answer-watcher.tsx";
 import { VoiceAvatarPanel } from "./voice-avatar.tsx";
+import { VoiceStage } from "./voice-stage.tsx";
 import { VoiceAudioSink } from "./voice-audio-sink.tsx";
 import { useDirectAudioOutput } from "./use-direct-audio-output.ts";
 import { useVoiceUiStore } from "./voice-ui-store.ts";
@@ -37,9 +38,14 @@ export interface VoiceSurfaceProps {
   config: VoiceConfig;
   /** Render the avatar panel when the session config asks for an avatar. @default true */
   avatar?: boolean;
+  /**
+   * Replace the chat thread with the voice stage while a call is live.
+   * @default true
+   */
+  stage?: boolean;
 }
 
-export function VoiceSurface({ bridge, config, avatar = true }: VoiceSurfaceProps) {
+export function VoiceSurface({ bridge, config, avatar = true, stage = true }: VoiceSurfaceProps) {
   const mode = config.mode ?? "relay";
   const wantsTools = mode === "realtime" && (config.exposeClientTools ?? true);
 
@@ -58,8 +64,14 @@ export function VoiceSurface({ bridge, config, avatar = true }: VoiceSurfaceProp
     [bridge],
   );
   const onTranscript = useCallback(
-    (role: "user" | "assistant", text: string, isFinal: boolean) =>
-      bridge.handleTranscript(role, text, isFinal),
+    (role: "user" | "assistant", text: string, isFinal: boolean) => {
+      bridge.handleTranscript(role, text, isFinal);
+      // The stage shows what is being said right now; a final empty string
+      // is a VAD misfire and would blank the line for no reason.
+      if (text.trim() || !isFinal) {
+        useVoiceUiStore.setState(role === "user" ? { userText: text } : { assistantText: text });
+      }
+    },
     [bridge],
   );
   const toolExecutor = useMemo(
@@ -151,8 +163,28 @@ export function VoiceSurface({ bridge, config, avatar = true }: VoiceSurfaceProp
       connectionState: live.connectionState,
       isMuted: live.isMuted,
       isReady: live.isReady,
+      analyser: live.audioAnalyser,
+      videoStream: live.videoStream,
+      audioStream: live.audioStream,
     });
-  }, [live.connectionState, live.isMuted, live.isReady]);
+  }, [
+    live.connectionState,
+    live.isMuted,
+    live.isReady,
+    live.audioAnalyser,
+    live.videoStream,
+    live.audioStream,
+  ]);
+
+  // Hand the thread over to the stage for the duration of the call, and hand
+  // it straight back afterwards. Registering the component IS the takeover,
+  // so there is no second "is it active" flag to keep in step.
+  const callLive = live.connectionState === "connected" || live.connectionState === "reconnecting";
+  useEffect(() => {
+    if (!stage) return;
+    registerChatSlots({ threadSurface: callLive ? VoiceStage : null });
+    return () => registerChatSlots({ threadSurface: null });
+  }, [stage, callLive]);
 
   // Surface a session-fatal error once. `error` stays set until the next
   // connect, so re-reporting it on every render would end the session
@@ -182,7 +214,8 @@ export function VoiceSurface({ bridge, config, avatar = true }: VoiceSurfaceProp
   return (
     <>
       {mode === "relay" ? <RelayAnswerWatcher bridge={bridge} /> : null}
-      {showAvatar ? (
+      {showAvatar && !stage ? (
+        // With the stage on, the avatar is drawn there instead of floating.
         <VoiceAvatarPanel videoStream={live.videoStream} audioStream={live.audioStream} />
       ) : isWebRtc ? (
         <VoiceAudioSink stream={live.audioStream} />

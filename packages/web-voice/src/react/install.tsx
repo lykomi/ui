@@ -34,6 +34,12 @@ export interface VoiceInstallOptions extends VoiceConfig {
   chrome?: boolean;
   /** Render the avatar panel when the session config asks for an avatar. @default true */
   avatar?: boolean;
+  /**
+   * Replace the chat thread with the voice stage while a call is live.
+   * Turn off to keep the transcript visible and show the avatar floating.
+   * @default true
+   */
+  stage?: boolean;
 }
 
 export interface VoiceInstallation {
@@ -45,7 +51,7 @@ export interface VoiceInstallation {
 }
 
 export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
-  const { chrome = true, avatar = true, ...config } = options;
+  const { chrome = true, avatar = true, stage = true, ...config } = options;
   const bridge = new VoiceBridge(config);
 
   registerVoiceAdapter(bridge.createAdapter());
@@ -60,7 +66,7 @@ export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
   }
 
   const Host: ComponentType = () => (
-    <VoiceSurface bridge={bridge} config={config} avatar={avatar} />
+    <VoiceSurface bridge={bridge} config={config} avatar={avatar} stage={stage} />
   );
   Host.displayName = "FoundryVoiceHost";
 
@@ -74,6 +80,7 @@ export function installVoice(options: VoiceInstallOptions): VoiceInstallation {
           composerActions: null,
           composerBanner: null,
           composerActionsReplaceSend: false,
+          threadSurface: null,
         });
       }
     },

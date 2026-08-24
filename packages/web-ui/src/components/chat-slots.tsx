@@ -24,6 +24,13 @@
  *     content about the thread — a push-to-talk mic, say. Leading-edge
  *     controls (attach, context pins) stay owned by the composer itself.
  *
+ *   - ``threadSurface`` — rendered *instead of* the message viewport, for a
+ *     mode that replaces the conversation rather than adding to it. A live
+ *     voice call is the case it exists for: while you are talking, the
+ *     transcript scrolling past is not what you are looking at. Unlike the
+ *     other slots this one is set and cleared at runtime — registering a
+ *     component IS the takeover, clearing it hands the thread back.
+ *
  * A module that registers ``composerActions`` may also claim the Send
  * position while the composer is empty (``composerActionsReplaceSend``).
  * That is the shape a voice control wants: nothing has been typed, so Send
@@ -42,6 +49,8 @@ interface ChatSlotsState {
   composerActions: ComponentType | null;
   /** Let ``composerActions`` stand in for Send while the composer is empty. */
   composerActionsReplaceSend: boolean;
+  /** Replaces the message viewport entirely while set. */
+  threadSurface: ComponentType | null;
 }
 
 export const useChatSlotsStore = create<ChatSlotsState>(() => ({
@@ -49,6 +58,7 @@ export const useChatSlotsStore = create<ChatSlotsState>(() => ({
   launcherBadge: null,
   composerActions: null,
   composerActionsReplaceSend: false,
+  threadSurface: null,
 }));
 
 /**
@@ -65,6 +75,7 @@ export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
   if (slots.composerActionsReplaceSend !== undefined) {
     next.composerActionsReplaceSend = slots.composerActionsReplaceSend;
   }
+  if (slots.threadSurface !== undefined) next.threadSurface = slots.threadSurface;
   useChatSlotsStore.setState(next);
 }
 
@@ -91,4 +102,12 @@ export function useComposerActionsOwnSend(): boolean {
   const claimed = useChatSlotsStore((s) => s.composerActionsReplaceSend && !!s.composerActions);
   const isEmpty = useAuiState((s) => s.optional.composer?.isEmpty ?? true);
   return claimed && isEmpty;
+}
+
+/**
+ * The module-supplied surface that replaces the message viewport, or null
+ * when the thread should render normally.
+ */
+export function useChatThreadSurface(): ComponentType | null {
+  return useChatSlotsStore((s) => s.threadSurface);
 }
