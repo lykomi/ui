@@ -36,6 +36,7 @@ export { useVoiceUiStore } from "./react/voice-ui-store.ts";
 export { VoiceBridge, type VoiceTransportControls } from "./adapter/voice-bridge.ts";
 export { buildVoiceSession, toVoiceLiveTools } from "./adapter/session-config.ts";
 export { createRegistryToolExecutor } from "./adapter/tool-bridge.ts";
+export { ToolSync } from "./adapter/tool-sync.ts";
 export { SentenceStream, SpeechQueue, toSpeakableText } from "./adapter/speech-queue.ts";
 export {
   HalfDuplexGate,

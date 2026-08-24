@@ -22,8 +22,9 @@ import type {
 } from "@iloveagents/foundry-voice-live-react";
 import { clientToolRegistry } from "@iloveagents/foundry-agent";
 import { registerChatSlots, submitComposerText } from "@iloveagents/foundry-web-ui";
-import { buildVoiceSession, toVoiceLiveTools } from "../adapter/session-config.ts";
+import { buildVoiceSession } from "../adapter/session-config.ts";
 import { createRegistryToolExecutor } from "../adapter/tool-bridge.ts";
+import { ToolSync } from "../adapter/tool-sync.ts";
 import type { VoiceBridge, VoiceTransportControls } from "../adapter/voice-bridge.ts";
 import { HalfDuplexGate } from "../adapter/half-duplex.ts";
 import type { VoiceConfig } from "../adapter/types.ts";
@@ -125,13 +126,25 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   // tools are registered and cleared on navigation, so a catalogue frozen
   // at connect time leaves the model either unable to act on the page the
   // user is looking at, or calling a tool that no longer exists.
+  //
+  // Keyed on `isReady`, not just mounted: a registry change that happens
+  // while the session is still connecting used to be dropped by an
+  // is-ready guard and never replayed. Re-running on the ready edge and
+  // syncing immediately closes that window, and `ToolSync`'s dedupe makes
+  // the extra call free when nothing actually changed.
+  const toolSync = useRef<ToolSync | null>(null);
+  toolSync.current ??= new ToolSync((tools) => liveRef.current.updateSession({ tools }));
   useEffect(() => {
-    if (!wantsTools) return;
-    return clientToolRegistry.subscribe(() => {
-      if (!liveRef.current.isReady) return;
-      liveRef.current.updateSession({ tools: toVoiceLiveTools(clientToolRegistry.getState()) });
-    });
-  }, [wantsTools]);
+    const sync = toolSync.current;
+    if (!sync) return;
+    if (!wantsTools || !live.isReady) {
+      // The next session sends its own catalogue; forget what this one did.
+      sync.reset();
+      return;
+    }
+    sync.sync(clientToolRegistry.getState());
+    return clientToolRegistry.subscribe(() => sync.sync(clientToolRegistry.getState()));
+  }, [wantsTools, live.isReady]);
 
   // Half-duplex: hold the microphone closed while the assistant speaks, so
   // its own voice cannot trip the service's VAD and start a conversation

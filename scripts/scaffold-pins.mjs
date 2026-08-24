@@ -16,9 +16,9 @@ const RUNTIME_PACKAGE_DIRS = [
   "packages/web-primitives",
   "packages/web-ui",
   "packages/web-shell",
-  // Not in the scaffold template (voice is opt-in), but listed so a preset
-  // that DOES pin it can never drift from the published version — which is
-  // the one thing this file exists to prevent.
+  // The template pins this like any other runtime package. Voice is opt-in
+  // at RUNTIME (`VITE_VOICE_PROXY_URL`), not at scaffold time, so the pin is
+  // always present and always has to stay in step with what is published.
   "packages/web-voice",
 ];
 

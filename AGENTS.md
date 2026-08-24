@@ -11,10 +11,15 @@ packages/web-voice/       → @iloveagents/foundry-web-voice (OPTIONAL spoken co
 packages/create-foundry-ui-app/ → create-foundry-ui-app (scaffolding CLI — `npm create foundry-ui-app`)
 ```
 
-**`web-voice` is optional and versions on its own.** Nothing in this repo imports it, it is not in
-the scaffold template, and it is deliberately outside the `fixed` changesets group — a voice
-release must not bump the coordinated four. An app that never installs it has an unchanged
-composer and an unchanged runtime.
+**`web-voice` is optional and versions on its own.** Nothing in this repo imports it, and it is
+deliberately outside the `fixed` changesets group — a voice release must not bump the coordinated
+four.
+
+Optional here means _at runtime, not at scaffold time_. The template does depend on it and does
+import `createVoiceModule`, but only calls it when `VITE_VOICE_PROXY_URL` is set; with the variable
+unset the call is unreachable and the bundler drops the package entirely (asserted by
+`smoke:starter` — a default scaffold's build contains no Voice Live code). An app that never sets
+it therefore has an unchanged composer, an unchanged runtime, and no added bytes.
 
 **Tier convention:** `foundry-` prefix on every package projects the brand. `foundry-agent` has no runtime-tier suffix because it's pure cross-runtime transport (zero React, zero DOM). `foundry-web-*` packages are React-DOM tier. Future tiers reserved by convention: `foundry-native-*` (React Native), `foundry-unity-*` (Unity), `foundry-outlook-shell`, `foundry-teams-shell`.
 
@@ -132,7 +137,6 @@ and is missing for everyone else until it is released.
   A green build says the source compiles, not that the package carries it.
 - **Every change needs a changeset.** No changeset, no release, and a
   consumer waiting on it waits forever.
-
 
 # Bot code review (do not skip, do not merge around)
 

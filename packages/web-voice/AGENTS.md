@@ -105,8 +105,11 @@ src/
   (guarded by `install.test.tsx`).
 - Nothing in this repo may import **this** package — that is what "optional" means, and
   `OPEN_CORE_GRAPH` in `packages/web-ui/src/__tests__/open-core-guards.test.ts` enforces it.
-- Not in the `create-foundry-ui-app` default template, and **not** in the changesets `fixed` group
-  — it versions independently of the coordinated four.
+- **Not** in the changesets `fixed` group — it versions independently of the coordinated four.
+- The `create-foundry-ui-app` template DOES depend on this package and import `createVoiceModule`;
+  it is gated at runtime on `VITE_VOICE_PROXY_URL`, so with the variable unset the call is
+  unreachable and the bundler drops the package. "Optional" here is a runtime property enforced by
+  tree-shaking, not an absence from the scaffold.
 - `ChatModule` is typed locally in `voice-module.tsx` rather than imported from
   `@iloveagents/foundry-web-shell`: the shell composes modules, so importing it would invert the
   dependency and force every voice consumer to install the shell.

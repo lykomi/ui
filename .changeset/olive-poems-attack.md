@@ -14,5 +14,7 @@ persists like any other, and the reply is spoken back sentence by sentence (with
 `realtime` hands the conversation to the Voice Live model for sub-second latency, with the app's
 `clientToolRegistry` exposed as session tools.
 
-Optional by construction: no other package imports it, it is not in the scaffold template, and it
-versions outside the coordinated `fixed` group.
+Optional by construction: no other package imports it, and it versions outside the coordinated
+`fixed` group. The scaffold template depends on it but only calls `createVoiceModule` when
+`VITE_VOICE_PROXY_URL` is set, so an app that never configures voice drops the package at build
+time.

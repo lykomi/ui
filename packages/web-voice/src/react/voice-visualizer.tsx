@@ -6,12 +6,14 @@
  *
  * - **It wears the theme, and notices when the theme changes.** Colours are
  *   read from the app's CSS custom properties (`--primary`,
- *   `--muted-foreground`) rather than baked in, and re-read when the root
- *   element's theme attributes change or the OS colour scheme flips — a
- *   canvas cannot inherit a CSS variable the way a DOM node does, so it has
- *   to watch for itself. Opacity comes from `globalAlpha`, not from building
- *   `rgba()` strings, so any colour format the design system uses — `oklch`,
- *   `hsl`, hex — works untouched.
+ *   `--muted-foreground`) rather than baked in. A canvas cannot inherit a CSS
+ *   variable the way a DOM node does, so it re-reads them: periodically while
+ *   animating (a theme-layer swap lands as inline style on an ancestor, which
+ *   no root-element observer can see), and on a root class / `data-theme` /
+ *   OS-scheme change for the static case, where no loop is running to notice.
+ *   Opacity comes from `globalAlpha`, not from building `rgba()` strings, so
+ *   any colour format the design system uses — `oklch`, `hsl`, hex — works
+ *   untouched.
  * - **It matches the device.** The backing store is sized in device pixels
  *   and scaled, so the rings are not soft on a retina display; a
  *   `ResizeObserver` keeps that true when the pane is resized.
@@ -22,6 +24,17 @@
  */
 
 import { useEffect, useRef } from "react";
+
+/**
+ * How often, in frames, to re-read the theme while animating.
+ *
+ * `getComputedStyle` forces a style recalc, so this cannot run per frame —
+ * but it must run at all: foundry applies its tokens as inline style on a
+ * `ThemeScope` div, so a theme-layer change is invisible to an observer
+ * watching the root element. Twice a second is imperceptible to the user
+ * and negligible to the browser.
+ */
+const COLOR_REFRESH_FRAMES = 30;
 
 /** Rings drawn outward from the core. */
 const RING_COUNT = 5;
@@ -88,6 +101,7 @@ export function VoiceVisualizer({
     let colors = readColors(canvas);
     let level = 0;
     let frame: number | null = null;
+    let sinceColorRead = 0;
 
     // Device pixels, so the strokes are crisp rather than upscaled.
     const resize = () => {
@@ -106,6 +120,10 @@ export function VoiceVisualizer({
     const buffer = analyser ? new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount)) : null;
 
     const draw = () => {
+      if (++sinceColorRead >= COLOR_REFRESH_FRAMES) {
+        sinceColorRead = 0;
+        colors = readColors(canvas);
+      }
       const { width, height } = canvas.getBoundingClientRect();
       const cx = width / 2;
       const cy = height / 2;
