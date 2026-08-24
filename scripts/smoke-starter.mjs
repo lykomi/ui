@@ -426,6 +426,26 @@ run("node", ["packages/create-foundry-ui-app/dist/index.mjs", appDir, "--no-inst
 
 const packageJsonPath = join(appDir, "package.json");
 const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+// The generated app's OWN overrides live in pnpm-workspace.yaml, and adding a
+// `pnpm.overrides` block to package.json makes pnpm use that instead — silently
+// dropping them. This test therefore cannot see a bad override in the template,
+// which is exactly how a pinned `@assistant-ui/store` shipped in every scaffold
+// while this test stayed green. Assert the file is clean of the pins that can
+// only do harm before neutralising it.
+const workspaceYamlPath = join(appDir, "pnpm-workspace.yaml");
+if (existsSync(workspaceYamlPath)) {
+  const yaml = readFileSync(workspaceYamlPath, "utf8");
+  for (const pinned of ["@assistant-ui/store", "@assistant-ui/core", "@assistant-ui/tap"]) {
+    if (new RegExp(`^\\s+"?${pinned.replace("/", "\\/")}"?\\s*:`, "m").test(yaml)) {
+      throw new Error(
+        `The scaffold's pnpm-workspace.yaml pins ${pinned}. Pinning a transitive of ` +
+          `@assistant-ui/react freezes one node of a graph that keeps moving, and the ` +
+          `generated app stops building. Remove it from the template.`,
+      );
+    }
+  }
+}
+
 const generatedOverrides = packageJson.overrides ?? {};
 for (const [name, specifier] of tarballs) {
   packageJson.dependencies[name] = specifier;

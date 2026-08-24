@@ -9,6 +9,12 @@ allowBuilds:
   "@swc/core": true
   esbuild: true
 
-overrides:
-  "@assistant-ui/store": 0.2.10
-  "@assistant-ui/tap": 0.5.16
+# No `overrides:` for the assistant-ui packages, deliberately.
+#
+# This file used to pin `@assistant-ui/store` and `@assistant-ui/tap` to exact
+# versions. Pinning a transitive of `@assistant-ui/react` freezes one node of a
+# graph the rest of which keeps moving under the caret above: `react` floated
+# to a build whose `core` peer-requires `store@^0.3.0`, the pin held `store` at
+# `0.2.10`, and every generated app failed to build on a missing
+# `@assistant-ui/store/client` specifier. assistant-ui's own ranges resolve a
+# consistent graph; a pin here can only break that.
