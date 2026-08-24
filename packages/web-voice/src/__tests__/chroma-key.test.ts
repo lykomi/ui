@@ -19,6 +19,8 @@
  * if it breaks one of those three properties.
  */
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { AVATAR_CHROMA_KEY } from "../react/voice-avatar.tsx";
 
 type Rgb = [number, number, number];
@@ -98,5 +100,15 @@ describe("avatar chroma key", () => {
   it("still resolves to the subject just inside the edge", () => {
     // The other side of the same trade: cut too hard and the outline erodes.
     expect(alphaOf(edgePixel(0.95))).toBeGreaterThan(0.9);
+  });
+
+  it("is documented as tighter than the SDK default, because it is", () => {
+    // A stale doc is how the previous round of review found four wrong claims.
+    // The SDK default is 0.40 / 0.10; "softer" would mean a WIDER blend band,
+    // which is exactly the change that turned the avatar translucent.
+    const readme = readFileSync(join(import.meta.dirname, "..", "..", "README.md"), "utf8");
+    expect(readme).toMatch(/tighter/i);
+    expect(readme).not.toMatch(/softer-edged than\s*\n?\s*the SDK/i);
+    expect(AVATAR_CHROMA_KEY.smoothness).toBeLessThan(0.1);
   });
 });
