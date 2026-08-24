@@ -19,18 +19,26 @@
  */
 
 import type { ToolRegistry } from "@iloveagents/foundry-agent";
-import type { FunctionTool } from "@iloveagents/foundry-voice-live-react";
-import { toVoiceLiveTools } from "./session-config.ts";
+import type { Tool } from "@iloveagents/foundry-voice-live-react";
+import { sessionTools } from "./session-config.ts";
 
 export class ToolSync {
   /** Serialized catalogue last put on the wire, or null if none has been. */
   private lastSent: string | null = null;
 
-  constructor(private readonly send: (tools: FunctionTool[]) => void) {}
+  constructor(private readonly send: (tools: Tool[]) => void) {}
 
-  /** Push the registry's current tools, unless they are already on the wire. */
-  sync(registry: ToolRegistry): void {
-    const tools = toVoiceLiveTools(registry);
+  /**
+   * Push the session's current catalogue, unless it is already on the wire.
+   *
+   * `hostTools` is not optional decoration: `session.update` replaces the
+   * catalogue outright, so sending the registry's tools alone withdraws every
+   * MCP server and Foundry agent tool the host configured, and any host
+   * override of a registry tool. It has to be the same merge the session was
+   * built with, which is why both go through `sessionTools`.
+   */
+  sync(registry: ToolRegistry, hostTools: Tool[] | undefined): void {
+    const tools = sessionTools(registry, hostTools) ?? [];
     const key = JSON.stringify(tools);
     if (key === this.lastSent) return;
     this.lastSent = key;

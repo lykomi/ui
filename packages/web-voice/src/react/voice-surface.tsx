@@ -132,6 +132,7 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   // is-ready guard and never replayed. Re-running on the ready edge and
   // syncing immediately closes that window, and `ToolSync`'s dedupe makes
   // the extra call free when nothing actually changed.
+  const hostToolsKey = JSON.stringify(config.session?.tools ?? null);
   const toolSync = useRef<ToolSync | null>(null);
   toolSync.current ??= new ToolSync((tools) => liveRef.current.updateSession({ tools }));
   useEffect(() => {
@@ -142,9 +143,14 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
       sync.reset();
       return;
     }
-    sync.sync(clientToolRegistry.getState());
-    return clientToolRegistry.subscribe(() => sync.sync(clientToolRegistry.getState()));
-  }, [wantsTools, live.isReady]);
+    const hostTools = config.session?.tools;
+    sync.sync(clientToolRegistry.getState(), hostTools);
+    return clientToolRegistry.subscribe(() => sync.sync(clientToolRegistry.getState(), hostTools));
+    // Keyed on the host tools' CONTENT, not the array's identity: a host that
+    // rebuilds its config object every render would otherwise resubscribe on
+    // every render for a catalogue that never changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsTools, live.isReady, hostToolsKey]);
 
   // Half-duplex: hold the microphone closed while the assistant speaks, so
   // its own voice cannot trip the service's VAD and start a conversation
@@ -194,10 +200,15 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   // dead analyser, and an outstanding auto-mute are all last-call state.
   useEffect(() => {
     if (live.connectionState === "disconnected") {
+      // End the adapter session too, not just our own UI state. Without this
+      // a clean remote close (or exhausted reconnects) left `bridge.connected`
+      // true and assistant-ui's voice session `running`: the controls kept
+      // showing a live call and relay answers were queued to a dead transport.
+      bridge.handleClosed();
       halfDuplexGate.current.reset();
       resetVoiceSessionState();
     }
-  }, [live.connectionState]);
+  }, [bridge, live.connectionState]);
 
   // Host chroma-key tuning travels through the store because the stage is
   // registered as a bare component reference, not a closure over config.

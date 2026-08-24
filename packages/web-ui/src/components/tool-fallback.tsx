@@ -8,8 +8,7 @@ export const ToolFallback = (props: Record<string, unknown>) => {
     result: unknown;
     part: { status?: { type: string } };
   };
-  const rawStatus =
-    (part?.status as { type: string }) || (props.status as { type: string });
+  const rawStatus = (part?.status as { type: string }) || (props.status as { type: string });
 
   // Tool results that *describe* a failure (Python ``@tool`` raises an
   // exception → agent-framework serializes it as an error string;

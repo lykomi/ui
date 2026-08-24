@@ -399,6 +399,47 @@ describe("session lifecycle", () => {
     expect(session.status).toMatchObject({ type: "ended", reason: "error" });
   });
 
+  it("ends the session when the transport closes on its own", async () => {
+    // `handleClosed` had no caller anywhere in the repo. After a clean remote
+    // close or exhausted reconnects the SDK reaches `disconnected` without an
+    // error, so nothing ended the adapter session: `connected` stayed true,
+    // assistant-ui kept the voice session `running`, the controls kept showing
+    // a live call, and relay answers were queued to a dead transport.
+    const bridge = new VoiceBridge(relay());
+    const { session } = await connect(bridge, fakeControls());
+    expect(session.status.type).toBe("running");
+
+    bridge.handleClosed();
+
+    expect(session.status).toMatchObject({ type: "ended", reason: "finished" });
+  });
+
+  it("keeps a failure's reason when the close arrives after it", async () => {
+    // Every route out of a call converges on `handleClosed`: an explicit
+    // disconnect, a failure, and the surface observing `disconnected` all
+    // arrive, so a close routinely follows an error. What must not happen is
+    // the later close presenting as a clean finish and masking why the call
+    // actually died.
+    //
+    // Note this pins the end-to-end contract, not the bridge's `connected`
+    // guard on its own: assistant-ui's `end()` is itself once-only, so the
+    // guard has no separately observable effect here (removing it leaves this
+    // test green). It stays because the convergence above is real and the
+    // bridge should not depend on the runtime's forgiveness for correctness.
+    const onError = vi.fn();
+    const bridge = new VoiceBridge(relay({ onError }));
+    const { session } = await connect(bridge, fakeControls());
+
+    bridge.handleError("WebSocket connection error");
+    expect(session.status).toMatchObject({ type: "ended", reason: "error" });
+
+    bridge.handleClosed();
+
+    // Still the error, not overwritten by a "finished".
+    expect(session.status).toMatchObject({ type: "ended", reason: "error" });
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
   it("stops speaking when the session is disconnected", async () => {
     const controls = fakeControls();
     const bridge = new VoiceBridge(relay());

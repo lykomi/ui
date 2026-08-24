@@ -61,10 +61,7 @@ describe("theme runtime", () => {
     );
 
     expect(runtime.mode).toBe("light");
-    expect(runtime.sources.map((layer) => layer.id)).toEqual([
-      "global-theme",
-      "workspace-theme",
-    ]);
+    expect(runtime.sources.map((layer) => layer.id)).toEqual(["global-theme", "workspace-theme"]);
     expect(runtime.definition.light?.primary).toBe("oklch(0.52 0.16 240)");
     expect(runtime.variables["--primary" as keyof typeof runtime.variables]).toBe(
       "oklch(0.52 0.16 240)",

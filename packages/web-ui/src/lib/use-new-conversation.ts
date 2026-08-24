@@ -13,7 +13,10 @@ import { useChatLifecycleStore } from "./chat-lifecycle-store.ts";
  * Shared hook for starting a new conversation.
  * Used by ChatHeader and Sidebar to keep behavior in sync.
  */
-export function useNewConversation(options?: { navigateToChat?: boolean; preserveNavigation?: boolean }) {
+export function useNewConversation(options?: {
+  navigateToChat?: boolean;
+  preserveNavigation?: boolean;
+}) {
   const aui = useAui();
   const { resetThread } = useAGUIAdapter();
   const navigate = useNavigate();

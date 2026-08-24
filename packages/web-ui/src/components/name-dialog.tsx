@@ -50,14 +50,15 @@ export function NameDialog({
       size="sm"
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={pending}
+          >
             Cancel
           </Button>
-          <Button
-            type="submit"
-            form={`${inputId}-form`}
-            disabled={!value.trim() || pending}
-          >
+          <Button type="submit" form={`${inputId}-form`} disabled={!value.trim() || pending}>
             {pending ? (pendingLabel ?? `${submitLabel}...`) : submitLabel}
           </Button>
         </>

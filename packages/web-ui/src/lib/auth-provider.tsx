@@ -8,13 +8,7 @@
  * Missing configuration is treated as an application bootstrap error.
  */
 
-import {
-  type FC,
-  type PropsWithChildren,
-  type ReactNode,
-  useEffect,
-  useState,
-} from "react";
+import { type FC, type PropsWithChildren, type ReactNode, useEffect, useState } from "react";
 import {
   authStore,
   initializeMsal,
@@ -39,10 +33,7 @@ type MsalHook = () => {
   inProgress: string;
 };
 
-export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({
-  config,
-  children,
-}) => {
+export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({ config, children }) => {
   const [ready, setReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const [MsalProvider, setMsalProvider] = useState<MsalProviderComponent | null>(null);
@@ -71,7 +62,9 @@ export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [config]);
 
   if (!ready) return null;
@@ -107,10 +100,7 @@ export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({
  * Uses inProgress === "none" to avoid redirect loops (best practice from
  * Microsoft docs — never call loginRedirect while another interaction is active).
  */
-const AuthGuard: FC<PropsWithChildren<{ useMsalHook: MsalHook }>> = ({
-  useMsalHook,
-  children,
-}) => {
+const AuthGuard: FC<PropsWithChildren<{ useMsalHook: MsalHook }>> = ({ useMsalHook, children }) => {
   const { instance, accounts, inProgress } = useMsalHook();
   const [authenticated, setAuthenticated] = useState(false);
 

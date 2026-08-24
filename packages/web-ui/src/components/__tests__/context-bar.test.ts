@@ -42,9 +42,9 @@ describe("getNavigablePath", () => {
     // The source module places the deep-link in sourcePage when it
     // creates the ref; the framework surfaces it without knowing
     // anything about the ref shape.
-    expect(
-      getNavigablePath(refItem("abc:b1", "/spaces/abc#block-b1")),
-    ).toBe("/spaces/abc#block-b1");
+    expect(getNavigablePath(refItem("abc:b1", "/spaces/abc#block-b1"))).toBe(
+      "/spaces/abc#block-b1",
+    );
   });
 
   it("returns null when a ref has no sourcePage", () => {

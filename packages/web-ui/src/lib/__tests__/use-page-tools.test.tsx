@@ -4,7 +4,11 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { clientToolRegistry } from "@iloveagents/foundry-agent";
 import { usePageTools } from "../use-page-tools.ts";
 
-const schemaNames = () => clientToolRegistry.getState().getActiveSchemas().map((t) => t.name);
+const schemaNames = () =>
+  clientToolRegistry
+    .getState()
+    .getActiveSchemas()
+    .map((t) => t.name);
 
 describe("usePageTools", () => {
   let container: HTMLDivElement;

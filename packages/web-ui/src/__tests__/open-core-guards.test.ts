@@ -216,7 +216,9 @@ describe("open-core guards", () => {
             // packages (@ltwlf/* today; @lastspace/* was the pre-rename scope);
             // allow-listing is enforced for sibling @iloveagents/* deps.
             if (imp.startsWith("@lastspace/") || imp.startsWith("@ltwlf/")) {
-              violations.push(`${relative(ROOT, file)} -> ${imp} (commercial downstream import forbidden)`);
+              violations.push(
+                `${relative(ROOT, file)} -> ${imp} (commercial downstream import forbidden)`,
+              );
               continue;
             }
             if (!imp.startsWith("@iloveagents/")) continue;

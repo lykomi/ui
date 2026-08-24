@@ -145,7 +145,11 @@ describe("app-store", () => {
         scopedRefItem("atom", "Table cell", "$.blocks[?(@.id=='block-1')].rows[0].cells[0]"),
       );
       store().addContextItem(
-        scopedRefItem("atom", "Updated table cell", "$.blocks[?(@.id=='block-1')].rows[0].cells[0]"),
+        scopedRefItem(
+          "atom",
+          "Updated table cell",
+          "$.blocks[?(@.id=='block-1')].rows[0].cells[0]",
+        ),
       );
       expect(store().contextItems).toHaveLength(2);
     });

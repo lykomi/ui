@@ -331,75 +331,75 @@ export function ChatBubble() {
               <ChatComposerBannerSlot />
               <div className="px-3 py-3">
                 <ComposerPrimitive.Root
-                className={cn(
-                  // Query container for the controls inside: the bubble is
-                  // a narrow panel in a wide window, so they have to size
-                  // against THIS box, not the viewport.
-                  "@container",
-                  "flex flex-col gap-1",
-                  "rounded-2xl border border-input",
-                  "bg-background shadow-sm",
-                  "px-3 py-2",
-                  "focus-within:border-primary/50",
-                  "transition-all duration-200",
-                )}
-              >
-                <ComposerSubmitBridge />
-                <ComposerContextBadges />
-                <div className="flex items-center gap-2">
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    {/* The bubble is the chat you use WHILE reading a
+                  className={cn(
+                    // Query container for the controls inside: the bubble is
+                    // a narrow panel in a wide window, so they have to size
+                    // against THIS box, not the viewport.
+                    "@container",
+                    "flex flex-col gap-1",
+                    "rounded-2xl border border-input",
+                    "bg-background shadow-sm",
+                    "px-3 py-2",
+                    "focus-within:border-primary/50",
+                    "transition-all duration-200",
+                  )}
+                >
+                  <ComposerSubmitBridge />
+                  <ComposerContextBadges />
+                  <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      {/* The bubble is the chat you use WHILE reading a
                         document, so it needs the pin at least as much as
                         the expanded composer does — it just lives in the
                         menu now rather than owning a permanent icon. */}
-                    <ComposerAddMenu compact />
-                    <ContextPins compact />
-                  </div>
-                  <ComposerPrimitive.Input
-                    autoFocus
-                    placeholder={DEFAULT_COMPOSER_PLACEHOLDER}
-                    rows={1}
-                    className={cn(
-                      "flex-1 bg-transparent",
-                      "py-1 text-sm",
-                      "text-foreground outline-none",
-                      "placeholder:text-muted-foreground",
-                      "resize-none max-h-20",
-                    )}
-                  />
-                  {/* Right-hand slot, mirroring the expanded composer:
+                      <ComposerAddMenu compact />
+                      <ContextPins compact />
+                    </div>
+                    <ComposerPrimitive.Input
+                      autoFocus
+                      placeholder={DEFAULT_COMPOSER_PLACEHOLDER}
+                      rows={1}
+                      className={cn(
+                        "flex-1 bg-transparent",
+                        "py-1 text-sm",
+                        "text-foreground outline-none",
+                        "placeholder:text-muted-foreground",
+                        "resize-none max-h-20",
+                      )}
+                    />
+                    {/* Right-hand slot, mirroring the expanded composer:
                       settings sit beside Send, not among the attachment
                       icons. Hidden while running, like the expanded one. */}
-                  <ThreadPrimitive.If running={false}>
-                    <ReasoningEffortPicker />
-                  </ThreadPrimitive.If>
-                  <ChatComposerActionsSlot />
-                  <ThreadPrimitive.If running>
-                    <ComposerPrimitive.Cancel asChild>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="rounded-full size-8 shrink-0"
-                        aria-label="Stop"
-                      >
-                        <Square className="size-3" />
-                      </Button>
-                    </ComposerPrimitive.Cancel>
-                  </ThreadPrimitive.If>
-                  {!actionsOwnSend && (
                     <ThreadPrimitive.If running={false}>
-                      <ComposerPrimitive.Send asChild>
+                      <ReasoningEffortPicker />
+                    </ThreadPrimitive.If>
+                    <ChatComposerActionsSlot />
+                    <ThreadPrimitive.If running>
+                      <ComposerPrimitive.Cancel asChild>
                         <Button
+                          variant="secondary"
                           size="icon"
                           className="rounded-full size-8 shrink-0"
-                          aria-label="Send"
+                          aria-label="Stop"
                         >
-                          <ArrowUp className="size-4" />
+                          <Square className="size-3" />
                         </Button>
-                      </ComposerPrimitive.Send>
+                      </ComposerPrimitive.Cancel>
                     </ThreadPrimitive.If>
-                  )}
-                </div>
+                    {!actionsOwnSend && (
+                      <ThreadPrimitive.If running={false}>
+                        <ComposerPrimitive.Send asChild>
+                          <Button
+                            size="icon"
+                            className="rounded-full size-8 shrink-0"
+                            aria-label="Send"
+                          >
+                            <ArrowUp className="size-4" />
+                          </Button>
+                        </ComposerPrimitive.Send>
+                      </ThreadPrimitive.If>
+                    )}
+                  </div>
                 </ComposerPrimitive.Root>
               </div>
             </div>

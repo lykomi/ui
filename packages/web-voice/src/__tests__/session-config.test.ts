@@ -71,22 +71,24 @@ describe("buildVoiceSession", () => {
   });
 
   it("keeps the client tools when a host adds a server-side MCP tool", () => {
-    // The eomi case: the browser owns ui_* / page_*, while the corpus and
-    // graph live behind an MCP endpoint the service calls itself. A plain
-    // spread would drop the client tools the moment MCP was declared, and
-    // the model would lose the UI with nothing to explain why.
+    // The shape a downstream app has: the browser owns ui_* / page_*, while
+    // the corpus and graph live behind an MCP endpoint the service calls
+    // itself. A plain spread would drop the client tools the moment MCP was
+    // declared, and the model would lose the UI with nothing to explain why.
     const registry = fakeRegistry([{ name: "ui_navigate" }]);
     const session = buildVoiceSession({
       mode: "realtime",
       registry,
       overrides: {
-        tools: [{ type: "mcp", serverLabel: "eomi", serverUrl: "https://example.invalid/mcp" }],
+        tools: [
+          { type: "mcp", serverLabel: "example_server", serverUrl: "https://example.invalid/mcp" },
+        ],
       },
     });
 
     expect(session.tools).toEqual([
       { type: "function", name: "ui_navigate", description: "", parameters: {} },
-      { type: "mcp", serverLabel: "eomi", serverUrl: "https://example.invalid/mcp" },
+      { type: "mcp", serverLabel: "example_server", serverUrl: "https://example.invalid/mcp" },
     ]);
   });
 

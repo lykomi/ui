@@ -36,9 +36,7 @@ function defaultSelectionContext(input: SelectionContextInput): SelectionContext
   };
 }
 
-export function registerSelectionContextResolver(
-  resolver: SelectionContextResolver,
-): () => void {
+export function registerSelectionContextResolver(resolver: SelectionContextResolver): () => void {
   resolvers.set(resolver.id, resolver);
   return () => {
     if (resolvers.get(resolver.id) === resolver) {

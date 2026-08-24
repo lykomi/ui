@@ -6,13 +6,14 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import type { AttachmentAdapter } from "@assistant-ui/react";
-import {
-  registerAttachmentAdapter,
-  useAttachmentAdapterStore,
-} from "../attachment-registry.ts";
+import { registerAttachmentAdapter, useAttachmentAdapterStore } from "../attachment-registry.ts";
 
-const fakeAdapter = (accept: string): AttachmentAdapter =>
-  ({ accept, add: async () => ({}) as never, send: async () => ({}) as never, remove: async () => {} });
+const fakeAdapter = (accept: string): AttachmentAdapter => ({
+  accept,
+  add: async () => ({}) as never,
+  send: async () => ({}) as never,
+  remove: async () => {},
+});
 
 describe("attachment adapter registry", () => {
   afterEach(() => {

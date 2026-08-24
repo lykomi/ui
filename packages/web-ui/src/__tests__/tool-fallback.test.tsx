@@ -8,10 +8,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-  _detectErrorResult,
-  _extractErrorMessage,
-} from "../components/tool-fallback.tsx";
+import { _detectErrorResult, _extractErrorMessage } from "../components/tool-fallback.tsx";
 
 describe("_detectErrorResult", () => {
   it("returns false for null / undefined", () => {
@@ -31,9 +28,7 @@ describe("_detectErrorResult", () => {
 
   it("does NOT false-positive on strings containing the word Error mid-text", () => {
     // This is the failure the anchored regex exists to prevent.
-    expect(
-      _detectErrorResult("A passage about Error Handling in Python"),
-    ).toBe(false);
+    expect(_detectErrorResult("A passage about Error Handling in Python")).toBe(false);
     expect(_detectErrorResult("Error Boundaries in React")).toBe(false);
   });
 
@@ -68,9 +63,7 @@ describe("_detectErrorResult", () => {
 
 describe("_extractErrorMessage", () => {
   it("strips the `Error: ` prefix from string errors", () => {
-    expect(_extractErrorMessage("Error: search backend 500")).toBe(
-      "search backend 500",
-    );
+    expect(_extractErrorMessage("Error: search backend 500")).toBe("search backend 500");
   });
 
   it("returns `Execution failed` when the string is just `Error:`", () => {
@@ -86,9 +79,7 @@ describe("_extractErrorMessage", () => {
   });
 
   it("extracts nested `error.message`", () => {
-    expect(
-      _extractErrorMessage({ error: { message: "invalid token" } }),
-    ).toBe("invalid token");
+    expect(_extractErrorMessage({ error: { message: "invalid token" } })).toBe("invalid token");
   });
 
   it("extracts the first text item from MCP content arrays", () => {

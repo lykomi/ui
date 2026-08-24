@@ -114,7 +114,7 @@ export function buildVoiceSession({
     // the browser's — and a plain spread would silently drop every client
     // tool the moment one was declared, leaving the model unable to touch
     // the UI with no error to explain why.
-    tools: mergeTools(base.tools, overrides.tools),
+    tools: sessionTools(registry, overrides.tools),
     turnDetection:
       overrides.turnDetection === undefined
         ? base.turnDetection
@@ -140,6 +140,22 @@ function withKeyableAvatarBackground(session: VoiceLiveSessionConfig): VoiceLive
       video: { ...avatar.video, background: { color: GREEN_SCREEN } },
     },
   };
+}
+
+/**
+ * The tool catalogue a session carries: the registry's client tools merged
+ * with whatever the host declared.
+ *
+ * Exported because `session.update` REPLACES the catalogue rather than adding
+ * to it, so the live re-sync has to rebuild the very same list this file
+ * builds at connect time. Two places deriving it independently is precisely
+ * how the host's MCP tools went missing the moment a session became ready.
+ */
+export function sessionTools(
+  registry: ToolRegistry | undefined,
+  hostTools: Tool[] | undefined,
+): Tool[] | undefined {
+  return mergeTools(registry ? toVoiceLiveTools(registry) : undefined, hostTools);
 }
 
 /**

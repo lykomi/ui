@@ -54,10 +54,7 @@ describe("injectCitations", () => {
     await act(async () => {
       root.render(
         <p>
-          {injectCitations([
-            "Plain claim [1]. ",
-            <strong key="nested">Nested claim [2].</strong>,
-          ])}
+          {injectCitations(["Plain claim [1]. ", <strong key="nested">Nested claim [2].</strong>])}
         </p>,
       );
     });

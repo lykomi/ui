@@ -40,7 +40,10 @@ export function InfiniteScrollSentinel({
   return (
     <div
       ref={ref}
-      className={cn("flex h-12 items-center justify-center text-sm text-muted-foreground", className)}
+      className={cn(
+        "flex h-12 items-center justify-center text-sm text-muted-foreground",
+        className,
+      )}
     >
       {enabled ? (loading ? "Loading more..." : "Scroll for more") : null}
     </div>

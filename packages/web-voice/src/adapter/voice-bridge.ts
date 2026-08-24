@@ -258,8 +258,17 @@ export class VoiceBridge {
     this.stopVolumeMeter();
   }
 
-  /** The transport closed on its own (not via `disconnect()`). */
+  /**
+   * The transport reached a terminal closed state.
+   *
+   * Idempotent by the `connected` check, because every route out of a call
+   * ends here: an explicit `disconnect()`, a failure through `handleError`,
+   * and the surface observing `connectionState === "disconnected"` all arrive,
+   * and ending the session twice would be a second `end()` on a session that
+   * already finished.
+   */
   handleClosed(): void {
+    if (!this.connected) return;
     this.connected = false;
     this.helpers?.end("finished");
     this.stopVolumeMeter();
@@ -374,7 +383,9 @@ export class VoiceBridge {
         this.stopVolumeMeter();
         return;
       }
-      helpers.emitVolume(readLevel(controls.getAnalyser(), (size) => this.ensureVolumeBuffer(size)));
+      helpers.emitVolume(
+        readLevel(controls.getAnalyser(), (size) => this.ensureVolumeBuffer(size)),
+      );
     }, VOLUME_INTERVAL_MS);
   }
 

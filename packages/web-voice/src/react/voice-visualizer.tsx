@@ -114,7 +114,15 @@ export function VoiceVisualizer({
     };
     resize();
 
-    const observer = new ResizeObserver(resize);
+    // Assigning canvas.width/height clears the backing store. With a loop
+    // running the next frame repaints it, but the static path (no analyser,
+    // or reduced motion) has no next frame — so resizing the window or the
+    // surrounding pane simply erased the idle indicator until something else
+    // happened to redraw.
+    const observer = new ResizeObserver(() => {
+      resize();
+      if (frame === null) draw();
+    });
     observer.observe(canvas);
 
     const buffer = analyser ? new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount)) : null;
@@ -189,20 +197,28 @@ export function VoiceVisualizer({
     document.addEventListener("visibilitychange", onVisibility);
 
     // The theme can change without this component re-rendering: a class or
-    // data-theme flip on <html>, or the OS scheme changing while the app is
-    // on "system". Painted pixels do not update with a CSS variable, so
-    // watch both and repaint the static frame when the loop is not running.
+    // data-theme flip, the OS scheme changing while the app is on "system",
+    // or a runtime theme layer being applied. Painted pixels do not follow a
+    // CSS variable, so watch for all three and repaint the static frame.
     const refreshColors = () => {
       colors = readColors(canvas);
       if (frame === null) draw();
     };
     const scheme = window.matchMedia?.("(prefers-color-scheme: dark)");
     scheme?.addEventListener?.("change", refreshColors);
+
+    // Every ancestor, not just <html>: foundry's ThemeScope sets its runtime
+    // variables as an inline style on a wrapper div somewhere between the
+    // canvas and the root, and a change there is invisible to an observer
+    // watching only the document element. The animating path re-reads on a
+    // timer anyway; this is what keeps the STATIC path honest.
     const themeObserver = new MutationObserver(refreshColors);
-    themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "data-theme", "style"],
-    });
+    for (let node: HTMLElement | null = canvas; node; node = node.parentElement) {
+      themeObserver.observe(node, {
+        attributes: true,
+        attributeFilter: ["class", "data-theme", "style"],
+      });
+    }
     refreshColors();
 
     return () => {

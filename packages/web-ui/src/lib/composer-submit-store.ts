@@ -29,4 +29,3 @@ export const useComposerSubmitStore = create<ComposerSubmitState>((set) => ({
 export function submitComposerText(text: string): void {
   useComposerSubmitStore.getState().submit(text);
 }
-
