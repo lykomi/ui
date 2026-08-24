@@ -97,7 +97,12 @@ export function VoiceVisualizer({
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    // Live, not a mount-time snapshot. Someone who turns reduced motion on
+    // mid-call is asking for the animation to stop now, and a voice session can
+    // run for many minutes — leaving the loop going for the rest of it is the
+    // whole of what they were trying to avoid.
+    const motionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)") ?? null;
+    let reducedMotion = motionQuery?.matches ?? false;
     let colors = readColors(canvas);
     let level = 0;
     let frame: number | null = null;
@@ -179,30 +184,33 @@ export function VoiceVisualizer({
       ctx.globalAlpha = 1;
     };
 
-    if (reducedMotion || !analyser) {
-      // One static frame: the shape is still meaningful as a state icon.
+    const loop = () => {
       draw();
-    } else {
-      const loop = () => {
-        draw();
-        frame = requestAnimationFrame(loop);
-      };
-      loop();
-    }
-
-    // A background tab throttles rAF to a crawl; stop rather than limp.
-    const onVisibility = () => {
-      if (document.hidden && frame !== null) {
+      frame = requestAnimationFrame(loop);
+    };
+    /** Run only when there is something to animate and nobody objecting. */
+    const sync = () => {
+      const shouldAnimate = !reducedMotion && !!analyser && !document.hidden;
+      if (shouldAnimate && frame === null) {
+        loop();
+      } else if (!shouldAnimate && frame !== null) {
         cancelAnimationFrame(frame);
         frame = null;
-      } else if (!document.hidden && frame === null && !reducedMotion && analyser) {
-        const loop = () => {
-          draw();
-          frame = requestAnimationFrame(loop);
-        };
-        loop();
+        // One static frame: the shape is still meaningful as a state icon.
+        draw();
+      } else if (!shouldAnimate) {
+        draw();
       }
     };
+    sync();
+
+    // A background tab throttles rAF to a crawl; stop rather than limp.
+    const onVisibility = sync;
+    const onMotionChange = (e: MediaQueryListEvent) => {
+      reducedMotion = e.matches;
+      sync();
+    };
+    motionQuery?.addEventListener?.("change", onMotionChange);
     document.addEventListener("visibilitychange", onVisibility);
 
     // The theme can change without this component re-rendering: a class or
@@ -235,6 +243,7 @@ export function VoiceVisualizer({
       observer.disconnect();
       themeObserver.disconnect();
       scheme?.removeEventListener?.("change", refreshColors);
+      motionQuery?.removeEventListener?.("change", onMotionChange);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [analyser, themeKey]);

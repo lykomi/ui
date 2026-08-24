@@ -42,4 +42,19 @@ describe("composer surface parity", () => {
     expect(text).toContain('ThreadSurface && "invisible"');
     expect(text).toContain("aria-hidden={ThreadSurface ? true : undefined}");
   });
+
+  it("keeps a submit consumer mounted in the bubble even when the panel is closed", () => {
+    // A voice call outlives the panel that started it: the launcher badge
+    // exists because the microphone keeps running while collapsed. If the only
+    // ComposerSubmitBridge lives inside the open-panel branch, a spoken turn on
+    // a non-root page lands in the pending store and is never sent, and each
+    // further turn overwrites it. Structural, because the failure is *where*
+    // the element sits rather than what it renders.
+    const text = source("chat-bubble.tsx");
+    const bridge = text.indexOf("<ComposerSubmitBridge />");
+    const panel = text.indexOf("{isOpen && (");
+    expect(bridge, "chat-bubble.tsx must mount ComposerSubmitBridge").toBeGreaterThan(-1);
+    expect(panel, "expected an isOpen panel branch to exist").toBeGreaterThan(-1);
+    expect(bridge, "the bridge must be mounted outside the open-panel branch").toBeLessThan(panel);
+  });
 });

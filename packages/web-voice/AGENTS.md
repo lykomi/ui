@@ -107,7 +107,16 @@ src/
 
 - **A call outlives the panel that started it.** `VoiceSurface` is a layout extra, so closing the
   bubble takes every control away while the microphone stays open. `VoiceLauncherBadge` fills the
-  `launcherBadge` slot so the collapsed launcher shows the call and can end it.
+  `launcherBadge` slot so the collapsed launcher shows the call and can end it — and web-ui mounts
+  `ComposerSubmitBridge` for the whole life of `ChatBubble`, not just the open panel, or a relay
+  turn spoken while collapsed lands in the pending store and is never sent. Several bridges can
+  therefore be mounted at once, which is why the store hands out an atomic `claim()`.
+
+- **Audio routing follows the SESSION, not the display choice.** A host may configure an avatar and
+  hide its panel (`avatar: false`); the voice still arrives as a remote track that only an element
+  can play, so `needsElement` derives from `session.avatar`, and an audio-only `VoiceAudioSink`
+  mounts when the panel is off. Deriving it from `showAvatar` makes the assistant silent with no
+  error anywhere.
 
 # Boundaries
 

@@ -246,18 +246,32 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   // play. Otherwise the audio is PCM this browser decoded itself, and it
   // goes straight out through Web Audio — see `useDirectAudioOutput` for why
   // that is worth doing rather than attaching the MediaStream.
-  const showAvatar = avatar && !!session.avatar;
+  // Whether an element is needed follows from what the SESSION negotiated, not
+  // from whether we chose to show a face. A host that configures an avatar but
+  // hides the panel (`avatar: false`) still receives the assistant's voice as a
+  // remote track, and routing that through Web Audio as if it were locally
+  // decoded PCM plays nothing at all — the assistant simply goes silent.
+  const hasAvatar = !!session.avatar;
+  const showAvatar = avatar && hasAvatar;
   const isWebRtc = config.connection.transport === "webrtc";
-  const needsElement = showAvatar || isWebRtc;
+  const needsElement = hasAvatar || isWebRtc;
   useDirectAudioOutput(!needsElement, live.audioContext, live.audioAnalyser);
+
+  // The stage draws the avatar itself, so an element already exists there.
+  const needsAudioOnlySink = needsElement && !showAvatar;
 
   return (
     <>
       {mode === "relay" ? <RelayAnswerWatcher bridge={bridge} /> : null}
       {showAvatar && !stage ? (
         // With the stage on, the avatar is drawn there instead of floating.
-        <VoiceAvatarPanel videoStream={live.videoStream} audioStream={live.audioStream} />
-      ) : isWebRtc ? (
+        <VoiceAvatarPanel
+          videoStream={live.videoStream}
+          audioStream={live.audioStream}
+          // Tuning must not depend on where the avatar happens to be drawn.
+          chromaKeyConfig={config.chromaKey ?? undefined}
+        />
+      ) : needsAudioOnlySink ? (
         <VoiceAudioSink stream={live.audioStream} />
       ) : null}
     </>

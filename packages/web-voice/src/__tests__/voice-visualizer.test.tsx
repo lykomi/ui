@@ -12,6 +12,8 @@ import { VoiceVisualizer } from "../react/voice-visualizer.tsx";
 let paints = 0;
 let resizeCallback: (() => void) | null = null;
 let rectSpy: ReturnType<typeof vi.fn>;
+let reduceMotion = false;
+const motionListeners = new Set<(e: MediaQueryListEvent) => void>();
 
 const fakeCtx = {
   setTransform: vi.fn(),
@@ -43,6 +45,29 @@ let priorAct: boolean | undefined;
 beforeAll(() => {
   priorAct = globalThis.IS_REACT_ACT_ENVIRONMENT;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+  window.matchMedia = ((query: string) => {
+    const listeners = new Set<(e: MediaQueryListEvent) => void>();
+    const mql = {
+      media: query,
+      get matches() {
+        return query.includes("reduced-motion") ? reduceMotion : false;
+      },
+      addEventListener: (_: string, cb: (e: MediaQueryListEvent) => void) => {
+        if (query.includes("reduced-motion")) motionListeners.add(cb);
+        listeners.add(cb);
+      },
+      removeEventListener: (_: string, cb: (e: MediaQueryListEvent) => void) => {
+        motionListeners.delete(cb);
+        listeners.delete(cb);
+      },
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => true,
+      onchange: null,
+    };
+    return mql as unknown as MediaQueryList;
+  }) as typeof window.matchMedia;
 
   vi.stubGlobal(
     "ResizeObserver",
@@ -84,6 +109,12 @@ afterEach(async () => {
   host = null;
   resizeCallback = null;
   paints = 0;
+  reduceMotion = false;
+  motionListeners.clear();
+  // Restore every spy here rather than per test: the animation-frame spies
+  // otherwise leak into the next test, where a fresh spyOn returns the SAME
+  // spy with its call history intact and assertions read the previous test.
+  vi.restoreAllMocks();
 });
 
 /** Mounts inside a ThemeScope-like wrapper: the theme lives on an ANCESTOR. */
@@ -137,12 +168,10 @@ describe("VoiceVisualizer (animating path)", () => {
     // for the length of a call is a self-inflicted reflow on every frame; the
     // CSS size only changes on resize, which has its own observer.
     const frames: FrameRequestCallback[] = [];
-    const rafSpy = vi
-      .spyOn(window, "requestAnimationFrame")
-      .mockImplementation((cb: FrameRequestCallback) => {
-        frames.push(cb);
-        return frames.length;
-      });
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb: FrameRequestCallback) => {
+      frames.push(cb);
+      return frames.length;
+    });
     vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
 
     const analyser = {
@@ -165,6 +194,45 @@ describe("VoiceVisualizer (animating path)", () => {
     }
 
     expect(rectSpy.mock.calls.length).toBe(afterMount);
-    rafSpy.mockRestore();
+  });
+});
+
+describe("VoiceVisualizer reduced motion", () => {
+  it("stops the loop when reduced motion is turned on mid-call", async () => {
+    // A voice session runs for minutes. Someone enabling reduced motion partway
+    // through is asking for the animation to stop now — a mount-time snapshot
+    // leaves it running for the rest of the call, which is the whole of what
+    // they were trying to avoid.
+    const frames: FrameRequestCallback[] = [];
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb: FrameRequestCallback) => {
+      frames.push(cb);
+      return frames.length;
+    });
+    const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+
+    const analyser = {
+      fftSize: 256,
+      frequencyBinCount: 128,
+      getByteFrequencyData: (b: Uint8Array) => b.fill(10),
+    } as unknown as AnalyserNode;
+
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => root!.render(<VoiceVisualizer analyser={analyser} />));
+
+    // Animating: a frame was scheduled.
+    expect(frames.length).toBeGreaterThan(0);
+    // The subscription itself must exist — without this the dispatch below
+    // reaches nobody and the test would pass for the wrong reason.
+    expect(motionListeners.size, "no reduced-motion subscription").toBeGreaterThan(0);
+    expect(cancel).not.toHaveBeenCalled();
+
+    await act(async () => {
+      reduceMotion = true;
+      for (const cb of motionListeners) cb({ matches: true } as MediaQueryListEvent);
+    });
+
+    expect(cancel).toHaveBeenCalled();
   });
 });
