@@ -499,6 +499,44 @@ describe("session lifecycle", () => {
     await vi.waitFor(() => expect(controls.sent.length).toBe(afterBStarted + 1));
   });
 
+  it("ignores the completion of a response cancelled before it was acknowledged", async () => {
+    // The SDK's own response gate names this window: between sending
+    // `response.create` and receiving `response.created` the conversation
+    // looks idle. Interrupt in there and there is no id to remember, so the
+    // completion that eventually arrives looks like the NEXT answer's and
+    // releases it early. Order on the wire is what closes it: the first
+    // `response.created` after such a cancel names the cancelled response.
+    const bridge = new VoiceBridge(relay());
+    const controls = fakeControls();
+    await connect(bridge, controls);
+
+    bridge.trackAnswer("a1", `${FIRST} ${SECOND}`, true);
+    await vi.waitFor(() => expect(controls.sent.length).toBe(1));
+
+    // Barge-in BEFORE response.created has arrived for that utterance.
+    bridge.handleServerEvent({ type: "input_audio_buffer.speech_started" } as never);
+    expect(controls.cancelled).toBe(1);
+
+    // Now the service acknowledges the response that was already cancelled.
+    bridge.handleServerEvent({
+      type: "response.created",
+      response: { id: "resp_late" },
+    } as never);
+
+    // A new answer starts speaking.
+    bridge.trackAnswer("a2", `${FIRST} ${SECOND}`, true);
+    await vi.waitFor(() => expect(controls.sent.length).toBe(2));
+    bridge.handleServerEvent({ type: "response.created", response: { id: "resp_B" } } as never);
+    const afterBStarted = controls.sent.length;
+
+    // The cancelled response finally completes. It must not release B's next.
+    bridge.handleServerEvent({ type: "response.done", response: { id: "resp_late" } } as never);
+    expect(controls.sent.length, "a pre-acknowledgement cancel leaked through").toBe(afterBStarted);
+
+    bridge.handleServerEvent({ type: "response.done", response: { id: "resp_B" } } as never);
+    await vi.waitFor(() => expect(controls.sent.length).toBe(afterBStarted + 1));
+  });
+
   it("ends the session when the transport closes on its own", async () => {
     // `handleClosed` had no caller anywhere in the repo. After a clean remote
     // close or exhausted reconnects the SDK reaches `disconnected` without an

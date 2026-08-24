@@ -34,4 +34,19 @@ describe("voice surface lifecycle", () => {
     );
     expect(block).toContain("bridge.handleError(live.error)");
   });
+
+  it("cannot end a live call on a re-render", () => {
+    // The cleanup above now ENDS the call, which makes the stability of its
+    // dependencies load-bearing: if `controls` were rebuilt on any render, the
+    // effect would re-run mid-call and hang up on the user. It is memoised
+    // with an empty dependency list and reads everything through a ref, so the
+    // cleanup can only fire on a real unmount.
+    const memo = source.indexOf("const controls = useMemo<VoiceTransportControls>(");
+    expect(memo).toBeGreaterThan(-1);
+    const deps = source.slice(memo, source.indexOf("useEffect", memo));
+    expect(deps, "controls must be memoised with no dependencies").toMatch(/\[\],\s*\);/);
+    expect(deps, "controls must read live state through a ref, not close over it").toContain(
+      "liveRef.current",
+    );
+  });
 });

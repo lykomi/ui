@@ -109,6 +109,17 @@ export class VoiceBridge {
    * rest of the session when the count is wrong.
    */
   private readonly cancelledResponses = new Set<string>();
+  /**
+   * A response was cancelled before the service had named it.
+   *
+   * The SDK's own gate documents the window: between sending `response.create`
+   * and receiving `response.created` the conversation looks idle. Interrupting
+   * in there leaves nothing to correlate, so the completion that eventually
+   * arrives would look like the NEXT answer's and release it early — the same
+   * bug, in the gap. The wire preserves order, so the first `response.created`
+   * after such a cancel names the response that was cancelled.
+   */
+  private cancelledBeforeCreated = false;
 
   /** Injected so the bridge never imports the React chat surface. */
   private submitText: ((text: string) => void) | null = null;
@@ -255,7 +266,12 @@ export class VoiceBridge {
           // — usually after the NEXT answer has started speaking. Released
           // then, it frees an utterance while the current one is still going
           // and the two run together.
-          if (this.activeResponseId) this.cancelledResponses.add(this.activeResponseId);
+          if (this.activeResponseId) {
+            this.cancelledResponses.add(this.activeResponseId);
+          } else if (this.speech.isSpeaking) {
+            // Sent, not yet acknowledged: claim the id when it arrives.
+            this.cancelledBeforeCreated = true;
+          }
           this.activeResponseId = null;
           this.speech.cancel();
           this.controls?.cancelResponse();
@@ -264,9 +280,16 @@ export class VoiceBridge {
         this.answerDone = true;
         break;
 
-      case "response.created":
-        this.activeResponseId = responseIdOf(event);
+      case "response.created": {
+        const created = responseIdOf(event);
+        if (this.cancelledBeforeCreated) {
+          this.cancelledBeforeCreated = false;
+          if (created) this.cancelledResponses.add(created);
+          break;
+        }
+        this.activeResponseId = created;
         break;
+      }
 
       case "response.done": {
         const id = responseIdOf(event);
@@ -325,6 +348,7 @@ export class VoiceBridge {
     this.connected = false;
     this.activeResponseId = null;
     this.cancelledResponses.clear();
+    this.cancelledBeforeCreated = false;
     this.userMuted = false;
     this.stopVolumeMeter();
     this.speech.cancel();
