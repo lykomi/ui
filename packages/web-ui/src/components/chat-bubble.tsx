@@ -17,7 +17,6 @@ import {
   ChevronDown,
   Copy,
   Check,
-  Paperclip,
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
@@ -26,7 +25,15 @@ import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { ContextPins } from "./context-bar.tsx";
 import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
-import { ChatComposerBannerSlot, ChatLauncherBadgeSlot } from "./chat-slots.tsx";
+import { ComposerAddMenu } from "./composer-add-menu.tsx";
+import { DEFAULT_COMPOSER_PLACEHOLDER } from "./assistant-chat.tsx";
+import {
+  ChatComposerActionsSlot,
+  ChatComposerBannerSlot,
+  ChatLauncherBadgeSlot,
+  useChatThreadSurface,
+  useComposerActionsOwnSend,
+} from "./chat-slots.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
@@ -111,6 +118,7 @@ function BubbleScrollToBottomButton() {
 }
 
 export function ChatBubble() {
+  const ThreadSurface = useChatThreadSurface();
   const isOpen = useChatBubbleStore((s) => s.isOpen);
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const openBubble = useChatBubbleStore((s) => s.open);
@@ -122,6 +130,8 @@ export function ChatBubble() {
   const pageLabel = useAppStore((s) => s.navContext.label);
   const currentPage = useAppStore((s) => s.currentPage);
   const threadActive = useAppStore((s) => s.threadActive);
+  // With nothing typed, a module-supplied control may hold the send corner.
+  const actionsOwnSend = useComposerActionsOwnSend();
 
   // Draggable position: null = use default CSS anchored with equal left/bottom inset.
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -175,233 +185,253 @@ export function ChatBubble() {
 
   return (
     <>
-      {!isOpen && (
-        <div
-          aria-hidden="true"
-          className={cn(
-            "pointer-events-none fixed bottom-0 left-0 z-40 hidden md:block",
-            "border-r border-sidebar-border",
-            "bg-gradient-to-b from-sidebar/0 via-sidebar/88 to-sidebar/96",
-            "supports-[backdrop-filter]:backdrop-blur",
-          )}
-          style={{
-            width: isSidebarOpen ? sidebarWidth : RAIL_WIDTH,
-            height: 64,
-          }}
-        />
-      )}
+      {/* Mounted whether or not the panel is open. A voice call outlives the
+          panel that started it — the launcher badge exists precisely because
+          the microphone keeps running while collapsed — so the consumer for
+          spoken turns has to outlive it too. With the panel-scoped bridge
+          alone, a spoken question on a non-root page landed in the pending
+          store and stayed there, and each further turn overwrote it. */}
+      <ComposerSubmitBridge />
+      <>
+        {!isOpen && (
+          <div
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none fixed bottom-0 left-0 z-40 hidden md:block",
+              "border-r border-sidebar-border",
+              "bg-gradient-to-b from-sidebar/0 via-sidebar/88 to-sidebar/96",
+              "supports-[backdrop-filter]:backdrop-blur",
+            )}
+            style={{
+              width: isSidebarOpen ? sidebarWidth : RAIL_WIDTH,
+              height: 64,
+            }}
+          />
+        )}
 
-      {/* Trigger button — bottom-left corner. The positioned `group` wrapper
+        {/* Trigger button — bottom-left corner. The positioned `group` wrapper
           is the anchor contract for ChatLauncherBadgeSlot: badges position
           absolutely over the button and may use group-hover for a flyout. */}
-      {!isOpen && (
-        <div
-          className="fixed z-50 group"
-          style={{ left: CHAT_BUBBLE_INSET, bottom: CHAT_BUBBLE_INSET }}
-        >
-          <button
-            type="button"
-            onClick={openBubble}
-            className={cn(
-              "size-10 rounded-full",
-              "bg-primary text-primary-foreground shadow-lg",
-              "flex items-center justify-center",
-              "hover:bg-primary/90 transition-all duration-200",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            )}
-            aria-label="Ask the AI"
-          >
-            <Sparkles className="size-4" />
-          </button>
-          <ChatLauncherBadgeSlot />
-        </div>
-      )}
-
-      {/* Chat panel — draggable, anchored bottom-left by default */}
-      {isOpen && (
-        <div
-          ref={panelRef}
-          data-chat-surface="bubble"
-          className={cn(
-            "fixed z-50",
-            "rounded-2xl border border-border",
-            "bg-background shadow-2xl",
-            "flex flex-col overflow-hidden",
-            "w-95 h-150",
-          )}
-          style={
-            dragPos
-              ? { left: dragPos.x, top: dragPos.y }
-              : { left: CHAT_BUBBLE_INSET, bottom: CHAT_BUBBLE_INSET }
-          }
-        >
-          {/* Header — drag handle */}
+        {!isOpen && (
           <div
-            className={cn(
-              "flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0",
-              "cursor-grab active:cursor-grabbing select-none",
-            )}
-            style={{ touchAction: "none" }}
-            onPointerDown={onHeaderPointerDown}
-            onPointerMove={onHeaderPointerMove}
-            onPointerUp={onHeaderPointerUp}
-            onLostPointerCapture={onHeaderLostPointerCapture}
+            className="fixed z-50 group"
+            style={{ left: CHAT_BUBBLE_INSET, bottom: CHAT_BUBBLE_INSET }}
           >
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5 text-sm">
-                <Sparkles className="size-3.5 text-primary shrink-0" />
-                <span className="font-semibold text-foreground truncate">{pageLabel}</span>
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {threadActive ? "Active thread" : "New conversation"}
-              </span>
-            </div>
-            <div className="flex items-center gap-0.5">
-              <TooltipIconButton
-                tooltip="New Thread"
-                size="icon"
-                className="size-7"
-                onClick={startNewThread}
-              >
-                <SquarePen className="size-3.5" />
-              </TooltipIconButton>
-              <TooltipIconButton
-                tooltip="Expand chat"
-                size="icon"
-                className="size-7"
-                onClick={expandChat}
-              >
-                <Maximize2 className="size-3.5" />
-              </TooltipIconButton>
-              <TooltipIconButton
-                tooltip="Close"
-                size="icon"
-                className="size-7"
-                onClick={handleClose}
-              >
-                <X className="size-4" />
-              </TooltipIconButton>
-            </div>
+            <button
+              type="button"
+              onClick={openBubble}
+              className={cn(
+                "size-10 rounded-full",
+                "bg-primary text-primary-foreground shadow-lg",
+                "flex items-center justify-center",
+                "hover:bg-primary/90 transition-all duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              )}
+              aria-label="Ask the AI"
+            >
+              <Sparkles className="size-4" />
+            </button>
+            <ChatLauncherBadgeSlot />
           </div>
+        )}
 
-          {/* Thread */}
-          <ThreadPrimitive.Root className="flex flex-col flex-1 overflow-hidden">
-            <div className="relative flex-1 overflow-hidden">
-              <ThreadPrimitive.Viewport className="absolute inset-0 overflow-y-auto">
-                <ThreadPrimitive.Empty>
-                  <div className="flex h-full items-center justify-center p-4">
-                    <p className="text-sm text-muted-foreground text-center">
-                      Ask the agent about this page
-                    </p>
+        {/* Chat panel — draggable, anchored bottom-left by default */}
+        {isOpen && (
+          <div
+            ref={panelRef}
+            data-chat-surface="bubble"
+            className={cn(
+              "fixed z-50",
+              "rounded-2xl border border-border",
+              "bg-background shadow-2xl",
+              "flex flex-col overflow-hidden",
+              "w-95 h-150",
+            )}
+            style={
+              dragPos
+                ? { left: dragPos.x, top: dragPos.y }
+                : { left: CHAT_BUBBLE_INSET, bottom: CHAT_BUBBLE_INSET }
+            }
+          >
+            {/* Header — drag handle */}
+            <div
+              className={cn(
+                "flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0",
+                "cursor-grab active:cursor-grabbing select-none",
+              )}
+              style={{ touchAction: "none" }}
+              onPointerDown={onHeaderPointerDown}
+              onPointerMove={onHeaderPointerMove}
+              onPointerUp={onHeaderPointerUp}
+              onLostPointerCapture={onHeaderLostPointerCapture}
+            >
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Sparkles className="size-3.5 text-primary shrink-0" />
+                  <span className="font-semibold text-foreground truncate">{pageLabel}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {threadActive ? "Active thread" : "New conversation"}
+                </span>
+              </div>
+              <div className="flex items-center gap-0.5">
+                <TooltipIconButton
+                  tooltip="New Thread"
+                  size="icon"
+                  className="size-7"
+                  onClick={startNewThread}
+                >
+                  <SquarePen className="size-3.5" />
+                </TooltipIconButton>
+                <TooltipIconButton
+                  tooltip="Expand chat"
+                  size="icon"
+                  className="size-7"
+                  onClick={expandChat}
+                >
+                  <Maximize2 className="size-3.5" />
+                </TooltipIconButton>
+                <TooltipIconButton
+                  tooltip="Close"
+                  size="icon"
+                  className="size-7"
+                  onClick={handleClose}
+                >
+                  <X className="size-4" />
+                </TooltipIconButton>
+              </div>
+            </div>
+
+            {/* Thread */}
+            <ThreadPrimitive.Root className="flex flex-col flex-1 overflow-hidden">
+              <div className="relative flex-1 overflow-hidden">
+                {/* A module can take the conversation's place here exactly as it
+                  can in the expanded chat. The bubble carries the same
+                  composer actions, so a call can START here — and without
+                  this it would run with the ordinary transcript showing and
+                  no visualiser, because the surface suppresses its own
+                  floating panel while the stage is registered. */}
+                {ThreadSurface && (
+                  <div className="absolute inset-0 z-10 overflow-hidden bg-background">
+                    <ThreadSurface />
                   </div>
-                </ThreadPrimitive.Empty>
+                )}
+                <ThreadPrimitive.Viewport
+                  className={cn("absolute inset-0 overflow-y-auto", ThreadSurface && "invisible")}
+                  aria-hidden={ThreadSurface ? true : undefined}
+                >
+                  <ThreadPrimitive.Empty>
+                    <div className="flex h-full items-center justify-center p-4">
+                      <p className="text-sm text-muted-foreground text-center">
+                        Ask the agent about this page
+                      </p>
+                    </div>
+                  </ThreadPrimitive.Empty>
 
-                <ThreadPrimitive.If empty={false}>
-                  {/* pb: the last thing in the scroller is often the running
+                  <ThreadPrimitive.If empty={false}>
+                    {/* pb: the last thing in the scroller is often the running
                       status ("Thinking"), and with no bottom padding it sat
                       directly on the composer's top border. */}
-                  <div className="px-4 pt-4 pb-3">
-                    <ThreadPrimitive.Messages
-                      components={{
-                        UserMessage: BubbleUserMessage,
-                        AssistantMessage: BubbleAssistantMessage,
-                      }}
-                    />
-                    <ThreadPrimitive.If running>
-                      <LoadingIndicator />
-                    </ThreadPrimitive.If>
-                  </div>
+                    <div className="px-4 pt-4 pb-3">
+                      <ThreadPrimitive.Messages
+                        components={{
+                          UserMessage: BubbleUserMessage,
+                          AssistantMessage: BubbleAssistantMessage,
+                        }}
+                      />
+                      <ThreadPrimitive.If running>
+                        <LoadingIndicator />
+                      </ThreadPrimitive.If>
+                    </div>
+                  </ThreadPrimitive.If>
+                </ThreadPrimitive.Viewport>
+                <ThreadPrimitive.If empty={false}>
+                  {/* Hidden while a surface owns the viewport — see the same
+                      note in assistant-chat.tsx. */}
+                  {!ThreadSurface && <BubbleScrollToBottomButton />}
                 </ThreadPrimitive.If>
-              </ThreadPrimitive.Viewport>
-              <ThreadPrimitive.If empty={false}>
-                <BubbleScrollToBottomButton />
-              </ThreadPrimitive.If>
-            </div>
+              </div>
 
-            {/* Composer — same pattern as full chat: attachment + input + send */}
-            <div className="shrink-0 border-t border-border">
-              <ChatComposerBannerSlot />
-              <div className="px-3 py-3">
-                <ComposerPrimitive.Root
-                className={cn(
-                  // Query container for the controls inside: the bubble is
-                  // a narrow panel in a wide window, so they have to size
-                  // against THIS box, not the viewport.
-                  "@container",
-                  "flex flex-col gap-1",
-                  "rounded-2xl border border-input",
-                  "bg-background shadow-sm",
-                  "px-3 py-2",
-                  "focus-within:border-primary/50",
-                  "transition-all duration-200",
-                )}
-              >
-                <ComposerSubmitBridge />
-                <ComposerContextBadges />
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center -space-x-1 shrink-0">
-                    <ComposerPrimitive.AddAttachment asChild>
-                      <TooltipIconButton
-                        tooltip="Attach file"
-                        size="icon"
-                        className="size-7 shrink-0"
-                      >
-                        <Paperclip className="size-3.5" />
-                      </TooltipIconButton>
-                    </ComposerPrimitive.AddAttachment>
-                    {/* The bubble is the chat you use WHILE reading a
-                        document, so it needs the pin at least as much as
-                        the expanded composer does. */}
-                    <ContextPins compact showPinButton />
-                  </div>
-                  <ComposerPrimitive.Input
-                    autoFocus
-                    placeholder="Message..."
-                    rows={1}
+              {/* Composer — same pattern as full chat: attachment + input + send */}
+              <div className="shrink-0 border-t border-border">
+                <ChatComposerBannerSlot />
+                <div className="px-3 py-3">
+                  <ComposerPrimitive.Root
                     className={cn(
-                      "flex-1 bg-transparent",
-                      "py-1 text-sm",
-                      "text-foreground outline-none",
-                      "placeholder:text-muted-foreground",
-                      "resize-none max-h-20",
+                      // Query container for the controls inside: the bubble is
+                      // a narrow panel in a wide window, so they have to size
+                      // against THIS box, not the viewport.
+                      "@container",
+                      "flex flex-col gap-1",
+                      "rounded-2xl border border-input",
+                      "bg-background shadow-sm",
+                      "px-3 py-2",
+                      "focus-within:border-primary/50",
+                      "transition-all duration-200",
                     )}
-                  />
-                  {/* Right-hand slot, mirroring the expanded composer:
+                  >
+                    <ComposerContextBadges />
+                    <div className="flex items-center gap-2">
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        {/* The bubble is the chat you use WHILE reading a
+                        document, so it needs the pin at least as much as
+                        the expanded composer does — it just lives in the
+                        menu now rather than owning a permanent icon. */}
+                        <ComposerAddMenu compact />
+                        <ContextPins compact />
+                      </div>
+                      <ComposerPrimitive.Input
+                        autoFocus
+                        placeholder={DEFAULT_COMPOSER_PLACEHOLDER}
+                        rows={1}
+                        className={cn(
+                          "flex-1 bg-transparent",
+                          "py-1 text-sm",
+                          "text-foreground outline-none",
+                          "placeholder:text-muted-foreground",
+                          "resize-none max-h-20",
+                        )}
+                      />
+                      {/* Right-hand slot, mirroring the expanded composer:
                       settings sit beside Send, not among the attachment
                       icons. Hidden while running, like the expanded one. */}
-                  <ThreadPrimitive.If running={false}>
-                    <ReasoningEffortPicker />
-                  </ThreadPrimitive.If>
-                  <ThreadPrimitive.If running>
-                    <ComposerPrimitive.Cancel asChild>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="rounded-full size-8 shrink-0"
-                        aria-label="Stop"
-                      >
-                        <Square className="size-3" />
-                      </Button>
-                    </ComposerPrimitive.Cancel>
-                  </ThreadPrimitive.If>
-                  <ThreadPrimitive.If running={false}>
-                    <ComposerPrimitive.Send asChild>
-                      <Button
-                        size="icon"
-                        className="rounded-full size-8 shrink-0"
-                        aria-label="Send"
-                      >
-                        <ArrowUp className="size-4" />
-                      </Button>
-                    </ComposerPrimitive.Send>
-                  </ThreadPrimitive.If>
+                      <ThreadPrimitive.If running={false}>
+                        <ReasoningEffortPicker />
+                      </ThreadPrimitive.If>
+                      <ChatComposerActionsSlot />
+                      <ThreadPrimitive.If running>
+                        <ComposerPrimitive.Cancel asChild>
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="rounded-full size-8 shrink-0"
+                            aria-label="Stop"
+                          >
+                            <Square className="size-3" />
+                          </Button>
+                        </ComposerPrimitive.Cancel>
+                      </ThreadPrimitive.If>
+                      {!actionsOwnSend && (
+                        <ThreadPrimitive.If running={false}>
+                          <ComposerPrimitive.Send asChild>
+                            <Button
+                              size="icon"
+                              className="rounded-full size-8 shrink-0"
+                              aria-label="Send"
+                            >
+                              <ArrowUp className="size-4" />
+                            </Button>
+                          </ComposerPrimitive.Send>
+                        </ThreadPrimitive.If>
+                      )}
+                    </div>
+                  </ComposerPrimitive.Root>
                 </div>
-                </ComposerPrimitive.Root>
               </div>
-            </div>
-          </ThreadPrimitive.Root>
-        </div>
-      )}
+            </ThreadPrimitive.Root>
+          </div>
+        )}
+      </>
     </>
   );
 }

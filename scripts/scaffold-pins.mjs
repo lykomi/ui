@@ -16,6 +16,10 @@ const RUNTIME_PACKAGE_DIRS = [
   "packages/web-primitives",
   "packages/web-ui",
   "packages/web-shell",
+  // The template pins this like any other runtime package. Voice is opt-in
+  // at RUNTIME (`VITE_VOICE_PROXY_URL`), not at scaffold time, so the pin is
+  // always present and always has to stay in step with what is published.
+  "packages/web-voice",
 ];
 
 const CLI_ROOT = "packages/create-foundry-ui-app";

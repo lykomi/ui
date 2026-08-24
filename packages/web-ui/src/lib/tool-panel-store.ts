@@ -106,8 +106,7 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
   renderers: [],
 
   openPanel: (content) => set({ isOpen: true, content }),
-  registerRenderer: (entry) =>
-    set((state) => ({ renderers: [...state.renderers, entry] })),
+  registerRenderer: (entry) => set((state) => ({ renderers: [...state.renderers, entry] })),
   closePanel: () => set({ isOpen: false, isFullscreen: false }),
   setContent: (content) => set({ content }),
   setPanelWidth: (width) => {

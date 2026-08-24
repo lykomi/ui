@@ -5,6 +5,7 @@ import { TooltipProvider } from "../ui/tooltip.tsx";
 import { AGUIAdapterSDK } from "../lib/ag-ui-adapter.ts";
 import { FileAttachmentAdapter } from "../lib/attachment-adapter.ts";
 import { useAttachmentAdapterStore } from "../lib/attachment-registry.ts";
+import { useVoiceAdapterStore } from "../lib/voice-adapter-registry.ts";
 import { ShowDocumentToolUI } from "./show-document-tool-ui.tsx";
 import { ClientToolExecutor } from "./client-tool-executor.tsx";
 
@@ -97,9 +98,7 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
 
   const innerKey = `${props.threadId ?? "fresh"}:${resetKey}`;
 
-  return (
-    <AGUIRuntimeInner key={innerKey} {...props} resetThread={resetThread} />
-  );
+  return <AGUIRuntimeInner key={innerKey} {...props} resetThread={resetThread} />;
 }
 
 function AGUIRuntimeInner({
@@ -152,6 +151,14 @@ function AGUIRuntimeInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyAdapterFactory, urlMatch]);
 
+  // Voice is opt-in and host-supplied (see ``registerVoiceAdapter``).
+  // Both slots stay absent unless a module registered one, so a runtime
+  // without voice is byte-for-byte the runtime that existed before:
+  // assistant-ui reports the capability as unavailable and every voice
+  // affordance hides itself.
+  const voiceAdapter = useVoiceAdapterStore((s) => s.voice);
+  const speechAdapter = useVoiceAdapterStore((s) => s.speech);
+
   const runtime = useLocalRuntime(adapter, {
     adapters: {
       attachments: attachmentAdapter,
@@ -160,6 +167,8 @@ function AGUIRuntimeInner({
       // assistant-ui calls .load() on mount to seed past messages and
       // .append() after every turn.
       ...(historyAdapter ? { history: historyAdapter } : {}),
+      ...(voiceAdapter ? { voice: voiceAdapter } : {}),
+      ...(speechAdapter ? { speech: speechAdapter } : {}),
     },
   });
 

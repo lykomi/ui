@@ -41,16 +41,46 @@ describe("template dependency ranges", () => {
       ...Object.keys(template.devDependencies ?? {}),
       ...Object.keys(template.overrides ?? {}),
     ];
-    expect(names.filter((n) => n.startsWith("@assistant-ui/"))).toEqual([
-      "@assistant-ui/react",
-    ]);
+    expect(names.filter((n) => n.startsWith("@assistant-ui/"))).toEqual(["@assistant-ui/react"]);
   });
 
-  it("scaffolds the foundry packages at one coordinated version", () => {
+  /**
+   * The four that ship as one release (`fixed` in `.changeset/config.json`)
+   * must scaffold at one version — a template mixing 0.20.1 with 0.19.0 of a
+   * `fixed` group installs two copies of React context holders.
+   *
+   * `foundry-web-voice` is deliberately NOT in that group: it is optional and
+   * releases on its own cadence, so it is listed here by absence rather than
+   * by a prefix match. A new coordinated package must be added to this list,
+   * which is the point — a prefix match would have silently swept an
+   * independently-versioned package back into the invariant.
+   */
+  const COORDINATED = [
+    "@iloveagents/foundry-agent",
+    "@iloveagents/foundry-web-primitives",
+    "@iloveagents/foundry-web-ui",
+    "@iloveagents/foundry-web-shell",
+  ];
+
+  it("scaffolds the coordinated foundry packages at one version", () => {
+    const deps = template.dependencies as Record<string, string>;
+    const ranges = COORDINATED.map((name) => {
+      expect(deps[name], `${name} missing from the template`).toBeTruthy();
+      return deps[name];
+    });
+    expect(new Set(ranges).size).toBe(1);
+  });
+
+  it("keeps every scaffolded foundry package pinned exactly", () => {
+    // Independently-versioned packages may differ from the group, but none
+    // of them may drift to a range: the scaffold pins exact versions so a
+    // generated app is reproducible.
     const foundry = Object.entries(template.dependencies as Record<string, string>).filter(
       ([name]) => name.startsWith("@iloveagents/foundry-"),
     );
-    expect(foundry.length).toBeGreaterThan(0);
-    expect(new Set(foundry.map(([, range]) => range)).size).toBe(1);
+    expect(foundry.length).toBeGreaterThan(COORDINATED.length - 1);
+    for (const [name, range] of foundry) {
+      expect(range, `${name} should be an exact version`).toMatch(/^\d+\.\d+\.\d+/);
+    }
   });
 });

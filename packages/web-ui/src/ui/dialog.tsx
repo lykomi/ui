@@ -48,9 +48,7 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {/* ThemeScope ensures portaled dialogs inherit the active theme */}
-      <ThemeScope style={{ display: "contents" }}>
-      {children}
-      </ThemeScope>
+      <ThemeScope style={{ display: "contents" }}>{children}</ThemeScope>
       {showCloseButton ? (
         <DialogPrimitive.Close
           className={cn(

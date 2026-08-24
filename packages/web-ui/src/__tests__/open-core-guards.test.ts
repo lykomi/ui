@@ -45,6 +45,18 @@ const OPEN_CORE_GRAPH: Record<string, string[]> = {
     "@iloveagents/foundry-web-ui",
     "@iloveagents/foundry-agent",
   ],
+  // The optional voice tier is a *module*: it composes the UI packages, and
+  // nothing composes it. It must never appear in another package's allowed
+  // list, or "optional" stops being true.
+  //
+  // `foundry-voice-live-react` shares the @iloveagents scope but is a
+  // different product (the Azure Voice Live SDK), consumed from npm like any
+  // third-party dependency — not a sibling in this workspace.
+  "@iloveagents/foundry-web-voice": [
+    "@iloveagents/foundry-web-ui",
+    "@iloveagents/foundry-agent",
+    "@iloveagents/foundry-voice-live-react",
+  ],
 };
 
 /**
@@ -204,7 +216,9 @@ describe("open-core guards", () => {
             // packages (@ltwlf/* today; @lastspace/* was the pre-rename scope);
             // allow-listing is enforced for sibling @iloveagents/* deps.
             if (imp.startsWith("@lastspace/") || imp.startsWith("@ltwlf/")) {
-              violations.push(`${relative(ROOT, file)} -> ${imp} (commercial downstream import forbidden)`);
+              violations.push(
+                `${relative(ROOT, file)} -> ${imp} (commercial downstream import forbidden)`,
+              );
               continue;
             }
             if (!imp.startsWith("@iloveagents/")) continue;

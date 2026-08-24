@@ -96,6 +96,46 @@ bootstrapShell({
 
 Keep `@import "@iloveagents/foundry-web-ui/styles.css";` in `src/index.css`; it exposes the package theme tokens to Tailwind.
 
+## Talk To It
+
+Voice is wired up and switched on by configuration, not by a flag. Set one
+variable and a microphone appears in the composer:
+
+```bash
+# .env
+VITE_VOICE_PROXY_URL=ws://localhost:8080/ws?model=gpt-realtime
+```
+
+Leave it unset and nothing is registered — no microphone, no cost, the app is
+exactly what it was.
+
+You need a proxy because a browser cannot put a credential on a WebSocket:
+
+```bash
+docker run -p 8080:8080 \
+  -e FOUNDRY_RESOURCE_NAME=your-foundry-resource \
+  -e FOUNDRY_API_KEY="…" \
+  -e ALLOWED_ORIGINS="http://localhost:8010" \
+  ghcr.io/iloveagents/foundry-voice-live-proxy:latest
+```
+
+> The default model (`gpt-realtime`) is available in **East US 2** and
+> **Sweden Central**.
+
+The default mode is **relay**: Voice Live transcribes what you say and speaks
+the answer, but *your* agent still answers it. A spoken turn is an ordinary
+turn — same tools, same retrieval, same history — so nothing about your agent
+changes because the question arrived by microphone. While a call is live the
+conversation is replaced by a visualiser (or an avatar, if you configure one)
+and comes straight back when you hang up.
+
+Switch to `mode: "realtime"` in `src/main.tsx` to let the Voice Live model
+answer directly instead: much faster, but it only knows what your client-side
+tools tell it. On laptop speakers add `halfDuplex: true` so the assistant does
+not hear itself.
+
+Full options: [`@iloveagents/foundry-web-voice`](https://www.npmjs.com/package/@iloveagents/foundry-web-voice).
+
 ## Add A Tool
 
 Add a function in `agent/app/tools.py` and include it in `AGENT_TOOLS`:

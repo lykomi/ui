@@ -111,4 +111,3 @@ describe("selection-context", () => {
     expect(resolveSelectionContext(input("x")).item.label).toBe("high x");
   });
 });
-

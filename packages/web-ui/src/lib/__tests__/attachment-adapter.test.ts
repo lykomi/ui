@@ -59,8 +59,7 @@ describe("FileAttachmentAdapter.send", () => {
       {
         type: "file",
         data: "aGVsbG8=",
-        mimeType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename: "brief.docx",
       },
     ]);
