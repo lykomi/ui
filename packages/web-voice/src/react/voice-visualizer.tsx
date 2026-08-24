@@ -102,12 +102,20 @@ export function VoiceVisualizer({
     let level = 0;
     let frame: number | null = null;
     let sinceColorRead = 0;
+    // The CSS-pixel size draw() works in. Cached here rather than measured per
+    // frame: getBoundingClientRect() forces layout, and at 60fps for the length
+    // of a call that is a self-inflicted reflow on every single frame. The only
+    // thing that can change it is a resize, and that has its own observer.
+    let cssWidth = 0;
+    let cssHeight = 0;
 
     // Device pixels, so the strokes are crisp rather than upscaled.
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       const { width, height } = canvas.getBoundingClientRect();
       if (!width || !height) return;
+      cssWidth = width;
+      cssHeight = height;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -132,7 +140,8 @@ export function VoiceVisualizer({
         sinceColorRead = 0;
         colors = readColors(canvas);
       }
-      const { width, height } = canvas.getBoundingClientRect();
+      const width = cssWidth;
+      const height = cssHeight;
       const cx = width / 2;
       const cy = height / 2;
 

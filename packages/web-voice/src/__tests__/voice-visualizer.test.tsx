@@ -11,6 +11,7 @@ import { VoiceVisualizer } from "../react/voice-visualizer.tsx";
 /** Counts paints: every draw() opens at least one path. */
 let paints = 0;
 let resizeCallback: (() => void) | null = null;
+let rectSpy: ReturnType<typeof vi.fn>;
 
 const fakeCtx = {
   setTransform: vi.fn(),
@@ -56,8 +57,8 @@ beforeAll(() => {
   HTMLCanvasElement.prototype.getContext = vi.fn(
     () => fakeCtx,
   ) as unknown as HTMLCanvasElement["getContext"];
-  // A zero-sized canvas makes resize() bail before it clears anything.
-  HTMLCanvasElement.prototype.getBoundingClientRect = vi.fn(() => ({
+  // resize() bails on a zero-sized canvas, so give it a real box.
+  rectSpy = vi.fn(() => ({
     width: 300,
     height: 300,
     top: 0,
@@ -66,7 +67,9 @@ beforeAll(() => {
     bottom: 300,
     x: 0,
     y: 0,
-  })) as unknown as HTMLElement["getBoundingClientRect"];
+  }));
+  HTMLCanvasElement.prototype.getBoundingClientRect =
+    rectSpy as unknown as HTMLElement["getBoundingClientRect"];
 });
 
 afterAll(() => {
@@ -125,5 +128,43 @@ describe("VoiceVisualizer (static path)", () => {
     });
 
     expect(paints).toBeGreaterThan(0);
+  });
+});
+
+describe("VoiceVisualizer (animating path)", () => {
+  it("does not measure layout on every frame", async () => {
+    // getBoundingClientRect() forces layout. Calling it once per frame at 60fps
+    // for the length of a call is a self-inflicted reflow on every frame; the
+    // CSS size only changes on resize, which has its own observer.
+    const frames: FrameRequestCallback[] = [];
+    const rafSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb: FrameRequestCallback) => {
+        frames.push(cb);
+        return frames.length;
+      });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+
+    const analyser = {
+      fftSize: 256,
+      frequencyBinCount: 128,
+      getByteFrequencyData: (b: Uint8Array) => b.fill(10),
+    } as unknown as AnalyserNode;
+
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => root!.render(<VoiceVisualizer analyser={analyser} />));
+
+    const afterMount = rectSpy.mock.calls.length;
+    // Run ten animation frames.
+    for (let i = 0; i < 10; i++) {
+      const next = frames.shift();
+      if (!next) break;
+      await act(async () => next(performance.now()));
+    }
+
+    expect(rectSpy.mock.calls.length).toBe(afterMount);
+    rafSpy.mockRestore();
   });
 });

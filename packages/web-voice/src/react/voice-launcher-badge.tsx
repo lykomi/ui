@@ -36,7 +36,14 @@ export function VoiceLauncherBadge() {
         }`}
       />
       {/* Revealed on hover of the launcher group — the slot is documented to
-          support exactly this, so ending a call never needs the panel. */}
+          support exactly this, so ending a call never needs the panel.
+          Hidden with opacity, never `display:none`: a display-hidden control
+          is not focusable, so it drops out of the tab order entirely and no
+          `focus-visible:` rule on it can ever fire. That would leave keyboard
+          and screen-reader users with a live microphone and no way to stop it
+          — the very thing this badge exists to prevent. `group-focus-within`
+          reveals it when tabbed to, and `pointer-events-none` keeps the
+          invisible state from swallowing clicks meant for the launcher. */}
       <button
         type="button"
         onClick={(e) => {
@@ -47,9 +54,11 @@ export function VoiceLauncherBadge() {
         }}
         aria-label="End voice conversation"
         className={
-          "pointer-events-auto ml-1 hidden items-center gap-1 rounded-full bg-background/95 " +
-          "px-2 py-1 text-xs text-foreground shadow ring-1 ring-border group-hover:flex " +
-          "focus-visible:flex"
+          "pointer-events-none ml-1 flex items-center gap-1 rounded-full bg-background/95 " +
+          "px-2 py-1 text-xs text-foreground opacity-0 shadow ring-1 ring-border " +
+          "transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 " +
+          "group-focus-within:pointer-events-auto group-focus-within:opacity-100 " +
+          "focus-visible:pointer-events-auto focus-visible:opacity-100"
         }
       >
         <PhoneOff className="size-3.5" />
