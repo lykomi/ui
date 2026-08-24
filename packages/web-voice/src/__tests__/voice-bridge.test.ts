@@ -622,6 +622,88 @@ describe("session lifecycle", () => {
     expect(disconnectsAfter, "a stale pending connect was acted on").toBe(0);
   });
 
+  it("does not let a stale attempt erase a newer one's pending record", async () => {
+    // The other half of the shared-flag bug: when the superseded connection
+    // finally settles it used to clear `pendingConnect` unconditionally — the
+    // record belonging to a NEWER attempt that was itself still connecting. A
+    // later close then found nothing pending and left that transport coming up
+    // with no host.
+    const stale = fakeControls();
+    let releaseStale: (() => void) | null = null;
+    stale.connect = () =>
+      new Promise<void>((resolve) => {
+        releaseStale = () => resolve();
+      });
+
+    const fresh = fakeControls();
+    let freshDisconnects = 0;
+    const stopFresh = fresh.disconnect;
+    fresh.disconnect = () => {
+      freshDisconnects += 1;
+      stopFresh();
+    };
+    let freshStarted = false;
+    fresh.connect = () => {
+      freshStarted = true;
+      return new Promise<void>(() => {}); // still connecting
+    };
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(stale);
+    bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(releaseStale).not.toBeNull());
+
+    bridge.attach(fresh);
+    bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(freshStarted).toBe(true));
+
+    // The superseded one settles. It must not touch the newer attempt.
+    releaseStale!();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+
+    bridge.handleClosed();
+
+    expect(freshDisconnects, "the newer pending transport was left coming up").toBe(1);
+  });
+
+  it("does not let a superseded connection come up behind a newer call", async () => {
+    // Abandonment used to be a boolean on the bridge, so starting a second
+    // call reset it. If the FIRST transport then came up, its continuation saw
+    // "not abandoned", marked itself connected and started its meter — a
+    // microphone open with no host, and the newer attempt's pending record
+    // cleared out from under it. The token makes each attempt answer only for
+    // itself.
+    const stale = fakeControls();
+    let releaseStale: (() => void) | null = null;
+    stale.connect = () =>
+      new Promise<void>((resolve) => {
+        releaseStale = () => {
+          stale.connected = true;
+          resolve();
+        };
+      });
+
+    const bridge = new VoiceBridge(relay());
+    bridge.attach(stale);
+    const first = bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(releaseStale).not.toBeNull());
+
+    // A second call supersedes it before the first transport ever came up.
+    const fresh = fakeControls();
+    bridge.attach(fresh);
+    const second = bridge.createAdapter().connect({});
+    await vi.waitFor(() => expect(second.status.type).toBe("running"));
+
+    // Only now does the stale transport finish connecting.
+    releaseStale!();
+
+    await vi.waitFor(() => expect(stale.connected, "a superseded mic went live").toBe(false));
+    expect(first.status.type, "the superseded session started anyway").not.toBe("running");
+    // The newer call is untouched by the old one settling.
+    expect(second.status.type).toBe("running");
+    expect(fresh.connected).toBe(true);
+  });
+
   it("takes down a connection that never settles when the host leaves", async () => {
     // `setup` re-checks `abandoned` past its await, so a connection that
     // arrives late is already handled. The case that path cannot reach is the

@@ -19,7 +19,6 @@ import { submitComposerText, useComposerSubmitStore } from "../../lib/composer-s
 const sent: string[] = [];
 
 let draft = "";
-let gate: Promise<void> | null = null;
 let attachments: { id: string; file?: File }[] = [];
 const sentWith: { text: string; attachments: string[] }[] = [];
 
@@ -28,19 +27,6 @@ const composer = {
   setText: (t: string) => {
     draft = t;
     sent.push(t);
-  },
-  clearAttachments: async () => {
-    // Real attachment work spans ticks; that is what lets two submissions
-    // overlap at all. `gate` lets a test hold the bridge INSIDE that window,
-    // which is the only way to observe interleaving — awaiting a few ticks
-    // and hoping is how the first version of these tests passed against the
-    // very defects they were written for.
-    if (gate) await gate;
-    attachments = [];
-  },
-  addAttachment: async (file: File) => {
-    await Promise.resolve();
-    attachments = [...attachments, { id: file.name, file }];
   },
   // The real composer clears text AND attachments on send.
   send: () => {
@@ -72,7 +58,6 @@ afterEach(async () => {
   sent.length = 0;
   sentWith.length = 0;
   draft = "";
-  gate = null;
   attachments = [];
   useComposerSubmitStore.setState({ pending: null });
 });
@@ -167,197 +152,25 @@ describe("composer submit store", () => {
     expect(draft).toBe("");
   });
 
-  it("does not send the user's attachment with a spoken turn", async () => {
-    // The damaging half: text can be retyped, a file cannot be un-sent.
-    await mount(<ComposerSubmitBridge />);
-    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
-    attachments = [{ id: "contract.pdf", file }];
-
-    await act(async () => submitComposerText("what is the notice period?"));
-    await settle();
-
-    expect(sentWith).toHaveLength(1);
-    expect(sentWith[0]!.text).toBe("what is the notice period?");
-    expect(sentWith[0]!.attachments, "the user's file rode along").toEqual([]);
-  });
-
-  it("puts the attachment back afterwards", async () => {
-    await mount(<ComposerSubmitBridge />);
-    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
-    attachments = [{ id: "contract.pdf", file }];
-
-    await act(async () => submitComposerText("spoken turn"));
-    await settle();
-
-    expect(attachments.map((a) => a.id)).toEqual(["contract.pdf"]);
-  });
-
-  it("sends rather than destroys an attachment it cannot put back", async () => {
-    // Re-adding needs the original File, and an attachment that has been
-    // through an adapter may not have one. The choice is then between sending
-    // it with the wrong message and losing it outright — and losing it is
-    // worse, so it is left in place and goes with the turn, exactly as before
-    // this change. Written down because it is a deliberate limit, not an
-    // oversight: the composer clears on send, so "still there afterwards" is
-    // not an outcome available here.
-    await mount(<ComposerSubmitBridge />);
-    attachments = [{ id: "already-uploaded" }];
-
-    await act(async () => submitComposerText("spoken turn"));
-    await settle();
-
-    expect(sentWith).toHaveLength(1);
-    expect(sentWith[0]!.attachments, "it was silently dropped rather than sent").toEqual([
-      "already-uploaded",
-    ]);
-  });
-
-  it("runs a second submission after the first, not interleaved with it", async () => {
-    // `claim()` stops the same submission being sent twice; it says nothing
-    // about two DIFFERENT ones overlapping. The gate holds the first inside
-    // its attachment work while the second arrives, which is the actual
-    // failure: two save/restore sequences trampling each other's snapshot.
-    // (Two submissions in the same TICK is a different matter — the store has
-    // one pending slot, so the first is replaced before any consumer sees it.
-    // That needs a queue in the store, and VAD cannot finalise two transcripts
-    // in one tick, so it is deliberately left alone.)
-    await mount(<ComposerSubmitBridge />);
-    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
-    attachments = [{ id: "contract.pdf", file }];
-
-    let open: (() => void) | null = null;
-    gate = new Promise<void>((resolve) => {
-      open = () => resolve();
-    });
-
-    await act(async () => submitComposerText("first spoken turn"));
-    await settle();
-    // The first is now parked inside clearAttachments. Nothing sent yet.
-    expect(sentWith).toHaveLength(0);
-
-    await act(async () => submitComposerText("second spoken turn"));
-    await settle();
-    expect(sentWith, "the second turn overtook the first").toHaveLength(0);
-
-    gate = null;
-    open!();
-    for (let i = 0; i < 6; i++) await settle();
-
-    expect(sentWith.map((t) => t.text)).toEqual(["first spoken turn", "second spoken turn"]);
-    for (const turn of sentWith) {
-      expect(turn.attachments, "an attachment rode along with a turn").toEqual([]);
-    }
-    expect(
-      attachments.map((a) => a.id),
-      "the attachment was lost between the two turns",
-    ).toEqual(["contract.pdf"]);
-  });
-
-  it("does not put a stale draft back over newer typing", async () => {
-    // The user keeps typing while the attachments are being lifted out. A
-    // draft snapshotted at the START of that sequence is written back over
-    // whatever they have since added. The gate is what makes "while" real.
-    await mount(<ComposerSubmitBridge />);
-    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
-    attachments = [{ id: "contract.pdf", file }];
-    draft = "half a thought";
-
-    let open: (() => void) | null = null;
-    gate = new Promise<void>((resolve) => {
-      open = () => resolve();
-    });
-
-    await act(async () => submitComposerText("spoken turn"));
-    await settle();
-
-    // Typed while the bridge is parked mid-sequence.
-    draft = "half a thought, now finished";
-
-    gate = null;
-    open!();
-    for (let i = 0; i < 6; i++) await settle();
-
-    expect(draft, "a stale draft was written back over newer typing").toBe(
-      "half a thought, now finished",
-    );
-  });
-
-  it("serialises across bridges, not just within one", async () => {
-    // Several bridges can be mounted, and one that unmounts mid-sequence hands
-    // nothing over. With a queue per component the next bridge's turn simply
-    // overtakes the one still in flight, attaching the restored file to the
-    // wrong turn. What has to be serialised is the composer, and there is one.
-    const first = document.createElement("div");
-    document.body.appendChild(first);
-    const firstRoot = createRoot(first);
-    await act(async () => firstRoot.render(<ComposerSubmitBridge />));
-
-    const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
-    attachments = [{ id: "contract.pdf", file }];
-
-    let open: (() => void) | null = null;
-    gate = new Promise<void>((resolve) => {
-      open = () => resolve();
-    });
-
-    await act(async () => submitComposerText("first spoken turn"));
-    await settle();
-    expect(sentWith).toHaveLength(0); // parked inside the attachment work
-
-    // That bridge goes away; a different one picks up the next turn.
-    await act(async () => firstRoot.unmount());
-    first.remove();
-    await mount(<ComposerSubmitBridge />);
-    await act(async () => submitComposerText("second spoken turn"));
-    await settle();
-    expect(sentWith, "a second bridge overtook the first").toHaveLength(0);
-
-    gate = null;
-    open!();
-    for (let i = 0; i < 8; i++) await settle();
-
-    expect(sentWith.map((t) => t.text)).toEqual(["first spoken turn", "second spoken turn"]);
-    expect(attachments.map((a) => a.id)).toEqual(["contract.pdf"]);
-  });
-
-  it("does not let one stalled attachment stop every later turn", async () => {
-    // Attachment work goes through a host adapter and can stall. Awaiting it
-    // unbounded in a SHARED chain means one hung upload silently stops every
-    // later spoken turn for the life of the page — the same shape as a speech
-    // queue waiting on a completion that never comes.
-    vi.useFakeTimers();
-    try {
+  it("sends the user's pending attachment with the turn — a known limitation", () => {
+    // Not preserving attachments is a decision, recorded here so it cannot be
+    // mistaken for an oversight. There is no way to send without them
+    // (`SendOptions` is `{ startRun, steer }`), so preserving them means
+    // lifting them out and adding them back — asynchronous work through a host
+    // adapter that produced four separate defects in short order. Keeping this
+    // synchronous is what makes it easy to be sure about.
+    return (async () => {
       await mount(<ComposerSubmitBridge />);
       const file = new File(["x"], "contract.pdf", { type: "application/pdf" });
       attachments = [{ id: "contract.pdf", file }];
+      draft = "half a thought";
 
-      // Never resolves, and nobody opens it.
-      gate = new Promise<void>(() => {});
+      await act(async () => submitComposerText("spoken turn"));
 
-      await act(async () => submitComposerText("first spoken turn"));
-      await act(async () => {
-        await Promise.resolve();
-      });
-      expect(sentWith, "it should still be parked at this point").toHaveLength(0);
-
-      // The backstop fires and the chain moves on.
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(11_000);
-      });
-      expect(
-        sentWith.map((t) => t.text),
-        "a stalled attachment wedged the queue",
-      ).toEqual(["first spoken turn"]);
-
-      // And a later turn is not stuck behind it.
-      gate = null;
-      await act(async () => submitComposerText("second spoken turn"));
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(11_000);
-      });
-      expect(sentWith.map((t) => t.text)).toEqual(["first spoken turn", "second spoken turn"]);
-    } finally {
-      vi.useRealTimers();
-    }
+      expect(sentWith).toHaveLength(1);
+      expect(sentWith[0]!.attachments).toEqual(["contract.pdf"]);
+      // The text half IS preserved, and that is the common case.
+      expect(draft).toBe("half a thought");
+    })();
   });
 });

@@ -121,18 +121,23 @@ export class VoiceBridge {
    */
   private cancelledBeforeCreated = false;
   /**
-   * The host went away. Set even while connecting, which `connected` cannot
-   * express — it is false both before a call and during one that is still
-   * being set up, and only one of those may go on to start a session.
+   * The connection attempt currently allowed to become a session.
+   *
+   * A token per attempt, not a boolean on the bridge. A boolean is shared, so
+   * starting a second call reset it — and if the FIRST transport then came up,
+   * its continuation saw "not abandoned", marked itself connected, and left a
+   * microphone open with no host, while also clearing the newer attempt's
+   * pending record. Each attempt compares its own token, so an obsolete
+   * continuation can never mistake a later call's state for permission.
    */
-  private abandoned = false;
+  private attempt: symbol | null = null;
   /**
    * A connection that has been asked for but has not settled.
    *
    * Held so that abandoning a call can take the transport down NOW rather than
    * waiting on a promise that may never resolve — a permission prompt left
-   * open, a transport that stalls. `setup` re-checks `abandoned` past its
-   * await and covers a connection that arrives late; the case it cannot reach
+   * open, a transport that stalls. `setup` re-checks its attempt token past
+   * the await and covers a connection that arrives late; the case it cannot reach
    * is the one that never arrives, which is exactly this.
    */
   private pendingConnect: { controls: VoiceTransportControls } | null = null;
@@ -197,7 +202,8 @@ export class VoiceBridge {
           // does not exist. Awaiting first therefore left a discarded session
           // able to acquire the microphone minutes later with no control able
           // to stop it.
-          this.abandoned = false;
+          const attempt = Symbol("voice-connect");
+          this.attempt = attempt;
           const connecting = controls.connect();
           this.pendingConnect = { controls };
           if (abortSignal) {
@@ -235,13 +241,16 @@ export class VoiceBridge {
             await connecting;
           }
 
-          this.pendingConnect = null;
-          if (this.abandoned) {
-            // The host unmounted while this was connecting. Nothing is left to
-            // control the transport, so do not let it become a live session.
+          if (this.attempt === attempt) this.pendingConnect = null;
+          if (this.attempt !== attempt) {
+            // Abandoned: the host went away, or a newer call superseded this
+            // one. Either way nothing remains that would control this
+            // transport, so it must not become a live session. `endCall()` is
+            // NOT called here — a newer attempt may already own the bridge,
+            // and tearing its state down is exactly the confusion a shared
+            // flag caused.
             controls.disconnect();
-            this.endCall();
-            throw new Error("Voice host unmounted while connecting");
+            throw new Error("Voice connection superseded before it completed");
           }
 
           this.connected = true;
@@ -384,7 +393,7 @@ export class VoiceBridge {
     // `connected` is only true once `connect()` resolves, so it cannot tell
     // "no call yet" from "a call still coming up" — and only the second of
     // those has anything to tear down.
-    this.abandoned = true;
+    this.attempt = null;
 
     // A connection may still be on its way up with nothing left to control it.
     // Take it down now; one that resolves LATER is caught inside `setup`,
