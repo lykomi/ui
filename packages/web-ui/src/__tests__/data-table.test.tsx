@@ -927,6 +927,44 @@ describe("useDataTable + DataTable", () => {
     ).toBe(rowsBefore);
   });
 
+  it("the row holding the selection bar cannot break in two", () => {
+    // Counting DOM children cannot see this one: the toolbar still has one
+    // child row, but that row WRAPS. The lead region shares its line with a
+    // search that has a width floor, so once the pane is narrower than the
+    // search the selection bar is pushed onto a second flex line and the
+    // toolbar grows exactly as it did before — same jump, different cause
+    // (review catch). jsdom does no layout, so what is observable here is
+    // the declaration: this region wraps for facets and never for a
+    // selection.
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          enableRowSelection
+          toolbarProps={{ selectionBar: <span data-bar="">selected</span> }}
+          onTable={(t) => (table = t)}
+        />,
+      );
+    });
+    const lead = () => container!.querySelector("[data-toolbar-lead]")!;
+    expect(lead().getAttribute("data-toolbar-lead")).toBe("filters");
+    expect(
+      lead().className,
+      "the filter region has to keep stacking facets into rows",
+    ).toContain("flex-wrap");
+
+    act(() => table.getRow("t1").toggleSelected(true));
+
+    expect(lead().getAttribute("data-toolbar-lead")).toBe("selection");
+    expect(
+      lead().className,
+      "the selection bar can wrap below the search and grow the toolbar",
+    ).toContain("flex-nowrap");
+  });
+
   it("layout=inline keeps one wrapping row", () => {
     container = document.createElement("div");
     document.body.appendChild(container);

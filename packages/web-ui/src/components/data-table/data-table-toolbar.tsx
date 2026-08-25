@@ -300,15 +300,25 @@ export function DataTableToolbar<T>({
               Search stays put, exactly as it does when stacked: it is how
               you narrow what you are selecting from, and only the filter
               controls give way. */}
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <div
+            data-toolbar-lead={showSelectionBar ? "selection" : "filters"}
+            className={cn(
+              "flex min-w-0 flex-1 items-center gap-2",
+              // Facets genuinely want rows: six of them in a narrow pane
+              // should stack rather than scroll off the side. A selection
+              // bar is the opposite — one row by definition. Left wrapping,
+              // it drops below the search as soon as the search alone is
+              // wider than the space, which grows the toolbar again and is
+              // the jump this whole change exists to remove (review catch).
+              showSelectionBar ? "flex-nowrap" : "flex-wrap",
+            )}
+          >
             {searchNode}
             {showSelectionBar ? (
-              // `overflow-x-auto` and no wrapping: this wrapper shares one
-              // row with the fixed-width search and the non-shrinking right
-              // group, so in a narrow pane it can be squeezed small — and a
-              // bar that WRAPS there grows the toolbar again, which is the
-              // jump this whole change exists to remove (review catch).
-              // Scrolling the bar keeps the row exactly one row high.
+              // The bar shares this row with a search that has a width
+              // floor and a right group that does not shrink, so in a
+              // narrow pane it gets squeezed. It scrolls rather than
+              // wrapping inside itself — the row stays exactly one high.
               <div
                 data-selection-row=""
                 className="min-w-0 flex-1 overflow-x-auto [&>*]:flex-nowrap"
