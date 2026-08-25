@@ -122,3 +122,69 @@ describe("ThemeScope reaches portalled UI", () => {
     expect(document.documentElement.style.getPropertyValue("--primary")).toBe(BLUE);
   });
 });
+
+describe("two independently mounted outer scopes", () => {
+  let hostA: HTMLDivElement;
+  let hostB: HTMLDivElement;
+  let rootA: Root;
+  let rootB: Root;
+
+  beforeEach(() => {
+    document.documentElement.removeAttribute("style");
+    hostA = document.createElement("div");
+    hostB = document.createElement("div");
+    document.body.append(hostA, hostB);
+    rootA = createRoot(hostA);
+    rootB = createRoot(hostB);
+  });
+
+  afterEach(() => {
+    hostA.remove();
+    hostB.remove();
+    document.documentElement.removeAttribute("style");
+  });
+
+  const GREEN = "#00A36C";
+  const scope = (colour: string) => (
+    <ThemeRuntimeProvider
+      layers={[{ id: colour, definition: { light: { primary: colour } } as never }]}
+      mode="light"
+    >
+      <ThemeScope>x</ThemeScope>
+    </ThemeRuntimeProvider>
+  );
+
+  it("hands the document back to the base when the LAST one leaves, whatever the order", () => {
+    // The case a per-effect snapshot cannot get right: A writes blue, B
+    // snapshots blue and writes green, A unmounts FIRST. B's snapshot now
+    // names a value whose owner is gone, so restoring it on B's unmount
+    // leaves the document themed by nobody (review catch).
+    act(() => rootA.render(scope(BLUE)));
+    expect(document.documentElement.style.getPropertyValue("--primary")).toBe(BLUE);
+
+    act(() => rootB.render(scope(GREEN)));
+    expect(document.documentElement.style.getPropertyValue("--primary")).toBe(GREEN);
+
+    // Out of order: the FIRST one leaves first.
+    act(() => rootA.unmount());
+    expect(
+      document.documentElement.style.getPropertyValue("--primary"),
+      "the live owner's theme was clobbered by a departing one",
+    ).toBe(GREEN);
+
+    act(() => rootB.unmount());
+    expect(
+      document.documentElement.style.getPropertyValue("--primary"),
+      "the document kept a theme whose owner had unmounted",
+    ).toBe("");
+  });
+
+  it("still restores correctly in LIFO order", () => {
+    act(() => rootA.render(scope(BLUE)));
+    act(() => rootB.render(scope(GREEN)));
+    act(() => rootB.unmount());
+    expect(document.documentElement.style.getPropertyValue("--primary")).toBe(BLUE);
+    act(() => rootA.unmount());
+    expect(document.documentElement.style.getPropertyValue("--primary")).toBe("");
+  });
+});
