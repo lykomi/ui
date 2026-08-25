@@ -320,6 +320,14 @@ export function DataTableToolbar<T>({
               // floor and a right group that does not shrink, so in a
               // narrow pane it gets squeezed. It scrolls rather than
               // wrapping inside itself — the row stays exactly one high.
+              //
+              // And the scrollbar itself stays out of layout. A classic,
+              // space-consuming one — Windows and Linux by default, macOS
+              // set to "always show" — appears only once the bar overflows,
+              // which is only once something is ticked, so its height lands
+              // on the toolbar as the same jump by another route (review
+              // catch). `[data-selection-row]` in `styles.css` keeps it out
+              // of layout; hiding the widget does not hide the scrolling.
               <div data-selection-row="" className="min-w-0 flex-1 overflow-x-auto">
                 <SelectionBarSingleLine value={true}>{selectionBar}</SelectionBarSingleLine>
               </div>

@@ -151,6 +151,10 @@ function mount(props: Omit<Parameters<typeof Harness>[0], "onTable">) {
   };
 }
 
+/** Source as shipped — for the invariants that live in CSS, which jsdom
+ *  lays out not at all. */
+const read = (relative: string) => readFileSync(resolve(process.cwd(), relative), "utf8");
+
 /** The real bar, so these assertions are about the shipped class names.
  *  `onTable` runs during the Harness's own render, before children render,
  *  so this reads a live table. */
@@ -509,7 +513,6 @@ describe("what the table actually draws", () => {
   it("keeps frozen cells under the sticky header", () => {
     // The regression this guards: a frozen cell painted over the sticky header
     // while scrolling, because the cell's z-index outranked the header row's.
-    const read = (relative: string) => readFileSync(resolve(process.cwd(), relative), "utf8");
     const css = read("src/styles.css");
     const zOf = (selector: string) => {
       const rule = new RegExp(`\\[data-pinned="${selector}"\\][^}]*z-index:\\s*(\\d+)`).exec(css);
@@ -1002,6 +1005,17 @@ describe("useDataTable + DataTable", () => {
       );
     });
     act(() => table.getRow("t1").toggleSelected(true));
+
+    // jsdom lays nothing out, so what is checkable is that the row this
+    // element scrolls in is the one `styles.css` keeps a scrollbar out of.
+    // A classic, space-consuming scrollbar appears exactly when the bar
+    // overflows — exactly when something is ticked — and its height lands
+    // on the toolbar as the same jump by another route (review catch).
+    expect(container!.querySelector("[data-selection-row]")).not.toBeNull();
+    expect(
+      /\[data-selection-row\][^}]*scrollbar-width:\s*none/.test(read("src/styles.css")),
+      "nothing keeps the scrollbar out of the selection row's height",
+    ).toBe(true);
 
     const bar = container!.querySelector("[data-selection-bar]")!;
     const actions = container!.querySelector("[data-selection-actions]")!;
