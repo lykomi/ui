@@ -88,6 +88,16 @@ export function ThemeScope({
   // anything portalled anywhere inherits. Nested scopes keep the div only:
   // they exist to theme a subtree differently, and must not overwrite the
   // document with their own values.
+  //
+  // Residual, stated because it is a real limit and not an oversight: a
+  // NESTED scope's own portalled content still resolves the document's
+  // (outermost) theme, because the portal escapes the nested div and the
+  // nested scope deliberately does not publish. That is strictly better
+  // than before — such content used to get the base `:root` preset rather
+  // than any theme at all — and the remedy already exists and is used:
+  // wrap the portalled content in a `ThemeScope`, as `ui/dialog.tsx` does
+  // with `display: contents`. Context reaches through a portal, so the
+  // nested scope's variables land on the portalled subtree (review catch).
   // BEFORE paint, not after. A portal that exists on the very first render —
   // a default-open dialog, an overlay restored during hydration — would
   // otherwise paint once against the base `:root` preset and then correct
