@@ -107,6 +107,21 @@ export interface ThemeBranding {
    */
   iconUrl?: string;
   darkIconUrl?: string;
+  /**
+   * Rendered height of the mark, as a CSS length (`"2rem"`, `"32px"`).
+   * Defaults to the 20px lockup height when unset.
+   *
+   * A wordmark is not interchangeable with an icon at one fixed height. Marks
+   * that carry a tagline under the name — a common wordmark shape — turn the
+   * tagline into an unreadable smear at 20px, and the whole lockup reads as
+   * undersized next to the product name. The tenant supplying the asset is the
+   * only one who knows how much height it needs, so this is theirs to set.
+   *
+   * Validated, not interpolated blindly: the value reaches an inline style and
+   * themes are tenant-authored content, so anything that is not a plain
+   * non-negative CSS length in px/rem/em is ignored in favour of the default.
+   */
+  logoHeight?: string;
 }
 
 export interface ThemeDefinition {
@@ -241,6 +256,7 @@ const BRANDING_KEYS = [
   "darkLogoUrl",
   "iconUrl",
   "darkIconUrl",
+  "logoHeight",
 ] as const satisfies readonly (keyof ThemeBranding)[];
 
 function cleanObject<T extends object>(

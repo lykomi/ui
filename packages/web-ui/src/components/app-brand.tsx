@@ -10,6 +10,8 @@ export interface BrandLockup {
   isIcon: boolean;
   name: string;
   showName: boolean;
+  /** Validated CSS height for the mark, or undefined to use the default. */
+  height?: string;
 }
 
 /**
@@ -25,6 +27,20 @@ export interface BrandLockup {
  * "<mark> Product Name", which is what a tenant whose product name differs
  * from their company name is asking for.
  */
+/**
+ * A tenant-supplied length, or undefined.
+ *
+ * The value lands in an inline `style`, and a theme is content a tenant
+ * authors — so this allowlists a shape rather than trying to spot bad ones.
+ * Anything else (a `calc()`, a `var()`, a url, a second declaration smuggled
+ * in behind a `;`) fails the pattern and the caller falls back to the default
+ * height, which is always a safe thing to render.
+ */
+export function _safeLogoHeight(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return /^\d+(?:\.\d+)?(?:px|rem|em)$/.test(value.trim()) ? value.trim() : undefined;
+}
+
 export function _resolveBrandLockup(
   branding: ThemeBranding,
   mode: "light" | "dark",
@@ -42,6 +58,7 @@ export function _resolveBrandLockup(
     isIcon: Boolean(iconUrl),
     name: branding.appName || "Foundry UI",
     showName: showName && (Boolean(iconUrl) || !markUrl),
+    height: _safeLogoHeight(branding.logoHeight),
   };
 }
 
@@ -65,6 +82,7 @@ export function AppBrand({
         <img
           src={lockup.markUrl}
           alt={lockup.name}
+          style={lockup.height ? { height: lockup.height } : undefined}
           className={cn(
             "shrink-0 object-contain",
             // Both lock HEIGHT and let width follow the aspect ratio. Sizing an
@@ -74,7 +92,15 @@ export function AppBrand({
             // replaced. Marks are rarely square, so height is the only
             // dimension worth fixing. The max-width is just a runaway guard:
             // tighter for an icon, which has to leave room for the name.
-            lockup.isIcon ? "h-5 w-auto max-w-8" : "h-5 w-auto max-w-[7rem]",
+            // `branding.logoHeight` overrides the height and, with it, the
+            // max-width guard: a taller mark is wider in proportion, so
+            // keeping the 7rem cap would letterbox exactly the marks that
+            // asked for more room.
+            lockup.height
+              ? "w-auto"
+              : lockup.isIcon
+                ? "h-5 w-auto max-w-8"
+                : "h-5 w-auto max-w-[7rem]",
             iconClassName,
           )}
         />

@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { _resolveBrandLockup } from "../components/app-brand.tsx";
+import { _resolveBrandLockup, _safeLogoHeight } from "../components/app-brand.tsx";
 
 describe("_resolveBrandLockup", () => {
   it("falls back to the generic glyph and the default name", () => {
@@ -101,6 +101,48 @@ describe("_resolveBrandLockup", () => {
       );
       expect(l.markUrl).toBe("icon.svg");
       expect(l.showName).toBe(true);
+    });
+  });
+
+  describe("logoHeight", () => {
+    it("carries a valid length onto the lockup", () => {
+      // A wordmark with a tagline under it is illegible at the default 20px;
+      // the tenant who supplied the asset is the one who knows how much
+      // height it needs.
+      for (const h of ["2rem", "32px", "1.5em", "2.25rem"]) {
+        expect(_resolveBrandLockup({ logoUrl: "w.png", logoHeight: h }, "light", true).height).toBe(
+          h,
+        );
+      }
+    });
+
+    it("is undefined when unset, so the default height still applies", () => {
+      expect(_resolveBrandLockup({ logoUrl: "w.png" }, "light", true).height).toBeUndefined();
+    });
+
+    it("refuses anything that is not a plain length", () => {
+      // The value reaches an inline style and a theme is tenant-authored
+      // content. Allowlist the shape: a rejected value falls back to the
+      // default height, which is always safe to render.
+      const bad = [
+        "2rem; background: url(http://evil/x)",
+        "calc(100% - 4px)",
+        "var(--x)",
+        "expression(alert(1))",
+        "url(data:,)",
+        "-2rem",
+        "100%",
+        "2 rem",
+        "",
+        "   ",
+      ];
+      for (const h of bad) {
+        expect(_safeLogoHeight(h)).toBeUndefined();
+      }
+    });
+
+    it("trims incidental whitespace rather than rejecting it", () => {
+      expect(_safeLogoHeight("  2rem  ")).toBe("2rem");
     });
   });
 });
