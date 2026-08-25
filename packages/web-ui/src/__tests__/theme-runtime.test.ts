@@ -159,6 +159,21 @@ describe("theme runtime", () => {
     expect(src).not.toContain("text-sidebar-foreground/60");
   });
 
+  it("lets a custom-sized mark shrink inside its header", () => {
+    // A fixed max-width is always the wrong number for someone: 20rem is
+    // 320px while an expanded sidebar is 248px, so a 4:1 wordmark at the 4rem
+    // ceiling still overflowed and pushed the collapse button out. The bound
+    // has to be the container, and the image has to be allowed to narrow —
+    // `shrink-0` is what turns "too wide" into "off screen".
+    const src = readFileSync(
+      join(import.meta.dirname!, "../components/app-brand.tsx"),
+      "utf-8",
+    );
+    expect(src).toContain('lockup.height ? "min-w-0 shrink" : "shrink-0"');
+    expect(src).toContain('"w-auto max-w-full"');
+    expect(src).not.toContain("max-w-[20rem]");
+  });
+
   it("falls back to the default preset for unknown names", () => {
     expect(getThemePreset("unknown-preset")).toEqual(getThemePreset("foundry-violet"));
   });

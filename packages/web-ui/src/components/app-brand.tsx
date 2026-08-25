@@ -100,7 +100,12 @@ export function AppBrand({
           alt={lockup.name}
           style={lockup.height ? { height: lockup.height } : undefined}
           className={cn(
-            "shrink-0 object-contain",
+            "object-contain",
+            // A custom mark must be able to SHRINK. `shrink-0` is right for the
+            // 20px default, whose max-widths already fit every header; for a
+            // taller one it is the thing that pushes the collapse button out
+            // of the sidebar instead of letting the image narrow.
+            lockup.height ? "min-w-0 shrink" : "shrink-0",
             // Both lock HEIGHT and let width follow the aspect ratio. Sizing an
             // icon into a square box (`size-5`) silently shrinks any mark that
             // is not 1:1 — `object-contain` letterboxes a 4:3 glyph to 20x15,
@@ -108,13 +113,15 @@ export function AppBrand({
             // replaced. Marks are rarely square, so height is the only
             // dimension worth fixing. The max-width is just a runaway guard:
             // tighter for an icon, which has to leave room for the name.
-            // `branding.logoHeight` overrides the HEIGHT, and the width guard
-            // grows with it rather than disappearing: the 7rem cap is sized
-            // for a 20px mark and would letterbox a taller one, but dropping
-            // every bound lets a mistyped height push the header's actions
-            // off screen (the mark is `shrink-0`).
+            // `branding.logoHeight` overrides the HEIGHT, and the width is
+            // bounded by the CONTAINER rather than by a number picked here.
+            // The 7rem cap is sized for a 20px mark and would letterbox a
+            // taller one; a bigger fixed cap is just a different wrong number
+            // — 20rem is 320px while an expanded sidebar is 248px, so a 4:1
+            // wordmark at the 4rem ceiling (256px) still overflowed it.
+            // `max-w-full` is whatever the header actually has.
             lockup.height
-              ? "w-auto max-w-[20rem]"
+              ? "w-auto max-w-full"
               : lockup.isIcon
                 ? "h-5 w-auto max-w-8"
                 : "h-5 w-auto max-w-[7rem]",
