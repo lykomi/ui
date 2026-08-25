@@ -72,6 +72,40 @@ describe("theme runtime", () => {
     expect(runtime.variables["--success" as keyof typeof runtime.variables]).toBeTruthy();
   });
 
+  it("lets a theme colour the sidebar icons without dragging the labels", () => {
+    // A brand whose mark is a colour wants the icons in it and the labels
+    // still readable. Before `sidebarIcon` the only lever was
+    // `sidebarForeground`, which is the LABEL colour — reaching the icons
+    // through it turned every label the brand colour too.
+    const runtime = resolveThemeRuntime(
+      [
+        {
+          id: "t",
+          definition: {
+            sidebar: { light: { sidebarForeground: "#1f2937", sidebarIcon: "#A4C407" } },
+          },
+        },
+      ],
+      "light",
+    );
+    const v = runtime.variables as Record<string, string>;
+    expect(v["--sidebar-icon"]).toBe("#A4C407");
+    expect(v["--sidebar-foreground"]).toBe("#1f2937");
+  });
+
+  it("resolves the icon colour to the previous rendering when unset", () => {
+    // The default must reproduce the previous rendering exactly — the label
+    // colour at 60% — so adding the token moves no existing theme.
+    const runtime = resolveThemeRuntime(
+      [{ id: "t", definition: { sidebar: { light: { sidebarForeground: "#1f2937" } } } }],
+      "light",
+    );
+    const v = runtime.variables as Record<string, string>;
+    expect(v["--sidebar-icon"]).toBe(
+      "color-mix(in srgb, var(--sidebar-foreground) 60%, transparent)",
+    );
+  });
+
   it("falls back to the default preset for unknown names", () => {
     expect(getThemePreset("unknown-preset")).toEqual(getThemePreset("foundry-violet"));
   });

@@ -32,6 +32,16 @@ export interface ThemeSidebarSlots {
   sidebarAccentForeground?: string;
   sidebarSelected?: string;
   sidebarSelectedForeground?: string;
+  /**
+   * Colour of the icons in the sidebar's idle rows.
+   *
+   * Separate from `sidebarForeground` because a brand whose mark is a colour
+   * usually wants the icons in that colour and the LABELS still readable —
+   * tinting `sidebarForeground` to reach the icons drags every label with it.
+   * Unset resolves to the previous behaviour (the label colour at 60%), so no
+   * existing theme moves.
+   */
+  sidebarIcon?: string;
   sidebarBorder?: string;
   sidebarRing?: string;
 }
@@ -194,6 +204,7 @@ const SIDEBAR_KEYS = [
   "sidebarAccentForeground",
   "sidebarSelected",
   "sidebarSelectedForeground",
+  "sidebarIcon",
   "sidebarBorder",
   "sidebarRing",
 ] as const satisfies readonly (keyof ThemeSidebarSlots)[];
@@ -379,6 +390,7 @@ function toCssVars(
     ["--sidebar-accent-foreground" as string]: sidebar.sidebarAccentForeground,
     ["--sidebar-selected" as string]: sidebar.sidebarSelected,
     ["--sidebar-selected-foreground" as string]: sidebar.sidebarSelectedForeground,
+    ["--sidebar-icon" as string]: sidebar.sidebarIcon,
     ["--sidebar-border" as string]: sidebar.sidebarBorder,
     ["--sidebar-ring" as string]: sidebar.sidebarRing,
     ["--success" as string]: status.success,
@@ -440,6 +452,7 @@ function defaultSidebar(colors: ThemeColorSlots): ThemeSidebarSlots {
     sidebarAccentForeground: colors.accentForeground!,
     sidebarSelected: colors.muted!,
     sidebarSelectedForeground: colors.foreground!,
+    sidebarIcon: `color-mix(in srgb, ${colors.foreground!} 60%, transparent)`,
     sidebarBorder: colors.border!,
     sidebarRing: colors.ring!,
   };
@@ -573,6 +586,7 @@ export const FOUNDRY_VIOLET_THEME: ThemeDefinition = {
       sidebarAccentForeground: "color-mix(in srgb, var(--foreground) 92%, var(--primary) 8%)",
       sidebarSelected: "var(--muted)",
       sidebarSelectedForeground: "var(--foreground)",
+      sidebarIcon: "color-mix(in srgb, var(--sidebar-foreground) 60%, transparent)",
       sidebarBorder: "color-mix(in srgb, var(--border) 96%, var(--foreground) 4%)",
       sidebarRing: "oklch(43% 0.24 286)",
     },
@@ -585,6 +599,7 @@ export const FOUNDRY_VIOLET_THEME: ThemeDefinition = {
       sidebarAccentForeground: "color-mix(in srgb, var(--foreground) 90%, white 10%)",
       sidebarSelected: "color-mix(in srgb, var(--muted) 78%, var(--background) 22%)",
       sidebarSelectedForeground: "var(--foreground)",
+      sidebarIcon: "color-mix(in srgb, var(--sidebar-foreground) 60%, transparent)",
       sidebarBorder: "color-mix(in srgb, var(--border) 90%, white 10%)",
       sidebarRing: "oklch(0.72 0.18 286)",
     },
