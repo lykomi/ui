@@ -35,6 +35,7 @@ import {
   type DataTableState,
 } from "../components/data-table/state.ts";
 import { selectionColumn } from "../components/data-table/selection-column.tsx";
+import { DataTableSelectionBar } from "../components/data-table/data-table-selection-bar.tsx";
 import { Checkbox } from "@iloveagents/foundry-web-primitives";
 import {
   defaultHiddenColumns,
@@ -148,6 +149,20 @@ function mount(props: Omit<Parameters<typeof Harness>[0], "onTable">) {
       return table;
     },
   };
+}
+
+/** The real bar, so these assertions are about the shipped class names.
+ *  `onTable` runs during the Harness's own render, before children render,
+ *  so this reads a live table. */
+let barTable: Table<Task> | null = null;
+function BulkBar() {
+  if (!barTable) return null;
+  return (
+    <DataTableSelectionBar table={barTable} label="task">
+      <button type="button">Archive</button>
+      <button type="button">Delete</button>
+    </DataTableSelectionBar>
+  );
 }
 
 const renderedIds = () =>
@@ -963,6 +978,76 @@ describe("useDataTable + DataTable", () => {
       lead().className,
       "the selection bar can wrap below the search and grow the toolbar",
     ).toContain("flex-nowrap");
+  });
+
+  it("the bar's own bulk actions cannot wrap either", () => {
+    // The row not wrapping is only half of it. The bar sitting in that row
+    // has flex containers of its own, and its actions container wrapping
+    // its buttons grows the toolbar exactly as a second flex line would —
+    // the same jump, one level down (review catch).
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          enableRowSelection
+          toolbarProps={{ selectionBar: <BulkBar /> }}
+          onTable={(t) => {
+            table = t;
+            barTable = t;
+          }}
+        />,
+      );
+    });
+    act(() => table.getRow("t1").toggleSelected(true));
+
+    const bar = container!.querySelector("[data-selection-bar]")!;
+    const actions = container!.querySelector("[data-selection-actions]")!;
+    expect(bar.className, "the bar itself can wrap in the shared row").toContain(
+      "flex-nowrap",
+    );
+    expect(
+      actions.className,
+      "the bulk actions can wrap inside a bar that cannot",
+    ).toContain("flex-nowrap");
+  });
+
+  it("a standalone selection bar still wraps", () => {
+    // The constraint belongs to the toolbar row, not to the bar. Rendered
+    // anywhere else — including the stacked layout, where the bar has a row
+    // of its own — wrapping is right and has to survive.
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          enableRowSelection
+          onTable={(t) => {
+            table = t;
+            barTable = t;
+          }}
+        />,
+      );
+    });
+    act(() => table.getRow("t1").toggleSelected(true));
+
+    const standalone = document.createElement("div");
+    document.body.appendChild(standalone);
+    const barRoot = createRoot(standalone);
+    act(() => barRoot.render(<BulkBar />));
+
+    expect(standalone.querySelector("[data-selection-bar]")!.className).toContain(
+      "flex-wrap",
+    );
+    expect(standalone.querySelector("[data-selection-actions]")!.className).toContain(
+      "flex-wrap",
+    );
+    act(() => barRoot.unmount());
+    standalone.remove();
   });
 
   it("layout=inline keeps one wrapping row", () => {

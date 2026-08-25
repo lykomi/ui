@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "../../ui/dropdown-menu.tsx";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter.tsx";
+import { SelectionBarSingleLine } from "./data-table-selection-bar.tsx";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { DataTableViewOptions } from "./data-table-view-options.tsx";
 import { columnLabel, normalizeFacetValue, type DataTableFacetOption } from "./facets.ts";
@@ -319,11 +320,8 @@ export function DataTableToolbar<T>({
               // floor and a right group that does not shrink, so in a
               // narrow pane it gets squeezed. It scrolls rather than
               // wrapping inside itself — the row stays exactly one high.
-              <div
-                data-selection-row=""
-                className="min-w-0 flex-1 overflow-x-auto [&>*]:flex-nowrap"
-              >
-                {selectionBar}
+              <div data-selection-row="" className="min-w-0 flex-1 overflow-x-auto">
+                <SelectionBarSingleLine value={true}>{selectionBar}</SelectionBarSingleLine>
               </div>
             ) : (
               <>
