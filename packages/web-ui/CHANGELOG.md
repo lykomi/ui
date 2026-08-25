@@ -1,5 +1,25 @@
 # @iloveagents/foundry-web-ui
 
+## 0.21.1
+
+### Patch Changes
+
+- f61f4cd: `DataTableToolbar`: a selection bar now takes toolbar space in the
+  non-stacked layout too, instead of adding a row. A list with no facets grew
+  by one row the moment the first row was ticked, shoving the table down under
+  the cursor mid-click — the jump the stacked layout already avoided by
+  swapping its filter row for the selection bar. Search stays put in both
+  layouts; only the filter controls give way.
+- a0d2401: Theme variables now reach portalled UI. `ThemeScope` put them on a div, but
+  Radix portals mount into `document.body` — outside it — so dropdowns,
+  popovers, selects and tooltips fell back to `:root` and rendered in the base
+  preset while the page around them wore the customer's theme. The outermost
+  scope now publishes to the document element as well; nested scopes keep the
+  div only, so a subtree can still be themed differently without repainting
+  the page when it mounts.
+  - @iloveagents/foundry-agent@0.21.1
+  - @iloveagents/foundry-web-primitives@0.21.1
+
 ## 0.21.0
 
 ### Minor Changes
