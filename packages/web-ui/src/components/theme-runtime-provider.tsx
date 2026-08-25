@@ -83,14 +83,35 @@ type RootThemeWrite = { id: symbol; vars: Record<string, string> };
 const rootThemeStack: RootThemeWrite[] = [];
 const rootThemeBase = new Map<string, { value: string; priority: string }>();
 // What this module last put on the element, per name. Anything else there
-// now came from outside, and outside wins — see `applyTopRootTheme`.
-const rootThemeWritten = new Map<string, string>();
+// now came from outside, and outside wins — see `applyTopRootTheme`. Value
+// AND priority: a host re-declaring the same value as `!important` has said
+// something new about that name, and comparing values alone would read it as
+// our own write and quietly drop the flag (review catch).
+const rootThemeWritten = new Map<string, { value: string; priority: string }>();
+
+function currentlyOurs(root: HTMLElement, name: string): boolean {
+  const written = rootThemeWritten.get(name);
+  if (written === undefined) return true;
+  return (
+    root.style.getPropertyValue(name) === written.value
+    && root.style.getPropertyPriority(name) === written.priority
+  );
+}
+
+function rememberWrite(root: HTMLElement, name: string): void {
+  // Read back rather than storing what we passed: the browser normalises the
+  // value, and a comparison against the un-normalised string would read
+  // every one of our own writes as somebody else's.
+  rootThemeWritten.set(name, {
+    value: root.style.getPropertyValue(name),
+    priority: root.style.getPropertyPriority(name),
+  });
+}
 
 function applyTopRootTheme(root: HTMLElement): void {
   const top = rootThemeStack[rootThemeStack.length - 1];
   for (const [name, base] of rootThemeBase) {
-    const written = rootThemeWritten.get(name);
-    if (written !== undefined && root.style.getPropertyValue(name) !== written) {
+    if (!currentlyOurs(root, name)) {
       // Someone outside this module wrote this name after we did — a host
       // theme manager, a design-mode preview, a test. Their write is newer
       // than anything we have to say about it, so we neither overwrite it
@@ -110,10 +131,7 @@ function applyTopRootTheme(root: HTMLElement): void {
       rootThemeWritten.delete(name);
       continue;
     }
-    // Read back rather than storing what we passed: the browser normalises
-    // the value, and a comparison against the un-normalised string would
-    // read every one of our own writes as somebody else's.
-    rootThemeWritten.set(name, root.style.getPropertyValue(name));
+    rememberWrite(root, name);
   }
 }
 

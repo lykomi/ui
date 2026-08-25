@@ -225,6 +225,22 @@ describe("two independently mounted outer scopes", () => {
     ).toBe(HOST);
   });
 
+  it("notices an outside write that only adds !important", () => {
+    // The same value with a priority is still something new said about that
+    // name, and a value-only comparison reads it as our own write — then
+    // the next scope overwrites it without the flag (review catch).
+    act(() => rootA.render(scope(BLUE)));
+    document.documentElement.style.setProperty("--primary", BLUE, "important");
+
+    act(() => rootB.render(scope(GREEN)));
+
+    expect(document.documentElement.style.getPropertyValue("--primary")).toBe(BLUE);
+    expect(
+      document.documentElement.style.getPropertyPriority("--primary"),
+      "the host's !important was dropped",
+    ).toBe("important");
+  });
+
   it("still restores correctly in LIFO order", () => {
     act(() => rootA.render(scope(BLUE)));
     act(() => rootB.render(scope(GREEN)));
