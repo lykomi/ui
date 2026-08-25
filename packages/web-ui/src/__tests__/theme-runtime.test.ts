@@ -106,6 +106,39 @@ describe("theme runtime", () => {
     );
   });
 
+  it("does not move a theme authored before these slots existed", () => {
+    // Shaped like the themes real deployments ship (eomi, and customer
+    // tenants): every sidebar slot set EXCEPT the new one. Adding a slot must
+    // be inert for them — an existing deployment must not repaint on upgrade,
+    // which is the whole reason the default reproduces the old value instead
+    // of deriving something nicer from `primary`.
+    const legacySidebar = {
+      sidebar: "#ffffff",
+      sidebarForeground: "#1f2937",
+      sidebarPrimary: "#0075BE",
+      sidebarPrimaryForeground: "#ffffff",
+      sidebarAccent: "#e8f2f8",
+      sidebarAccentForeground: "#0f172a",
+      sidebarBorder: "#d8dfe5",
+      sidebarRing: "#0075BE",
+      sidebarSelectedForeground: "#0075BE",
+    };
+    const runtime = resolveThemeRuntime(
+      [{ id: "legacy", definition: { sidebar: { light: legacySidebar } } }],
+      "light",
+    );
+    const v = runtime.variables as Record<string, string>;
+
+    for (const [key, value] of Object.entries(legacySidebar)) {
+      const cssVar = "--" + key.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
+      expect(v[cssVar]).toBe(value);
+    }
+    // ...and the icons keep the tint the hardcoded class used to apply.
+    expect(v["--sidebar-icon"]).toBe(
+      "color-mix(in srgb, var(--sidebar-foreground) 60%, transparent)",
+    );
+  });
+
   it("falls back to the default preset for unknown names", () => {
     expect(getThemePreset("unknown-preset")).toEqual(getThemePreset("foundry-violet"));
   });
