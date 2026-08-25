@@ -139,6 +139,13 @@ describe("two independently mounted outer scopes", () => {
   });
 
   afterEach(() => {
+    // Unmount, don't just detach: the document-level theme is module state,
+    // and a root left mounted keeps its place in the ownership stack for
+    // every test that follows.
+    act(() => {
+      rootA.unmount();
+      rootB.unmount();
+    });
     hostA.remove();
     hostB.remove();
     document.documentElement.removeAttribute("style");
@@ -177,6 +184,45 @@ describe("two independently mounted outer scopes", () => {
       document.documentElement.style.getPropertyValue("--primary"),
       "the document kept a theme whose owner had unmounted",
     ).toBe("");
+  });
+
+  it("a rerender of the first one does not take the theme back", () => {
+    // Its place in the stack belongs to the scope, not to its latest write.
+    // An inline `layers` array hands back a new `variables` object on every
+    // render, so re-registering on each change would let A's ordinary
+    // rerender jump over a B that mounted after it — newest WRITE winning
+    // instead of newest OWNER (review catch).
+    act(() => rootA.render(scope(BLUE)));
+    act(() => rootB.render(scope(GREEN)));
+
+    act(() => rootA.render(scope(BLUE)));
+
+    expect(
+      document.documentElement.style.getPropertyValue("--primary"),
+      "a rerender re-ordered the scopes",
+    ).toBe(GREEN);
+  });
+
+  it("leaves a name alone once something outside has written it", () => {
+    // A host theme manager, a design-mode preview, a test: whoever wrote
+    // after us has the newer word on that name. Restoring our snapshot over
+    // it on unmount would silently undo them (review catch).
+    act(() => rootA.render(scope(BLUE)));
+    const HOST = "#123456";
+    document.documentElement.style.setProperty("--primary", HOST);
+
+    act(() => rootB.render(scope(GREEN)));
+    expect(
+      document.documentElement.style.getPropertyValue("--primary"),
+      "a later scope overwrote the host",
+    ).toBe(HOST);
+
+    act(() => rootA.unmount());
+    act(() => rootB.unmount());
+    expect(
+      document.documentElement.style.getPropertyValue("--primary"),
+      "cleanup restored over the host's own value",
+    ).toBe(HOST);
   });
 
   it("still restores correctly in LIFO order", () => {

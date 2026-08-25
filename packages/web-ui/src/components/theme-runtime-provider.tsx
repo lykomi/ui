@@ -82,10 +82,22 @@ export function useThemeRuntime(): ResolvedThemeRuntime {
 type RootThemeWrite = { id: symbol; vars: Record<string, string> };
 const rootThemeStack: RootThemeWrite[] = [];
 const rootThemeBase = new Map<string, { value: string; priority: string }>();
+// What this module last put on the element, per name. Anything else there
+// now came from outside, and outside wins — see `applyTopRootTheme`.
+const rootThemeWritten = new Map<string, string>();
 
 function applyTopRootTheme(root: HTMLElement): void {
   const top = rootThemeStack[rootThemeStack.length - 1];
   for (const [name, base] of rootThemeBase) {
+    const written = rootThemeWritten.get(name);
+    if (written !== undefined && root.style.getPropertyValue(name) !== written) {
+      // Someone outside this module wrote this name after we did — a host
+      // theme manager, a design-mode preview, a test. Their write is newer
+      // than anything we have to say about it, so we neither overwrite it
+      // now nor restore over it later: the name is theirs from here
+      // (review catch).
+      continue;
+    }
     const next = top?.vars[name];
     if (next !== undefined) {
       root.style.setProperty(name, String(next));
@@ -95,12 +107,27 @@ function applyTopRootTheme(root: HTMLElement): void {
       root.style.setProperty(name, base.value, base.priority);
     } else {
       root.style.removeProperty(name);
+      rootThemeWritten.delete(name);
+      continue;
     }
+    // Read back rather than storing what we passed: the browser normalises
+    // the value, and a comparison against the un-normalised string would
+    // read every one of our own writes as somebody else's.
+    rootThemeWritten.set(name, root.style.getPropertyValue(name));
   }
 }
 
-/** Publish `vars` on the document until the returned cleanup runs. */
-function pushRootTheme(root: HTMLElement, vars: Record<string, string>): () => void {
+/**
+ * Publish `vars` on the document for `id`, claiming a place in the stack the
+ * first time and KEEPING it afterwards.
+ *
+ * Keeping it is the point: a scope whose theme merely changes — a rerender
+ * that hands back a new `variables` object, even a semantically identical
+ * one from an inline `layers` array — must not jump over a scope that
+ * mounted after it. Re-registering on every dependency change would make
+ * the newest write win instead of the newest owner (review catch).
+ */
+function writeRootTheme(root: HTMLElement, id: symbol, vars: Record<string, string>): void {
   for (const name of Object.keys(vars)) {
     if (!rootThemeBase.has(name)) {
       rootThemeBase.set(name, {
@@ -109,15 +136,21 @@ function pushRootTheme(root: HTMLElement, vars: Record<string, string>): () => v
       });
     }
   }
-  const id = Symbol("theme-scope");
-  rootThemeStack.push({ id, vars });
+  const existing = rootThemeStack.find((write) => write.id === id);
+  if (existing) existing.vars = vars;
+  else rootThemeStack.push({ id, vars });
   applyTopRootTheme(root);
-  return () => {
-    const at = rootThemeStack.findIndex((write) => write.id === id);
-    if (at >= 0) rootThemeStack.splice(at, 1);
-    applyTopRootTheme(root);
-    if (rootThemeStack.length === 0) rootThemeBase.clear();
-  };
+}
+
+/** Give up `id`'s place, wherever in the stack it sits. */
+function releaseRootTheme(root: HTMLElement, id: symbol): void {
+  const at = rootThemeStack.findIndex((write) => write.id === id);
+  if (at >= 0) rootThemeStack.splice(at, 1);
+  applyTopRootTheme(root);
+  if (rootThemeStack.length === 0) {
+    rootThemeBase.clear();
+    rootThemeWritten.clear();
+  }
 }
 
 export function ThemeScope({
@@ -158,9 +191,21 @@ export function ThemeScope({
   // otherwise paint once against the base `:root` preset and then correct
   // itself: the mismatched-theme flash this exists to remove, in miniature
   // (review catch).
+  // The identity of THIS scope, stable for its whole life. Its place in the
+  // stack is claimed once and released once; changing its theme in between
+  // must not re-order it (review catch).
+  const idRef = useRef<symbol>(undefined);
+  idRef.current ??= Symbol("theme-scope");
+
   useLayoutEffect(() => {
     if (nested || typeof document === "undefined") return;
     const root = document.documentElement;
+    const id = idRef.current!;
+    return () => releaseRootTheme(root, id);
+  }, [nested]);
+
+  useLayoutEffect(() => {
+    if (nested || typeof document === "undefined") return;
     // `font-family` rides along as one more name: `<html>` needs it set,
     // not just `--font-body` defined, or portalled content keeps the host's
     // font (review catch).
@@ -168,7 +213,7 @@ export function ThemeScope({
       ...(runtime.variables as Record<string, string>),
       "font-family": "var(--font-body)",
     };
-    return pushRootTheme(root, vars);
+    writeRootTheme(document.documentElement, idRef.current!, vars);
   }, [nested, runtime.variables]);
 
   return (
