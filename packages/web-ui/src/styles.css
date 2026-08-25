@@ -184,6 +184,27 @@
   box-shadow: 6px 0 6px -6px color-mix(in srgb, var(--foreground) 12%, transparent);
 }
 
+/* The opposite call from the list scroller below, for the opposite reason.
+ * The toolbar's selection row shares a line with the search and the actions,
+ * and its entire contract is that ticking a row never changes the toolbar's
+ * height. A classic, space-consuming scrollbar — Windows and Linux by
+ * default, macOS set to "always show" — would appear exactly when the bar
+ * overflows, which is exactly when something is ticked, and its height would
+ * land on the toolbar as the same jump by another route (review catch).
+ *
+ * So the widget is hidden, not the scrolling: wheel, trackpad, and tabbing
+ * to a button past the edge all still reach it. Plain CSS rather than
+ * utilities, because a class that a consumer's Tailwind never scans fails
+ * silently, and this one has no visible symptom until the platform is one we
+ * do not develop on. */
+[data-selection-row] {
+  scrollbar-width: none;
+}
+[data-selection-row]::-webkit-scrollbar {
+  height: 0;
+  display: none;
+}
+
 /* A list you can scroll should say so: keep its scrollbars visible rather
  * than relying on the overlay ones macOS hides until you already scroll. */
 [data-list-scroller] {

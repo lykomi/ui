@@ -35,6 +35,7 @@ import {
   type DataTableState,
 } from "../components/data-table/state.ts";
 import { selectionColumn } from "../components/data-table/selection-column.tsx";
+import { DataTableSelectionBar } from "../components/data-table/data-table-selection-bar.tsx";
 import { Checkbox } from "@iloveagents/foundry-web-primitives";
 import {
   defaultHiddenColumns,
@@ -150,10 +151,42 @@ function mount(props: Omit<Parameters<typeof Harness>[0], "onTable">) {
   };
 }
 
+/** Source as shipped — for the invariants that live in CSS, which jsdom
+ *  lays out not at all. */
+const read = (relative: string) => readFileSync(resolve(process.cwd(), relative), "utf8");
+
+/** The real bar, so these assertions are about the shipped class names.
+ *  `onTable` runs during the Harness's own render, before children render,
+ *  so this reads a live table. */
+let barTable: Table<Task> | null = null;
+function BulkBar() {
+  if (!barTable) return null;
+  return (
+    <DataTableSelectionBar table={barTable} label="task">
+      <button type="button">Archive</button>
+      <button type="button">Delete</button>
+    </DataTableSelectionBar>
+  );
+}
+
 const renderedIds = () =>
   Array.from(container!.querySelectorAll("tbody tr[data-row-id]")).map((tr) =>
     tr.getAttribute("data-row-id"),
   );
+
+
+/** How many stacked rows the toolbar's flex column currently holds.
+ *
+ *  Throws rather than returning a sentinel: a helper that answers `-1` for
+ *  "could not find it" lets the assertion below pass when the SELECTOR
+ *  breaks, which is the same shape as the bug it is testing for (review
+ *  catch). There is a `data-slot` hook for exactly this.
+ */
+function countToolbarRows(container: HTMLElement): number {
+  const column = container.querySelector("[data-slot='data-table-toolbar']");
+  if (!column) throw new Error("no [data-slot='data-table-toolbar'] in the tree");
+  return column.children.length;
+}
 
 describe("promises the metadata makes", () => {
   it("starts a defaultHidden column hidden, and lets the caller override it", () => {
@@ -480,7 +513,6 @@ describe("what the table actually draws", () => {
   it("keeps frozen cells under the sticky header", () => {
     // The regression this guards: a frozen cell painted over the sticky header
     // while scrolling, because the cell's z-index outranked the header row's.
-    const read = (relative: string) => readFileSync(resolve(process.cwd(), relative), "utf8");
     const css = read("src/styles.css");
     const zOf = (selector: string) => {
       const rule = new RegExp(`\\[data-pinned="${selector}"\\][^}]*z-index:\\s*(\\d+)`).exec(css);
@@ -879,6 +911,157 @@ describe("useDataTable + DataTable", () => {
     act(() => table.resetRowSelection(true));
     expect(container!.querySelector("[data-selection-row]")).toBeNull();
     expect(container!.querySelector("[data-filter-row]")).not.toBeNull();
+  });
+
+  it("a facetless list does not grow when a row is ticked", () => {
+    // With no facets the toolbar takes its non-stacked layout, which never
+    // reached the swap above: the selection bar was APPENDED, so the
+    // toolbar gained a row on the first tick and the table jumped down
+    // under the cursor mid-click — the exact regression moving
+    // `selectionBar` into the toolbar was meant to end.
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          enableRowSelection
+          toolbarProps={{ selectionBar: <span data-bar="">selected</span> }}
+          onTable={(t) => (table = t)}
+        />,
+      );
+    });
+    const toolbar = container!.querySelector("[data-selection-row]");
+    expect(toolbar, "nothing ticked yet").toBeNull();
+    const rowsBefore = countToolbarRows(container!);
+
+    act(() => table.getRow("t1").toggleSelected(true));
+
+    expect(container!.querySelector("[data-bar]")?.textContent).toBe("selected");
+    expect(
+      countToolbarRows(container!),
+      "the selection bar must take toolbar space, not add to it",
+    ).toBe(rowsBefore);
+  });
+
+  it("the row holding the selection bar cannot break in two", () => {
+    // Counting DOM children cannot see this one: the toolbar still has one
+    // child row, but that row WRAPS. The lead region shares its line with a
+    // search that has a width floor, so once the pane is narrower than the
+    // search the selection bar is pushed onto a second flex line and the
+    // toolbar grows exactly as it did before — same jump, different cause
+    // (review catch). jsdom does no layout, so what is observable here is
+    // the declaration: this region wraps for facets and never for a
+    // selection.
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          enableRowSelection
+          toolbarProps={{ selectionBar: <span data-bar="">selected</span> }}
+          onTable={(t) => (table = t)}
+        />,
+      );
+    });
+    const lead = () => container!.querySelector("[data-toolbar-lead]")!;
+    expect(lead().getAttribute("data-toolbar-lead")).toBe("filters");
+    expect(
+      lead().className,
+      "the filter region has to keep stacking facets into rows",
+    ).toContain("flex-wrap");
+
+    act(() => table.getRow("t1").toggleSelected(true));
+
+    expect(lead().getAttribute("data-toolbar-lead")).toBe("selection");
+    expect(
+      lead().className,
+      "the selection bar can wrap below the search and grow the toolbar",
+    ).toContain("flex-nowrap");
+  });
+
+  it("the bar's own bulk actions cannot wrap either", () => {
+    // The row not wrapping is only half of it. The bar sitting in that row
+    // has flex containers of its own, and its actions container wrapping
+    // its buttons grows the toolbar exactly as a second flex line would —
+    // the same jump, one level down (review catch).
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          enableRowSelection
+          toolbarProps={{ selectionBar: <BulkBar /> }}
+          onTable={(t) => {
+            table = t;
+            barTable = t;
+          }}
+        />,
+      );
+    });
+    act(() => table.getRow("t1").toggleSelected(true));
+
+    // jsdom lays nothing out, so what is checkable is that the row this
+    // element scrolls in is the one `styles.css` keeps a scrollbar out of.
+    // A classic, space-consuming scrollbar appears exactly when the bar
+    // overflows — exactly when something is ticked — and its height lands
+    // on the toolbar as the same jump by another route (review catch).
+    expect(container!.querySelector("[data-selection-row]")).not.toBeNull();
+    expect(
+      /\[data-selection-row\][^}]*scrollbar-width:\s*none/.test(read("src/styles.css")),
+      "nothing keeps the scrollbar out of the selection row's height",
+    ).toBe(true);
+
+    const bar = container!.querySelector("[data-selection-bar]")!;
+    const actions = container!.querySelector("[data-selection-actions]")!;
+    expect(bar.className, "the bar itself can wrap in the shared row").toContain(
+      "flex-nowrap",
+    );
+    expect(
+      actions.className,
+      "the bulk actions can wrap inside a bar that cannot",
+    ).toContain("flex-nowrap");
+  });
+
+  it("a standalone selection bar still wraps", () => {
+    // The constraint belongs to the toolbar row, not to the bar. Rendered
+    // anywhere else — including the stacked layout, where the bar has a row
+    // of its own — wrapping is right and has to survive.
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let table!: Table<Task>;
+    act(() => {
+      root!.render(
+        <Harness
+          enableRowSelection
+          onTable={(t) => {
+            table = t;
+            barTable = t;
+          }}
+        />,
+      );
+    });
+    act(() => table.getRow("t1").toggleSelected(true));
+
+    const standalone = document.createElement("div");
+    document.body.appendChild(standalone);
+    const barRoot = createRoot(standalone);
+    act(() => barRoot.render(<BulkBar />));
+
+    expect(standalone.querySelector("[data-selection-bar]")!.className).toContain(
+      "flex-wrap",
+    );
+    expect(standalone.querySelector("[data-selection-actions]")!.className).toContain(
+      "flex-wrap",
+    );
+    act(() => barRoot.unmount());
+    standalone.remove();
   });
 
   it("layout=inline keeps one wrapping row", () => {

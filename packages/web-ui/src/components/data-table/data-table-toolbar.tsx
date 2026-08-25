@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "../../ui/dropdown-menu.tsx";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter.tsx";
+import { SelectionBarSingleLine } from "./data-table-selection-bar.tsx";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { DataTableViewOptions } from "./data-table-view-options.tsx";
 import { columnLabel, normalizeFacetValue, type DataTableFacetOption } from "./facets.ts";
@@ -283,26 +284,70 @@ export function DataTableToolbar<T>({
 
   if (!stacked) {
     return (
-      <div className={cn("flex flex-col gap-2", className)}>
+      // A stable hook for tests and hosts, rather than leaving them to
+      // match on Tailwind classes — a selector that silently stops
+      // matching is how an assertion starts passing for the wrong reason
+      // (review catch).
+      <div data-slot="data-table-toolbar" className={cn("flex flex-col gap-2", className)}>
         <div className="flex items-start gap-2">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {/* The selection bar TAKES this row rather than adding one below
+              it. Appended, it grew the toolbar the moment the first row was
+              ticked and shoved the table down under the cursor mid-click —
+              the same jump the stacked layout avoids by swapping its filter
+              row, and the reason `selectionBar` moved into the toolbar at
+              all. A list with no facets never reached that swap, so it kept
+              jumping (review catch).
+
+              Search stays put, exactly as it does when stacked: it is how
+              you narrow what you are selecting from, and only the filter
+              controls give way. */}
+          <div
+            data-toolbar-lead={showSelectionBar ? "selection" : "filters"}
+            className={cn(
+              "flex min-w-0 flex-1 items-center gap-2",
+              // Facets genuinely want rows: six of them in a narrow pane
+              // should stack rather than scroll off the side. A selection
+              // bar is the opposite — one row by definition. Left wrapping,
+              // it drops below the search as soon as the search alone is
+              // wider than the space, which grows the toolbar again and is
+              // the jump this whole change exists to remove (review catch).
+              showSelectionBar ? "flex-nowrap" : "flex-wrap",
+            )}
+          >
             {searchNode}
-            {facetNodes}
-            {addFilterNode}
-            {children}
-            {resetNode}
+            {showSelectionBar ? (
+              // The bar shares this row with a search that has a width
+              // floor and a right group that does not shrink, so in a
+              // narrow pane it gets squeezed. It scrolls rather than
+              // wrapping inside itself — the row stays exactly one high.
+              //
+              // And the scrollbar itself stays out of layout. A classic,
+              // space-consuming one — Windows and Linux by default, macOS
+              // set to "always show" — appears only once the bar overflows,
+              // which is only once something is ticked, so its height lands
+              // on the toolbar as the same jump by another route (review
+              // catch). `[data-selection-row]` in `styles.css` keeps it out
+              // of layout; hiding the widget does not hide the scrolling.
+              <div data-selection-row="" className="min-w-0 flex-1 overflow-x-auto">
+                <SelectionBarSingleLine value={true}>{selectionBar}</SelectionBarSingleLine>
+              </div>
+            ) : (
+              <>
+                {facetNodes}
+                {addFilterNode}
+                {children}
+                {resetNode}
+              </>
+            )}
           </div>
           {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
         </div>
-        {/* An inline list can still select rows, so its bulk actions have a
-            home too — under the one row rather than in place of it. */}
-        {showSelectionBar ? <div data-selection-row="">{selectionBar}</div> : null}
       </div>
     );
   }
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
+    <div data-slot="data-table-toolbar" className={cn("flex flex-col gap-2", className)}>
       <div className="flex items-center gap-2">
         {searchNode}
         {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
