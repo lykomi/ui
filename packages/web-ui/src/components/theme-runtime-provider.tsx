@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -87,19 +88,50 @@ export function ThemeScope({
   // anything portalled anywhere inherits. Nested scopes keep the div only:
   // they exist to theme a subtree differently, and must not overwrite the
   // document with their own values.
-  useEffect(() => {
+  // BEFORE paint, not after. A portal that exists on the very first render —
+  // a default-open dialog, an overlay restored during hydration — would
+  // otherwise paint once against the base `:root` preset and then correct
+  // itself: the mismatched-theme flash this exists to remove, in miniature
+  // (review catch).
+  useLayoutEffect(() => {
     if (nested || typeof document === "undefined") return;
     const root = document.documentElement;
     const applied = Object.entries(runtime.variables as Record<string, string>);
-    const previous = applied.map(([name]) => [name, root.style.getPropertyValue(name)] as const);
+    // Value AND priority. A host that declared a root token `!important`
+    // gets the text back on cleanup but silently loses the flag otherwise,
+    // so anything else can start overriding a theme it owns (review catch).
+    const previous = applied.map(
+      ([name]) =>
+        [name, root.style.getPropertyValue(name), root.style.getPropertyPriority(name)] as const,
+    );
+    // The themed body font has to reach portalled content too. The scoped
+    // div sets `font-family` explicitly; `<html>` was given only the custom
+    // property, and defining `--font-body` does not itself change the font —
+    // so dropdowns and tooltips under `document.body` kept the host's
+    // (review catch).
+    const previousFont = root.style.getPropertyValue("font-family");
+    const previousFontPriority = root.style.getPropertyPriority("font-family");
     for (const [name, value] of applied) root.style.setProperty(name, String(value));
+    root.style.setProperty("font-family", "var(--font-body)");
     return () => {
       // Restore, rather than remove: another provider may have set these
       // before us, and clearing them would strip a theme we did not own.
-      for (const [name, value] of previous) {
-        if (value) root.style.setProperty(name, value);
+      //
+      // And only where WE are still the last writer. Another scope or a host
+      // theme manager can write one of these after us, and restoring a stale
+      // snapshot over it clobbers the live owner's value (review catch).
+      const restore = (name: string, value: string, priority: string, mine: string) => {
+        if (root.style.getPropertyValue(name) !== mine) return;
+        if (value) root.style.setProperty(name, value, priority);
         else root.style.removeProperty(name);
+      };
+      for (const [name, value, priority] of previous) {
+        const mine = String(
+          (runtime.variables as Record<string, string>)[name] ?? "",
+        );
+        restore(name, value, priority, mine);
       }
+      restore("font-family", previousFont, previousFontPriority, "var(--font-body)");
     };
   }, [nested, runtime.variables]);
 
