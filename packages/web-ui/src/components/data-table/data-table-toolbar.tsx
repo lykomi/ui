@@ -283,7 +283,11 @@ export function DataTableToolbar<T>({
 
   if (!stacked) {
     return (
-      <div className={cn("flex flex-col gap-2", className)}>
+      // A stable hook for tests and hosts, rather than leaving them to
+      // match on Tailwind classes — a selector that silently stops
+      // matching is how an assertion starts passing for the wrong reason
+      // (review catch).
+      <div data-slot="data-table-toolbar" className={cn("flex flex-col gap-2", className)}>
         <div className="flex items-start gap-2">
           {/* The selection bar TAKES this row rather than adding one below
               it. Appended, it grew the toolbar the moment the first row was
@@ -299,7 +303,16 @@ export function DataTableToolbar<T>({
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             {searchNode}
             {showSelectionBar ? (
-              <div data-selection-row="" className="min-w-0 flex-1">
+              // `overflow-x-auto` and no wrapping: this wrapper shares one
+              // row with the fixed-width search and the non-shrinking right
+              // group, so in a narrow pane it can be squeezed small — and a
+              // bar that WRAPS there grows the toolbar again, which is the
+              // jump this whole change exists to remove (review catch).
+              // Scrolling the bar keeps the row exactly one row high.
+              <div
+                data-selection-row=""
+                className="min-w-0 flex-1 overflow-x-auto [&>*]:flex-nowrap"
+              >
                 {selectionBar}
               </div>
             ) : (
@@ -318,7 +331,7 @@ export function DataTableToolbar<T>({
   }
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
+    <div data-slot="data-table-toolbar" className={cn("flex flex-col gap-2", className)}>
       <div className="flex items-center gap-2">
         {searchNode}
         {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}

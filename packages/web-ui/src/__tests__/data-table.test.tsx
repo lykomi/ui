@@ -156,11 +156,17 @@ const renderedIds = () =>
   );
 
 
-/** How many stacked rows the toolbar's flex column currently holds. */
+/** How many stacked rows the toolbar's flex column currently holds.
+ *
+ *  Throws rather than returning a sentinel: a helper that answers `-1` for
+ *  "could not find it" lets the assertion below pass when the SELECTOR
+ *  breaks, which is the same shape as the bug it is testing for (review
+ *  catch). There is a `data-slot` hook for exactly this.
+ */
 function countToolbarRows(container: HTMLElement): number {
-  const column = container.querySelector("[data-slot='data-table-toolbar']")
-    ?? container.querySelector(".flex.flex-col.gap-2");
-  return column ? column.children.length : -1;
+  const column = container.querySelector("[data-slot='data-table-toolbar']");
+  if (!column) throw new Error("no [data-slot='data-table-toolbar'] in the tree");
+  return column.children.length;
 }
 
 describe("promises the metadata makes", () => {
