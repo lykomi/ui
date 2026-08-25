@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 import {
   getThemePreset,
@@ -107,8 +110,8 @@ describe("theme runtime", () => {
   });
 
   it("does not move a theme authored before these slots existed", () => {
-    // Shaped like the themes real deployments ship (eomi, and customer
-    // tenants): every sidebar slot set EXCEPT the new one. Adding a slot must
+    // Shaped like the themes downstream deployments ship: every sidebar slot
+    // set EXCEPT the new one. Adding a slot must
     // be inert for them — an existing deployment must not repaint on upgrade,
     // which is the whole reason the default reproduces the old value instead
     // of deriving something nicer from `primary`.
@@ -137,6 +140,23 @@ describe("theme runtime", () => {
     expect(v["--sidebar-icon"]).toBe(
       "color-mix(in srgb, var(--sidebar-foreground) 60%, transparent)",
     );
+  });
+
+  it("colours the collapsed rail's idle icons too", () => {
+    // A theme slot that stops applying when the sidebar is collapsed is worse
+    // than no slot: the branding silently changes on a UI state the user
+    // controls. Asserted against the source, because the collapsed branches
+    // render through TooltipIconButton rather than the shared nav row.
+    const src = readFileSync(
+      join(import.meta.dirname!, "../components/sidebar.tsx"),
+      "utf-8",
+    );
+    // The collapsed "New Thread" button.
+    expect(src).toContain('<SquarePen className="size-4 text-sidebar-icon" />');
+    // The collapsed nav shortcuts: active keeps `primary`, idle takes the slot.
+    expect(src).toContain('isActive ? "text-primary" : "text-sidebar-icon"');
+    // And nothing anywhere still hardcodes the tint the slot replaced.
+    expect(src).not.toContain("text-sidebar-foreground/60");
   });
 
   it("falls back to the default preset for unknown names", () => {

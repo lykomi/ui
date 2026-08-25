@@ -1418,7 +1418,7 @@ function CollapsedNavShortcut({
           isActive && "border border-transparent bg-sidebar-selected text-sidebar-foreground",
         )}
       >
-        <Icon className={cn("size-4", isActive && "text-primary")} />
+        <Icon className={cn("size-4", isActive ? "text-primary" : "text-sidebar-icon")} />
       </TooltipIconButton>
     </NavLink>
   );
@@ -1776,7 +1776,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
           <PanelLeftOpen className="size-5" />
         </TooltipIconButton>
         <TooltipIconButton tooltip="New Thread" side="right" onClick={handleNewConversation}>
-          <SquarePen className="size-4" />
+          <SquarePen className="size-4 text-sidebar-icon" />
         </TooltipIconButton>
         <div className="mt-4 flex w-full flex-col items-stretch gap-1">
           {/* `w-full` on this inner column makes children resolve to the

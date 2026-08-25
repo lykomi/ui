@@ -109,7 +109,10 @@ describe("_resolveBrandLockup", () => {
       // A wordmark with a tagline under it is illegible at the default 20px;
       // the tenant who supplied the asset is the one who knows how much
       // height it needs.
-      for (const h of ["2rem", "32px", "1.5em", "2.25rem"]) {
+      // `.5rem` has no integer part and is valid CSS — a common spelling that
+      // an earlier revision of the pattern silently rejected, falling back to
+      // the default and making the documented contract untrue.
+      for (const h of ["2rem", "32px", "1.5em", "2.25rem", ".5rem", "0.75rem"]) {
         expect(_resolveBrandLockup({ logoUrl: "w.png", logoHeight: h }, "light", true).height).toBe(
           h,
         );
@@ -133,6 +136,9 @@ describe("_resolveBrandLockup", () => {
         "-2rem",
         "100%",
         "2 rem",
+        "0rem",
+        "rem",
+        ".rem",
         "",
         "   ",
       ];
@@ -143,6 +149,18 @@ describe("_resolveBrandLockup", () => {
 
     it("trims incidental whitespace rather than rejecting it", () => {
       expect(_safeLogoHeight("  2rem  ")).toBe("2rem");
+    });
+
+    it("clamps an implausibly large mark instead of letting it break the header", () => {
+      // Syntactically valid is not safe. The mark is `shrink-0`, so a typo
+      // like "320px" would push the header's actions off screen rather than
+      // shrinking. Clamped, not rejected: too big should look wrong, not
+      // disappear.
+      expect(_safeLogoHeight("320px")).toBe("4rem");
+      expect(_safeLogoHeight("40rem")).toBe("4rem");
+      // Just under the cap is untouched.
+      expect(_safeLogoHeight("3.9rem")).toBe("3.9rem");
+      expect(_safeLogoHeight("60px")).toBe("60px");
     });
   });
 });

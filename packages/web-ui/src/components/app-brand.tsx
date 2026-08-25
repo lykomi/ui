@@ -36,9 +36,25 @@ export interface BrandLockup {
  * in behind a `;`) fails the pattern and the caller falls back to the default
  * height, which is always a safe thing to render.
  */
+//: The tallest mark the header will render. A syntactically valid length is
+//: not a SAFE one: `logoHeight: "320px"` is a plausible typo, and because the
+//: mark is `shrink-0` it would push the sidebar and mobile-header actions off
+//: screen rather than shrinking. Marks above this are clamped, not rejected —
+//: a too-large value should look wrong, not vanish.
+const MAX_LOGO_HEIGHT_REM = 4;
+const REM_PER_UNIT: Record<string, number> = { rem: 1, em: 1, px: 1 / 16 };
+
 export function _safeLogoHeight(value: string | undefined): string | undefined {
   if (!value) return undefined;
-  return /^\d+(?:\.\d+)?(?:px|rem|em)$/.test(value.trim()) ? value.trim() : undefined;
+  // The integer part is optional: `.5rem` is a valid CSS length and a common
+  // spelling, and silently falling back to the default for it would make the
+  // contract a lie.
+  const match = /^(\d*\.?\d+)(px|rem|em)$/.exec(value.trim());
+  if (!match) return undefined;
+  const [, rawNumber, unit] = match;
+  const asRem = Number(rawNumber) * REM_PER_UNIT[unit];
+  if (!Number.isFinite(asRem) || asRem <= 0) return undefined;
+  return asRem > MAX_LOGO_HEIGHT_REM ? `${MAX_LOGO_HEIGHT_REM}rem` : value.trim();
 }
 
 export function _resolveBrandLockup(
@@ -92,12 +108,13 @@ export function AppBrand({
             // replaced. Marks are rarely square, so height is the only
             // dimension worth fixing. The max-width is just a runaway guard:
             // tighter for an icon, which has to leave room for the name.
-            // `branding.logoHeight` overrides the height and, with it, the
-            // max-width guard: a taller mark is wider in proportion, so
-            // keeping the 7rem cap would letterbox exactly the marks that
-            // asked for more room.
+            // `branding.logoHeight` overrides the HEIGHT, and the width guard
+            // grows with it rather than disappearing: the 7rem cap is sized
+            // for a 20px mark and would letterbox a taller one, but dropping
+            // every bound lets a mistyped height push the header's actions
+            // off screen (the mark is `shrink-0`).
             lockup.height
-              ? "w-auto"
+              ? "w-auto max-w-[20rem]"
               : lockup.isIcon
                 ? "h-5 w-auto max-w-8"
                 : "h-5 w-auto max-w-[7rem]",
