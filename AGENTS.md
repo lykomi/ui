@@ -172,9 +172,11 @@ The non-negotiables:
 - **Fix the likely; decline the hypothetical — except where it destroys.** A
   finding needing a contrived chain of failures gets an answer in the thread,
   not a patch: speculative fixes are new code, and new code is what the next
-  round finds defects in. The exception is anything that deletes, purges,
-  overwrites or widens a credential's scope — fix those even on an uncommon
-  trigger, because being wrong there cannot be undone.
+  round finds defects in. Judge the exception by what a mistake COSTS, not by
+  which verb the code uses — an outcome nobody can undo (a resource someone
+  still depends on deleted or purged, unreproducible state overwritten, a
+  credential's scope widened) is worth fixing on an uncommon trigger; a temp
+  file or a cache is not.
 - **Rounds do not converge monotonically.** A round that goes up is the process
   working. Do not merge on the first green.
 
