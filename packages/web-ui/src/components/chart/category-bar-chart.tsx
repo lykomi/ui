@@ -5,7 +5,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, compactAxisTick } fr
 import {
   CHART_SLOT_COUNT,
   type ChartConfig,
-  chartSlotColor,
+  categoryColorResolver,
   foldCategoryTail,
   seriesColor,
 } from "./chart-config.ts";
@@ -39,11 +39,13 @@ export interface CategoryBarChartProps {
   className?: string;
 }
 
+const EMPTY_CONFIG: ChartConfig = {};
+
 export function CategoryBarChart({
   data,
   categoryKey,
   valueKey,
-  config = {},
+  config = EMPTY_CONFIG,
   horizontal = true,
   maxBars,
   colorByCategory = false,
@@ -55,7 +57,9 @@ export function CategoryBarChart({
 }: CategoryBarChartProps) {
   // Identity coloring caps at the palette (5 + Other); a single-hue ranked
   // list caps at what stays readable. Both fold rather than overflow.
-  const effectiveMax = maxBars ?? (colorByCategory ? CHART_SLOT_COUNT : 12);
+  const barDefault = colorByCategory ? CHART_SLOT_COUNT : 12;
+  // A non-finite cap keeps THIS chart's default, not the palette-wide one.
+  const effectiveMax = Number.isFinite(maxBars) ? (maxBars as number) : barDefault;
   const rows = React.useMemo(() => {
     // This is a RANKED breakdown by contract, and the fold keeps the head —
     // rank first so an unsorted input never folds its biggest categories.
@@ -64,25 +68,17 @@ export function CategoryBarChart({
     );
     return foldCategoryTail(ranked, { categoryKey, valueKey, max: effectiveMax });
   }, [data, categoryKey, valueKey, effectiveMax]);
-  // Identity follows the category's position in the ORIGINAL data (or its
-  // explicit config color) — filtering/sorting must not repaint survivors.
-  const categoryColor = React.useCallback(
-    (category: string): string => {
-      const explicit = config[category]?.color;
-      if (explicit) return explicit;
-      // Declared identity first: a category's position in the CONFIG is
-      // immune to the caller filtering the data. Data order is only the
-      // fallback for undeclared categories.
-      // The measure's own entry (labels/colors for the value column) is
-      // not a category — it must not shift the identity order.
-      const configIndex = Object.keys(config)
-        .filter((key) => key !== valueKey)
-        .indexOf(category);
-      if (configIndex !== -1) return chartSlotColor(configIndex);
-      const declared = data.findIndex((row) => String(row[categoryKey]) === category);
-      return chartSlotColor(declared === -1 ? CHART_SLOT_COUNT - 1 : declared);
-    },
-    [config, data, categoryKey],
+  // Identity resolved from the ORIGINAL categories, with the measure's own
+  // config entry excluded — it labels the value column, it is not a
+  // category and must not shift the order.
+  const categoryColor = React.useMemo(
+    () =>
+      categoryColorResolver(
+        config,
+        rows.map((row) => String(row[categoryKey] ?? "")),
+        { exclude: valueKey },
+      ),
+    [config, rows, categoryKey, valueKey],
   );
   const fixed = width !== undefined;
   const resolvedHeight = height ?? (horizontal ? Math.max(160, rows.length * 36 + 24) : 240);
@@ -158,7 +154,9 @@ export function CategoryBarChart({
           {colorByCategory &&
             rows.map((row, i) => {
               const category = String(row[categoryKey] ?? i);
-              return <RechartsPrimitive.Cell key={category} fill={categoryColor(category)} />;
+              return (
+                <RechartsPrimitive.Cell key={`${i}-${category}`} fill={categoryColor(category)} />
+              );
             })}
         </RechartsPrimitive.Bar>
       </RechartsPrimitive.BarChart>

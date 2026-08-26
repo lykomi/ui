@@ -13,9 +13,9 @@ import {
 
 /**
  * The shadcn-style chart layer over recharts: `ChartContainer` injects one
- * `--color-<key>` CSS variable per configured series (resolved from the
+ * `--chart-color-<key>` CSS variable per configured series (resolved from the
  * theme's `--chart-1..5` slots unless overridden), so every mark inside can
- * reference its series color with `var(--color-<key>)` and follow theme
+ * reference its series color with `seriesVar(key)` and follow theme
  * changes — light/dark and tenant themes alike — without re-rendering logic.
  *
  * Tooltip and legend CONTENT components read the same config through
@@ -111,6 +111,8 @@ export interface ChartTooltipContentProps {
   valueFormatter?: (value: number) => React.ReactNode;
   /** Hide the color indicator squares. */
   hideIndicator?: boolean;
+  /** Drop the header row entirely (a donut names its slice on the row). */
+  hideLabel?: boolean;
   /**
    * Override the indicator color per row — for charts whose CELLS recolor
    * the marks (colorByCategory) while the payload still carries the parent
@@ -131,6 +133,7 @@ function ChartTooltipContent({
   labelFormatter,
   valueFormatter,
   hideIndicator = false,
+  hideLabel = false,
   indicatorColor,
 }: ChartTooltipContentProps) {
   const { config } = useChart();
@@ -142,9 +145,11 @@ function ChartTooltipContent({
         className,
       )}
     >
-      <div className="mb-1.5 font-medium text-foreground">
-        {labelFormatter ? labelFormatter(label) : String(label ?? "")}
-      </div>
+      {!hideLabel && (
+        <div className="mb-1.5 font-medium text-foreground">
+          {labelFormatter ? labelFormatter(label) : String(label ?? "")}
+        </div>
+      )}
       <div className="grid gap-1">
         {payload.map((entry, i) => {
           // `name` first: a Pie names entries by its nameKey (the category),
@@ -155,7 +160,7 @@ function ChartTooltipContent({
           const numeric = typeof entry.value === "number" ? entry.value : Number(entry.value);
           const finite = Number.isFinite(numeric);
           return (
-            <div key={key} className="flex items-center justify-between gap-4">
+            <div key={`${i}-${key}`} className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 {!hideIndicator && (
                   <span
@@ -199,7 +204,10 @@ function ChartLegendContent({ payload, className }: ChartLegendContentProps) {
       {payload.map((entry, i) => {
         const key = String(entry.dataKey ?? entry.value ?? i);
         return (
-          <div key={key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div
+            key={`${i}-${key}`}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
+          >
             <span
               aria-hidden
               className="size-2.5 shrink-0 rounded-[3px]"

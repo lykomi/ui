@@ -20,6 +20,9 @@ export {
   type ChartLegendContentProps,
 } from "./components/chart/chart.tsx";
 export {
+  FOLD_COLOR,
+  OTHER_LABEL,
+  categoryColorResolver,
   chartSlotColor,
   chartStyleVars,
   foldCategoryTail,

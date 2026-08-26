@@ -51,6 +51,57 @@ export function seriesColor(config: ChartConfig, key: string): string {
   return chartSlotColor(declaredIndex === -1 ? 0 : declaredIndex);
 }
 
+/** The label a folded tail wears, and the muted color that marks it. */
+export const OTHER_LABEL = "Other";
+export const FOLD_COLOR = "var(--muted-foreground)";
+
+/**
+ * The color resolver for a CATEGORICAL chart, where every category is an
+ * identity rather than a series.
+ *
+ * Pass the categories the chart actually DRAWS (after any fold), not the
+ * raw data: the fold ranks, so a category sitting late in the input can be
+ * promoted into the chart, and resolving from input order would hand a
+ * visible slice the muted past-the-palette color — the dominant slice
+ * rendered the same grey as "Other".
+ *
+ * Order is declared config keys first, then the drawn categories in the
+ * order they are drawn, so DECLARING a category in `config` is how a caller
+ * pins its color across data changes. Two rules keep it honest: declared
+ * and undeclared never share an index space, and past the palette a
+ * category takes the muted fold color rather than wrapping modulo five onto
+ * a color another category already owns.
+ *
+ * `exclude` drops the measure's own config entry (a bar chart labels its
+ * value column there); it is not a category and must not shift the order.
+ */
+export function categoryColorResolver(
+  config: ChartConfig,
+  categories: Iterable<string>,
+  options: { exclude?: string; otherLabel?: string } = {},
+): (category: string) => string {
+  const { exclude, otherLabel = OTHER_LABEL } = options;
+  const drawn = new Set(categories);
+  const index = new Map<string, number>();
+  const add = (category: string) => {
+    if (category === otherLabel || index.has(category)) return;
+    index.set(category, index.size);
+  };
+  // Declared keys set the ORDER, but only DRAWN categories consume a slot —
+  // a config that also labels categories absent from this chart would
+  // otherwise push visible ones past the palette into the fold color.
+  for (const key of Object.keys(config)) if (key !== exclude && drawn.has(key)) add(key);
+  for (const category of drawn) add(category);
+  return (category: string): string => {
+    const explicit = config[category]?.color;
+    if (explicit) return explicit;
+    if (category === otherLabel) return FOLD_COLOR;
+    const slot = index.get(category);
+    if (slot === undefined || slot >= CHART_SLOT_COUNT) return FOLD_COLOR;
+    return chartSlotColor(slot);
+  };
+}
+
 /** Resolved label for a series: explicit config first, the key itself second. */
 export function seriesLabel(config: ChartConfig, key: string): React.ReactNode {
   return config[key]?.label ?? key;
@@ -64,18 +115,24 @@ export function seriesLabel(config: ChartConfig, key: string): React.ReactNode {
  */
 export function seriesVarName(key: string): string {
   const safe = key.replace(/[^a-zA-Z0-9_-]/g, "-");
-  if (safe === key) return `--color-${key}`;
+  if (safe === key) return `--chart-color-${key}`;
   // Two keys may sanitize to the same ident ("metrics.tokens" vs
   // "metrics tokens") — a short stable hash of the RAW key keeps them
   // apart without leaking invalid characters.
   let hash = 5381;
   for (let i = 0; i < key.length; i++) hash = ((hash << 5) + hash + key.charCodeAt(i)) | 0;
-  return `--color-${safe}-${(hash >>> 0).toString(36)}`;
+  return `--chart-color-${safe}-${(hash >>> 0).toString(36)}`;
 }
 
-/** The `var(--color-<key>)` reference marks use for their series color. */
-export function seriesVar(key: string): string {
-  return `var(${seriesVarName(key)})`;
+/**
+ * The `var()` reference marks use for their series color.
+ *
+ * A key with no configured series resolves to an UNDEFINED custom property,
+ * which makes `fill` fall back to black and `stroke` to none — a silent
+ * black band. The fallback keeps an undeclared series visible.
+ */
+export function seriesVar(key: string, fallback = chartSlotColor(0)): string {
+  return `var(${seriesVarName(key)}, ${fallback})`;
 }
 
 /**
@@ -125,9 +182,16 @@ export function formatBucketLabel(bucket: unknown): string {
 }
 
 /**
- * Fold a sorted category list's tail into a single "Other" row once it
- * exceeds `max` rows — the discipline for categorical charts: a 9th slice
- * is never a 9th color.
+ * Fold a category list's tail into a single "Other" row once it exceeds
+ * `max` rows — the discipline for categorical charts: a 9th slice is never
+ * a 9th color.
+ *
+ * Ranks by value FIRST. The fold keeps the head, so on an unranked list it
+ * would swallow whatever happened to be sorted late — a donut of six
+ * equal-ish categories plus one dominant one at the end rendered as four
+ * slivers and an unlabeled 96% "Other". Ranking here rather than trusting
+ * callers makes that unreachable, including for charts a builder agent
+ * writes.
  */
 export function foldCategoryTail<T extends Record<string, unknown>>(
   rows: T[],
@@ -138,21 +202,22 @@ export function foldCategoryTail<T extends Record<string, unknown>>(
     otherLabel?: string;
   },
 ): T[] {
-  const { categoryKey, valueKey, otherLabel = "Other" } = options;
-  // A cap below 2 cannot hold a fold (one real row + "Other" is the floor).
-  const max = Math.max(2, options.max ?? CHART_SLOT_COUNT);
+  const { categoryKey, valueKey, otherLabel = OTHER_LABEL } = options;
+  // A cap below 2 cannot hold a fold (one real row + "Other" is the floor);
+  // a non-finite cap would fold everything into a single bucket.
+  const requested = options.max ?? CHART_SLOT_COUNT;
+  const max = Math.max(2, Number.isFinite(requested) ? requested : CHART_SLOT_COUNT);
   if (rows.length <= max) return rows;
-  const head = rows.slice(0, max - 1);
-  const tail = rows.slice(max - 1);
-  // A pre-existing "Other" row in the head merges into the fold — two
-  // rows wearing the same label would double the category.
-  const kept = head.filter((row) => String(row[categoryKey]) !== otherLabel);
-  const folded = [...head.filter((row) => String(row[categoryKey]) === otherLabel), ...tail];
+  const ranked = [...rows].sort((a, b) => (Number(b[valueKey]) || 0) - (Number(a[valueKey]) || 0));
+  // A pre-existing "Other" row always joins the fold, so set it aside
+  // BEFORE taking the head: leaving it there would cost a real category
+  // its place for a row that gets folded away anyway.
+  const existingOther = ranked.filter((row) => String(row[categoryKey]) === otherLabel);
+  const real = ranked.filter((row) => String(row[categoryKey]) !== otherLabel);
+  const kept = real.slice(0, max - 1);
+  const folded = [...existingOther, ...real.slice(max - 1)];
+  if (!folded.length) return kept;
   const otherTotal = folded.reduce((sum, row) => sum + (Number(row[valueKey]) || 0), 0);
-  const other = {
-    ...(tail[0] ?? folded[0]),
-    [categoryKey]: otherLabel,
-    [valueKey]: otherTotal,
-  } as T;
+  const other = { ...folded[0], [categoryKey]: otherLabel, [valueKey]: otherTotal } as T;
   return [...kept, other];
 }

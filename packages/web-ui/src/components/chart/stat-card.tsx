@@ -37,6 +37,9 @@ export interface StatCardProps extends Omit<React.ComponentProps<"div">, "childr
 function formatValue(value: StatCardProps["value"], format: StatCardProps["format"]): string {
   if (value === null || value === undefined) return "–";
   if (typeof value === "string") return value;
+  // Both branches take the same guard: a NaN must not render as "NaN" in
+  // one format and "–" in the other.
+  if (!Number.isFinite(value)) return "–";
   return format === "plain" ? value.toLocaleString() : formatCompactNumber(value);
 }
 
@@ -57,7 +60,10 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
     },
     ref,
   ) => {
-    const direction = delta === undefined || delta === 0 ? "flat" : delta > 0 ? "up" : "down";
+    // A delta of Infinity is the natural result of dividing by a zero
+    // previous period, and "▲ ∞%" styled as GOOD is worse than no badge.
+    const hasDelta = delta !== undefined && Number.isFinite(delta);
+    const direction = !hasDelta || delta === 0 ? "flat" : delta! > 0 ? "up" : "down";
     const good = delta !== undefined && delta !== 0 && (invertDelta ? delta < 0 : delta > 0);
     return (
       <div
@@ -81,7 +87,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
               {formatValue(value, format)}
             </span>
           )}
-          {!loading && delta !== undefined && (
+          {!loading && hasDelta && (
             <span
               data-stat-delta={direction === "flat" ? "flat" : good ? "good" : "bad"}
               className={cn(
@@ -95,7 +101,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
             >
               {direction !== "flat" && <span aria-hidden>{direction === "up" ? "▲" : "▼"}</span>}
               <span className="sr-only">{direction === "flat" ? "unchanged" : direction} </span>
-              {Math.abs(delta).toLocaleString(undefined, { maximumFractionDigits: 1 })}%
+              {Math.abs(delta!).toLocaleString(undefined, { maximumFractionDigits: 1 })}%
             </span>
           )}
         </div>
