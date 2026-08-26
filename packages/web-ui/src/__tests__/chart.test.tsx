@@ -5,11 +5,16 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { ChartContainer, ChartTooltipContent } from "../components/chart/chart.tsx";
 import {
+  FOLD_COLOR,
+  categoryColorResolver,
+  chartSlotColor,
   chartStyleVars,
   foldCategoryTail,
   formatBucketLabel,
   seriesColor,
+  seriesVar,
 } from "../components/chart/chart-config.ts";
+import { ChartCard, DashboardGrid, DashboardTile } from "../components/chart/chart-card.tsx";
 import { StatCard } from "../components/chart/stat-card.tsx";
 import { TimeSeriesChart } from "../components/chart/time-series-chart.tsx";
 import { CategoryBarChart } from "../components/chart/category-bar-chart.tsx";
@@ -39,9 +44,9 @@ describe("chart semantics", () => {
   it("assigns theme slots in declared order and lets config override", () => {
     const config = { a: {}, b: {}, c: { color: "var(--destructive)" } };
     expect(chartStyleVars(config)).toEqual({
-      "--color-a": "var(--chart-1)",
-      "--color-b": "var(--chart-2)",
-      "--color-c": "var(--destructive)",
+      "--chart-color-a": "var(--chart-1)",
+      "--chart-color-b": "var(--chart-2)",
+      "--chart-color-c": "var(--destructive)",
     });
   });
 
@@ -70,9 +75,9 @@ describe("chart semantics", () => {
     // stays readable, a dirty one is sanitized (plus a disambiguating
     // hash — see the collision test).
     const vars = chartStyleVars({ tokens: {}, "metrics.tokens": {} });
-    expect(vars["--color-tokens"]).toBe("var(--chart-1)");
-    const dirty = Object.keys(vars).find((k) => k !== "--color-tokens")!;
-    expect(dirty).toMatch(/^--color-metrics-tokens-[a-z0-9]+$/);
+    expect(vars["--chart-color-tokens"]).toBe("var(--chart-1)");
+    const dirty = Object.keys(vars).find((k) => k !== "--chart-color-tokens")!;
+    expect(dirty).toMatch(/^--chart-color-metrics-tokens-[a-z0-9]+$/);
   });
 
   it("keys that sanitize alike still get distinct variables", () => {
@@ -88,11 +93,50 @@ describe("chart semantics", () => {
       { cat: "c", n: 3 },
     ];
     const folded = foldCategoryTail(rows, { categoryKey: "cat", valueKey: "n", max: 3 });
+    // One Other row, never two.
     expect(folded.filter((r) => r.cat === "Other")).toHaveLength(1);
-    // 5 (existing Other) + 4 + 3 — wait: head = a, Other; tail = b, c →
-    // kept = [a], folded = Other+b+c = 12.
-    expect(folded.find((r) => r.cat === "Other")?.n).toBe(12);
-    expect(folded).toHaveLength(2);
+    // The existing Other is set aside BEFORE the head is taken, so the cap
+    // spends its places on real categories: a and b survive, Other carries
+    // 5 (the existing one) + 3 (c).
+    expect(folded.map((r) => r.cat)).toEqual(["a", "b", "Other"]);
+    expect(folded.find((r) => r.cat === "Other")?.n).toBe(8);
+  });
+
+  it("an Other row that ranks high does not cost a real category its place", () => {
+    const rows = [
+      { c: "Other", n: 100 },
+      { c: "a", n: 9 },
+      { c: "b", n: 8 },
+      { c: "d", n: 1 },
+    ];
+    const folded = foldCategoryTail(rows, { categoryKey: "c", valueKey: "n", max: 3 });
+    // Two REAL categories survive; Other carries 100 + 1.
+    expect(folded.map((r) => r.c)).toEqual(["a", "b", "Other"]);
+    expect(folded[2].n).toBe(101);
+  });
+
+  it("a declared category keeps its color when a filter removes its neighbours", () => {
+    // The whole point of declaring: identity follows the entity, never its
+    // rank. `b` owns slot 2 whether or not `a` is on screen.
+    const config = { a: {}, b: {}, c: {} };
+    expect(categoryColorResolver(config, ["a", "b", "c"])("b")).toBe(chartSlotColor(1));
+    expect(categoryColorResolver(config, ["b"])("b")).toBe(chartSlotColor(1));
+  });
+
+  it("undeclared categories fill the slots no declaration claimed", () => {
+    // Declarations reserve 0 and 1 (that is what makes them stable), so the
+    // undeclared drawn categories take 2 and 3 rather than colliding or
+    // being pushed past the palette.
+    const resolve = categoryColorResolver({ a: {}, b: {} }, ["a", "x", "y"]);
+    expect(resolve("a")).toBe(chartSlotColor(0));
+    expect(resolve("x")).toBe(chartSlotColor(2));
+    expect(resolve("y")).toBe(chartSlotColor(3));
+    expect(new Set([resolve("a"), resolve("x"), resolve("y")]).size).toBe(3);
+  });
+
+  it("with every slot declared, an undeclared category is muted, never a duplicate", () => {
+    const full = { a: {}, b: {}, c: {}, d: {}, e: {} };
+    expect(categoryColorResolver(full, ["a", "zz"])("zz")).toBe(FOLD_COLOR);
   });
 
   it("a fold cap below two is clamped — one real row plus Other is the floor", () => {
@@ -117,8 +161,8 @@ describe("ChartContainer", () => {
         <svg />
       </ChartContainer>,
     ).querySelector("[data-chart]") as HTMLElement;
-    expect(el.style.getPropertyValue("--color-tokens")).toBe("var(--chart-1)");
-    expect(el.style.getPropertyValue("--color-runs")).toBe("red");
+    expect(el.style.getPropertyValue("--chart-color-tokens")).toBe("var(--chart-1)");
+    expect(el.style.getPropertyValue("--chart-color-runs")).toBe("red");
   });
 });
 
@@ -339,5 +383,212 @@ describe("DonutChart", () => {
     );
     expect(el.querySelectorAll(".recharts-pie-sector")).toHaveLength(5);
     expect(el.textContent).toContain("Other");
+  });
+});
+
+describe("the invariants a bot review proved were untested", () => {
+  it("the fold ranks first — an unsorted list never loses its leader", () => {
+    // The exact rendered failure this replaces: six equal categories plus a
+    // dominant one last folded to "a<1% b<1% c<1% d<1% Other 96%".
+    const rows = [
+      { m: "a", v: 1 },
+      { m: "b", v: 1 },
+      { m: "c", v: 1 },
+      { m: "d", v: 1 },
+      { m: "e", v: 1 },
+      { m: "DOMINANT", v: 100 },
+    ];
+    const el = mount(
+      <DonutChart data={rows} categoryKey="m" valueKey="v" width={400} height={240} />,
+    );
+    expect(el.textContent).toContain("DOMINANT");
+    expect(el.textContent).toContain("95%");
+    // …and "Other" is now what it should always have been: the tail.
+    expect(el.textContent).toContain("Other");
+  });
+
+  it("a promoted category gets a real color, not the muted past-palette grey", () => {
+    // The fold RANKS, so a category sitting last in the input can be drawn
+    // first. Resolving identity from input order gave that visible slice
+    // slot 6 → the same grey as "Other".
+    const rows = [
+      { m: "a", v: 1 },
+      { m: "b", v: 1 },
+      { m: "c", v: 1 },
+      { m: "d", v: 1 },
+      { m: "e", v: 1 },
+      { m: "DOMINANT", v: 100 },
+    ];
+    const el = mount(
+      <DonutChart data={rows} categoryKey="m" valueKey="v" width={400} height={240} />,
+    );
+    const fills = Array.from(el.querySelectorAll(".recharts-pie-sector path")).map((n) =>
+      n.getAttribute("fill"),
+    );
+    expect(fills[0]).toBe(chartSlotColor(0));
+    expect(fills[0]).not.toBe(FOLD_COLOR);
+  });
+
+  it("distinct categories never share a color — declared, undeclared, or past the palette", () => {
+    const resolve = categoryColorResolver({ b: { label: "B" } }, ["a", "b"]);
+    // The old bug: "a" took data index 0 and "b" took config index 0.
+    expect(resolve("a")).not.toBe(resolve("b"));
+    const many = categoryColorResolver({}, ["c0", "c1", "c2", "c3", "c4", "c5", "c6"]);
+    const inPalette = ["c0", "c1", "c2", "c3", "c4"].map(many);
+    expect(new Set(inPalette).size).toBe(5);
+    // Past the palette a category is muted, never wrapped onto slot 1.
+    expect(many("c5")).toBe(FOLD_COLOR);
+    expect(many("c5")).not.toBe(chartSlotColor(0));
+    // The fold row is always muted, and an explicit color always wins.
+    expect(many("Other")).toBe(FOLD_COLOR);
+    expect(categoryColorResolver({ a: { color: "rgb(9, 9, 9)" } }, ["a"])("a")).toBe(
+      "rgb(9, 9, 9)",
+    );
+  });
+
+  it("the measure's own config entry does not shift category identity", () => {
+    // A bar chart labels its value column in the same config object.
+    const withMeasure = categoryColorResolver({ tokens: { label: "Tokens" }, Eng: {} }, ["Eng"], {
+      exclude: "tokens",
+    });
+    expect(withMeasure("Eng")).toBe(chartSlotColor(0));
+  });
+
+  it("duplicate category values render without React key collisions", () => {
+    const errors: unknown[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => errors.push(args.join(" "));
+    try {
+      mount(
+        <DonutChart
+          data={[
+            { m: "a", v: 1 },
+            { m: "a", v: 2 },
+            { m: "b", v: 3 },
+          ]}
+          categoryKey="m"
+          valueKey="v"
+          width={400}
+          height={240}
+        />,
+      );
+    } finally {
+      console.error = original;
+    }
+    expect(errors.filter((e) => String(e).includes("same key"))).toHaveLength(0);
+  });
+
+  it("a series color actually reaches the mark it identifies", () => {
+    const el = mount(
+      <TimeSeriesChart
+        data={TIMELINE}
+        config={{ chat: {} }}
+        kind="line"
+        width={600}
+        height={240}
+      />,
+    );
+    const curve = el.querySelector(".recharts-line-curve") as SVGElement;
+    expect(curve.getAttribute("stroke")).toContain(seriesVar("chat"));
+  });
+
+  it("an undeclared series falls back to a visible color, never to black", () => {
+    // `var(--chart-color-b)` alone is undefined at computed-value time:
+    // fill falls back to black, stroke to none — a silent black band.
+    expect(seriesVar("b", chartSlotColor(1))).toBe("var(--chart-color-b, var(--chart-2))");
+    const el = mount(
+      <TimeSeriesChart
+        data={TIMELINE}
+        config={{ chat: {} }}
+        series={["chat", "workflow"]}
+        width={600}
+        height={240}
+      />,
+    );
+    const areas = Array.from(el.querySelectorAll(".recharts-area-area"));
+    expect(areas[1]?.getAttribute("fill")).toContain("var(--chart-2)");
+  });
+
+  it("the responsive path — what every real consumer renders — mounts a container", () => {
+    // Every other test passes `width`, which takes the fixed branch; the
+    // default branch went unexercised entirely.
+    const el = mount(<TimeSeriesChart data={TIMELINE} config={{ chat: {} }} />);
+    expect(el.querySelector(".recharts-responsive-container")).toBeTruthy();
+    // The wrapper states an explicit height, so the aspect ratio yields.
+    expect((el.querySelector("[data-chart]") as HTMLElement).style.height).toBe("240px");
+  });
+
+  it("formats a bucket label rather than passing it through", () => {
+    // The previous assertions (/26/, /\d{1,2}:\d{2}/) all held for the
+    // identity function, so the whole formatter was unverified.
+    // Locale-independent: the formatter is deliberately locale-aware
+    // (`toLocaleDateString(undefined, …)`), so assert it FORMATTED rather
+    // than pinning en-US output a de-DE contributor would fail on.
+    const day = formatBucketLabel("2026-08-26");
+    expect(day).not.toBe("2026-08-26");
+    expect(day).toBe(
+      new Date("2026-08-26T00:00:00").toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      }),
+    );
+    const hour = formatBucketLabel("2026-08-26T14:00:00+00:00");
+    expect(hour).not.toBe("2026-08-26T14:00:00+00:00");
+    expect(hour).toBe(
+      new Date("2026-08-26T14:00:00+00:00").toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    ); // TZ is pinned to America/Los_Angeles
+  });
+
+  it("a zero delta is neutral, and a non-finite one shows no badge at all", () => {
+    const flat = mount(<StatCard label="Tokens" value={5} delta={0} />);
+    expect((flat.querySelector("[data-stat-delta]") as HTMLElement).dataset.statDelta).toBe("flat");
+    // Infinity is what (now - 0) / 0 produces; "▲ ∞%" as GOOD is worse than
+    // no badge.
+    const infinite = mount(<StatCard label="Tokens" value={5} delta={Infinity} />);
+    expect(infinite.querySelector("[data-stat-delta]")).toBeNull();
+    const nan = mount(<StatCard label="Tokens" value={5} delta={NaN} />);
+    expect(nan.querySelector("[data-stat-delta]")).toBeNull();
+  });
+
+  it("a non-finite value reads the same in both formats", () => {
+    const compact = mount(<StatCard label="a" value={NaN} />);
+    const plain = mount(<StatCard label="a" value={NaN} format="plain" />);
+    expect((compact.querySelector("[data-stat-value]") as HTMLElement).textContent).toBe("–");
+    expect((plain.querySelector("[data-stat-value]") as HTMLElement).textContent).toBe("–");
+  });
+
+  it("a NaN cap folds nothing away", () => {
+    const rows = [
+      { c: "a", n: 3 },
+      { c: "b", n: 2 },
+      { c: "c", n: 1 },
+    ];
+    expect(
+      foldCategoryTail(rows, { categoryKey: "c", valueKey: "n", max: Number.NaN }),
+    ).toHaveLength(3);
+  });
+
+  it("the dashboard anatomy renders its parts", () => {
+    const el = mount(
+      <DashboardGrid columns={3}>
+        <DashboardTile span={2}>
+          <ChartCard title="Tokens" description="per day" footer="all-time">
+            <div data-body="" />
+          </ChartCard>
+        </DashboardTile>
+      </DashboardGrid>,
+    );
+    expect(el.querySelector("[data-dashboard-grid]")).toBeTruthy();
+    expect((el.querySelector("[data-dashboard-grid]") as HTMLElement).className).toContain(
+      "lg:grid-cols-3",
+    );
+    expect(el.querySelector("[data-chart-card]")).toBeTruthy();
+    expect(el.textContent).toContain("Tokens");
+    expect(el.textContent).toContain("per day");
+    expect(el.textContent).toContain("all-time");
+    expect(el.querySelector("[data-body]")).toBeTruthy();
   });
 });

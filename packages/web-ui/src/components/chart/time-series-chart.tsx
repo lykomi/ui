@@ -9,7 +9,7 @@ import {
   ChartTooltipContent,
   compactAxisTick,
 } from "./chart.tsx";
-import { type ChartConfig, formatBucketLabel, seriesVar } from "./chart-config.ts";
+import { chartSlotColor, type ChartConfig, formatBucketLabel, seriesVar } from "./chart-config.ts";
 
 /**
  * Change over time — the dashboard's workhorse. Declarative enough that a
@@ -66,6 +66,16 @@ export function TimeSeriesChart({
   className,
 }: TimeSeriesChartProps) {
   const keys = series ?? Object.keys(config);
+  // A drawn key with no config takes the next slot AFTER the configured
+  // ones — the rendered index would collide with a configured series when
+  // an undeclared key is drawn first.
+  const configured = Object.keys(config);
+  const fallbackSlot = (key: string) => {
+    const declared = configured.indexOf(key);
+    if (declared !== -1) return declared;
+    const undeclared = keys.filter((k) => !configured.includes(k)).indexOf(key);
+    return configured.length + Math.max(0, undeclared);
+  };
   const legend = showLegend ?? keys.length > 1;
   const fixed = width !== undefined;
   const ChartRoot =
@@ -115,7 +125,7 @@ export function TimeSeriesChart({
               key={key}
               type="monotone"
               dataKey={key}
-              stroke={seriesVar(key)}
+              stroke={seriesVar(key, chartSlotColor(fallbackSlot(key)))}
               strokeWidth={2}
               dot={data.length <= 3 ? { r: 3 } : false}
               isAnimationActive={false}
@@ -125,7 +135,7 @@ export function TimeSeriesChart({
               key={key}
               dataKey={key}
               stackId={stacked ? "stack" : undefined}
-              fill={seriesVar(key)}
+              fill={seriesVar(key, chartSlotColor(fallbackSlot(key)))}
               maxBarSize={48}
               radius={stacked ? 0 : [4, 4, 0, 0]}
               isAnimationActive={false}
@@ -136,8 +146,8 @@ export function TimeSeriesChart({
               type="monotone"
               dataKey={key}
               stackId={stacked ? "stack" : undefined}
-              stroke={seriesVar(key)}
-              fill={seriesVar(key)}
+              stroke={seriesVar(key, chartSlotColor(fallbackSlot(key)))}
+              fill={seriesVar(key, chartSlotColor(fallbackSlot(key)))}
               fillOpacity={0.25}
               strokeWidth={2}
               // A one-or-two point window would otherwise draw a floating
