@@ -1,8 +1,14 @@
 ---
-"@iloveagents/foundry-web-ui": patch
+"@iloveagents/foundry-web-ui": minor
 ---
 
 Categorical charts tell the truth about which category is which.
+
+**Renames a documented public contract**, which is why this is a minor and
+not a patch: the per-series custom properties the container injects are now
+`--chart-color-<key>` (see below). A consumer that wrote
+`var(--color-<key>)` by hand in a custom mark must switch to `seriesVar(key)`
+— the exported helper, which cannot drift again.
 
 An adversarial review of the freshly-shipped chart family found the fold
 and the palette disagreeing with the discipline the family documents.

@@ -20,24 +20,27 @@ import { TimeSeriesChart } from "../components/chart/time-series-chart.tsx";
 import { CategoryBarChart } from "../components/chart/category-bar-chart.tsx";
 import { DonutChart } from "../components/chart/donut-chart.tsx";
 
-let container: HTMLDivElement | null = null;
-let root: Root | null = null;
+// A test may mount more than once (comparing two prop sets), so every
+// mount is tracked — keeping a single `root` unmounted only the last one
+// and leaked the rest into document.body for the tests that followed.
+const mounted: Array<{ container: HTMLDivElement; root: Root }> = [];
 
 function mount(node: React.ReactElement): HTMLDivElement {
-  container = document.createElement("div");
+  const container = document.createElement("div");
   document.body.appendChild(container);
-  root = createRoot(container);
+  const root = createRoot(container);
+  mounted.push({ container, root });
   act(() => {
-    root!.render(node);
+    root.render(node);
   });
   return container;
 }
 
 afterEach(() => {
-  act(() => root?.unmount());
-  container?.remove();
-  container = null;
-  root = null;
+  for (const { container, root } of mounted.splice(0)) {
+    act(() => root.unmount());
+    container.remove();
+  }
 });
 
 describe("chart semantics", () => {
