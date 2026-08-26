@@ -8,9 +8,7 @@ describe("createServiceFetch", () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(null, { status: 200 }));
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 200 }));
   });
 
   afterEach(() => {
@@ -208,12 +206,8 @@ describe("createServiceFetch", () => {
       // Second call: forceRefresh: true (skip MSAL cache, hit token endpoint)
       expect(acquireToken).toHaveBeenNthCalledWith(2, { forceRefresh: true });
 
-      const firstAuth = new Headers(fetchSpy.mock.calls[0]![1]?.headers).get(
-        "Authorization",
-      );
-      const secondAuth = new Headers(fetchSpy.mock.calls[1]![1]?.headers).get(
-        "Authorization",
-      );
+      const firstAuth = new Headers(fetchSpy.mock.calls[0]![1]?.headers).get("Authorization");
+      const secondAuth = new Headers(fetchSpy.mock.calls[1]![1]?.headers).get("Authorization");
       expect(firstAuth).toBe("Bearer stale-token");
       expect(secondAuth).toBe("Bearer fresh-token");
     });
@@ -326,9 +320,7 @@ describe("createServiceFetch", () => {
         recoverFromHardAuthFailure,
       });
 
-      await expect(serviceFetch("/api/spaces/entities")).rejects.toThrow(
-        "loginRedirect in flight",
-      );
+      await expect(serviceFetch("/api/spaces/entities")).rejects.toThrow("loginRedirect in flight");
       expect(fetchSpy).toHaveBeenCalledTimes(2);
       expect(acquireToken).toHaveBeenCalledTimes(2);
       expect(recoverFromHardAuthFailure).toHaveBeenCalledTimes(1);
@@ -422,10 +414,7 @@ describe("createServiceFetch", () => {
       fetchSpy
         .mockResolvedValueOnce(new Response(null, { status: 401 }))
         .mockResolvedValueOnce(new Response(null, { status: 200 }));
-      const acquireToken = vi
-        .fn()
-        .mockResolvedValueOnce("stale")
-        .mockResolvedValueOnce("fresh");
+      const acquireToken = vi.fn().mockResolvedValueOnce("stale").mockResolvedValueOnce("fresh");
       const recoverFromHardAuthFailure = vi.fn();
       const serviceFetch = createServiceFetch({
         acquireToken,
@@ -454,7 +443,8 @@ describe("parseClaimsChallengeFromWwwAuthenticate", () => {
   it("extracts quoted claims payload", () => {
     // Microsoft Identity Platform CAE / Conditional Access challenge
     // shape — base64url payload inside double quotes.
-    const claims = "eyJhY2Nlc3NfdG9rZW4iOnsibmJmIjp7ImVzc2VudGlhbCI6dHJ1ZSwidmFsdWUiOiIxNjAwMDAwMDAwIn19fQ";
+    const claims =
+      "eyJhY2Nlc3NfdG9rZW4iOnsibmJmIjp7ImVzc2VudGlhbCI6dHJ1ZSwidmFsdWUiOiIxNjAwMDAwMDAwIn19fQ";
     const header = `Bearer realm="example", error="insufficient_claims", claims="${claims}"`;
     expect(parseClaimsChallengeFromWwwAuthenticate(header)).toBe(claims);
   });
@@ -471,7 +461,8 @@ describe("parseClaimsChallengeFromWwwAuthenticate", () => {
   });
 
   it("picks the Bearer claims even when other challenges are present", () => {
-    const header = 'Basic realm="x", Bearer realm="api", error="insufficient_claims", claims="ABC123"';
+    const header =
+      'Basic realm="x", Bearer realm="api", error="insufficient_claims", claims="ABC123"';
     expect(parseClaimsChallengeFromWwwAuthenticate(header)).toBe("ABC123");
   });
 });
@@ -493,23 +484,16 @@ describe("createServiceFetch — claims-challenge passthrough", () => {
     // user needs a step-up. Recovery must carry the challenge to
     // MSAL so the next token explicitly satisfies it.
     const claims = "eyJjbGFpbXMiOiJBQkMifQ";
-    fetchSpy
-      .mockResolvedValueOnce(new Response(null, { status: 401 }))
-      .mockResolvedValueOnce(
-        new Response(null, {
-          status: 401,
-          headers: {
-            "WWW-Authenticate": `Bearer realm="api", error="insufficient_claims", claims="${claims}"`,
-          },
-        }),
-      );
-    const acquireToken = vi
-      .fn()
-      .mockResolvedValueOnce("stale")
-      .mockResolvedValueOnce("fresh");
-    const recoverFromHardAuthFailure = vi
-      .fn()
-      .mockRejectedValue(new Error("redirecting"));
+    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 401 })).mockResolvedValueOnce(
+      new Response(null, {
+        status: 401,
+        headers: {
+          "WWW-Authenticate": `Bearer realm="api", error="insufficient_claims", claims="${claims}"`,
+        },
+      }),
+    );
+    const acquireToken = vi.fn().mockResolvedValueOnce("stale").mockResolvedValueOnce("fresh");
+    const recoverFromHardAuthFailure = vi.fn().mockRejectedValue(new Error("redirecting"));
     const serviceFetch = createServiceFetch({
       acquireToken,
       recoverFromHardAuthFailure,

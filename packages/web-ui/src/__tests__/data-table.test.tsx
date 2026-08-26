@@ -174,7 +174,6 @@ const renderedIds = () =>
     tr.getAttribute("data-row-id"),
   );
 
-
 /** How many stacked rows the toolbar's flex column currently holds.
  *
  *  Throws rather than returning a sentinel: a helper that answers `-1` for
@@ -969,10 +968,9 @@ describe("useDataTable + DataTable", () => {
     });
     const lead = () => container!.querySelector("[data-toolbar-lead]")!;
     expect(lead().getAttribute("data-toolbar-lead")).toBe("filters");
-    expect(
-      lead().className,
-      "the filter region has to keep stacking facets into rows",
-    ).toContain("flex-wrap");
+    expect(lead().className, "the filter region has to keep stacking facets into rows").toContain(
+      "flex-wrap",
+    );
 
     act(() => table.getRow("t1").toggleSelected(true));
 
@@ -1019,13 +1017,10 @@ describe("useDataTable + DataTable", () => {
 
     const bar = container!.querySelector("[data-selection-bar]")!;
     const actions = container!.querySelector("[data-selection-actions]")!;
-    expect(bar.className, "the bar itself can wrap in the shared row").toContain(
+    expect(bar.className, "the bar itself can wrap in the shared row").toContain("flex-nowrap");
+    expect(actions.className, "the bulk actions can wrap inside a bar that cannot").toContain(
       "flex-nowrap",
     );
-    expect(
-      actions.className,
-      "the bulk actions can wrap inside a bar that cannot",
-    ).toContain("flex-nowrap");
   });
 
   it("a standalone selection bar still wraps", () => {
@@ -1054,12 +1049,8 @@ describe("useDataTable + DataTable", () => {
     const barRoot = createRoot(standalone);
     act(() => barRoot.render(<BulkBar />));
 
-    expect(standalone.querySelector("[data-selection-bar]")!.className).toContain(
-      "flex-wrap",
-    );
-    expect(standalone.querySelector("[data-selection-actions]")!.className).toContain(
-      "flex-wrap",
-    );
+    expect(standalone.querySelector("[data-selection-bar]")!.className).toContain("flex-wrap");
+    expect(standalone.querySelector("[data-selection-actions]")!.className).toContain("flex-wrap");
     act(() => barRoot.unmount());
     standalone.remove();
   });

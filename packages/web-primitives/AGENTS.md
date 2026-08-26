@@ -36,6 +36,7 @@ Stateless, generic UI building blocks. Specifically:
 # Theming
 
 Components use Tailwind utility classes referencing CSS variables (shadcn convention):
+
 - `bg-background`, `text-foreground`, `border-border`, `bg-primary`, `text-primary-foreground`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-accent-foreground`, `border-input`, `ring-ring`, `bg-destructive`, `text-destructive-foreground`, `bg-secondary`, `text-secondary-foreground`
 
 Consumers must define these tokens in their app's CSS (canonical definitions: `packages/web-ui/src/styles.css`, shipped as `@iloveagents/foundry-web-ui/styles.css`; the scaffold's `template/src/index.css` shows the consumer wiring).

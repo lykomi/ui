@@ -60,9 +60,7 @@ export async function tokenFetch(
     retried.body?.cancel().catch(() => undefined);
     await authStore
       .getState()
-      .recoverFromHardAuthFailure(
-        new Error("API returned 401 after force-refresh retry"),
-      );
+      .recoverFromHardAuthFailure(new Error("API returned 401 after force-refresh retry"));
   }
   return retried;
 }

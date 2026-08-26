@@ -22,8 +22,7 @@
 export function runtimeConfig(key: string): string {
   const fromWindow =
     typeof window !== "undefined"
-      ? (window as { __APP_CONFIG__?: Record<string, string | undefined> })
-          .__APP_CONFIG__?.[key]
+      ? (window as { __APP_CONFIG__?: Record<string, string | undefined> }).__APP_CONFIG__?.[key]
       : undefined;
   const fromEnv = (import.meta.env as Record<string, string | undefined>)[key];
   return fromWindow ?? fromEnv ?? "";

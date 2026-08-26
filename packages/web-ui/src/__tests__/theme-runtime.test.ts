@@ -147,10 +147,7 @@ describe("theme runtime", () => {
     // than no slot: the branding silently changes on a UI state the user
     // controls. Asserted against the source, because the collapsed branches
     // render through TooltipIconButton rather than the shared nav row.
-    const src = readFileSync(
-      join(import.meta.dirname!, "../components/sidebar.tsx"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname!, "../components/sidebar.tsx"), "utf-8");
     // The collapsed "New Thread" button.
     expect(src).toContain('<SquarePen className="size-4 text-sidebar-icon" />');
     // The collapsed nav shortcuts: active keeps `primary`, idle takes the slot.
@@ -165,10 +162,7 @@ describe("theme runtime", () => {
     // ceiling still overflowed and pushed the collapse button out. The bound
     // has to be the container, and the image has to be allowed to narrow —
     // `shrink-0` is what turns "too wide" into "off screen".
-    const src = readFileSync(
-      join(import.meta.dirname!, "../components/app-brand.tsx"),
-      "utf-8",
-    );
+    const src = readFileSync(join(import.meta.dirname!, "../components/app-brand.tsx"), "utf-8");
     expect(src).toContain('lockup.height ? "min-w-0 shrink" : "shrink-0"');
     expect(src).toContain('"w-auto max-w-full"');
     expect(src).not.toContain("max-w-[20rem]");

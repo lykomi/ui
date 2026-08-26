@@ -34,6 +34,18 @@ export default defineConfig({
           if (id.includes("@iloveagents/foundry-web-ui")) return "vendor-foundry-ui";
           if (id.includes("@iloveagents/foundry-web-shell")) return "vendor-foundry-shell";
           if (id.includes("@iloveagents/foundry-agent")) return "vendor-foundry-agent";
+          // Before the react rule: recharts drags react-smooth + the d3
+          // sub-packages along, and "react-smooth" would land in
+          // vendor-react and push it past the chunk-size gate.
+          if (
+            id.includes("recharts") ||
+            id.includes("victory-vendor") ||
+            id.includes("/d3-") ||
+            id.includes("react-smooth") ||
+            id.includes("decimal.js-light")
+          ) {
+            return "vendor-charts";
+          }
           if (id.includes("react") || id.includes("scheduler")) return "vendor-react";
           if (id.includes("lucide-react")) return "vendor-icons";
           if (id.includes("react-markdown") || id.includes("remark-") || id.includes("micromark")) {

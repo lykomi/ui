@@ -201,9 +201,7 @@ function findOrphanedMsalKeys(): string[] {
     const k = window.localStorage.key(i);
     if (k && k.startsWith("msal.")) allKeys.push(k);
   }
-  const tokenKeys = allKeys.filter((k) =>
-    /\|(?:access|refresh|id)token\|/.test(k),
-  );
+  const tokenKeys = allKeys.filter((k) => /\|(?:access|refresh|id)token\|/.test(k));
   // No tokens = clean (or never logged in). Tokens AND empty
   // getAllAccounts means orphaned — caller is the only one who knows
   // the accounts state, so caller decides whether to nuke.
@@ -299,10 +297,7 @@ async function startInteractiveRecovery(
       } catch (err) {
         // Telemetry only — keep flowing into the redirect path.
         // eslint-disable-next-line no-console
-        console.warn(
-          "[msal-recovery] clearCache(account) failed; continuing with redirect",
-          err,
-        );
+        console.warn("[msal-recovery] clearCache(account) failed; continuing with redirect", err);
       }
     }
 
@@ -507,11 +502,6 @@ export const authStore = createStore<AuthState>((set) => ({
       );
     }
     const accounts = msal.getAllAccounts();
-    return startInteractiveRecovery(
-      msal,
-      accounts[0] ?? null,
-      config.apiScope,
-      reason,
-    );
+    return startInteractiveRecovery(msal, accounts[0] ?? null, config.apiScope, reason);
   },
 }));

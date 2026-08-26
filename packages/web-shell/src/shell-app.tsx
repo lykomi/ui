@@ -115,9 +115,16 @@ export function ShellApp({
           >
             <Suspense fallback={null}>
               <Routes>
-                <Route element={<ShellLayout modules={modules} baseThemeLayers={baseThemeLayers} />}>
+                <Route
+                  element={<ShellLayout modules={modules} baseThemeLayers={baseThemeLayers} />}
+                >
                   {mergedPages.map((p) => (
-                    <Route key={p.path} path={p.path === "/" ? undefined : p.path} index={p.path === "/"} element={p.element} />
+                    <Route
+                      key={p.path}
+                      path={p.path === "/" ? undefined : p.path}
+                      index={p.path === "/"}
+                      element={p.element}
+                    />
                   ))}
                 </Route>
               </Routes>

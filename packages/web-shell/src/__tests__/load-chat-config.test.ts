@@ -53,9 +53,7 @@ describe("loadChatConfig", () => {
   });
 
   it("resets on an unknown level — a wrong level is worse than none", async () => {
-    await loadChatConfig(
-      fetchReturning({ reasoning: { defaultEffort: "turbo", scope: "x" } }),
-    );
+    await loadChatConfig(fetchReturning({ reasoning: { defaultEffort: "turbo", scope: "x" } }));
     expect(setResolved).toHaveBeenLastCalledWith(null);
   });
 

@@ -117,9 +117,7 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     // trip the token endpoint so we stop sending the same stale-but-cached
     // access token.
     const msal = mockMsal();
-    expect(await store().getAccessToken("api", { forceRefresh: true })).toBe(
-      "fresh-token",
-    );
+    expect(await store().getAccessToken("api", { forceRefresh: true })).toBe("fresh-token");
     expect(msal.acquireTokenSilent).toHaveBeenCalledWith(
       expect.objectContaining({ forceRefresh: true }),
     );
@@ -141,14 +139,11 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     // challenge" guidance.
     const msal = mockMsal();
     const reason = new Error("API returned 401 after force-refresh retry");
-    await expectInteractiveRecoveryError(
-      store().recoverFromHardAuthFailure(reason),
-      {
-        code: undefined,
-        cause: reason,
-        messageIncludes: ["interaction required"],
-      },
-    );
+    await expectInteractiveRecoveryError(store().recoverFromHardAuthFailure(reason), {
+      code: undefined,
+      cause: reason,
+      messageIncludes: ["interaction required"],
+    });
     expect(msal.clearCache).toHaveBeenCalledOnce();
     expect(msal.clearCache).toHaveBeenCalledWith({
       account: { username: "alice@example.com", localAccountId: "alice-oid" },
@@ -166,18 +161,14 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     // recovery reason. The redirect must carry it through so Entra
     // mints a token that explicitly satisfies the challenge.
     const msal = mockMsal();
-    const reason = Object.assign(
-      new Error("API returned 401 after force-refresh retry"),
-      { claims: "eyJjbGFpbXMiOiIuLi4ifQ" },
-    );
-    await expectInteractiveRecoveryError(
-      store().recoverFromHardAuthFailure(reason),
-      {
-        code: undefined,
-        cause: reason,
-        messageIncludes: ["interaction required"],
-      },
-    );
+    const reason = Object.assign(new Error("API returned 401 after force-refresh retry"), {
+      claims: "eyJjbGFpbXMiOiIuLi4ifQ",
+    });
+    await expectInteractiveRecoveryError(store().recoverFromHardAuthFailure(reason), {
+      code: undefined,
+      cause: reason,
+      messageIncludes: ["interaction required"],
+    });
     expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
       expect.objectContaining({
         claims: "eyJjbGFpbXMiOiIuLi4ifQ",
@@ -269,7 +260,9 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       messageIncludes: ["Authentication interaction required", "consent_required"],
     });
     expect(msal.clearCache).toHaveBeenCalledWith(
-      expect.objectContaining({ account: expect.objectContaining({ localAccountId: "alice-oid" }) }),
+      expect.objectContaining({
+        account: expect.objectContaining({ localAccountId: "alice-oid" }),
+      }),
     );
     expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: "login" }),
@@ -290,7 +283,9 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
       messageIncludes: ["Authentication interaction required", "monitor_window_timeout"],
     });
     expect(msal.clearCache).toHaveBeenCalledWith(
-      expect.objectContaining({ account: expect.objectContaining({ localAccountId: "alice-oid" }) }),
+      expect.objectContaining({
+        account: expect.objectContaining({ localAccountId: "alice-oid" }),
+      }),
     );
     expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: "login" }),
@@ -374,9 +369,7 @@ describe("authStore.getAccessToken — canonical MSAL.js fallback", () => {
     expect(msal.acquireTokenRedirect).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: "login" }),
     );
-    expect(msal.loginRedirect).toHaveBeenCalledWith(
-      expect.objectContaining({ prompt: "login" }),
-    );
+    expect(msal.loginRedirect).toHaveBeenCalledWith(expect.objectContaining({ prompt: "login" }));
     // Per-account cache eviction DID happen as the canonical pre-
     // redirect step (see GitHub #6840). The "no clearCache" rule
     // applies only to the broad ``clearCache()`` form, not the
@@ -453,9 +446,7 @@ describe("authStore — orphaned-state recovery", () => {
     expect((thrown as AuthInteractionRequiredError).message).toMatch(/orphaned/i);
 
     // localStorage should have been nuked of all msal.* keys.
-    const remainingMsalKeys = Object.keys(localStorage).filter((k) =>
-      k.startsWith("msal."),
-    );
+    const remainingMsalKeys = Object.keys(localStorage).filter((k) => k.startsWith("msal."));
     expect(remainingMsalKeys).toEqual([]);
 
     // No account → recovery skips acquireTokenRedirect and goes
@@ -554,7 +545,9 @@ describe("authStore — block_iframe_reload defuse", () => {
       acquireRedirectHash = window.location.hash;
     });
 
-    await expect(authStore.getState().recoverFromHardAuthFailure(reason)).rejects.toBeInstanceOf(AuthInteractionRequiredError);
+    await expect(authStore.getState().recoverFromHardAuthFailure(reason)).rejects.toBeInstanceOf(
+      AuthInteractionRequiredError,
+    );
 
     // By the time MSAL's redirect API is called, the page fragment
     // has been wiped. MSAL won't see the stale ``error=`` and won't
@@ -571,9 +564,9 @@ describe("authStore — block_iframe_reload defuse", () => {
     window.history.replaceState(null, "", "/spaces?clean=1");
     const original = window.location.href;
     const msal = mockMsal();
-    await expect(authStore
-        .getState()
-        .recoverFromHardAuthFailure(new Error("policy drift"))).rejects.toBeInstanceOf(AuthInteractionRequiredError);
+    await expect(
+      authStore.getState().recoverFromHardAuthFailure(new Error("policy drift")),
+    ).rejects.toBeInstanceOf(AuthInteractionRequiredError);
     // Path + query stay identical (no replaceState invocation).
     expect(window.location.href).toBe(original);
     expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce();
@@ -590,7 +583,9 @@ describe("authStore — block_iframe_reload defuse", () => {
     msal.acquireTokenRedirect = vi.fn(async () => {
       hashAtRedirect = window.location.hash;
     });
-    await expect(authStore.getState().recoverFromHardAuthFailure(new Error("x"))).rejects.toBeInstanceOf(AuthInteractionRequiredError);
+    await expect(
+      authStore.getState().recoverFromHardAuthFailure(new Error("x")),
+    ).rejects.toBeInstanceOf(AuthInteractionRequiredError);
     expect(hashAtRedirect).toBe("");
   });
 });

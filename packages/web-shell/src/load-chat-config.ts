@@ -26,9 +26,7 @@ export async function loadChatConfig(
 ): Promise<void> {
   const reset = () => reasoningDefaultStore.getState().setResolved(null);
   try {
-    const query = params && Object.keys(params).length > 0
-      ? `?${new URLSearchParams(params)}`
-      : "";
+    const query = params && Object.keys(params).length > 0 ? `?${new URLSearchParams(params)}` : "";
     const response = await fetchImpl(`/api/chat/config${query}`);
     if (!response.ok) {
       reset();
@@ -76,9 +74,7 @@ export function _setChatConfigFetch(fetchImpl: typeof fetch): void {
  * the shell has booted there is no fetch client yet; calling then is a
  * safe no-op and the boot-time load will run anyway.
  */
-export async function refreshChatConfig(
-  params?: Record<string, string>,
-): Promise<void> {
+export async function refreshChatConfig(params?: Record<string, string>): Promise<void> {
   if (!bootFetch) return;
   await loadChatConfig(bootFetch, params);
 }
