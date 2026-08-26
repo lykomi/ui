@@ -115,9 +115,28 @@ describe("chart semantics", () => {
     expect(folded[2].n).toBe(101);
   });
 
-  it("config entries for categories this chart does not draw take no slot", () => {
-    const resolve = categoryColorResolver({ absent: {}, drawn: {} }, ["drawn"]);
-    expect(resolve("drawn")).toBe(chartSlotColor(0));
+  it("a declared category keeps its color when a filter removes its neighbours", () => {
+    // The whole point of declaring: identity follows the entity, never its
+    // rank. `b` owns slot 2 whether or not `a` is on screen.
+    const config = { a: {}, b: {}, c: {} };
+    expect(categoryColorResolver(config, ["a", "b", "c"])("b")).toBe(chartSlotColor(1));
+    expect(categoryColorResolver(config, ["b"])("b")).toBe(chartSlotColor(1));
+  });
+
+  it("undeclared categories fill the slots no declaration claimed", () => {
+    // Declarations reserve 0 and 1 (that is what makes them stable), so the
+    // undeclared drawn categories take 2 and 3 rather than colliding or
+    // being pushed past the palette.
+    const resolve = categoryColorResolver({ a: {}, b: {} }, ["a", "x", "y"]);
+    expect(resolve("a")).toBe(chartSlotColor(0));
+    expect(resolve("x")).toBe(chartSlotColor(2));
+    expect(resolve("y")).toBe(chartSlotColor(3));
+    expect(new Set([resolve("a"), resolve("x"), resolve("y")]).size).toBe(3);
+  });
+
+  it("with every slot declared, an undeclared category is muted, never a duplicate", () => {
+    const full = { a: {}, b: {}, c: {}, d: {}, e: {} };
+    expect(categoryColorResolver(full, ["a", "zz"])("zz")).toBe(FOLD_COLOR);
   });
 
   it("a fold cap below two is clamped — one real row plus Other is the floor", () => {

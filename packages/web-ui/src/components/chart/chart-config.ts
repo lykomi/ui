@@ -59,18 +59,22 @@ export const FOLD_COLOR = "var(--muted-foreground)";
  * The color resolver for a CATEGORICAL chart, where every category is an
  * identity rather than a series.
  *
- * Pass the categories the chart actually DRAWS (after any fold), not the
- * raw data: the fold ranks, so a category sitting late in the input can be
- * promoted into the chart, and resolving from input order would hand a
- * visible slice the muted past-the-palette color — the dominant slice
- * rendered the same grey as "Other".
+ * Two requirements pull against each other, and both are real:
+ *   - a DECLARED category must keep its color when a filter removes its
+ *     neighbours (identity follows the entity, never its rank), and
+ *   - a DRAWN category must never take the muted past-the-palette color
+ *     just because the config also names categories this chart does not
+ *     draw.
  *
- * Order is declared config keys first, then the drawn categories in the
- * order they are drawn, so DECLARING a category in `config` is how a caller
- * pins its color across data changes. Two rules keep it honest: declared
- * and undeclared never share an index space, and past the palette a
- * category takes the muted fold color rather than wrapping modulo five onto
- * a color another category already owns.
+ * Resolved by giving each side its own claim on the palette. A declared
+ * key OWNS its declared index — reserved whether or not it is drawn, which
+ * is what makes it stable — and undeclared drawn categories fill the slots
+ * no declaration claimed, in drawn order. Past the palette, or with every
+ * slot spoken for, a category takes the muted fold color rather than
+ * wrapping modulo five onto a color another category already owns.
+ *
+ * So: declare the categories whose colors must not move, and the rest sort
+ * themselves out.
  *
  * `exclude` drops the measure's own config entry (a bar chart labels its
  * value column there); it is not a category and must not shift the order.
@@ -81,22 +85,28 @@ export function categoryColorResolver(
   options: { exclude?: string; otherLabel?: string } = {},
 ): (category: string) => string {
   const { exclude, otherLabel = OTHER_LABEL } = options;
-  const drawn = new Set(categories);
-  const index = new Map<string, number>();
-  const add = (category: string) => {
-    if (category === otherLabel || index.has(category)) return;
-    index.set(category, index.size);
-  };
-  // Declared keys set the ORDER, but only DRAWN categories consume a slot —
-  // a config that also labels categories absent from this chart would
-  // otherwise push visible ones past the palette into the fold color.
-  for (const key of Object.keys(config)) if (key !== exclude && drawn.has(key)) add(key);
-  for (const category of drawn) add(category);
+  const declared = Object.keys(config).filter((key) => key !== exclude && key !== otherLabel);
+  const slotOf = new Map<string, number>();
+  declared.forEach((key, i) => slotOf.set(key, i));
+
+  // Whatever the declarations did not claim is free for the rest.
+  const claimed = new Set(slotOf.values());
+  const free: number[] = [];
+  for (let slot = 0; slot < CHART_SLOT_COUNT; slot++) {
+    if (!claimed.has(slot)) free.push(slot);
+  }
+  let next = 0;
+  for (const category of categories) {
+    if (category === otherLabel || slotOf.has(category)) continue;
+    const slot = free[next++];
+    slotOf.set(category, slot === undefined ? CHART_SLOT_COUNT : slot);
+  }
+
   return (category: string): string => {
     const explicit = config[category]?.color;
     if (explicit) return explicit;
     if (category === otherLabel) return FOLD_COLOR;
-    const slot = index.get(category);
+    const slot = slotOf.get(category);
     if (slot === undefined || slot >= CHART_SLOT_COUNT) return FOLD_COLOR;
     return chartSlotColor(slot);
   };

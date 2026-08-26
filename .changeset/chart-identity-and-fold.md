@@ -13,6 +13,13 @@ and the palette disagreeing with the discipline the family documents.
   and an unlabeled 96% "Other" — the largest slice invisible. Ranking
   happens inside the fold now, so no caller can reintroduce it, including
   the agent-written renderers this library exists to serve.
+- **The palette has one rule now.** A DECLARED category owns its declared
+  slot — reserved whether or not it is currently drawn, which is what keeps
+  its color stable when a filter removes its neighbours — and undeclared
+  drawn categories fill the slots no declaration claimed. Past the palette,
+  or with every slot spoken for, a category takes the muted fold color
+  rather than wrapping onto a color someone else owns. Declare the
+  categories whose colors must not move; the rest sort themselves out.
 - **Distinct categories no longer share a color.** Identity resolution mixed
   two index spaces (declared config keys vs. row position), so two
   categories could both take slot 1; past five it wrapped modulo the palette
