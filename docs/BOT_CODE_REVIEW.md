@@ -114,10 +114,29 @@ agent sits on a finished review indefinitely, or asks for it again.
    Roughly one finding in four is right about the rule and wrong about this
    code — answer that with the evidence, in the thread, and resolve it.
    "Fixed" and "declined, because…" are both finished; "unread" is not.
-6. **Answer in the thread, then resolve it.** A reply is how the next reader
+6. **Fix the likely; decline the hypothetical — except where it destroys.** A
+   finding that needs a contrived chain of failures to reach gets an answer in
+   the thread, not a patch. This is not laziness: every speculative fix is new
+   code, and new code is what the next round finds defects in. One PR here ran
+   5 → 10 → 10 → 11 findings without converging, and most of that growth was
+   the previous round's speculative hardening being critiqued in turn.
+
+   Weigh the exception by what a mistake COSTS, not by which verb the code
+   uses. Deleting a temp file, dropping a cache, or rewriting state that
+   regenerates itself is ordinary. An outcome nobody can undo — a resource
+   someone still depends on deleted or purged, state that cannot be
+   reproduced overwritten, a credential's scope widened — is worth fixing even
+   on an uncommon trigger, because there is no second chance to get it right.
+
+   On that same PR the two findings that genuinely mattered were both of that
+   kind: a teardown whose prefix match would have deleted a **still-live
+   sibling environment's** identities (an environment named `foo` builds a
+   prefix that also matches everything belonging to `foo-two`), and a purge
+   that could have destroyed a secrets vault the deployment did not own.
+7. **Answer in the thread, then resolve it.** A reply is how the next reader
    knows a finding was considered rather than missed, and it is what makes
    round N+1 shorter.
-7. **Stop when what is left is genuinely minor** — a style preference, churn
+8. **Stop when what is left is genuinely minor** — a style preference, churn
    that outweighs its value, a case the code deliberately does not support.
    Structural findings too large for the PR become issues, not silence.
 
