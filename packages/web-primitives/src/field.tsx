@@ -38,9 +38,6 @@ export function Field({
   );
 }
 
-export function FieldSet({
-  className,
-  ...props
-}: ComponentPropsWithoutRef<"div">) {
+export function FieldSet({ className, ...props }: ComponentPropsWithoutRef<"div">) {
   return <div className={cn("grid gap-4", className)} {...props} />;
 }

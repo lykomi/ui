@@ -152,7 +152,9 @@ function referenceResult(reference: SearchReference): SearchResult | null {
 
 function resultsFromReferences(references: SearchReference[] | undefined): SearchResult[] {
   if (!Array.isArray(references)) return [];
-  return references.map(referenceResult).filter((result): result is SearchResult => Boolean(result));
+  return references
+    .map(referenceResult)
+    .filter((result): result is SearchResult => Boolean(result));
 }
 
 function unwrapResults(result: unknown): SearchResult[] {
@@ -475,7 +477,11 @@ function activitySourceArguments(item: ActivityItem): Record<string, unknown> | 
 function isSourceActivity(item: ActivityItem): boolean {
   if (!item.type) return false;
   if (item.type === "mcpTool" || item.type === "searchIndex") return true;
-  if (item.type.startsWith("model") || item.type === "agenticReasoning" || item.type === "imageServing") {
+  if (
+    item.type.startsWith("model") ||
+    item.type === "agenticReasoning" ||
+    item.type === "imageServing"
+  ) {
     return false;
   }
   return Boolean(item.knowledgeSourceName || activitySourceArguments(item));
@@ -574,15 +580,16 @@ function SearchResultsBody({ results }: { results: SearchResult[] }) {
                     </span>
                   ) : (
                     <>
-                      <span className="text-[11px] text-muted-foreground">
-                        Score {scoreLabel}
-                      </span>
+                      <span className="text-[11px] text-muted-foreground">Score {scoreLabel}</span>
                       <div
                         className="flex h-2 w-16 justify-end overflow-hidden rounded-full border border-primary/30 bg-muted"
                         title={`Score: ${scoreLabel}`}
                       >
                         <div
-                          className={cn("h-full rounded-full transition-all", scoreClass(relevance))}
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            scoreClass(relevance),
+                          )}
                           style={{ width: `${Math.max(relevance, 8)}%` }}
                         />
                       </div>
@@ -726,7 +733,10 @@ function ActivityResultsList({ results }: { results: SearchResult[] }) {
           const snippet = cleanSnippet(rawContent(result));
           const preview = snippet.length > 140 ? `${snippet.slice(0, 140).trimEnd()}...` : snippet;
           return (
-            <div key={result.chunk_id ?? result.id ?? result.ref_id ?? `${title}-${index}`} className="text-xs">
+            <div
+              key={result.chunk_id ?? result.id ?? result.ref_id ?? `${title}-${index}`}
+              className="text-xs"
+            >
               <div className="flex min-w-0 items-center gap-1.5">
                 <span className="w-5 shrink-0 text-right text-[11px] font-semibold text-primary">
                   [{index + 1}]
@@ -740,9 +750,7 @@ function ActivityResultsList({ results }: { results: SearchResult[] }) {
                 )}
               </div>
               {preview && (
-                <div className="ml-8 line-clamp-2 text-[11px] text-muted-foreground">
-                  {preview}
-                </div>
+                <div className="ml-8 line-clamp-2 text-[11px] text-muted-foreground">{preview}</div>
               )}
             </div>
           );

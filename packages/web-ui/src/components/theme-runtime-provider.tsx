@@ -93,8 +93,8 @@ function currentlyOurs(root: HTMLElement, name: string): boolean {
   const written = rootThemeWritten.get(name);
   if (written === undefined) return true;
   return (
-    root.style.getPropertyValue(name) === written.value
-    && root.style.getPropertyPriority(name) === written.priority
+    root.style.getPropertyValue(name) === written.value &&
+    root.style.getPropertyPriority(name) === written.priority
   );
 }
 

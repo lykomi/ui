@@ -78,7 +78,9 @@ export interface ChatConversationConfig {
    *     a server row keyed by ``aguiThreadId``, cache the resulting
    *     conversation id, then load/append against that.
    */
-  buildHistoryAdapter: (args: ChatConversationFactoryArgs) => import("@assistant-ui/react").ThreadHistoryAdapter;
+  buildHistoryAdapter: (
+    args: ChatConversationFactoryArgs,
+  ) => import("@assistant-ui/react").ThreadHistoryAdapter;
 }
 
 /** Route entry contributed by a module or the host app. */

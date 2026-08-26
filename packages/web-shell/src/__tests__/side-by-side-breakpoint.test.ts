@@ -1,9 +1,6 @@
 import { describe, it, expect } from "vitest";
 import layoutSource from "../shell-layout.tsx?raw";
-import {
-  SIDE_BY_SIDE_MIN_VIEWPORT,
-  SIDE_BY_SIDE_BREAKPOINT_PX,
-} from "../use-page-panel-width.ts";
+import { SIDE_BY_SIDE_MIN_VIEWPORT, SIDE_BY_SIDE_BREAKPOINT_PX } from "../use-page-panel-width.ts";
 
 /**
  * The layout gates the side-by-side split with a Tailwind arbitrary variant,

@@ -21,9 +21,7 @@ function makeWrapper(label: string, expectedDepth: number) {
     // Using a side-effect ref so the assertion runs even if children
     // never resolve (e.g. routing to a no-match path).
     seen[label] = incoming;
-    return (
-      <DepthContext.Provider value={incoming + 1}>{children}</DepthContext.Provider>
-    );
+    return <DepthContext.Provider value={incoming + 1}>{children}</DepthContext.Provider>;
   };
 }
 
@@ -48,16 +46,12 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => {
     const incoming = useContext(DepthContext);
     seen["auth-provider"] = incoming;
-    return (
-      <DepthContext.Provider value={incoming + 1}>{children}</DepthContext.Provider>
-    );
+    return <DepthContext.Provider value={incoming + 1}>{children}</DepthContext.Provider>;
   },
   AGUIRuntimeProvider: ({ children }: { children: ReactNode }) => {
     const incoming = useContext(DepthContext);
     seen["agui-runtime"] = incoming;
-    return (
-      <DepthContext.Provider value={incoming + 1}>{children}</DepthContext.Provider>
-    );
+    return <DepthContext.Provider value={incoming + 1}>{children}</DepthContext.Provider>;
   },
   Sidebar: () => null,
   ChatHeader: () => null,

@@ -69,9 +69,7 @@ describe("tokenFetch", () => {
   it("retries once with forceRefresh when first attempt returns 401", async () => {
     // Long-lived tab path: cached token is rejected by the API → MSAL is
     // asked to round-trip the token endpoint with the refresh token.
-    getAccessToken
-      .mockResolvedValueOnce("stale-token")
-      .mockResolvedValueOnce("fresh-token");
+    getAccessToken.mockResolvedValueOnce("stale-token").mockResolvedValueOnce("fresh-token");
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
@@ -85,12 +83,8 @@ describe("tokenFetch", () => {
     expect(getAccessToken).toHaveBeenNthCalledWith(1, "api", undefined);
     expect(getAccessToken).toHaveBeenNthCalledWith(2, "api", { forceRefresh: true });
 
-    const firstAuth = new Headers(fetchSpy.mock.calls[0]![1]?.headers).get(
-      "Authorization",
-    );
-    const secondAuth = new Headers(fetchSpy.mock.calls[1]![1]?.headers).get(
-      "Authorization",
-    );
+    const firstAuth = new Headers(fetchSpy.mock.calls[0]![1]?.headers).get("Authorization");
+    const secondAuth = new Headers(fetchSpy.mock.calls[1]![1]?.headers).get("Authorization");
     expect(firstAuth).toBe("Bearer stale-token");
     expect(secondAuth).toBe("Bearer fresh-token");
   });
@@ -115,9 +109,7 @@ describe("tokenFetch", () => {
     // throws once the redirect is in flight; the throw stops the
     // calling pipeline.
     getAccessToken.mockResolvedValue("token");
-    recoverFromHardAuthFailure.mockRejectedValue(
-      new Error("loginRedirect in flight"),
-    );
+    recoverFromHardAuthFailure.mockRejectedValue(new Error("loginRedirect in flight"));
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(null, { status: 401 }))

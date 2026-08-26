@@ -85,9 +85,7 @@ let msalConfig: MsalAuthConfig | null = null;
  * Initialize the MSAL singleton. Must be called once before rendering.
  * Dynamically imports `@azure/msal-browser` so the dependency stays optional.
  */
-export async function initializeMsal(
-  config: MsalAuthConfig,
-): Promise<MsalClientApplication> {
+export async function initializeMsal(config: MsalAuthConfig): Promise<MsalClientApplication> {
   if (msalInstance) return msalInstance;
 
   const { PublicClientApplication: PCA } = await import("@azure/msal-browser");

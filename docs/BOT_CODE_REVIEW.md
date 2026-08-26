@@ -14,10 +14,10 @@ that 3,059 passing tests never touched.
 **Match on the numeric id, never the login** — the same bot answers to
 different names on different endpoints.
 
-| Bot | id | on `/pulls/{n}/reviews` | on the timeline |
-|---|---|---|---|
-| Copilot code review | `175728472` | `copilot-pull-request-reviewer[bot]` | `Copilot` |
-| Codex | `199175422` | `chatgpt-codex-connector[bot]` | same |
+| Bot                 | id          | on `/pulls/{n}/reviews`              | on the timeline |
+| ------------------- | ----------- | ------------------------------------ | --------------- |
+| Copilot code review | `175728472` | `copilot-pull-request-reviewer[bot]` | `Copilot`       |
+| Codex               | `199175422` | `chatgpt-codex-connector[bot]`       | same            |
 
 `copilot-swe-agent` is a **third** bot — the coding agent, not the reviewer.
 It is what GraphQL `suggestedActors(capabilities: [CAN_BE_ASSIGNED])` returns,
@@ -47,8 +47,8 @@ gh api --paginate repos/OWNER/REPO/issues/N/timeline \
 `gh pr edit N --add-reviewer @copilot` does the same thing. A `@copilot
 review` comment also gets an answer, as a comment.
 
-Copilot **reviews a PR once** unless the repo's ruleset enables *Review new
-pushes*. On a branch that has moved since, re-request explicitly rather than
+Copilot **reviews a PR once** unless the repo's ruleset enables _Review new
+pushes_. On a branch that has moved since, re-request explicitly rather than
 waiting for a pass that is not coming.
 
 **Codex: comment `@codex review`.** Free text after the trigger is read as
@@ -61,11 +61,11 @@ Rules` section in the nearest AGENTS.md.
 **A verdict does not always arrive as a review object.** This is the trap that
 matters most:
 
-| Bot | outcome | where it lands |
-|---|---|---|
-| Codex | findings | PR review — body starts `### 💡 Codex Review` |
-| Codex | nothing found | **issue comment** — `Codex Review: Didn't find any major issues`, with `Reviewed commit:` |
-| Copilot | either | PR review; a mention may also be answered as an issue comment |
+| Bot     | outcome       | where it lands                                                                            |
+| ------- | ------------- | ----------------------------------------------------------------------------------------- |
+| Codex   | findings      | PR review — body starts `### 💡 Codex Review`                                             |
+| Codex   | nothing found | **issue comment** — `Codex Review: Didn't find any major issues`, with `Reviewed commit:` |
+| Copilot | either        | PR review; a mention may also be answered as an issue comment                             |
 
 So query **both** `/pulls/{n}/reviews` and `/issues/{n}/comments`, filter by
 numeric id, and check the review's `commit_id` against the head SHA. Reading
@@ -105,7 +105,7 @@ agent sits on a finished review indefinitely, or asks for it again.
 3. **Fix, push, re-request, repeat.** Rounds do **not** converge
    monotonically. A real day on one PR: 6 findings, then 3, then 6, then 3,
    then 2 — and three of those rounds caught a bug introduced by the previous
-   round's fix. A round that goes *up* is the process working.
+   round's fix. A round that goes _up_ is the process working.
 4. **Take findings on your own fixes most seriously.** They are the ones
    nobody else will catch: a fix that regressed the case it was written for, a
    guard consulted but not applied, a test that cannot fail for its stated

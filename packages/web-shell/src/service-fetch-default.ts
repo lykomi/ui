@@ -20,7 +20,6 @@ import { runtimeConfig } from "./runtime-config.ts";
  */
 export const defaultAgentFetch: typeof fetch = createServiceFetch({
   acquireToken: (options) => authStore.getState().getAccessToken("api", options),
-  recoverFromHardAuthFailure: (reason) =>
-    authStore.getState().recoverFromHardAuthFailure(reason),
+  recoverFromHardAuthFailure: (reason) => authStore.getState().recoverFromHardAuthFailure(reason),
   baseUrl: runtimeConfig("VITE_API_BASE_URL"),
 });
