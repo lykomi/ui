@@ -169,6 +169,12 @@ The non-negotiables:
 - **Verify a claim against the code before acting on it**, and take the
   findings on your own fixes most seriously — they are the ones nobody else
   will catch.
+- **Fix the likely; decline the hypothetical — except where it destroys.** A
+  finding needing a contrived chain of failures gets an answer in the thread,
+  not a patch: speculative fixes are new code, and new code is what the next
+  round finds defects in. The exception is anything that deletes, purges,
+  overwrites or widens a credential's scope — fix those even on an uncommon
+  trigger, because being wrong there cannot be undone.
 - **Rounds do not converge monotonically.** A round that goes up is the process
   working. Do not merge on the first green.
 

@@ -114,10 +114,24 @@ agent sits on a finished review indefinitely, or asks for it again.
    Roughly one finding in four is right about the rule and wrong about this
    code — answer that with the evidence, in the thread, and resolve it.
    "Fixed" and "declined, because…" are both finished; "unread" is not.
-6. **Answer in the thread, then resolve it.** A reply is how the next reader
+6. **Fix what would plausibly happen; decline what is merely possible.** A
+   finding that needs a contrived chain of failures to reach gets an answer in
+   the thread, not a patch. This is not laziness: every speculative fix is new
+   code, and new code is what the next round finds defects in. One PR here ran
+   5 → 10 → 10 → 11 findings without converging, and most of that growth was
+   the previous round's speculative hardening being critiqued in turn.
+
+   Weight the destructive paths the other way. Anything that deletes, purges,
+   overwrites, or widens a credential's scope is worth fixing even on an
+   uncommon trigger, because being wrong there is unrecoverable. On that same
+   PR the two findings that genuinely mattered were both of that kind: a
+   teardown that would have deleted a **live sibling environment's** Entra
+   identities (`p-ai-dev-` also matches `p-ai-dev-east-…`), and a `--purge`
+   that could destroy a Key Vault the deployment did not own.
+7. **Answer in the thread, then resolve it.** A reply is how the next reader
    knows a finding was considered rather than missed, and it is what makes
    round N+1 shorter.
-7. **Stop when what is left is genuinely minor** — a style preference, churn
+8. **Stop when what is left is genuinely minor** — a style preference, churn
    that outweighs its value, a case the code deliberately does not support.
    Structural findings too large for the PR become issues, not silence.
 
