@@ -10,6 +10,8 @@ export interface BrandLockup {
   isIcon: boolean;
   name: string;
   showName: boolean;
+  /** Validated CSS height for the mark, or undefined to use the default. */
+  height?: string;
 }
 
 /**
@@ -25,6 +27,36 @@ export interface BrandLockup {
  * "<mark> Product Name", which is what a tenant whose product name differs
  * from their company name is asking for.
  */
+/**
+ * A tenant-supplied length, or undefined.
+ *
+ * The value lands in an inline `style`, and a theme is content a tenant
+ * authors — so this allowlists a shape rather than trying to spot bad ones.
+ * Anything else (a `calc()`, a `var()`, a url, a second declaration smuggled
+ * in behind a `;`) fails the pattern and the caller falls back to the default
+ * height, which is always a safe thing to render.
+ */
+//: The tallest mark the header will render. A syntactically valid length is
+//: not a SAFE one: `logoHeight: "320px"` is a plausible typo, and because the
+//: mark is `shrink-0` it would push the sidebar and mobile-header actions off
+//: screen rather than shrinking. Marks above this are clamped, not rejected —
+//: a too-large value should look wrong, not vanish.
+const MAX_LOGO_HEIGHT_REM = 4;
+const REM_PER_UNIT: Record<string, number> = { rem: 1, em: 1, px: 1 / 16 };
+
+export function _safeLogoHeight(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  // The integer part is optional: `.5rem` is a valid CSS length and a common
+  // spelling, and silently falling back to the default for it would make the
+  // contract a lie.
+  const match = /^(\d*\.?\d+)(px|rem|em)$/.exec(value.trim());
+  if (!match) return undefined;
+  const [, rawNumber, unit] = match;
+  const asRem = Number(rawNumber) * REM_PER_UNIT[unit];
+  if (!Number.isFinite(asRem) || asRem <= 0) return undefined;
+  return asRem > MAX_LOGO_HEIGHT_REM ? `${MAX_LOGO_HEIGHT_REM}rem` : value.trim();
+}
+
 export function _resolveBrandLockup(
   branding: ThemeBranding,
   mode: "light" | "dark",
@@ -42,6 +74,7 @@ export function _resolveBrandLockup(
     isIcon: Boolean(iconUrl),
     name: branding.appName || "Foundry UI",
     showName: showName && (Boolean(iconUrl) || !markUrl),
+    height: _safeLogoHeight(branding.logoHeight),
   };
 }
 
@@ -65,8 +98,14 @@ export function AppBrand({
         <img
           src={lockup.markUrl}
           alt={lockup.name}
+          style={lockup.height ? { height: lockup.height } : undefined}
           className={cn(
-            "shrink-0 object-contain",
+            "object-contain",
+            // A custom mark must be able to SHRINK. `shrink-0` is right for the
+            // 20px default, whose max-widths already fit every header; for a
+            // taller one it is the thing that pushes the collapse button out
+            // of the sidebar instead of letting the image narrow.
+            lockup.height ? "min-w-0 shrink" : "shrink-0",
             // Both lock HEIGHT and let width follow the aspect ratio. Sizing an
             // icon into a square box (`size-5`) silently shrinks any mark that
             // is not 1:1 — `object-contain` letterboxes a 4:3 glyph to 20x15,
@@ -74,7 +113,18 @@ export function AppBrand({
             // replaced. Marks are rarely square, so height is the only
             // dimension worth fixing. The max-width is just a runaway guard:
             // tighter for an icon, which has to leave room for the name.
-            lockup.isIcon ? "h-5 w-auto max-w-8" : "h-5 w-auto max-w-[7rem]",
+            // `branding.logoHeight` overrides the HEIGHT, and the width is
+            // bounded by the CONTAINER rather than by a number picked here.
+            // The 7rem cap is sized for a 20px mark and would letterbox a
+            // taller one; a bigger fixed cap is just a different wrong number
+            // — 20rem is 320px while an expanded sidebar is 248px, so a 4:1
+            // wordmark at the 4rem ceiling (256px) still overflowed it.
+            // `max-w-full` is whatever the header actually has.
+            lockup.height
+              ? "w-auto max-w-full"
+              : lockup.isIcon
+                ? "h-5 w-auto max-w-8"
+                : "h-5 w-auto max-w-[7rem]",
             iconClassName,
           )}
         />

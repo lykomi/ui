@@ -259,7 +259,7 @@ function statusIconClass(tone: NavStatusIcon["tone"]) {
       return "text-primary";
     case "neutral":
     default:
-      return "text-sidebar-foreground/60";
+      return "text-sidebar-icon";
   }
 }
 
@@ -760,7 +760,7 @@ function NavLeafItem({
           <item.icon
             className={cn(
               "size-3.5 shrink-0",
-              isActive && !isDisabled ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-foreground/60",
+              isActive && !isDisabled ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-icon",
             )}
           />
           <span className="truncate">{item.label}</span>
@@ -831,7 +831,7 @@ function NavLeafItem({
       <item.icon
         className={cn(
           "size-3.5 shrink-0",
-          isActive && !isDisabled ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-foreground/60",
+          isActive && !isDisabled ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-icon",
         )}
       />
       <span className={cn("truncate", isActive && !isDisabled && ACTIVE_NAV_TEXT_CLASS)}>
@@ -1018,7 +1018,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
                 ? ACTIVE_NAV_ICON_CLASS
                 : isAncestorActive
                   ? "text-sidebar-foreground/80"
-                  : "text-sidebar-foreground/60",
+                  : "text-sidebar-icon",
             )}
           />
           <span className="truncate">{item.label}</span>
@@ -1176,7 +1176,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
                 ? ACTIVE_NAV_ICON_CLASS
                 : ancestor
                   ? "text-sidebar-foreground/80"
-                  : "text-sidebar-foreground/60",
+                  : "text-sidebar-icon",
             )}
           />
           <span className="truncate">{item.label}</span>
@@ -1286,7 +1286,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
           <item.icon
             className={cn(
               "size-4 shrink-0",
-              isActive ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-foreground/60",
+              isActive ? ACTIVE_NAV_ICON_CLASS : "text-sidebar-icon",
             )}
           />
           <span className="truncate">{item.label}</span>
@@ -1418,7 +1418,7 @@ function CollapsedNavShortcut({
           isActive && "border border-transparent bg-sidebar-selected text-sidebar-foreground",
         )}
       >
-        <Icon className={cn("size-4", isActive && "text-primary")} />
+        <Icon className={cn("size-4", isActive ? "text-primary" : "text-sidebar-icon")} />
       </TooltipIconButton>
     </NavLink>
   );
@@ -1776,7 +1776,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
           <PanelLeftOpen className="size-5" />
         </TooltipIconButton>
         <TooltipIconButton tooltip="New Thread" side="right" onClick={handleNewConversation}>
-          <SquarePen className="size-4" />
+          <SquarePen className="size-4 text-sidebar-icon" />
         </TooltipIconButton>
         <div className="mt-4 flex w-full flex-col items-stretch gap-1">
           {/* `w-full` on this inner column makes children resolve to the
@@ -1869,7 +1869,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
             "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
           )}
         >
-          <SquarePen className="size-4 shrink-0 text-sidebar-foreground/60" />
+          <SquarePen className="size-4 shrink-0 text-sidebar-icon" />
           New Thread
         </button>
       </div>

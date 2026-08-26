@@ -32,6 +32,16 @@ export interface ThemeSidebarSlots {
   sidebarAccentForeground?: string;
   sidebarSelected?: string;
   sidebarSelectedForeground?: string;
+  /**
+   * Colour of the icons in the sidebar's idle rows.
+   *
+   * Separate from `sidebarForeground` because a brand whose mark is a colour
+   * usually wants the icons in that colour and the LABELS still readable —
+   * tinting `sidebarForeground` to reach the icons drags every label with it.
+   * Unset resolves to the previous behaviour (the label colour at 60%), so no
+   * existing theme moves.
+   */
+  sidebarIcon?: string;
   sidebarBorder?: string;
   sidebarRing?: string;
 }
@@ -107,6 +117,21 @@ export interface ThemeBranding {
    */
   iconUrl?: string;
   darkIconUrl?: string;
+  /**
+   * Rendered height of the mark, as a CSS length (`"2rem"`, `"32px"`).
+   * Defaults to the 20px lockup height when unset.
+   *
+   * A wordmark is not interchangeable with an icon at one fixed height. Marks
+   * that carry a tagline under the name — a common wordmark shape — turn the
+   * tagline into an unreadable smear at 20px, and the whole lockup reads as
+   * undersized next to the product name. The tenant supplying the asset is the
+   * only one who knows how much height it needs, so this is theirs to set.
+   *
+   * Validated, not interpolated blindly: the value reaches an inline style and
+   * themes are tenant-authored content, so anything that is not a plain
+   * non-negative CSS length in px/rem/em is ignored in favour of the default.
+   */
+  logoHeight?: string;
 }
 
 export interface ThemeDefinition {
@@ -179,6 +204,7 @@ const SIDEBAR_KEYS = [
   "sidebarAccentForeground",
   "sidebarSelected",
   "sidebarSelectedForeground",
+  "sidebarIcon",
   "sidebarBorder",
   "sidebarRing",
 ] as const satisfies readonly (keyof ThemeSidebarSlots)[];
@@ -241,6 +267,7 @@ const BRANDING_KEYS = [
   "darkLogoUrl",
   "iconUrl",
   "darkIconUrl",
+  "logoHeight",
 ] as const satisfies readonly (keyof ThemeBranding)[];
 
 function cleanObject<T extends object>(
@@ -363,6 +390,7 @@ function toCssVars(
     ["--sidebar-accent-foreground" as string]: sidebar.sidebarAccentForeground,
     ["--sidebar-selected" as string]: sidebar.sidebarSelected,
     ["--sidebar-selected-foreground" as string]: sidebar.sidebarSelectedForeground,
+    ["--sidebar-icon" as string]: sidebar.sidebarIcon,
     ["--sidebar-border" as string]: sidebar.sidebarBorder,
     ["--sidebar-ring" as string]: sidebar.sidebarRing,
     ["--success" as string]: status.success,
@@ -424,6 +452,7 @@ function defaultSidebar(colors: ThemeColorSlots): ThemeSidebarSlots {
     sidebarAccentForeground: colors.accentForeground!,
     sidebarSelected: colors.muted!,
     sidebarSelectedForeground: colors.foreground!,
+    sidebarIcon: `color-mix(in srgb, ${colors.foreground!} 60%, transparent)`,
     sidebarBorder: colors.border!,
     sidebarRing: colors.ring!,
   };
@@ -557,6 +586,7 @@ export const FOUNDRY_VIOLET_THEME: ThemeDefinition = {
       sidebarAccentForeground: "color-mix(in srgb, var(--foreground) 92%, var(--primary) 8%)",
       sidebarSelected: "var(--muted)",
       sidebarSelectedForeground: "var(--foreground)",
+      sidebarIcon: "color-mix(in srgb, var(--sidebar-foreground) 60%, transparent)",
       sidebarBorder: "color-mix(in srgb, var(--border) 96%, var(--foreground) 4%)",
       sidebarRing: "oklch(43% 0.24 286)",
     },
@@ -569,6 +599,7 @@ export const FOUNDRY_VIOLET_THEME: ThemeDefinition = {
       sidebarAccentForeground: "color-mix(in srgb, var(--foreground) 90%, white 10%)",
       sidebarSelected: "color-mix(in srgb, var(--muted) 78%, var(--background) 22%)",
       sidebarSelectedForeground: "var(--foreground)",
+      sidebarIcon: "color-mix(in srgb, var(--sidebar-foreground) 60%, transparent)",
       sidebarBorder: "color-mix(in srgb, var(--border) 90%, white 10%)",
       sidebarRing: "oklch(0.72 0.18 286)",
     },
