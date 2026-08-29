@@ -27,7 +27,7 @@ const CLI_ROOT = "packages/create-foundry-ui-app";
 export const TEMPLATE_PACKAGE_JSON = join(CLI_ROOT, "template/package.json");
 const PRESETS_DIR = join(CLI_ROOT, "presets");
 
-/** Package name → version, for the four published runtime packages. */
+/** Package name → version, for the published runtime packages. */
 export function foundryWorkspaceVersions() {
   return Object.fromEntries(
     RUNTIME_PACKAGE_DIRS.map((dir) => {
