@@ -38,6 +38,7 @@ export interface MergeExtraDepsOptions {
   targetDir: string;
   extraDependencies?: Record<string, string>;
   extraDevDependencies?: Record<string, string>;
+  extraScripts?: Record<string, string>;
 }
 
 const TEMPLATE_PROJECT_NAME = "__PROJECT_NAME__";
@@ -181,12 +182,20 @@ export async function applyOverlay(opts: ApplyOverlayOptions): Promise<void> {
 }
 
 /**
- * Merge `extraDependencies` / `extraDevDependencies` from a preset manifest
- * into the target's root `package.json`. Sorts the resulting dep maps
- * alphabetically (matches what `pnpm install` would do on its own).
+ * Merge `extraDependencies` / `extraDevDependencies` / `extraScripts` from a
+ * preset manifest into the target's root `package.json`. Sorts the resulting
+ * dep maps alphabetically (matches what `pnpm install` would do on its own).
+ *
+ * Scripts go through here rather than through the file overlay because the
+ * overlay copies files verbatim: an overlay `package.json` would replace the
+ * template's, losing its dependencies, its name substitution and its foundry
+ * version pins. Merging is the only way a preset can add a script safely.
+ *
+ * Scripts keep the template's order with the preset's appended, since npm
+ * script order is what `pnpm run` lists and grouping beats alphabetising there.
  */
 export async function mergeExtraDependencies(opts: MergeExtraDepsOptions): Promise<void> {
-  if (!opts.extraDependencies && !opts.extraDevDependencies) return;
+  if (!opts.extraDependencies && !opts.extraDevDependencies && !opts.extraScripts) return;
 
   const pkgPath = join(opts.targetDir, "package.json");
   const parsed = JSON.parse(readFileSync(pkgPath, "utf-8"));
@@ -199,6 +208,9 @@ export async function mergeExtraDependencies(opts: MergeExtraDepsOptions): Promi
       ...(parsed.devDependencies ?? {}),
       ...opts.extraDevDependencies,
     });
+  }
+  if (opts.extraScripts) {
+    parsed.scripts = { ...(parsed.scripts ?? {}), ...opts.extraScripts };
   }
   writeFileSync(pkgPath, JSON.stringify(parsed, null, 2) + "\n");
 }
@@ -213,6 +225,7 @@ function sortKeys<T extends Record<string, string>>(obj: T): T {
 
 const FOUNDRY_PACKAGES = [
   "@iloveagents/foundry-agent",
+  "@iloveagents/foundry-web-graph",
   "@iloveagents/foundry-web-primitives",
   "@iloveagents/foundry-web-shell",
   "@iloveagents/foundry-web-ui",

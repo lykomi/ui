@@ -1,0 +1,66 @@
+{
+  "name": "neo4j",
+  "version": "0.1.0",
+  "description": "Neo4j graph starter \u2014 schema, read-only Cypher and semantic search tools, with an interactive Bloom-like graph visualization. Runs against a local database or Neo4j Aura.",
+  "extends": "default",
+  "filesDir": "files",
+  "extraDependencies": {
+    "@iloveagents/foundry-web-graph": "0.1.0"
+  },
+  "extraScripts": {
+    "graph:up": "docker compose up -d",
+    "graph:down": "docker compose down",
+    "graph:seed": "uv run --project agent python scripts/seed_graph.py",
+    "graph:reset": "uv run --project agent python scripts/seed_graph.py --reset"
+  },
+  "envVars": [
+    {
+      "name": "NEO4J_URI",
+      "description": "Bolt URI of the graph database. bolt://localhost:7687 for the bundled Docker database, or neo4j+s://<instance-id>.databases.neo4j.io for Neo4j Aura.",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "NEO4J_USERNAME",
+      "description": "Database user. Defaults to neo4j.",
+      "required": true,
+      "secret": false
+    },
+    {
+      "name": "NEO4J_PASSWORD",
+      "description": "Database password.",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "NEO4J_DATABASE",
+      "description": "Database name within the instance. Defaults to neo4j.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "NEO4J_ALLOW_WRITES",
+      "description": "Set to true to register the write tool. Off by default \u2014 with it unset the agent has no way to modify the graph, and there is no human-approval step in front of writes.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "NEO4J_VECTOR_INDEX",
+      "description": "Vector index name. Set together with FOUNDRY_EMBEDDING_MODEL to register the semantic-search tool.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "FOUNDRY_EMBEDDING_MODEL",
+      "description": "Embedding model deployment used for semantic graph search.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "FOUNDRY_MODELS_ENDPOINT",
+      "description": "Foundry inference endpoint for the embedding model, for example https://<project>.services.ai.azure.com/models.",
+      "required": false,
+      "secret": false
+    }
+  ]
+}

@@ -16,17 +16,35 @@ export interface PdfHighlightRef {
 export interface ToolPanelContent {
   title: string;
   content: string;
-  type: "markdown" | "text" | "page" | "pdf";
+  type: "markdown" | "text" | "page" | "pdf" | "graph";
   /** PDF highlights for citation overlays (only when type === "pdf") */
   pdfHighlights?: PdfHighlightRef[];
   /** Initial page to scroll to (only when type === "pdf") */
   initialPage?: number;
   /** SPACES entity ID — enables pin and navigate actions in panel header */
   entityId?: string;
+  /**
+   * Structured payload for renderers that need more than a string — a graph,
+   * a chart, a table. `content` is still expected to carry a serialization, so
+   * the header's Copy action and the built-in text fallback keep working when
+   * no renderer matches.
+   */
+  data?: unknown;
 }
 
 /** Pluggable content renderer for the tool panel — registered by feature modules. */
 export interface PanelRendererEntry {
+  /**
+   * Stable identity. When present, re-registering replaces the previous entry
+   * with the same id instead of appending a second copy.
+   *
+   * Registration usually happens in a module's `useInit`, which runs again on
+   * every remount — a StrictMode double-render, a route change, a hot reload.
+   * Without an id those calls stack up, `renderers` grows without bound, and
+   * `find()` keeps matching the oldest (now stale) closure. Entries without an
+   * id keep the original append behaviour.
+   */
+  id?: string;
   /** Check if this renderer handles the given content */
   match: (content: ToolPanelContent) => boolean;
   /** Lazy component to render. Receives content as prop. */
@@ -106,7 +124,17 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
   renderers: [],
 
   openPanel: (content) => set({ isOpen: true, content }),
-  registerRenderer: (entry) => set((state) => ({ renderers: [...state.renderers, entry] })),
+  registerRenderer: (entry) =>
+    set((state) => {
+      if (entry.id === undefined) return { renderers: [...state.renderers, entry] };
+      const index = state.renderers.findIndex((existing) => existing.id === entry.id);
+      if (index === -1) return { renderers: [...state.renderers, entry] };
+      // Replace in place: registration order decides which renderer wins a
+      // match, so re-registering must not silently reprioritise it.
+      const renderers = [...state.renderers];
+      renderers[index] = entry;
+      return { renderers };
+    }),
   closePanel: () => set({ isOpen: false, isFullscreen: false }),
   setContent: (content) => set({ content }),
   setPanelWidth: (width) => {

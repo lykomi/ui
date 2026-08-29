@@ -40,6 +40,14 @@ const OPEN_CORE_GRAPH: Record<string, string[]> = {
     "@iloveagents/foundry-web-primitives",
     "@iloveagents/foundry-agent",
   ],
+  // The graph package sits ABOVE web-ui, never below it: web-ui must not gain
+  // an edge to web-graph, or `react-force-graph-2d` would land in the install
+  // of every consumer that only wants a chat.
+  "@iloveagents/foundry-web-graph": [
+    "@iloveagents/foundry-web-primitives",
+    "@iloveagents/foundry-web-ui",
+    "@iloveagents/foundry-agent",
+  ],
   "@iloveagents/foundry-web-shell": [
     "@iloveagents/foundry-web-primitives",
     "@iloveagents/foundry-web-ui",

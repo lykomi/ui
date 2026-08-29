@@ -1,0 +1,35 @@
+/* Graph palette.
+ *
+ * Eight hues chosen for categorical separation — including for the common
+ * red/green and blue/purple confusions — because a legend with two
+ * indistinguishable swatches is a legend that has failed.
+ *
+ * These are plain custom properties, not `@theme` tokens: they are read from
+ * the DOM by `resolveGraphTheme()` and painted onto a canvas, never turned into
+ * Tailwind utilities. Importing this file is optional — without it the graph
+ * falls back to the host's `--chart-1..5`, and then to a built-in palette.
+ *
+ * Dark values are lifted in lightness and dropped in chroma so they hold up
+ * against a dark ground without glowing.
+ */
+:root {
+  --graph-1: oklch(0.62 0.19 275);
+  --graph-2: oklch(0.65 0.15 205);
+  --graph-3: oklch(0.62 0.2 15);
+  --graph-4: oklch(0.68 0.16 65);
+  --graph-5: oklch(0.63 0.16 150);
+  --graph-6: oklch(0.6 0.19 330);
+  --graph-7: oklch(0.68 0.13 245);
+  --graph-8: oklch(0.66 0.14 105);
+}
+
+.dark {
+  --graph-1: oklch(0.72 0.16 275);
+  --graph-2: oklch(0.75 0.13 205);
+  --graph-3: oklch(0.72 0.17 15);
+  --graph-4: oklch(0.78 0.14 65);
+  --graph-5: oklch(0.73 0.14 150);
+  --graph-6: oklch(0.7 0.16 330);
+  --graph-7: oklch(0.77 0.11 245);
+  --graph-8: oklch(0.76 0.12 105);
+}

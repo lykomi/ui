@@ -1,4 +1,4 @@
-# **PROJECT_NAME**
+# __PROJECT_NAME__
 
 Foundry UI starter with a Microsoft Agent Framework service, AG-UI chat, and a Foundry IQ knowledge base tool.
 

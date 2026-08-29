@@ -15,6 +15,7 @@ const RUNTIME_PACKAGE_DIRS = [
   "packages/agent",
   "packages/web-primitives",
   "packages/web-ui",
+  "packages/web-graph",
   "packages/web-shell",
   // The template pins this like any other runtime package. Voice is opt-in
   // at RUNTIME (`VITE_VOICE_PROXY_URL`), not at scaffold time, so the pin is

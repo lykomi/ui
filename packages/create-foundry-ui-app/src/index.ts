@@ -167,6 +167,7 @@ async function main(): Promise<number> {
     targetDir: targetPath,
     extraDependencies: preset.extraDependencies,
     extraDevDependencies: preset.extraDevDependencies,
+    extraScripts: preset.extraScripts,
   });
   p.log.success(`Files copied (preset: ${preset.name}).`);
 

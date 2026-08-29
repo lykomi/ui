@@ -1,5 +1,9 @@
-# The template README carries the literal __PROJECT_NAME__ substitution
-# sentinel on its H1; Prettier normalizes __text__ to **text**, which breaks
-# every scaffolded app's README title. Guarded by a unit test in
-# packages/create-foundry-ui-app/src/__tests__/template-docs.test.ts.
+# Scaffold docs carry the literal __PROJECT_NAME__ substitution sentinel on
+# their H1; Prettier normalizes __text__ to **text**, which breaks every
+# scaffolded app's README title. This already happened once: the foundry-iq
+# preset shipped a README titled "**PROJECT_NAME**" because only the base
+# template was ignored here. Guarded by a unit test in
+# packages/create-foundry-ui-app/src/__tests__/template-docs.test.ts, which
+# checks EVERY preset, not just the ones that exist today.
 packages/create-foundry-ui-app/template/README.md
+packages/create-foundry-ui-app/presets/*/files/README.md

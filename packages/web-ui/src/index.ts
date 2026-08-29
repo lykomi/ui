@@ -35,7 +35,7 @@ export {
 } from "./components/chat-attachments.tsx";
 export { ShowDocumentToolUI } from "./components/show-document-tool-ui.tsx";
 export { ToolCallCard } from "./components/tool-call-card.tsx";
-export type { ToolCallStatus } from "./components/tool-call-card.tsx";
+export type { ToolCallStatus, ToolCallCardProps } from "./components/tool-call-card.tsx";
 export { ToolFallback } from "./components/tool-fallback.tsx";
 export { ConfirmationCard } from "./components/confirmation-card.tsx";
 export { TooltipIconButton } from "./components/tooltip-icon-button.tsx";

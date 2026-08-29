@@ -1,0 +1,255 @@
+"""Neo4j driver records -> the ``foundry.graph`` payload the UI renders.
+
+The contract is defined by ``@iloveagents/foundry-web-graph`` and is
+deliberately source-neutral: the visualizer never learns that Neo4j exists.
+Keep the field names here in step with ``GraphPayload`` in that package.
+"""
+
+from __future__ import annotations
+
+import datetime as _dt
+from collections.abc import Iterable, Mapping
+from typing import Any
+
+import neo4j
+import neo4j.graph
+import neo4j.time
+
+GRAPH_PAYLOAD_KIND = "foundry.graph"
+GRAPH_PAYLOAD_VERSION = 1
+
+# Long text (a document body, an embedding rendered as a string) is useless in a
+# property table and expensive in a chat context window, so it is clipped here
+# rather than at the UI.
+MAX_PROPERTY_CHARS = 500
+
+# How deep to walk a record value looking for graph entities.
+_MAX_DEPTH = 12
+
+
+def _clip(text: str) -> str:
+    if len(text) <= MAX_PROPERTY_CHARS:
+        return text
+    return f"{text[: MAX_PROPERTY_CHARS - 1]}…"
+
+
+def to_json_value(value: Any) -> Any:
+    """Coerce a driver value into something ``json.dumps`` accepts.
+
+    Neo4j returns its own temporal, spatial and integer types. Left alone they
+    blow up serialization at the FastAPI boundary — a failure that surfaces as
+    an opaque 500 long after the query succeeded.
+    """
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        return _clip(value)
+    if isinstance(value, (bytes, bytearray)):
+        return f"<{len(value)} bytes>"
+    if isinstance(value, (neo4j.time.DateTime, neo4j.time.Date, neo4j.time.Time)):
+        return str(value)
+    if isinstance(value, neo4j.time.Duration):
+        return str(value)
+    if isinstance(value, _dt.datetime | _dt.date | _dt.time):
+        return value.isoformat()
+    if isinstance(value, neo4j.spatial.Point):
+        return {"srid": value.srid, "coordinates": list(value)}
+    if isinstance(value, Mapping):
+        return {str(k): to_json_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set, frozenset)):
+        # A vector property is thousands of floats — summarise instead of
+        # shipping it into the chat context.
+        items = list(value)
+        if len(items) > 32 and all(isinstance(i, (int, float)) for i in items):
+            return f"<{len(items)}-dimension vector>"
+        return [to_json_value(v) for v in items]
+    return _clip(str(value))
+
+
+def _properties(entity: Any) -> dict[str, Any]:
+    return {str(k): to_json_value(v) for k, v in dict(entity).items()}
+
+
+def node_to_graph_node(node: neo4j.graph.Node) -> dict[str, Any]:
+    return {
+        "id": node.element_id,
+        "labels": list(node.labels),
+        "properties": _properties(node),
+    }
+
+
+def relationship_to_graph_edge(rel: neo4j.graph.Relationship) -> dict[str, Any] | None:
+    # A relationship detached from its endpoints cannot be drawn; the UI would
+    # drop it anyway, so it is dropped here where the reason is knowable.
+    if rel.start_node is None or rel.end_node is None:
+        return None
+    return {
+        "id": rel.element_id,
+        "source": rel.start_node.element_id,
+        "target": rel.end_node.element_id,
+        "type": rel.type,
+        "properties": _properties(rel),
+    }
+
+
+def _collect(value: Any, nodes: dict[str, Any], edges: dict[str, Any], depth: int) -> None:
+    """Walk a record value, picking out every node and relationship.
+
+    Recursive rather than shape-matched on purpose: the tool takes arbitrary
+    Cypher, so the result might be bare entities, a path, a ``collect()`` list,
+    or a map projection. Recursion makes ``RETURN *`` work as well as a careful
+    projection, which is what an agent-written query usually is.
+    """
+    if depth > _MAX_DEPTH or value is None:
+        return
+    if isinstance(value, neo4j.graph.Node):
+        nodes.setdefault(value.element_id, node_to_graph_node(value))
+        return
+    if isinstance(value, neo4j.graph.Relationship):
+        edge = relationship_to_graph_edge(value)
+        if edge is not None:
+            edges.setdefault(edge["id"], edge)
+        # A relationship carries its endpoints, and a query that returns only
+        # relationships still needs to render the nodes at both ends.
+        for end in (value.start_node, value.end_node):
+            if end is not None:
+                nodes.setdefault(end.element_id, node_to_graph_node(end))
+        return
+    if isinstance(value, neo4j.graph.Path):
+        for node in value.nodes:
+            _collect(node, nodes, edges, depth + 1)
+        for rel in value.relationships:
+            _collect(rel, nodes, edges, depth + 1)
+        return
+    if isinstance(value, Mapping):
+        for nested in value.values():
+            _collect(nested, nodes, edges, depth + 1)
+        return
+    if isinstance(value, (list, tuple, set, frozenset)):
+        for nested in value:
+            _collect(nested, nodes, edges, depth + 1)
+
+
+def select_connected_core(
+    node_ids: list[str], edges: Iterable[dict[str, Any]], limit: int
+) -> list[str]:
+    """Choose which nodes survive a cap: the connected core around the hubs.
+
+    Which nodes survive decides whether the user sees a graph or confetti.
+
+    Taking the first N in insertion order keeps whatever the database happened
+    to return first — for an unbounded MATCH that is close to random, and the
+    survivors are mostly unrelated, so the edges collapse with them.
+
+    Taking the N highest-degree nodes is better but not enough. In a graph
+    that is even loosely bipartite — films and people, orders and customers —
+    the hubs are all on one side and none of them are adjacent, so a small cap
+    still yields a set with no edges at all.
+
+    So: seed at the biggest hub and expand outwards through its neighbours,
+    preferring well-connected ones, then start again at the next unvisited hub.
+    Every node after the first seed is adjacent to one already chosen, so the
+    result is a handful of connected neighbourhoods rather than scattered dust.
+
+    Mirrors ``selectConnectedCore`` in ``@iloveagents/foundry-web-graph``; both
+    sides cap, and they have to agree on what the important part of a graph is.
+    """
+    if len(node_ids) <= limit:
+        return node_ids
+
+    degree: dict[str, int] = {}
+    adjacency: dict[str, list[str]] = {}
+    for edge in edges:
+        source, target = edge["source"], edge["target"]
+        degree[source] = degree.get(source, 0) + 1
+        degree[target] = degree.get(target, 0) + 1
+        adjacency.setdefault(source, []).append(target)
+        adjacency.setdefault(target, []).append(source)
+
+    # Insertion order breaks ties, so the same result caps the same way twice.
+    order = {node_id: index for index, node_id in enumerate(node_ids)}
+    rank = sorted(node_ids, key=lambda n: (-degree.get(n, 0), order[n]))
+
+    chosen: list[str] = []
+    seen: set[str] = set()
+    for seed in rank:
+        if len(chosen) >= limit:
+            break
+        if seed in seen:
+            continue
+        queue = [seed]
+        seen.add(seed)
+        while queue and len(chosen) < limit:
+            current = queue.pop(0)
+            chosen.append(current)
+            neighbours = sorted(
+                (n for n in adjacency.get(current, []) if n not in seen),
+                key=lambda n: (-degree.get(n, 0), order[n]),
+            )
+            for neighbour in neighbours:
+                seen.add(neighbour)
+                queue.append(neighbour)
+    return chosen[:limit]
+
+
+def records_to_graph_payload(
+    records: Iterable[neo4j.Record],
+    *,
+    max_nodes: int,
+    max_edges: int,
+    meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the payload. Never returns a top-level ``error`` key.
+
+    The AG-UI runner marks a tool call failed when the parsed result has an
+    ``error`` key, so a payload that used one to report partial trouble would
+    render as a red failed call regardless of how much good data it carried.
+    Partial results are reported through ``truncated`` instead.
+    """
+    nodes: dict[str, Any] = {}
+    edges: dict[str, Any] = {}
+    for record in records:
+        for value in record.values():
+            _collect(value, nodes, edges, 0)
+
+    total_nodes = len(nodes)
+    total_edges = len(edges)
+
+    if total_nodes <= max_nodes:
+        kept_nodes = nodes
+    else:
+        keep = select_connected_core(list(nodes), edges.values(), max_nodes)
+        kept_nodes = {node_id: nodes[node_id] for node_id in keep}
+    # Re-filter edges against the nodes that survived: an edge whose endpoint
+    # was just capped away would dangle.
+    kept_edges = [
+        edge
+        for edge in edges.values()
+        if edge["source"] in kept_nodes and edge["target"] in kept_nodes
+    ][:max_edges]
+
+    payload: dict[str, Any] = {
+        "kind": GRAPH_PAYLOAD_KIND,
+        "version": GRAPH_PAYLOAD_VERSION,
+        "nodes": list(kept_nodes.values()),
+        "edges": kept_edges,
+        "stats": {"nodeCount": total_nodes, "edgeCount": total_edges},
+    }
+    if total_nodes > len(kept_nodes) or total_edges > len(kept_edges):
+        payload["truncated"] = True
+    if meta:
+        payload["meta"] = meta
+    return payload
+
+
+def empty_payload(meta: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "kind": GRAPH_PAYLOAD_KIND,
+        "version": GRAPH_PAYLOAD_VERSION,
+        "nodes": [],
+        "edges": [],
+        "stats": {"nodeCount": 0, "edgeCount": 0},
+    }
+    if meta:
+        payload["meta"] = meta
+    return payload
