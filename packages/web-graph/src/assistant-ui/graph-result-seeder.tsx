@@ -138,9 +138,7 @@ export function GraphResultSeeder() {
       // series of unrelated pictures.
       mergeIntoOpenGraph(result.payload);
       if (result.autoOpenPanel) {
-        useToolPanelStore
-          .getState()
-          .openPanel(graphPanelContent(result.title, result.payload) as never);
+        useToolPanelStore.getState().openPanel(graphPanelContent(result.title, result.payload));
       }
     }
   }, [messages, threadId]);

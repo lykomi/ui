@@ -83,7 +83,7 @@ const showGraph: ClientToolEntry = {
     // it behaves on screen, since the renderer instance is reused and the
     // layout reconciles by node id.
     const panel = useToolPanelStore.getState();
-    const content = graphPanelContent(title, next) as never;
+    const content = graphPanelContent(title, next);
     if (panel.isOpen && panel.content?.type === GRAPH_PANEL_TYPE) panel.setContent(content);
     else panel.openPanel(content);
 

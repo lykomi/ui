@@ -63,6 +63,6 @@ export function mergeIntoOpenGraph(payload: GraphPayload): boolean {
   };
   if (!payload.nodes.some(differs) && !payload.edges.some(differs)) return false;
 
-  panel.setContent(graphPanelContent(content.title, mergeGraphPayloads(current, payload)) as never);
+  panel.setContent(graphPanelContent(content.title, mergeGraphPayloads(current, payload)));
   return true;
 }

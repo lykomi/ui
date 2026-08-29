@@ -200,6 +200,28 @@ interface AppState {
 }
 
 /**
+ * Structural comparison that survives what a `payload` actually carries.
+ *
+ * `JSON.stringify` throws on a `bigint`, and a bigint is not exotic here: a
+ * payload is often a database row, and the Neo4j driver returns them natively.
+ * Falling back to "not equal" on the throw looks safe and is not — the guard
+ * below would then treat every identical value as new, mint a fresh id and
+ * array on every call, and re-open the update loop it exists to close, for
+ * precisely the graphs most likely to hit it.
+ */
+function stableStringify(value: unknown): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(value, (_key, item: unknown) => {
+    if (typeof item === "bigint") return item.toString();
+    if (typeof item === "object" && item !== null) {
+      if (seen.has(item)) return "[circular]";
+      seen.add(item);
+    }
+    return item;
+  });
+}
+
+/**
  * Do two keyed context items carry the same value?
  *
  * Compares everything the consumer sees, ignoring the identity fields the
@@ -211,11 +233,7 @@ function sameContextValue(
   next: Omit<ContextItem, "id" | "createdAt">,
 ): boolean {
   const { id: _id, createdAt: _createdAt, ...rest } = current;
-  try {
-    return JSON.stringify(rest) === JSON.stringify(next);
-  } catch {
-    return false; // a cyclic payload is not worth a crash; just write it
-  }
+  return stableStringify(rest) === stableStringify(next);
 }
 
 export const useAppStore = create<AppState>((set, get) => ({

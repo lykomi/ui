@@ -23,5 +23,6 @@ export {
   GRAPH_PANEL_TYPE,
   graphPanelContent,
   graphPanelPayload,
+  type GraphPanelContent,
   type GraphPanelContentLike,
 } from "./graph-panel-content.ts";

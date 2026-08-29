@@ -71,6 +71,26 @@ describe("keyed context items", () => {
     expect(useAppStore.getState().contextItems.map((i) => i.persistence)).toEqual(["persistent"]);
   });
 
+  it("re-setting an identical item does nothing, even one carrying a bigint", () => {
+    // The guard exists to stop a UI that mirrors a selection into context from
+    // minting a fresh id and array on every render and driving itself into an
+    // update loop. A bigint is not exotic where these payloads come from — the
+    // Neo4j driver returns them natively — and comparing with a bare
+    // `JSON.stringify` THROWS on one, so "not equal" on the throw would have
+    // re-opened the loop for exactly the data most likely to hit it.
+    const store = useAppStore.getState();
+    const withBigint = () => ({
+      ...note("Metropolis"),
+      payload: { kind: "text" as const, text: "Metropolis", views: 10n } as never,
+    });
+
+    store.setContextItem("graph.selection", withBigint());
+    const first = useAppStore.getState().contextItems;
+    store.setContextItem("graph.selection", withBigint());
+
+    expect(useAppStore.getState().contextItems).toBe(first);
+  });
+
   it("leaves other keys and the user's own pins alone", () => {
     const store = useAppStore.getState();
     store.addContextItem(note("a note the user pinned"));

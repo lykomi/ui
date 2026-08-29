@@ -1,9 +1,15 @@
 import { coerceGraphPayload, safeStringify, type GraphPayload } from "../model.ts";
 
+/** The `ToolPanelContent.type` a graph panel matches on. */
+export const GRAPH_PANEL_TYPE = "graph";
+
 /**
- * The `ToolPanelContent` fields a graph panel needs. Declared structurally so
- * this module does not have to import the store's type — it only ever reads
- * these two fields, and a structural shape keeps the dependency one-way.
+ * ANY panel content, for the renderer that has to decide whether it is a graph.
+ *
+ * Declared structurally so this module does not import the store's type — it
+ * only ever reads these fields, and a structural shape keeps the dependency
+ * one-way. `type` is deliberately wide here: the whole job of
+ * `graphPanelPayload` is to be handed something that might not be a graph.
  */
 export interface GraphPanelContentLike {
   title: string;
@@ -12,8 +18,18 @@ export interface GraphPanelContentLike {
   data?: unknown;
 }
 
-/** The `ToolPanelContent.type` a graph panel matches on. */
-export const GRAPH_PANEL_TYPE = "graph";
+/**
+ * Content this module BUILT, which is a graph by construction.
+ *
+ * Separate from the wide shape above so `type` can be the literal, which is
+ * what makes it assignable to the host's `ToolPanelContent` union. One type
+ * serving both directions forced an `as never` at every `openPanel` and
+ * `setContent` call — casts that switch checking off exactly where a shape
+ * mismatch with the host would otherwise be caught.
+ */
+export interface GraphPanelContent extends GraphPanelContentLike {
+  type: typeof GRAPH_PANEL_TYPE;
+}
 
 /**
  * Build the panel payload for a graph.
@@ -22,7 +38,7 @@ export const GRAPH_PANEL_TYPE = "graph";
  * `content` carries the serialization so the panel header's Copy button and the
  * built-in text fallback still do something useful if no renderer matched.
  */
-export function graphPanelContent(title: string, payload: GraphPayload): GraphPanelContentLike {
+export function graphPanelContent(title: string, payload: GraphPayload): GraphPanelContent {
   return {
     title,
     type: GRAPH_PANEL_TYPE,

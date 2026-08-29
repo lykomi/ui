@@ -111,3 +111,9 @@ call `graph_show` for something that now happens on its own.
 Semantic search caps neighbours PER HIT rather than sharing one budget, so a
 single high-degree result can no longer spend the whole allowance and leave
 every other match with no context around it.
+
+`setContextItem`'s equality guard is bigint-safe. It compared structurally with
+a bare `JSON.stringify`, which throws on a bigint, and the catch reported "not
+equal" — so for a payload carrying one (a database row; the Neo4j driver
+returns them natively) the guard would have minted a fresh id and array on
+every call and re-opened the update loop it was added to close.
