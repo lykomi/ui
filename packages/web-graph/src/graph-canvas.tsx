@@ -298,6 +298,20 @@ export function GraphCanvas({
     [hiddenLabels],
   );
 
+  const isLinkHidden = useCallback(
+    (link: EngineLink) => {
+      const source = link.source as EngineNode | string | undefined;
+      const target = link.target as EngineNode | string | undefined;
+      // force-graph replaces the endpoint ids with the node objects once the
+      // graph is loaded, and hands back the raw id before that.
+      return (
+        (typeof source === "object" && source !== null && isHidden(source)) ||
+        (typeof target === "object" && target !== null && isHidden(target))
+      );
+    },
+    [isHidden],
+  );
+
   /**
    * Select on click, expand on double-click.
    *
@@ -519,6 +533,11 @@ export function GraphCanvas({
       maxZoom={MAX_ZOOM}
       nodeRelSize={4}
       nodeVisibility={(node) => !isHidden(node)}
+      // Hiding a label has to hide its relationships too. `nodeVisibility`
+      // alone leaves the links drawn, so filtering a type out of the legend
+      // left arrows pointing at nothing — which reads as missing nodes rather
+      // than as a filter doing its job.
+      linkVisibility={(link) => !isLinkHidden(link)}
       // MUST return an element, never a string: force-graph's tooltip assigns
       // a string via innerHTML, which would execute markup stored in the graph.
       nodeLabel={((node: EngineNode) => nodeTooltip(node, styleMap)) as never}
