@@ -107,3 +107,7 @@ accessible table lists relationships, not just per-node degrees; and the
 `run_write`, the schema's property list and a scalar result's rows all report
 their own caps, and the expansion and write tools no longer tell the model to
 call `graph_show` for something that now happens on its own.
+
+Semantic search caps neighbours PER HIT rather than sharing one budget, so a
+single high-degree result can no longer spend the whole allowance and leave
+every other match with no context around it.

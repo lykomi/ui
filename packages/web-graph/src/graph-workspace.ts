@@ -60,6 +60,10 @@ export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) =
       // Keeping it when it survives matters just as much: a merge changes
       // `payload` on the SAME panel, and clearing unconditionally would drop
       // the user's selection every time the agent expanded a node.
+      // Both conditions, and the first is the one that was missing: ids come
+      // from one database, so two panels showing overlapping results share
+      // them, and "the id is in the new payload" was letting panel A's
+      // selection arrive in panel B as something the user never clicked.
       const samePanel = state.handle === handle;
       const stillThere =
         state.selection !== null && payload.nodes.some((node) => node.id === state.selection?.id);
@@ -67,7 +71,7 @@ export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) =
         handle,
         title,
         payload,
-        selection: stillThere ? state.selection : null,
+        selection: samePanel && stillThere ? state.selection : null,
         query: samePanel ? state.query : "",
         hiddenLabels: samePanel ? state.hiddenLabels : [],
       };

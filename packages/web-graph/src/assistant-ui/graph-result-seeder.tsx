@@ -49,6 +49,15 @@ export interface SeedableGraphResult {
  */
 export function seedableGraphResults(
   messages: readonly { parts?: readonly ToolishPart[] }[] | undefined,
+  /**
+   * Calls already dealt with. Checked BEFORE `extract` runs, which is the
+   * whole point of the parameter: `thread.messages` is a new array on every
+   * streamed token, so this walk happens per token, and extracting means
+   * validating every node and edge of every graph the conversation has ever
+   * produced — work that grows with the transcript and is thrown away every
+   * time.
+   */
+  skip: ReadonlySet<string> = new Set(),
 ): SeedableGraphResult[] {
   const bindings = graphToolBindings();
   const found: SeedableGraphResult[] = [];
@@ -61,7 +70,7 @@ export function seedableGraphResults(
       // failure — it is simply not ready.
       if (part.result === undefined || part.result === null) continue;
       const id = part.toolCallId;
-      if (!id || seen.has(id)) continue;
+      if (!id || seen.has(id) || skip.has(id)) continue;
       const payload = binding.extract(part.result, part.args);
       if (!payload) continue;
       seen.add(id);
@@ -106,7 +115,6 @@ export function GraphResultSeeder() {
   const baseline = useRef<{ threadId: string | undefined; ids: Set<string> } | null>(null);
 
   useEffect(() => {
-    const results = seedableGraphResults(messages);
     const current = baseline.current;
 
     if (current === null || current.threadId !== threadId) {
@@ -114,13 +122,15 @@ export function GraphResultSeeder() {
       if (!messages || messages.length === 0) return;
       baseline.current = {
         threadId,
-        ids: new Set(results.map((result) => result.toolCallId)),
+        ids: new Set(seedableGraphResults(messages).map((result) => result.toolCallId)),
       };
       return;
     }
 
-    for (const result of results) {
-      if (current.ids.has(result.toolCallId)) continue;
+    // Everything already acted on is skipped before its payload is extracted,
+    // so a streaming turn re-walks the parts array without re-parsing the
+    // whole conversation's graphs on every token.
+    for (const result of seedableGraphResults(messages, current.ids)) {
       current.ids.add(result.toolCallId);
       // Fold into the graph already open when it is about the same part of
       // the graph. This is what makes expanding a node — and watching the

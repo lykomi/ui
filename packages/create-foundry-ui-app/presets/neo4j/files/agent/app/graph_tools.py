@@ -316,9 +316,21 @@ async def graph_vector_search(
             scores.append({"id": node.element_id, "score": float(record["score"])})
 
         if nodes:
+            # `CALL (n) { ... }` is the scoped-subquery form, Neo4j 5.23+ —
+            # which `neo4j:5-community` and Aura both are. The older
+            # `CALL { WITH n ... }` works everywhere but is deprecated there,
+            # and a starter should not greet its user with a warning.
+            #
+            # PER HIT, not one budget shared across all of them. A single
+            # global LIMIT lets the first high-degree hit spend the whole
+            # allowance, so a semantic search over a graph with uneven degrees
+            # came back as a hairball around one node and nothing at all around
+            # the rest — the opposite of what this tool is for.
             neighbours, _ = await graph_db.run_read(
-                "MATCH (n)-[r]-(m) WHERE elementId(n) IN $ids RETURN r, m LIMIT $cap",
-                {"ids": list(nodes), "cap": fanout * len(nodes)},
+                "MATCH (n) WHERE elementId(n) IN $ids "
+                "CALL (n) { MATCH (n)-[r]-(m) RETURN r, m LIMIT $fanout } "
+                "RETURN r, m",
+                {"ids": list(nodes), "fanout": fanout},
                 row_limit=fanout * len(nodes),
             )
             for record in neighbours:
