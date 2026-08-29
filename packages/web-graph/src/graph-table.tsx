@@ -51,11 +51,21 @@ export function GraphTable({ model, styleMap, onSelectNode, className }: GraphTa
     return counts;
   }, [model.links]);
 
+  // The relationships, resolved to the captions the nodes are listed under.
+  // A degree count says a node is connected; it does not say to WHAT, by which
+  // type, or in which direction — which is the whole content of a graph. A
+  // screen-reader user reading only the node table could not tell two
+  // completely different graphs apart.
+  const captionFor = useMemo(() => {
+    const byId = new Map(model.nodes.map((node) => [node.id, styleMap.styleForNode(node).caption]));
+    return (id: string | undefined) => (id === undefined ? "—" : (byId.get(id) ?? id));
+  }, [model.nodes, styleMap]);
+
   return (
-    <div className={cn("overflow-auto", className)}>
+    <div className={cn("flex flex-col gap-4 overflow-auto", className)}>
       <table className="w-full border-collapse text-left text-xs">
         <caption className="sr-only">
-          {model.nodes.length} nodes and {model.links.length} relationships
+          Nodes: {model.nodes.length} of them, in a graph with {model.links.length} relationships
         </caption>
         <thead className="text-muted-foreground sticky top-0">
           <tr className="border-border bg-card border-b">
@@ -95,6 +105,36 @@ export function GraphTable({ model, styleMap, onSelectNode, className }: GraphTa
           })}
         </tbody>
       </table>
+
+      {model.links.length > 0 && (
+        <table className="w-full border-collapse text-left text-xs">
+          <caption className="sr-only">
+            Relationships: {model.links.length} of them, as source, type and target
+          </caption>
+          <thead className="text-muted-foreground sticky top-0">
+            <tr className="border-border bg-card border-b">
+              <th scope="col" className="px-2 py-1 font-medium">
+                From
+              </th>
+              <th scope="col" className="px-2 py-1 font-medium">
+                Type
+              </th>
+              <th scope="col" className="px-2 py-1 font-medium">
+                To
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {model.links.map((link) => (
+              <tr key={link.id} className="border-border/60 border-b last:border-0">
+                <td className="px-2 py-1">{captionFor(endpointId(link.source))}</td>
+                <td className="text-muted-foreground px-2 py-1">{link.type ?? "RELATED"}</td>
+                <td className="px-2 py-1">{captionFor(endpointId(link.target))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

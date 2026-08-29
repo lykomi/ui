@@ -202,14 +202,19 @@ async def run_read(
 
 async def run_write(
     cypher: str, parameters: dict[str, Any] | None = None, row_limit: int | None = None
-) -> tuple[list[dict[str, Any]], dict[str, int]]:
-    """Run a mutating query; return its rows AND the counters.
+) -> tuple[list[dict[str, Any]], dict[str, int], bool]:
+    """Run a mutating query; return its rows, the counters, and the row cap.
 
     The rows matter as much as the counters. A write that ends `RETURN a, r, b`
     hands back exactly the nodes and relationships it just created, which is
     what lets "add Fritz Lang and connect him to Metropolis" render as the
     changed piece of graph rather than as `{"nodes_created": 1}`. Callers gate
     on :func:`writes_enabled` before exposing this.
+
+    The truncation flag matters for the same reason it does in
+    :func:`run_read`, and slightly more: the mutation is fully APPLIED however
+    many rows come back, so a capped result shows part of a change that
+    happened in full. One row is pulled past the cap to detect that.
     """
     query = neo4j.Query(cypher, timeout=query_timeout_seconds())
     driver = get_driver()
@@ -219,21 +224,27 @@ async def run_write(
         database=database(), default_access_mode=neo4j.WRITE_ACCESS
     ) as session:
         result = await session.run(query, parameters or {})
+        truncated = False
         async for record in result:
             if len(rows) >= cap:
+                truncated = True
                 break
             rows.append(dict(record))
         summary = await result.consume()
         counters = summary.counters
-        return rows, {
-            "nodes_created": counters.nodes_created,
-            "nodes_deleted": counters.nodes_deleted,
-            "relationships_created": counters.relationships_created,
-            "relationships_deleted": counters.relationships_deleted,
-            "properties_set": counters.properties_set,
-            "labels_added": counters.labels_added,
-            "labels_removed": counters.labels_removed,
-        }
+        return (
+            rows,
+            {
+                "nodes_created": counters.nodes_created,
+                "nodes_deleted": counters.nodes_deleted,
+                "relationships_created": counters.relationships_created,
+                "relationships_deleted": counters.relationships_deleted,
+                "properties_set": counters.properties_set,
+                "labels_added": counters.labels_added,
+                "labels_removed": counters.labels_removed,
+            },
+            truncated,
+        )
 
 
 _CREDENTIAL_LIKE = re.compile(

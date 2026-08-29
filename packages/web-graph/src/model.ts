@@ -85,14 +85,34 @@ export interface GraphPayload {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const isStringArray = (value: unknown): boolean =>
+  value === undefined || (Array.isArray(value) && value.every((item) => typeof item === "string"));
+
+/**
+ * A node, checked past its id.
+ *
+ * The optional fields are checked because this predicate decides whether the
+ * graph card TAKES OVER a tool result, and everything downstream then trusts
+ * the shape: `labels: [42]` was accepted as a graph and crashed the first
+ * search, in `matchNodes`, on `toLowerCase()`. Rejecting it renders the result
+ * as an ordinary tool card, which is the right outcome for something that is
+ * not a graph.
+ */
 const isNode = (value: unknown): value is GraphNode =>
-  isRecord(value) && typeof value.id === "string" && value.id.length > 0;
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  value.id.length > 0 &&
+  isStringArray(value.labels) &&
+  (value.caption === undefined || typeof value.caption === "string") &&
+  (value.properties === undefined || isRecord(value.properties));
 
 const isEdge = (value: unknown): value is GraphEdge =>
   isRecord(value) &&
   typeof value.id === "string" &&
   typeof value.source === "string" &&
-  typeof value.target === "string";
+  typeof value.target === "string" &&
+  (value.type === undefined || typeof value.type === "string") &&
+  (value.properties === undefined || isRecord(value.properties));
 
 /**
  * Structural check. Strict on the discriminator — an arbitrary object that
@@ -260,4 +280,30 @@ export function mergeGraphPayloads(base: GraphPayload, addition: GraphPayload): 
     legend: base.legend || addition.legend ? { ...base.legend, ...addition.legend } : undefined,
     meta: addition.meta ?? base.meta,
   };
+}
+
+/**
+ * `JSON.stringify` that survives what a graph actually carries.
+ *
+ * `properties` is `unknown` by design — it is whatever the database had — and
+ * the Neo4j driver hands back native `bigint` when configured with
+ * `useBigInt`, which `JSON.stringify` THROWS on. So opening the panel for an
+ * otherwise perfect payload could fail before anything rendered. Bigints
+ * become their decimal string (which is what the inspector already displays),
+ * and a cycle becomes `"[circular]"` rather than an exception.
+ */
+export function safeStringify(value: unknown, space?: number): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(
+    value,
+    (_key, item: unknown) => {
+      if (typeof item === "bigint") return item.toString();
+      if (typeof item === "object" && item !== null) {
+        if (seen.has(item)) return "[circular]";
+        seen.add(item);
+      }
+      return item;
+    },
+    space,
+  );
 }

@@ -73,7 +73,7 @@ async def graph_schema() -> dict[str, Any]:
         # The visualization gives shape but not property names; those are what
         # the model actually needs to write a working query.
         try:
-            props, _ = await graph_db.run_read(
+            props, props_truncated = await graph_db.run_read(
                 "CALL db.schema.nodeTypeProperties() "
                 "YIELD nodeLabels, propertyName, propertyTypes "
                 "RETURN nodeLabels, propertyName, propertyTypes"
@@ -86,6 +86,11 @@ async def graph_schema() -> dict[str, Any]:
                 }
                 for record in props
             ]
+            # Property names are what the model authors its next query from, so
+            # a prefix of them presented as the whole schema is worse than a
+            # smaller graph: it invents a database that does not exist.
+            if props_truncated:
+                payload["truncated"] = True
         except Exception:  # noqa: BLE001 - property detail is a bonus, not the point
             logger.debug("nodeTypeProperties unavailable", exc_info=True)
         return payload
@@ -130,10 +135,16 @@ async def graph_read_cypher(
     if not payload["nodes"]:
         # A query that returned scalars is legitimate; hand the values back so
         # the agent can still answer, and let the empty graph render as empty.
+        scalar_cap = 25
         payload["meta"]["rows"] = [
             {key: to_json_value(value) for key, value in record.items()}
-            for record in records[:25]
+            for record in records[:scalar_cap]
         ]
+        # A SECOND cap, under the row cap, and it needs saying too: a scalar
+        # answer is the whole answer for this query, so 25 of 200 rows
+        # presented as complete is a wrong answer rather than a partial view.
+        if len(records) > scalar_cap:
+            payload["truncated"] = True
     return payload
 
 
@@ -162,8 +173,9 @@ async def graph_write_cypher(
     Only available when the deployment has enabled writes. Call ``graph_schema``
     first so the labels, relationship types and property names match what is
     already there — a typo does not fail, it silently creates a second kind of
-    thing. After writing, pass the result to ``graph_show`` with ``merge: true``
-    so the new part appears in the open graph beside what it connects to.
+    thing. End the statement with a RETURN of what it touched: the result is
+    folded into the graph already on screen for you, so the change appears
+    beside what it connects to without a second tool call.
 
     A DELETION is the exception, and the result says so. Merging can add and
     update; it cannot remove, and a deleted node has no row to return — so the
@@ -177,7 +189,7 @@ async def graph_write_cypher(
         )
     started = time.monotonic()
     try:
-        records, counters = await graph_db.run_write(cypher, parameters)
+        records, counters, rows_truncated = await graph_db.run_write(cypher, parameters)
     except Exception as exc:  # noqa: BLE001
         return _failure(f"The write failed. {graph_db.safe_error(exc)}")
 
@@ -199,6 +211,7 @@ async def graph_write_cypher(
         max_nodes=graph_db.max_nodes(),
         max_edges=graph_db.max_edges(),
         meta=meta,
+        rows_truncated=rows_truncated,
     )
     # `applied` rides alongside the graph so the agent can confirm the change
     # even when the statement returned nothing to draw.
@@ -221,9 +234,9 @@ async def graph_expand_node(
     """Fetch a node's immediate neighbourhood — the node, its neighbours, and the relationships between.
 
     This is what "expand" means in a graph explorer, and it is the move people
-    reach for constantly: show me what is around this. Pass the result to
-    ``graph_show`` with ``merge: true`` so the neighbours join the graph on
-    screen instead of replacing it.
+    reach for constantly: show me what is around this. The neighbourhood joins
+    the graph on screen by itself — describe what appeared rather than calling
+    a second tool to arrange it.
     """
     started = time.monotonic()
     cap = max(1, min(int(limit), 100))

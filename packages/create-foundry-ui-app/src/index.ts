@@ -59,7 +59,9 @@ Scaffold a new Foundry UI app — AG-UI protocol + Microsoft Agent Framework + A
 
 Options:
   --preset <name>    Preset to scaffold from (default: "default" — OSS shell + AG-UI agent service).
-                     Use "foundry-iq" for an Azure AI Search Foundry IQ knowledge base demo.
+                     Use "foundry-iq" for an Azure AI Search Foundry IQ knowledge base demo,
+                     or "neo4j" for an agent over a Neo4j graph with an interactive
+                     visualization (local database or Neo4j Aura).
   --no-install       Skip running pnpm install in the new directory.
   --force            Allow scaffolding into a non-empty directory.
   -h, --help         Show this message.
@@ -67,6 +69,7 @@ Options:
 Example:
   npx create-foundry-ui-app my-app
   npx create-foundry-ui-app my-app --preset foundry-iq
+  npx create-foundry-ui-app my-app --preset neo4j
 `);
 }
 

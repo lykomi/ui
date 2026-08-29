@@ -510,12 +510,18 @@ export function GraphCanvas({
     recomputeCaptions();
   }, [selection.node, hoveredId, matchedIds, recomputeCaptions]);
 
+  // A search is active when it can MATCH something, which is the trimmed term.
+  // `matchNodes` trims and returns nothing for whitespace, so testing the raw
+  // length instead dimmed every node as a non-match: typing a space into the
+  // toolbar, or `graph_search(" ")`, greyed the entire graph out.
+  const searching = query.trim().length > 0;
+
   const nodeCanvasObject = useCallback(
     (node: PositionedNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
       const graphNode = node as EngineNode;
       const isSelected = selection.node?.id === graphNode.id;
       const isHovered = hoveredId === graphNode.id;
-      const isMatch = query.length > 0 && matchedIds.has(graphNode.id);
+      const isMatch = searching && matchedIds.has(graphNode.id);
       paintNode(
         node,
         {
@@ -524,7 +530,7 @@ export function GraphCanvas({
           hovered: isHovered,
           // A search dims the misses so the hits stand out; with no search
           // running, nothing is dimmed.
-          dimmed: query.length > 0 && !isMatch,
+          dimmed: searching && !isMatch,
           pinned: pinnedIds.has(graphNode.id),
           // Placement decides, and it already knows about selection, hover
           // and search — see `recomputeCaptions`. Re-adding "always show the
@@ -536,7 +542,7 @@ export function GraphCanvas({
         globalScale,
       );
     },
-    [styleMap, selection.node?.id, hoveredId, query, matchedIds, pinnedIds, theme, captioned],
+    [styleMap, selection.node?.id, hoveredId, searching, matchedIds, pinnedIds, theme, captioned],
   );
 
   const nodePointerAreaPaint = useCallback(

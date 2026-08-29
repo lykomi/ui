@@ -48,7 +48,19 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
   useEffect(() => {
     const handle = handleRef.current;
     if (!handle || !payload || !isOpen) return;
-    graphWorkspaceStore.getState().connect(handle, content.title, payload);
+    const workspace = graphWorkspaceStore.getState();
+    workspace.connect(handle, content.title, payload);
+    // Republish what the view is already showing. `disconnect` cleared the
+    // workspace when the panel closed, but the view was never unmounted — so
+    // reopening it leaves the drawer and the search box exactly as they were
+    // while `graph_get_view` reports neither, and the selected node is missing
+    // from the chat context. The callbacks cannot help: they fire on CHANGE,
+    // and from the view's side nothing changed.
+    const view = handle.getViewState();
+    workspace.setSelection(view.selection);
+    workspace.setQuery(view.query);
+    workspace.setHiddenLabels(view.hiddenLabels);
+    syncGraphSelectionContext(view.selection, `graph:${content.title}`);
     return () => graphWorkspaceStore.getState().disconnect(handle);
   }, [content.title, payload, isOpen]);
 

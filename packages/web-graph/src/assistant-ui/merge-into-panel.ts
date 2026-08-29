@@ -1,5 +1,11 @@
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
-import { mergeGraphPayloads, type GraphEdge, type GraphNode, type GraphPayload } from "../model.ts";
+import {
+  mergeGraphPayloads,
+  safeStringify,
+  type GraphEdge,
+  type GraphNode,
+  type GraphPayload,
+} from "../model.ts";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
 import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
 
@@ -53,7 +59,7 @@ export function mergeIntoOpenGraph(payload: GraphPayload): boolean {
   for (const edge of current.edges) byId.set(edge.id, edge);
   const differs = (entity: GraphNode | GraphEdge) => {
     const existing = byId.get(entity.id);
-    return existing === undefined || JSON.stringify(existing) !== JSON.stringify(entity);
+    return existing === undefined || safeStringify(existing) !== safeStringify(entity);
   };
   if (!payload.nodes.some(differs) && !payload.edges.some(differs)) return false;
 

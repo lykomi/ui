@@ -8,6 +8,7 @@ import {
   mergeGraphPayloads,
   pruneDanglingEdges,
   resolveCaption,
+  safeStringify,
   type GraphPayload,
 } from "../model.ts";
 
@@ -185,5 +186,44 @@ describe("mergeGraphPayloads", () => {
     const merged = mergeGraphPayloads(payload(), payload());
     expect(Object.hasOwn(merged, "error")).toBe(false);
     expect(isGraphPayload(merged)).toBe(true);
+  });
+});
+
+describe("safeStringify", () => {
+  it("serialises a bigint rather than throwing on it", () => {
+    // `properties` is whatever the database had, and the Neo4j driver hands
+    // back native bigints under `useBigInt`. `JSON.stringify` THROWS on one,
+    // so opening the panel for an otherwise perfect payload failed before
+    // anything rendered.
+    expect(() => JSON.stringify({ n: 1n })).toThrow();
+    expect(safeStringify({ n: 1n })).toBe('{"n":"1"}');
+  });
+
+  it("survives a cycle", () => {
+    const node: Record<string, unknown> = { id: "a" };
+    node.self = node;
+    expect(safeStringify(node)).toContain("[circular]");
+  });
+});
+
+describe("coerceGraphPayload rejects a payload it cannot render", () => {
+  const wrap = (nodes: unknown[]) => ({
+    kind: GRAPH_PAYLOAD_KIND,
+    version: GRAPH_PAYLOAD_VERSION,
+    nodes,
+    edges: [],
+  });
+
+  it("refuses labels that are not strings", () => {
+    // Accepted, this crashed the first search: `matchNodes` calls
+    // `toLowerCase()` on every label. Rejecting it renders the result as an
+    // ordinary tool card, which is right for something that is not a graph.
+    expect(coerceGraphPayload(wrap([{ id: "a", labels: [42] }]))).toBeNull();
+    expect(coerceGraphPayload(wrap([{ id: "a", labels: ["Person"] }]))).not.toBeNull();
+  });
+
+  it("refuses a caption or properties of the wrong shape", () => {
+    expect(coerceGraphPayload(wrap([{ id: "a", caption: 7 }]))).toBeNull();
+    expect(coerceGraphPayload(wrap([{ id: "a", properties: "nope" }]))).toBeNull();
   });
 });

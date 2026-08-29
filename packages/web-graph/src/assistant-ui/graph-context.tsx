@@ -75,10 +75,17 @@ export function GraphContextPinButton({ node }: { node: GraphNode }) {
   const toggle = useCallback(() => {
     if (pinned) {
       removeContextItem(pinned.id);
+      // Pinning PROMOTED the keyed item, which is how it survives selecting
+      // elsewhere — so removing the pin removes the only copy, and the node
+      // the user is still looking at drops out of the conversation entirely
+      // until they select something else. Unpinning means "stop keeping this
+      // one", not "forget what I have selected", so the tracking item comes
+      // back.
+      syncGraphSelectionContext(node, pinned.sourcePage ?? "");
       return;
     }
     if (tracked) promoteContextItem(tracked.id);
-  }, [pinned, tracked, promoteContextItem, removeContextItem]);
+  }, [node, pinned, tracked, promoteContextItem, removeContextItem]);
 
   return (
     <button

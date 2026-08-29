@@ -54,9 +54,19 @@ function hashLabel(label: string): number {
  *
  * Probing covers the hash's weakness: two labels that hash to the same slot
  * would otherwise be indistinguishable in exactly the small graphs where the
- * legend matters most. Labels are processed in sorted order so the outcome
- * depends only on WHICH labels are present, never on the order the producer
- * happened to return them in.
+ * legend matters most. With eight colours and a handful of labels a collision
+ * is likelier than not, so dropping it is not an option.
+ *
+ * The cost, stated plainly because it is a real one: a label's colour depends
+ * on which OTHER labels are present. Add a label that hashes to the same slot
+ * and sorts earlier, and the first label moves one slot along — so a label can
+ * change colour between two queries, and can change colour mid-session as a
+ * merge grows the graph. There is no way to have both properties with a fixed
+ * eight-colour palette; distinctness within one graph is the one worth having,
+ * because the swatch is only ever read next to the label's own name.
+ *
+ * Sorted order at least makes the outcome depend on WHICH labels are present
+ * and never on the order the producer happened to return them in.
  */
 function buildLabelColors(
   labels: string[],

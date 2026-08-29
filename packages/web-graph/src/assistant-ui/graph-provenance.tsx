@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@iloveagents/foundry-web-primitives";
-import { primaryLabel, type GraphPayload } from "../model.ts";
+import { primaryLabel, safeStringify, type GraphPayload } from "../model.ts";
 
 /** Rows the producer put in `meta` when a query returned scalars, not a graph. */
 type MetaRows = Record<string, unknown>[];
@@ -76,7 +76,7 @@ export function GraphProvenance({ payload, args, className }: GraphProvenancePro
               values here is the difference between an answer and a dead end. */}
           <h4 className="text-muted-foreground mb-1 font-medium">Rows</h4>
           <pre className="border-border bg-muted/60 text-foreground max-h-40 overflow-auto rounded border p-2 font-mono text-[11px]">
-            {JSON.stringify(rows, null, 2)}
+            {safeStringify(rows, 2)}
           </pre>
         </section>
       )}
@@ -90,7 +90,7 @@ export function GraphProvenance({ payload, args, className }: GraphProvenancePro
       </button>
       {showRaw && (
         <pre className="border-border bg-muted/60 text-foreground max-h-64 overflow-auto rounded border p-2 font-mono text-[11px]">
-          {JSON.stringify(payload, null, 2)}
+          {safeStringify(payload, 2)}
         </pre>
       )}
     </div>

@@ -11,7 +11,7 @@ import {
   type Ref,
 } from "react";
 import { cn } from "@iloveagents/foundry-web-primitives";
-import { primaryLabel, type GraphNode, type GraphPayload } from "./model.ts";
+import { primaryLabel, safeStringify, type GraphNode, type GraphPayload } from "./model.ts";
 import { GraphLegend } from "./graph-legend.tsx";
 import { GraphInspector, GRAPH_INSPECTOR_WIDTH } from "./graph-inspector.tsx";
 import { GraphToolbar } from "./graph-toolbar.tsx";
@@ -48,6 +48,17 @@ export interface GraphViewHandle {
    */
   select: (nodeId: string | null) => boolean;
   unpinAll: () => void;
+  /**
+   * What the view is currently showing beyond its data: the selected node, the
+   * search term, the labels hidden in the legend.
+   *
+   * Exists because the view OUTLIVES the workspace it publishes to. Closing
+   * the tool panel disconnects the workspace but does not unmount this
+   * component, so on reopening, the drawer and the search box still show what
+   * they showed — while the change callbacks, which fire only on change, have
+   * nothing to report. A host reconnecting reads this instead of guessing.
+   */
+  getViewState: () => { selection: GraphNode | null; query: string; hiddenLabels: string[] };
 }
 
 export interface GraphViewProps {
@@ -193,7 +204,7 @@ export function GraphView({
    * changes only when the data actually changes — while noticing that case.
    */
   const selectionSignature = selection.node
-    ? JSON.stringify([
+    ? safeStringify([
         selection.node.id,
         selection.node.labels ?? [],
         selection.node.caption ?? null,
@@ -260,6 +271,11 @@ export function GraphView({
         return node !== null;
       },
       unpinAll: () => state.unpinAll(),
+      getViewState: () => ({
+        selection: state.selection.node,
+        query: state.query,
+        hiddenLabels: [...state.hiddenLabels],
+      }),
     }),
     [model.nodes, selectNode, state],
   );

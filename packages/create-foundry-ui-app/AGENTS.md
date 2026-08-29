@@ -26,6 +26,7 @@ npx create-foundry-ui-app <target-dir> [--preset <name>] [--no-install] [--force
 
 - `--preset default` - bundled OSS starter: Foundry UI chat, FastAPI agent service, hello/weather tools.
 - `--preset foundry-iq` - bundled OSS starter plus Azure AI Search Foundry IQ knowledge base retrieval.
+- `--preset neo4j` - bundled OSS starter plus Neo4j graph tools (schema, read-only Cypher, node expansion, opt-in writes, semantic search) and an interactive graph. Local database or Neo4j Aura; only the connection URI differs.
 - `--no-install` - skip `pnpm install`.
 - `--force` - allow scaffolding into a non-empty target.
 

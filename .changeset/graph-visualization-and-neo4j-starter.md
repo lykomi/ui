@@ -87,3 +87,23 @@ endpoint is derived from the resource rather than by appending `/models` to a
 project endpoint, which produced a path that does not exist; and a write that
 deletes says so in its result, because a deletion cannot be merged into the
 graph on screen.
+
+Serialisation goes through a `safeStringify` that survives what a graph
+actually carries: `properties` is whatever the database had, and the Neo4j
+driver returns native `bigint` under `useBigInt`, which `JSON.stringify`
+throws on — so an otherwise valid payload could fail before the panel
+rendered. The payload guard also checks the optional fields now, since it is
+what decides whether the graph card takes over a tool result; `labels: [42]`
+used to be accepted and then crash the first search.
+
+Smaller ones from the same pass: a relationship-only Neo4j result
+(`MATCH ()-[r]->() RETURN r`) gets endpoint nodes rather than rendering as an
+empty graph; a whitespace-only search no longer dims every node; Escape closes
+the details drawer without also closing the panel underneath it; unpinning the
+selected node returns it to the chat context instead of dropping it; reopening
+a closed panel republishes the selection and search the view still shows; the
+accessible table lists relationships, not just per-node degrees; and the
+`neo4j` preset appears in `create-foundry-ui-app --help`. On the agent side,
+`run_write`, the schema's property list and a scalar result's rows all report
+their own caps, and the expansion and write tools no longer tell the model to
+call `graph_show` for something that now happens on its own.

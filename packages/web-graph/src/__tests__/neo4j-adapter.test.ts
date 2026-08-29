@@ -111,3 +111,47 @@ describe("graphFromNeo4j", () => {
     expect(payload.nodes[0]?.id).toBe("4:abc:7");
   });
 });
+
+describe("relationship-only results", () => {
+  it("gives an edge its endpoints, so the graph is not empty", () => {
+    // `MATCH ()-[r]->() RETURN r` is an ordinary query and the driver returns
+    // no node objects at all. Without placeholders every edge dangles,
+    // `pruneDanglingEdges` drops the lot, and a good result renders empty.
+    const graph = graphFromNeo4j([
+      {
+        r: {
+          identity: { low: 7, high: 0 },
+          start: { low: 1, high: 0 },
+          end: { low: 2, high: 0 },
+          type: "ACTED_IN",
+          properties: {},
+        },
+      },
+    ]);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.nodes.map((node) => node.id).sort()).toEqual(
+      [graph.edges[0].source, graph.edges[0].target].sort(),
+    );
+  });
+
+  it("lets a real node overwrite the placeholder it left behind", () => {
+    const graph = graphFromNeo4j([
+      {
+        r: {
+          identity: { low: 7, high: 0 },
+          start: { low: 1, high: 0 },
+          end: { low: 2, high: 0 },
+          type: "ACTED_IN",
+          properties: {},
+        },
+        m: {
+          identity: { low: 2, high: 0 },
+          labels: ["Movie"],
+          properties: { title: "Metropolis" },
+        },
+      },
+    ]);
+    const target = graph.nodes.find((node) => node.id === graph.edges[0].target);
+    expect(target?.properties?.title).toBe("Metropolis");
+  });
+});

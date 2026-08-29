@@ -145,7 +145,18 @@ export function graphFromNeo4j(rows: unknown): GraphPayload {
     }
     if (isNeo4jRelationship(value)) {
       const edge = toGraphEdge(value);
-      if (edge) edges.set(edge.id, edge);
+      if (edge) {
+        edges.set(edge.id, edge);
+        // `MATCH ()-[r]->() RETURN r` is an ordinary query, and the driver
+        // gives back relationships with no node objects at all. Without a
+        // placeholder for each end, every edge dangles, `pruneDanglingEdges`
+        // drops the lot, and a perfectly good result renders as an empty
+        // graph. `setdefault` semantics: a real node visited later — in the
+        // same result or a merge — overwrites the stub and brings its labels
+        // and properties with it.
+        if (!nodes.has(edge.source)) nodes.set(edge.source, { id: edge.source });
+        if (!nodes.has(edge.target)) nodes.set(edge.target, { id: edge.target });
+      }
       return;
     }
     for (const nested of Object.values(value)) visit(nested, depth + 1);

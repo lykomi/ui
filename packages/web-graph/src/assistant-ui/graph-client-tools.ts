@@ -5,6 +5,7 @@ import {
   mergeGraphPayloads,
   primaryLabel,
   resolveCaption,
+  safeStringify,
   type GraphNode,
 } from "../model.ts";
 import { findWorkspaceNode, graphWorkspaceStore } from "../graph-workspace.ts";
@@ -27,7 +28,10 @@ const describe = (node: GraphNode) => ({
   properties: node.properties ?? {},
 });
 
-const ok = (value: unknown) => JSON.stringify(value);
+// Not `JSON.stringify`: every one of these results carries node properties
+// straight out of the database, and a `bigint` there would throw inside the
+// tool rather than answering it.
+const ok = (value: unknown) => safeStringify(value);
 const fail = (message: string) => JSON.stringify({ error: message });
 
 function parseArgs(argsJson: string): Record<string, unknown> {

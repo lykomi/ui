@@ -120,10 +120,21 @@ export function GraphInspector({
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
+      // One press, one dismissal. The host's tool panel listens for Escape on
+      // the window too, and it was registered first (it mounts before a
+      // selection exists), so in the bubble phase it ran first and closed the
+      // WHOLE graph panel out from under the drawer this key was meant for.
+      //
+      // Hence capture: a capture listener on `window` runs before every bubble
+      // listener on it, and `stopPropagation` there ends the trip — the event
+      // never reaches the target and never bubbles back. `preventDefault` as
+      // well, for any handler that guards on `defaultPrevented` instead.
+      event.stopPropagation();
+      event.preventDefault();
       onClose();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [open, onClose]);
 
   if (!node && !edge) return null;

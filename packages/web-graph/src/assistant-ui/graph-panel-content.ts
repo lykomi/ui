@@ -1,4 +1,4 @@
-import { coerceGraphPayload, type GraphPayload } from "../model.ts";
+import { coerceGraphPayload, safeStringify, type GraphPayload } from "../model.ts";
 
 /**
  * The `ToolPanelContent` fields a graph panel needs. Declared structurally so
@@ -26,7 +26,7 @@ export function graphPanelContent(title: string, payload: GraphPayload): GraphPa
   return {
     title,
     type: GRAPH_PANEL_TYPE,
-    content: JSON.stringify(payload, null, 2),
+    content: safeStringify(payload, 2),
     data: payload,
   };
 }

@@ -21,6 +21,7 @@ const handle = (): GraphViewHandle => ({
   search: vi.fn(),
   select: vi.fn(() => true),
   unpinAll: vi.fn(),
+  getViewState: vi.fn(() => ({ selection: null, query: "", hiddenLabels: [] })),
 });
 
 beforeEach(() => {
