@@ -7,7 +7,12 @@ import {
   type GraphPayload,
 } from "../model.ts";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
-import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
+import {
+  GRAPH_PANEL_TYPE,
+  graphPanelContent,
+  graphPanelPayload,
+  type GraphPanelContentLike,
+} from "./graph-panel-content.ts";
 
 /**
  * Fold a fresh result into the graph the user already has open.
@@ -29,7 +34,21 @@ import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
  * @returns whether the open graph was updated.
  */
 export function mergeIntoOpenGraph(payload: GraphPayload): boolean {
-  const current = graphWorkspaceStore.getState().payload;
+  const panel = useToolPanelStore.getState();
+  const content = panel.content;
+  if (!panel.isOpen || content?.type !== GRAPH_PANEL_TYPE) return false;
+
+  // The base is what the PANEL holds, not what the workspace published.
+  // `setContent` below updates the panel synchronously; the workspace only
+  // catches up when `GraphPanel`'s effect re-runs. Two results handled in one
+  // pass — an expansion and a write in the same turn, which is the ordinary
+  // case here — would otherwise both read the same stale base, and the second
+  // would either reject an addition overlapping only the first or overwrite
+  // it with `old + second`, silently losing a merge already on screen. The
+  // workspace is the fallback for a panel opened by something that only knows
+  // how to set strings.
+  const current =
+    graphPanelPayload(content as GraphPanelContentLike) ?? graphWorkspaceStore.getState().payload;
   // An empty payload is not a merge. It is usually a write that DELETED
   // something, and merging cannot express a removal — there is no row for a
   // node that no longer exists, and nothing here can know which ids went. The
@@ -37,10 +56,6 @@ export function mergeIntoOpenGraph(payload: GraphPayload): boolean {
   // to re-read; silently treating this as "no change" is what would leave the
   // panel drawing a node the database no longer has.
   if (!current || payload.nodes.length === 0) return false;
-
-  const panel = useToolPanelStore.getState();
-  const content = panel.content;
-  if (!panel.isOpen || content?.type !== GRAPH_PANEL_TYPE) return false;
 
   const onScreen = new Set(current.nodes.map((node) => node.id));
   if (!payload.nodes.some((node) => onScreen.has(node.id))) return false;

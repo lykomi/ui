@@ -92,6 +92,33 @@ export interface GraphViewState_Reported {
   lossy: boolean;
 }
 
+/**
+ * Is there a canvas that can actually be DRAWN on?
+ *
+ * `typeof HTMLCanvasElement === "undefined"` was the wrong question. A stock
+ * jsdom defines the class and then throws "Not implemented" from
+ * `getContext`, so a consumer's test rendering `GraphView` took the engine
+ * path and hit unimplemented APIs instead of the readable table this fallback
+ * exists to give them. Asking for the context answers what the caller meant.
+ *
+ * Probed once: the answer cannot change within a page, and this is read on
+ * every render.
+ */
+let usableCanvas: boolean | undefined;
+function hasUsableCanvas(): boolean {
+  if (usableCanvas !== undefined) return usableCanvas;
+  if (typeof document === "undefined" || typeof HTMLCanvasElement === "undefined") {
+    usableCanvas = false;
+    return usableCanvas;
+  }
+  try {
+    usableCanvas = document.createElement("canvas").getContext("2d") !== null;
+  } catch {
+    usableCanvas = false;
+  }
+  return usableCanvas;
+}
+
 export interface GraphViewProps {
   data: GraphPayload;
   /** `inline` is the compact card form; `full` adds the details drawer. */
@@ -335,9 +362,9 @@ export function GraphView({
     [model.nodes, model.lossy, visibleModel, selectNode, state],
   );
 
-  // No canvas in jsdom, and `forceTable` is the print path. `tableRequested`
-  // is the user asking, from the toolbar.
-  const noCanvas = typeof HTMLCanvasElement === "undefined";
+  // `forceTable` is the print path; `tableRequested` is the user asking, from
+  // the toolbar; `noCanvas` is the environment having nothing to draw on.
+  const noCanvas = !hasUsableCanvas();
   const useTable = forceTable || noCanvas || tableRequested;
   const isEmpty = model.nodes.length === 0;
 

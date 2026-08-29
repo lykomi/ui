@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { GraphEdge, GraphNode, GraphPayload } from "./model.ts";
+import { safeStringify, type GraphEdge, type GraphNode, type GraphPayload } from "./model.ts";
 
 /** What the user currently has selected. `null` when nothing is selected. */
 export interface GraphSelection {
@@ -107,8 +107,20 @@ export function useGraphViewState(
       if (prev.node && !payload.nodes.some((node) => node.id === prev.node?.id)) {
         return EMPTY_SELECTION;
       }
-      if (prev.edge && !payload.edges.some((edge) => edge.id === prev.edge?.id)) {
-        return EMPTY_SELECTION;
+      if (prev.edge) {
+        const fresh = payload.edges.find((edge) => edge.id === prev.edge?.id);
+        if (!fresh) return EMPTY_SELECTION;
+        // Edges, unlike nodes, are REBUILT on every payload —
+        // `reconcileGraphModel` reuses node objects to keep their positions
+        // but has no such reason for links. So a merge that rewrote this
+        // relationship's type or properties left the drawer describing the
+        // version before the write, with no way to notice short of
+        // reselecting it. Swapped only when the content actually differs, so
+        // a host handing us a fresh `data` object on every render cannot turn
+        // this into a loop.
+        if (safeStringify(fresh) !== safeStringify(prev.edge)) {
+          return { node: null, edge: fresh };
+        }
       }
       return prev;
     });

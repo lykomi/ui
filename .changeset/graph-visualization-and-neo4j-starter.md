@@ -130,3 +130,9 @@ being marked handled and lost.
 `.py` was missing from the text-extension allowlist, so every scaffold from
 every preset shipped `FastAPI(title="__PROJECT_NAME__ Agent")` verbatim and
 served the placeholder as its own OpenAPI title.
+
+The readable table is also what actually renders where there is no canvas to
+draw on. The check was `typeof HTMLCanvasElement === "undefined"`, which jsdom
+satisfies while refusing to give a 2D context — so a consumer's test rendering
+`GraphView` took the engine path and hit unimplemented canvas APIs instead of
+the fallback. It asks for the context now.

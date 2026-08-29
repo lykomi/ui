@@ -212,7 +212,10 @@ interface AppState {
 function stableStringify(value: unknown): string {
   const seen = new WeakSet<object>();
   return JSON.stringify(value, (_key, item: unknown) => {
-    if (typeof item === "bigint") return item.toString();
+    // Tagged, not bare: `10n` and the string "10" are different values, and
+    // collapsing both to "10" would make a change between them read as
+    // unchanged — leaving stale context attached to every later message.
+    if (typeof item === "bigint") return `${item.toString()}n`;
     if (typeof item === "object" && item !== null) {
       if (seen.has(item)) return "[circular]";
       seen.add(item);
