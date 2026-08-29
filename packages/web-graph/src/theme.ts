@@ -62,16 +62,7 @@ export const FALLBACK_THEME: GraphTheme = {
   background: "#ffffff",
   border: "#e4e4e7",
   ring: "#8b5cf6",
-  palette: [
-    "#7c3aed",
-    "#0891b2",
-    "#db2777",
-    "#ea580c",
-    "#16a34a",
-    "#2563eb",
-    "#ca8a04",
-    "#9333ea",
-  ],
+  palette: ["#7c3aed", "#0891b2", "#db2777", "#ea580c", "#16a34a", "#2563eb", "#ca8a04", "#9333ea"],
 };
 
 function readToken(styles: CSSStyleDeclaration, name: string): string | null {

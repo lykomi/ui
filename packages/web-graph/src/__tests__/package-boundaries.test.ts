@@ -106,9 +106,10 @@ describe("source neutrality", () => {
 });
 
 describe("packaging", () => {
-  const pkg = JSON.parse(
-    readFileSync(join(SRC, "..", "package.json"), "utf-8"),
-  ) as Record<string, Record<string, unknown>>;
+  const pkg = JSON.parse(readFileSync(join(SRC, "..", "package.json"), "utf-8")) as Record<
+    string,
+    Record<string, unknown>
+  >;
 
   it("exports each entry point the README documents", () => {
     expect(Object.keys(pkg.exports)).toEqual([

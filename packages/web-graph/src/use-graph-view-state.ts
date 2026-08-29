@@ -42,7 +42,11 @@ export interface GraphViewState {
  * id, an email, or a status that the caption rule did not pick — which is most
  * of what people actually search a graph for.
  */
-function matchNodes(nodes: GraphNode[], query: string, captionOf: (n: GraphNode) => string): Set<string> {
+function matchNodes(
+  nodes: GraphNode[],
+  query: string,
+  captionOf: (n: GraphNode) => string,
+): Set<string> {
   const needle = query.trim().toLowerCase();
   if (needle.length === 0) return new Set();
   const out = new Set<string>();

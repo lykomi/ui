@@ -1,4 +1,15 @@
-import { Suspense, lazy, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { primaryLabel, type GraphNode, type GraphPayload } from "./model.ts";
 import { GraphLegend } from "./graph-legend.tsx";
@@ -33,7 +44,7 @@ export interface GraphViewHandle {
 
 export interface GraphViewProps {
   data: GraphPayload;
-  /** `inline` is the compact card form; `full` adds the inspector rail. */
+  /** `inline` is the compact card form; `full` adds the details drawer. */
   variant?: "inline" | "full";
   height?: number | string;
   className?: string;
@@ -48,6 +59,12 @@ export interface GraphViewProps {
   onSelectionChange?: (node: GraphNode | null) => void;
   /** Fires when the search term changes, whoever changed it. */
   onQueryChange?: (query: string) => void;
+  /**
+   * Extra footer actions for the details drawer, rendered for the selected
+   * node. The host owns them — the view has no opinion about what "pin to
+   * chat" or "open the record" mean.
+   */
+  inspectorActions?: (node: GraphNode) => ReactNode;
   /** Render the table instead of the canvas. Used by tests and print. */
   forceTable?: boolean;
   handleRef?: Ref<GraphViewHandle>;
@@ -83,6 +100,7 @@ export function GraphView({
   onExpandNode,
   onSelectionChange,
   onQueryChange,
+  inspectorActions,
   forceTable = false,
   handleRef,
 }: GraphViewProps) {
@@ -164,13 +182,21 @@ export function GraphView({
       />
 
       {(model.lossy || data.truncated) && (
-        <GraphLossNotice loss={model.loss} truncatedByProducer={data.truncated} className="shrink-0" />
+        <GraphLossNotice
+          loss={model.loss}
+          truncatedByProducer={data.truncated}
+          className="shrink-0"
+        />
       )}
 
-      <div className="flex min-h-0 flex-1 gap-2">
+      {/* The drawer lives INSIDE this box, over the canvas. Beside it, the
+          details rail would take its width from the graph for as long as
+          anything is selected — so the click that means "show me more" would
+          also be the click that shrinks what you are looking at. */}
+      <div className="flex min-h-0 flex-1">
         <div
           ref={setCanvasHost}
-          className="border-border bg-background relative min-h-0 flex-1 overflow-hidden rounded-md border"
+          className="border-border bg-background relative min-h-0 flex-1 overflow-hidden rounded-lg border"
         >
           {isEmpty ? (
             <GraphEmptyState />
@@ -198,20 +224,20 @@ export function GraphView({
               )}
             </Suspense>
           )}
-        </div>
 
-        {variant === "full" && (selection.node || selection.edge) && (
-          <GraphInspector
-            selection={selection}
-            colorForLabel={styleMap.colorForLabel}
-            captionOf={captionOf}
-            onClose={state.clearSelection}
-            onExpandNode={onExpandNode}
-            onTogglePin={(node) => state.togglePinned(node.id)}
-            isPinned={(node) => state.pinnedIds.has(node.id)}
-            className="shrink-0"
-          />
-        )}
+          {variant === "full" && (selection.node || selection.edge) && (
+            <GraphInspector
+              selection={selection}
+              colorForLabel={styleMap.colorForLabel}
+              captionOf={captionOf}
+              onClose={state.clearSelection}
+              onExpandNode={onExpandNode}
+              onToggleFrozen={(node) => state.togglePinned(node.id)}
+              isFrozen={(node) => state.pinnedIds.has(node.id)}
+              actions={selection.node && inspectorActions ? inspectorActions(selection.node) : null}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

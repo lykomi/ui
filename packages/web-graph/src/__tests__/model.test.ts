@@ -107,7 +107,12 @@ describe("resolveCaption", () => {
 describe("pruneDanglingEdges", () => {
   it("drops edges whose endpoints are absent and reports the count", () => {
     const result = pruneDanglingEdges(
-      payload({ edges: [{ id: "e1", source: "a", target: "b" }, { id: "e2", source: "a", target: "ghost" }] }),
+      payload({
+        edges: [
+          { id: "e1", source: "a", target: "b" },
+          { id: "e2", source: "a", target: "ghost" },
+        ],
+      }),
     );
     expect(result.edges.map((e) => e.id)).toEqual(["e1"]);
     expect(result.dropped).toBe(1);

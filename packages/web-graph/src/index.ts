@@ -46,7 +46,11 @@ export {
   type GraphStyling,
   type NodeStyle,
 } from "./use-graph-styling.ts";
-export { useGraphViewState, type GraphSelection, type GraphViewState } from "./use-graph-view-state.ts";
+export {
+  useGraphViewState,
+  type GraphSelection,
+  type GraphViewState,
+} from "./use-graph-view-state.ts";
 export { useGraphTheme } from "./use-graph-theme.ts";
 export { FALLBACK_THEME, resolveGraphTheme, type GraphTheme } from "./theme.ts";
 export {

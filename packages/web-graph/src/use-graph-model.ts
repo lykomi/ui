@@ -148,8 +148,11 @@ export function reconcileGraphModel(
   limits: GraphModelLimits = DEFAULT_LIMITS,
 ): { model: GraphModel; cache: Map<string, EngineNode> } {
   {
-    const { nodes: allNodes, edges: connectedEdges, dropped: danglingEdges } =
-      pruneDanglingEdges(payload);
+    const {
+      nodes: allNodes,
+      edges: connectedEdges,
+      dropped: danglingEdges,
+    } = pruneDanglingEdges(payload);
 
     const keptNodes = selectConnectedCore(allNodes, connectedEdges, limits.maxNodes);
     const cappedNodes = allNodes.length - keptNodes.length;

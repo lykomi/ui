@@ -3,6 +3,7 @@ import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
+import { GraphContextPinButton, syncGraphSelectionContext } from "./graph-context.tsx";
 
 /**
  * Full-size graph for the tool panel, connected to the shared workspace.
@@ -22,7 +23,12 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
     const handle = handleRef.current;
     if (!handle || !payload) return;
     graphWorkspaceStore.getState().connect(handle, content.title, payload);
-    return () => graphWorkspaceStore.getState().disconnect(handle);
+    return () => {
+      graphWorkspaceStore.getState().disconnect(handle);
+      // Otherwise a node from a closed panel stays in the chat context and
+      // the agent answers about a graph nobody can see.
+      syncGraphSelectionContext(null, "");
+    };
   }, [content.title, payload]);
 
   if (!payload) {
@@ -47,7 +53,13 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
         handleRef={handleRef}
         // The user's clicks and the agent's reads share one piece of state, so
         // "tell me about this node" needs no restating on either side.
-        onSelectionChange={(node) => graphWorkspaceStore.getState().setSelection(node)}
+        onSelectionChange={(node) => {
+          graphWorkspaceStore.getState().setSelection(node);
+          // The selected node joins the conversation automatically, so
+          // "tell me about this" needs no restating on either side.
+          syncGraphSelectionContext(node, `graph:${content.title}`);
+        }}
+        inspectorActions={(node) => <GraphContextPinButton node={node} />}
         onQueryChange={(query) => graphWorkspaceStore.getState().setQuery(query)}
       />
     </div>

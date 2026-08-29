@@ -136,12 +136,7 @@ const getView: ClientToolEntry = {
   },
 };
 
-export const GRAPH_CLIENT_TOOLS: ClientToolEntry[] = [
-  showGraph,
-  selectNode,
-  searchGraph,
-  getView,
-];
+export const GRAPH_CLIENT_TOOLS: ClientToolEntry[] = [showGraph, selectNode, searchGraph, getView];
 
 /**
  * Register the graph client tools globally.

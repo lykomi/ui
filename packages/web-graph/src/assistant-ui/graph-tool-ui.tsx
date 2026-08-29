@@ -87,9 +87,7 @@ export function makeGraphToolUI(options: MakeGraphToolUIOptions) {
 
       const open = useCallback(() => {
         if (!payload) return;
-        openPanel(
-          graphPanelContent(panelTitle?.(payload, args) ?? title, payload) as never,
-        );
+        openPanel(graphPanelContent(panelTitle?.(payload, args) ?? title, payload) as never);
       }, [payload, openPanel, args]);
 
       if (payload && autoOpenPanel && !autoOpenedRef.current.has(toolCallId)) {

@@ -41,6 +41,16 @@ export interface GraphCanvasProps {
 const DOUBLE_CLICK_MS = 350;
 
 /**
+ * Upper bound on zoom.
+ *
+ * `zoomToFit` has no upper bound, so a two- or three-node result frames itself
+ * at a scale where the nodes fill the panel like beach balls. Capping keeps a
+ * small graph looking like a small graph, while leaving room to zoom into a
+ * dense neighbourhood by hand.
+ */
+const MAX_ZOOM = 2.2;
+
+/**
  * Breathing room around a fitted graph, in screen pixels.
  *
  * Generous on purpose: `zoomToFit` frames the node CENTRES, so a tight padding
@@ -98,6 +108,39 @@ function tuneForces(
   if (link && typeof (link as { distance?: unknown }).distance === "function") {
     (link as unknown as { distance: (v: number) => void }).distance(28 * spread + 22);
   }
+  engine.d3Force("graphCohesion", cohesionForce());
+}
+
+/**
+ * A weak pull toward the origin.
+ *
+ * The link force only acts WITHIN a connected component, and charge pushes
+ * everything apart — so a result with two components has nothing holding them
+ * together. They drift to opposite corners, `zoomToFit` frames the empty space
+ * between them, and a six-node answer renders as two specks with a void in the
+ * middle. (Seen on "people who worked on more than one film": two clusters,
+ * most of the panel empty.)
+ *
+ * Written by hand rather than importing `d3-force`: force-graph bundles its
+ * own copy, and pulling in a second one to get `forceX` would ship the whole
+ * module twice. A d3 force is just a function with an `initialize` hook.
+ */
+function cohesionForce(): (alpha: number) => void {
+  let nodes: EngineNode[] = [];
+  const force = (alpha: number) => {
+    // Proportional to distance, so distant components are pulled hardest and
+    // nodes already near the centre are barely touched.
+    const k = alpha * 0.09;
+    for (const node of nodes) {
+      if (node.fx != null || node.fy != null) continue; // pinned: user's choice wins
+      if (typeof node.x === "number") node.vx = (node.vx ?? 0) - node.x * k;
+      if (typeof node.y === "number") node.vy = (node.vy ?? 0) - node.y * k;
+    }
+  };
+  force.initialize = (initial: EngineNode[]) => {
+    nodes = initial;
+  };
+  return force;
 }
 
 /**
@@ -281,6 +324,10 @@ export function GraphCanvas({
       width={width}
       height={height}
       backgroundColor="transparent"
+      // Cap the zoom. `zoomToFit` has no upper bound, so a three-node result
+      // frames itself at a scale where the nodes fill the panel like beach
+      // balls. Capping keeps a small graph looking like a small graph.
+      maxZoom={MAX_ZOOM}
       nodeRelSize={4}
       nodeVisibility={(node) => !isHidden(node)}
       // MUST return an element, never a string: force-graph's tooltip assigns

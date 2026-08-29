@@ -18,7 +18,11 @@ const rel = (elementId: string, type: string, start: string, end: string) => ({
 describe("graphFromNeo4j", () => {
   it("collects nodes and relationships out of flat record columns", () => {
     const result = graphFromNeo4j([
-      { p: node("4:n:1", ["Person"], { name: "Ada" }), r: rel("5:r:1", "KNOWS", "4:n:1", "4:n:2"), q: node("4:n:2", ["Person"], { name: "Alan" }) },
+      {
+        p: node("4:n:1", ["Person"], { name: "Ada" }),
+        r: rel("5:r:1", "KNOWS", "4:n:1", "4:n:2"),
+        q: node("4:n:2", ["Person"], { name: "Alan" }),
+      },
     ]);
     expect(result.nodes.map((n) => n.id)).toEqual(["4:n:1", "4:n:2"]);
     expect(result.edges[0]).toMatchObject({ source: "4:n:1", target: "4:n:2", type: "KNOWS" });

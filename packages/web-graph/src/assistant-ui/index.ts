@@ -11,9 +11,11 @@ export { GraphToolUI, makeGraphToolUI, type MakeGraphToolUIOptions } from "./gra
 export { GraphProvenance } from "./graph-provenance.tsx";
 export { registerGraphPanelRenderer } from "./register-graph-panel.ts";
 export {
-  GRAPH_CLIENT_TOOLS,
-  registerGraphClientTools,
-} from "./graph-client-tools.ts";
+  GRAPH_SELECTION_CONTEXT_KEY,
+  GraphContextPinButton,
+  syncGraphSelectionContext,
+} from "./graph-context.tsx";
+export { GRAPH_CLIENT_TOOLS, registerGraphClientTools } from "./graph-client-tools.ts";
 export {
   GRAPH_PANEL_TYPE,
   graphPanelContent,

@@ -46,10 +46,7 @@ export function GraphLossNotice({
   return (
     <p
       role="status"
-      className={cn(
-        "text-muted-foreground flex items-start gap-1.5 text-xs",
-        className,
-      )}
+      className={cn("text-muted-foreground flex items-start gap-1.5 text-xs", className)}
     >
       <AlertTriangle className="mt-px size-3.5 shrink-0" aria-hidden="true" />
       <span>Showing a partial graph — {reasons.join("; ")}.</span>

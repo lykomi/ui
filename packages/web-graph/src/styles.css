@@ -1,35 +1,111 @@
 /* Graph palette.
  *
- * Eight hues chosen for categorical separation — including for the common
- * red/green and blue/purple confusions — because a legend with two
- * indistinguishable swatches is a legend that has failed.
+ * Eight categorical hues, evenly spaced around the wheel and held at a
+ * constant lightness and chroma so no single label shouts louder than the
+ * others — a palette where one colour is darker reads as a hierarchy that
+ * isn't there. Spacing is even rather than "pleasing" on purpose: the job is
+ * telling `Person` from `Movie` at a glance, including for the common
+ * red/green and blue/purple confusions.
+ *
+ * The violet at `--graph-1` is the same family as the shell's `--primary`, so
+ * the first (and in most graphs, largest) label sits inside the app's identity
+ * instead of fighting it.
  *
  * These are plain custom properties, not `@theme` tokens: they are read from
- * the DOM by `resolveGraphTheme()` and painted onto a canvas, never turned into
- * Tailwind utilities. Importing this file is optional — without it the graph
- * falls back to the host's `--chart-1..5`, and then to a built-in palette.
+ * the DOM by `resolveGraphTheme()` and painted onto a canvas, never turned
+ * into Tailwind utilities. Importing this file is optional — without it the
+ * graph falls back to the host's `--chart-1..5`, and then to a built-in
+ * palette.
  *
- * Dark values are lifted in lightness and dropped in chroma so they hold up
- * against a dark ground without glowing.
+ * Dark values lift lightness and drop chroma: the same colour at the same
+ * chroma glows against a dark ground and bleeds into its own caption.
  */
 :root {
-  --graph-1: oklch(0.62 0.19 275);
-  --graph-2: oklch(0.65 0.15 205);
-  --graph-3: oklch(0.62 0.2 15);
-  --graph-4: oklch(0.68 0.16 65);
-  --graph-5: oklch(0.63 0.16 150);
-  --graph-6: oklch(0.6 0.19 330);
-  --graph-7: oklch(0.68 0.13 245);
-  --graph-8: oklch(0.66 0.14 105);
+  --graph-1: oklch(0.61 0.212 285); /* violet — pairs with --primary */
+  --graph-2: oklch(0.65 0.155 200); /* cyan */
+  --graph-3: oklch(0.62 0.208 15); /* rose */
+  --graph-4: oklch(0.7 0.165 75); /* amber */
+  --graph-5: oklch(0.63 0.152 158); /* emerald */
+  --graph-6: oklch(0.61 0.223 328); /* fuchsia */
+  --graph-7: oklch(0.6 0.19 255); /* blue */
+  --graph-8: oklch(0.68 0.17 122); /* lime */
 }
 
 .dark {
-  --graph-1: oklch(0.72 0.16 275);
-  --graph-2: oklch(0.75 0.13 205);
+  --graph-1: oklch(0.72 0.175 285);
+  --graph-2: oklch(0.76 0.13 200);
   --graph-3: oklch(0.72 0.17 15);
-  --graph-4: oklch(0.78 0.14 65);
-  --graph-5: oklch(0.73 0.14 150);
-  --graph-6: oklch(0.7 0.16 330);
-  --graph-7: oklch(0.77 0.11 245);
-  --graph-8: oklch(0.76 0.12 105);
+  --graph-4: oklch(0.79 0.14 75);
+  --graph-5: oklch(0.74 0.128 158);
+  --graph-6: oklch(0.72 0.18 328);
+  --graph-7: oklch(0.71 0.155 255);
+  --graph-8: oklch(0.78 0.145 122);
+}
+
+/* The hover tooltip.
+ *
+ * `force-graph` renders it through `float-tooltip`, which injects its own
+ * stylesheet: a hardcoded `rgba(0,0,0,0.6)` box with `#eee` text and a 12px
+ * sans stack. That is a black box floating over a themed app, and it looks
+ * exactly like the third-party widget it is.
+ *
+ * These rules re-dress it from the host's tokens. They live here rather than
+ * in a component because the element is created outside React — there is no
+ * render pass to attach a class in.
+ */
+.float-tooltip-kap {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 0.375rem);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  font:
+    12px/1.45 ui-sans-serif,
+    system-ui,
+    sans-serif;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  max-width: 22rem;
+}
+
+/* The details drawer's slide-in.
+ *
+ * A keyframe, not React state. The obvious implementation — mount at
+ * `translate-x-full`, flip to `translate-x-0` in an effect — needs a state
+ * write on every selection change, and a selection change is also what
+ * re-renders the graph around it. Keyframes run off the render path entirely,
+ * so re-selecting cannot feed back into another render.
+ */
+@keyframes foundry-graph-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes foundry-graph-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.foundry-graph-drawer {
+  animation: foundry-graph-drawer-in 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.foundry-graph-scrim {
+  animation: foundry-graph-scrim-in 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foundry-graph-drawer,
+  .foundry-graph-scrim {
+    animation: none;
+  }
 }

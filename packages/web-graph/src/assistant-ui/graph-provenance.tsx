@@ -28,7 +28,8 @@ function readString(source: unknown, key: string): string | null {
  */
 export function GraphProvenance({ payload, args, className }: GraphProvenanceProps) {
   const [showRaw, setShowRaw] = useState(false);
-  const query = readString(payload.meta, "query") ?? readString(args, "cypher") ?? readString(args, "query");
+  const query =
+    readString(payload.meta, "query") ?? readString(args, "cypher") ?? readString(args, "query");
   const elapsed = typeof payload.meta?.elapsedMs === "number" ? payload.meta.elapsedMs : null;
   const database = readString(payload.meta, "database");
   const rows = Array.isArray(payload.meta?.rows) ? (payload.meta.rows as MetaRows) : null;

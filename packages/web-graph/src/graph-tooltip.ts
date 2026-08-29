@@ -14,16 +14,18 @@ import type { GraphEdge, GraphNode } from "./model.ts";
  */
 function tooltipElement(heading: string, rows: [string, string][]): HTMLElement {
   const root = document.createElement("div");
-  root.style.maxWidth = "20rem";
 
   const title = document.createElement("div");
   title.style.fontWeight = "600";
   title.textContent = heading;
+  title.style.marginBottom = rows.length ? "0.125rem" : "0";
   root.appendChild(title);
 
   for (const [key, value] of rows) {
     const row = document.createElement("div");
-    row.style.opacity = "0.8";
+    // The token, not a hardcoded grey — the tooltip sits on the host's
+    // popover surface (see `.float-tooltip-kap` in styles.css).
+    row.style.color = "var(--muted-foreground)";
     row.textContent = `${key}: ${value}`;
     root.appendChild(row);
   }
@@ -42,7 +44,9 @@ function previewRows(properties: Record<string, unknown> | undefined): [string, 
     const text = String(value);
     rows.push([
       key,
-      text.length > MAX_TOOLTIP_VALUE_CHARS ? `${text.slice(0, MAX_TOOLTIP_VALUE_CHARS - 1)}…` : text,
+      text.length > MAX_TOOLTIP_VALUE_CHARS
+        ? `${text.slice(0, MAX_TOOLTIP_VALUE_CHARS - 1)}…`
+        : text,
     ]);
   }
   return rows;

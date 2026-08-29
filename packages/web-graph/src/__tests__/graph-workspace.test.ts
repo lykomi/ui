@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  GRAPH_PAYLOAD_KIND,
-  GRAPH_PAYLOAD_VERSION,
-  type GraphPayload,
-} from "../model.ts";
+import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
 import { findWorkspaceNode, graphWorkspaceStore, isGraphOpen } from "../graph-workspace.ts";
 import type { GraphViewHandle } from "../graph-view.tsx";
 

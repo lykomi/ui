@@ -222,7 +222,10 @@ export function paintEdgeLabel(
   let angle = Math.atan2(y2 - y1, x2 - x1);
   if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI;
 
-  const fontSize = Math.max(7, 9 / globalScale);
+  // Divide by the zoom and DO NOT floor it in graph units. A floor here is a
+  // minimum in GRAPH space, which the zoom then multiplies — so on a small
+  // graph, where zoom-to-fit lands at a high scale, the label renders enormous.
+  const fontSize = 9 / globalScale;
   ctx.save();
   ctx.translate(midX, midY);
   ctx.rotate(angle);

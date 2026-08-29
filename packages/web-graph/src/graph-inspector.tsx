@@ -1,6 +1,7 @@
-import { X } from "lucide-react";
+import { useEffect, type ReactNode } from "react";
+import { Maximize2, Snowflake, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
-import { primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
+import { primaryLabel, resolveCaption, type GraphEdge, type GraphNode } from "./model.ts";
 import type { GraphSelection } from "./use-graph-view-state.ts";
 
 /** Render a property value without collapsing structure into "[object Object]". */
@@ -18,20 +19,42 @@ function formatValue(value: unknown): string {
   }
 }
 
-function PropertyTable({ properties }: { properties: Record<string, unknown> | undefined }) {
+/**
+ * Label/value rows, matching the field list a downstream app already uses for
+ * "inspect this item".
+ *
+ * A fixed label column rather than a two-column grid: property names in a
+ * graph are short and repetitive (`name`, `year`, `title`), values are not, so
+ * an auto-sized label column jitters between selections and makes the drawer
+ * feel like it is redrawing itself every time you click.
+ */
+function PropertyRows({ properties }: { properties: Record<string, unknown> | undefined }) {
   const entries = Object.entries(properties ?? {});
   if (entries.length === 0) {
-    return <p className="text-muted-foreground text-xs">No properties.</p>;
+    return (
+      <p className="text-muted-foreground rounded-xl border border-dashed px-3 py-6 text-center text-sm">
+        No properties.
+      </p>
+    );
   }
   return (
-    <dl className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+    <div className="divide-border/60 border-border/70 divide-y rounded-xl border">
       {entries.map(([key, value]) => (
-        <div key={key} className="contents">
-          <dt className="text-muted-foreground truncate font-medium">{key}</dt>
-          <dd className="text-foreground break-words">{formatValue(value)}</dd>
+        <div key={key} className="px-3 py-2">
+          <div className="flex min-h-9 items-start gap-3">
+            <span
+              className="text-muted-foreground w-28 shrink-0 truncate pt-0.5 text-sm"
+              title={key}
+            >
+              {key}
+            </span>
+            <div className="text-foreground min-w-0 flex-1 break-words text-sm">
+              {formatValue(value)}
+            </div>
+          </div>
         </div>
       ))}
-    </dl>
+    </div>
   );
 }
 
@@ -43,14 +66,23 @@ export interface GraphInspectorProps {
   onClose: () => void;
   /** Rendered as an "Expand" action when the host supplies one. */
   onExpandNode?: (node: GraphNode) => void;
-  /** Rendered as a "Pin"/"Unpin" toggle. */
-  onTogglePin?: (node: GraphNode) => void;
-  isPinned?: (node: GraphNode) => boolean;
+  /** Freeze the node where it sits, so the layout stops moving it around. */
+  onToggleFrozen?: (node: GraphNode) => void;
+  isFrozen?: (node: GraphNode) => boolean;
+  /** Host-supplied actions for the footer — e.g. "pin to chat". */
+  actions?: ReactNode;
   className?: string;
 }
 
 /**
  * Details for the selected node or relationship.
+ *
+ * A drawer over the canvas, not a rail beside it. A rail is the obvious
+ * layout and it is wrong here: it takes its width from the graph permanently,
+ * so selecting a node — the one gesture that means "I want to look at this
+ * more closely" — is also the gesture that shrinks what you are looking at.
+ * Over the canvas, the graph keeps its full width and the drawer is dismissed
+ * the moment you are done with it.
  *
  * Also the accessible surface for the graph: the canvas itself is opaque to a
  * screen reader, so everything a sighted user learns by hovering has to be
@@ -62,99 +94,120 @@ export function GraphInspector({
   captionOf,
   onClose,
   onExpandNode,
-  onTogglePin,
-  isPinned,
+  onToggleFrozen,
+  isFrozen,
+  actions,
   className,
 }: GraphInspectorProps) {
   const { node, edge } = selection;
+  const open = Boolean(node || edge);
+
+  // Escape closes, matching every other dismissible surface. Bound to the
+  // window rather than the drawer because the canvas keeps keyboard focus —
+  // people select with the mouse and expect Escape to work without clicking
+  // into the panel first.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!node && !edge) return null;
 
+  const frozen = node ? Boolean(isFrozen?.(node)) : false;
+
   return (
-    <aside
-      aria-label={node ? "Selected node" : "Selected relationship"}
-      className={cn(
-        "border-border bg-card text-card-foreground flex max-h-full w-64 flex-col overflow-hidden rounded-md border shadow-sm",
-        className,
-      )}
-    >
-      <header className="border-border flex items-start gap-2 border-b px-3 py-2">
-        <div className="min-w-0 flex-1">
-          {node ? (
-            <NodeHeading node={node} colorForLabel={colorForLabel} caption={captionOf(node)} />
-          ) : null}
-          {edge ? (
-            <p className="text-foreground truncate text-xs font-semibold">
-              {edge.type ?? "RELATED"}
-            </p>
-          ) : null}
+    <div className={cn("absolute inset-0 z-20 flex justify-end", className)}>
+      {/* Light and unblurred on purpose: the drawer is a companion to the
+          graph, not a replacement for it — people read the properties against
+          the shape the node sits in, so that shape has to stay visible. */}
+      <button
+        type="button"
+        aria-label="Close details"
+        onClick={onClose}
+        className="foundry-graph-scrim bg-foreground/10 flex-1 cursor-default"
+      />
+      <aside
+        role="dialog"
+        aria-modal="false"
+        aria-label={node ? "Selected node" : "Selected relationship"}
+        className="foundry-graph-drawer border-border bg-background flex h-full w-80 max-w-[85%] flex-col border-l shadow-2xl"
+      >
+        <header className="border-border flex items-start justify-between gap-3 border-b px-4 py-3">
+          <div className="min-w-0">
+            {node ? (
+              <p className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]">
+                <span
+                  aria-hidden="true"
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: colorForLabel(primaryLabel(node)) }}
+                />
+                {(node.labels?.length ? node.labels : ["Node"]).join(" · ")}
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.14em]">
+                Relationship
+              </p>
+            )}
+            <h2 className="text-foreground truncate text-base font-semibold" title={headingOf()}>
+              {headingOf()}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close details"
+            className="border-border text-muted-foreground hover:bg-muted focus-visible:ring-ring rounded-lg border p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-1"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          <PropertyRows properties={(node ?? (edge as GraphEdge)).properties} />
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close details"
-          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded focus-visible:outline-none focus-visible:ring-1"
-        >
-          <X className="size-3.5" />
-        </button>
-      </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
-        <PropertyTable properties={(node ?? (edge as GraphEdge)).properties} />
-      </div>
-
-      {node && (onExpandNode || onTogglePin) && (
-        <footer className="border-border flex gap-2 border-t px-3 py-2">
-          {onExpandNode && (
-            <button
-              type="button"
-              onClick={() => onExpandNode(node)}
-              className="border-border hover:bg-accent focus-visible:ring-ring rounded border px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1"
-            >
-              Expand
-            </button>
-          )}
-          {onTogglePin && (
-            <button
-              type="button"
-              onClick={() => onTogglePin(node)}
-              className="border-border hover:bg-accent focus-visible:ring-ring rounded border px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1"
-            >
-              {isPinned?.(node) ? "Unpin" : "Pin"}
-            </button>
-          )}
-        </footer>
-      )}
-    </aside>
+        {node && (onExpandNode || onToggleFrozen || actions) && (
+          <footer className="border-border flex items-center justify-end gap-1.5 border-t px-4 py-3">
+            {actions}
+            {onToggleFrozen && (
+              <button
+                type="button"
+                onClick={() => onToggleFrozen(node)}
+                aria-pressed={frozen}
+                title={frozen ? "Let the layout move this node" : "Freeze this node in place"}
+                className={cn(
+                  "border-border hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1",
+                  frozen ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <Snowflake className="size-3.5" />
+                {frozen ? "Frozen" : "Freeze"}
+              </button>
+            )}
+            {onExpandNode && (
+              <button
+                type="button"
+                onClick={() => onExpandNode(node)}
+                title="Load this node's neighbours"
+                className="border-border hover:bg-muted text-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1"
+              >
+                <Maximize2 className="size-3.5" />
+                Expand
+              </button>
+            )}
+          </footer>
+        )}
+      </aside>
+    </div>
   );
-}
 
-function NodeHeading({
-  node,
-  colorForLabel,
-  caption,
-}: {
-  node: GraphNode;
-  colorForLabel: (label: string) => string;
-  caption: string;
-}) {
-  const labels = node.labels?.length ? node.labels : ["Node"];
-  return (
-    <>
-      <div className="flex flex-wrap items-center gap-1">
-        {labels.map((label) => (
-          <span key={label} className="inline-flex items-center gap-1 text-xs">
-            <span
-              aria-hidden="true"
-              className="size-2 rounded-full"
-              style={{ backgroundColor: colorForLabel(primaryLabel(node)) }}
-            />
-            <span className="text-muted-foreground">{label}</span>
-          </span>
-        ))}
-      </div>
-      <p className="text-foreground mt-0.5 truncate text-xs font-semibold" title={caption}>
-        {caption}
-      </p>
-    </>
-  );
+  function headingOf(): string {
+    if (node) return captionOf(node) || resolveCaption(node);
+    return edge?.type ?? "RELATED";
+  }
 }

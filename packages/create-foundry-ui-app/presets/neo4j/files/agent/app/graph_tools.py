@@ -232,22 +232,85 @@ async def graph_vector_search(
     return payload if kept_nodes else empty_payload(meta)
 
 
+#: The audience a Foundry / Azure OpenAI models endpoint accepts.
+#:
+#: ``azure.ai.inference`` defaults its ``credential_scopes`` to
+#: ``https://ml.azure.com/.default`` (Azure ML), which a models endpoint
+#: rejects with "the audience is incorrect" — a 401 that reads like a
+#: permissions problem and is not one.
+_EMBEDDING_SCOPE = "https://cognitiveservices.azure.com/.default"
+
+
+def _models_endpoint() -> str | None:
+    """Where the embedding model is served.
+
+    ``FOUNDRY_MODELS_ENDPOINT`` if the deployment names one; otherwise derive
+    it from the Azure OpenAI endpoint the chat model already uses, so vector
+    search needs no second setting for the same resource.
+    """
+    explicit = os.getenv("FOUNDRY_MODELS_ENDPOINT")
+    if explicit:
+        return explicit
+    aoai = os.getenv("AZURE_OPENAI_ENDPOINT")
+    return f"{aoai.rstrip('/')}/models" if aoai else None
+
+
+#: Built once. ``DefaultAzureCredential`` caches tokens on the instance, so a
+#: fresh one per query pays a full token acquisition (~hundreds of ms) on every
+#: vector search — the SDK's own advice, and very visible in a chat loop.
+_CREDENTIAL: Any = None
+
+
+def _embedding_credential() -> Any:
+    """The credential for the models endpoint — API key if given, else Entra."""
+    global _CREDENTIAL
+    if _CREDENTIAL is None:
+        api_key = os.getenv("FOUNDRY_MODELS_API_KEY")
+        if api_key:
+            from azure.core.credentials import AzureKeyCredential
+
+            _CREDENTIAL = AzureKeyCredential(api_key)
+        else:
+            from azure.identity.aio import DefaultAzureCredential
+
+            _CREDENTIAL = DefaultAzureCredential()
+    return _CREDENTIAL
+
+
 async def embed_query(text: str) -> list[float]:
     """Embed one string with the Foundry embedding model.
 
     Uses ``agent_framework_foundry``'s embedding client, so this shares the
     endpoint and credential the chat model already uses — no second SDK and no
     second auth story.
+
+    The transport is built here rather than left to the wrapper: the wrapper
+    forwards only ``endpoint`` and ``credential`` to ``EmbeddingsClient``, so a
+    token credential gets the SDK's default (Azure ML) audience and every call
+    401s. ``credential`` is still passed because the wrapper validates it and
+    builds its image client from it.
     """
     from agent_framework_foundry import FoundryEmbeddingClient
-    from azure.identity import DefaultAzureCredential
+    from azure.ai.inference.aio import EmbeddingsClient
 
+    endpoint = _models_endpoint()
+    credential = _embedding_credential()
+
+    transport = EmbeddingsClient(
+        endpoint=endpoint,  # type: ignore[arg-type]
+        credential=credential,  # type: ignore[arg-type]
+        credential_scopes=[_EMBEDDING_SCOPE],
+    )
     client = FoundryEmbeddingClient(
         model=os.getenv("FOUNDRY_EMBEDDING_MODEL"),
-        endpoint=os.getenv("FOUNDRY_MODELS_ENDPOINT"),
-        credential=None if os.getenv("FOUNDRY_MODELS_API_KEY") else DefaultAzureCredential(),  # type: ignore[arg-type]
+        endpoint=endpoint,
+        text_client=transport,
+        credential=credential,  # type: ignore[arg-type]
     )
-    result = await client.get_embeddings([text])
+    try:
+        result = await client.get_embeddings([text])
+    finally:
+        await client.close()
     return list(result[0].vector)
 
 

@@ -1,5 +1,11 @@
 import { useMemo } from "react";
-import { primaryLabel, resolveCaption, type GraphEdge, type GraphNode, type GraphPayload } from "./model.ts";
+import {
+  primaryLabel,
+  resolveCaption,
+  type GraphEdge,
+  type GraphNode,
+  type GraphPayload,
+} from "./model.ts";
 import type { GraphTheme } from "./theme.ts";
 
 /** Host-supplied styling overrides, all optional. */

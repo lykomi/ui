@@ -151,7 +151,10 @@ describe("selectConnectedCore", () => {
   });
 
   it("is deterministic — the retained set must not flicker between renders", () => {
-    const payload = build(20, Array.from({ length: 15 }, (_, i): [number, number] => [i, i + 1]));
+    const payload = build(
+      20,
+      Array.from({ length: 15 }, (_, i): [number, number] => [i, i + 1]),
+    );
     const once = selectConnectedCore(payload.nodes, payload.edges, 8).map((n) => n.id);
     const twice = selectConnectedCore(payload.nodes, payload.edges, 8).map((n) => n.id);
     expect(once).toEqual(twice);
