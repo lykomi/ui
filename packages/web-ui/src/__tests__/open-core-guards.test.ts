@@ -325,6 +325,40 @@ describe("open-core guards", () => {
       });
     }
 
+    // 4b. The @assistant-ui/tap upper bound must stay.
+    //
+    // `@assistant-ui/react@0.15.1` depends on `@assistant-ui/tap: ^0.9.7`, and
+    // tap 0.9.13 rewrote its internal `useSyncExternalStore`. assistant-ui was
+    // built against the old semantics and does not survive the new ones: the
+    // composer silently drops every keystroke, with only a console line about
+    // an uncached `getSnapshot` to show for it. Install succeeds, the build
+    // succeeds, and the app is dead.
+    //
+    // Nothing else expresses that constraint — upstream's caret accepts the
+    // broken versions — so a bound removed as tidy-up would ship a chat with
+    // no composer. Measured: 0.9.8 and 0.9.12 green, 0.9.13/0.9.14/0.9.15 red.
+    it("pins @assistant-ui/tap below the release that breaks the composer", () => {
+      const workspaceYaml = readFileSync(join(ROOT, "pnpm-workspace.yaml"), "utf8");
+      const override = workspaceYaml
+        .split("\n")
+        .map((line) => line.replace(/#.*$/, "").trim())
+        .find((line) => line.startsWith('"@assistant-ui/tap":'));
+      expect(
+        override,
+        "pnpm-workspace.yaml must override @assistant-ui/tap — see the comment beside it",
+      ).toBeDefined();
+      // An EXCLUSIVE upper bound no higher than 0.9.13 — the first broken
+      // release, so `<0.9.13` is the widest range that is still safe.
+      const bound = /<\s*(\d+)\.(\d+)\.(\d+)/.exec(override ?? "");
+      expect(bound, `no exclusive upper bound in ${override}`).not.toBeNull();
+      const [major, minor, patch] = bound!.slice(1).map(Number);
+      const rank = (a: number, b: number, c: number) => a * 1e6 + b * 1e3 + c;
+      expect(
+        rank(major, minor, patch) <= rank(0, 9, 13),
+        `@assistant-ui/tap must stay below 0.9.13; this allows up to <${major}.${minor}.${patch}`,
+      ).toBe(true);
+    });
+
     // 5. Sibling foundry-* packages must never be peerDependencies.
     //
     // The four packages ship together as a coordinated `fixed` changesets
