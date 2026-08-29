@@ -1,7 +1,7 @@
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useMemo } from "react";
 import { primaryLabel, type GraphNode } from "./model.ts";
-import type { GraphModel } from "./use-graph-model.ts";
+import { endpointId, type GraphModel } from "./use-graph-model.ts";
 import type { GraphStyleMap } from "./use-graph-styling.ts";
 
 export interface GraphTableProps {
@@ -19,17 +19,6 @@ export interface GraphTableProps {
  * anyone using one. It is also what renders when there is no canvas at all —
  * jsdom in tests, and print.
  */
-/** force-graph swaps an endpoint id for the node object once it has run. */
-function endpointId(end: unknown): string | undefined {
-  if (typeof end === "string") return end;
-  if (typeof end === "number") return String(end);
-  if (typeof end === "object" && end !== null && "id" in end) {
-    const id = (end as { id?: unknown }).id;
-    if (typeof id === "string" || typeof id === "number") return String(id);
-  }
-  return undefined;
-}
-
 export function GraphTable({ model, styleMap, onSelectNode, className }: GraphTableProps) {
   // Counted once, not per row. The old version filtered the whole link array
   // for every node — quadratic, and this is the ACCESSIBILITY path, where a

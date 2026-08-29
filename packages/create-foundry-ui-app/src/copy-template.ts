@@ -76,6 +76,12 @@ const TEXT_EXTENSIONS = new Set([
   ".toml",
   ".env",
   ".sh",
+  // `.py` was missing, so every scaffold — default, foundry-iq and neo4j
+  // alike — shipped `FastAPI(title="__PROJECT_NAME__ Agent")` verbatim and
+  // served the placeholder as its own OpenAPI title. Same failure as the
+  // corrupted preset README this PR also fixes: a substitution nobody
+  // noticed was not happening.
+  ".py",
 ]);
 
 function isTextFile(filename: string): boolean {

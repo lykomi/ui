@@ -28,6 +28,7 @@ vi.mock("../assistant-ui/merge-into-panel.ts", () => ({
 }));
 
 const { GraphResultSeeder } = await import("../assistant-ui/graph-result-seeder.tsx");
+const { useToolPanelStore } = await import("@iloveagents/foundry-web-ui");
 const { _resetGraphToolBindings, registerGraphTool } =
   await import("../assistant-ui/graph-tool-registry.ts");
 const { coerceGraphPayload } = await import("../model.ts");
@@ -60,6 +61,10 @@ beforeEach(() => {
   merged.calls = [];
   thread.messages = [];
   thread.threadId = "t1";
+  // A merge needs somewhere to merge INTO. The seeder holds a result back
+  // while the panel is closed rather than marking it handled, so these tests
+  // would otherwise assert against a deliberately deferred no-op.
+  useToolPanelStore.setState({ isOpen: true });
   _resetGraphToolBindings();
   registerGraphTool({
     toolName: "graph_expand_node",
@@ -80,6 +85,22 @@ afterEach(() => {
 });
 
 describe("GraphResultSeeder", () => {
+  it("holds a result back while the panel is closed, and applies it on reopen", () => {
+    // Ask for an expansion, close the panel before the tool returns, reopen:
+    // the merge had nothing to merge into, and marking the call handled anyway
+    // meant the answer the user asked for was gone for good.
+    useToolPanelStore.setState({ isOpen: false });
+    thread.messages = [{ parts: [] }];
+    render();
+
+    thread.messages = [call("c1", "a")];
+    render();
+    expect(merged.calls).toHaveLength(0);
+
+    act(() => useToolPanelStore.setState({ isOpen: true }));
+    expect(merged.calls.map((p) => p.nodes[0].id)).toEqual(["a"]);
+  });
+
   it("acts on a result that arrives while the thread is open", () => {
     thread.messages = [{ parts: [] }];
     render();

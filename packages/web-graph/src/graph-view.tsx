@@ -11,14 +11,25 @@ import {
   type Ref,
 } from "react";
 import { cn } from "@iloveagents/foundry-web-primitives";
-import { primaryLabel, safeStringify, type GraphNode, type GraphPayload } from "./model.ts";
+import {
+  primaryLabel,
+  safeStringify,
+  type GraphEdge,
+  type GraphNode,
+  type GraphPayload,
+} from "./model.ts";
 import { GraphLegend } from "./graph-legend.tsx";
 import { GraphInspector, GRAPH_INSPECTOR_WIDTH } from "./graph-inspector.tsx";
 import { GraphToolbar } from "./graph-toolbar.tsx";
 import { GraphEmptyState, GraphLossNotice } from "./graph-notice.tsx";
 import { GraphTable } from "./graph-table.tsx";
 import { useElementSize } from "./use-element-size.ts";
-import { useGraphModel, DEFAULT_LIMITS, type GraphModelLimits } from "./use-graph-model.ts";
+import {
+  endpointId,
+  useGraphModel,
+  DEFAULT_LIMITS,
+  type GraphModelLimits,
+} from "./use-graph-model.ts";
 import { useGraphStyling, type GraphStyling } from "./use-graph-styling.ts";
 import { useGraphTheme } from "./use-graph-theme.ts";
 import { useGraphViewState } from "./use-graph-view-state.ts";
@@ -49,16 +60,36 @@ export interface GraphViewHandle {
   select: (nodeId: string | null) => boolean;
   unpinAll: () => void;
   /**
-   * What the view is currently showing beyond its data: the selected node, the
-   * search term, the labels hidden in the legend.
+   * What the view is actually showing — the single honest answer to "what is
+   * on screen", which is why anything REPORTING on the graph reads it.
    *
-   * Exists because the view OUTLIVES the workspace it publishes to. Closing
-   * the tool panel disconnects the workspace but does not unmount this
+   * `nodes`/`edges` are what is DRAWN: the payload capped to the connected
+   * core, then filtered by the legend. Counting the payload instead described
+   * a graph the user was not looking at, in two directions at once — the
+   * agent naming nodes the cap had dropped, and a hidden label still counted.
+   *
+   * It also exists because the view OUTLIVES the workspace it publishes to.
+   * Closing the tool panel disconnects the workspace but does not unmount this
    * component, so on reopening, the drawer and the search box still show what
    * they showed — while the change callbacks, which fire only on change, have
    * nothing to report. A host reconnecting reads this instead of guessing.
    */
-  getViewState: () => { selection: GraphNode | null; query: string; hiddenLabels: string[] };
+  getViewState: () => GraphViewState_Reported;
+}
+
+/** What {@link GraphViewHandle.getViewState} reports. */
+export interface GraphViewState_Reported {
+  selection: GraphNode | null;
+  /** A relationship can be selected too, and the drawer shows it. */
+  selectedEdge: GraphEdge | null;
+  query: string;
+  hiddenLabels: string[];
+  /** Nodes actually drawn: capped to the connected core, legend filter applied. */
+  nodes: GraphNode[];
+  /** Relationships actually drawn, re-filtered against the surviving nodes. */
+  edges: GraphEdge[];
+  /** Whether anything was dropped to get here — the cap, or a dangling edge. */
+  lossy: boolean;
 }
 
 export interface GraphViewProps {
@@ -175,6 +206,26 @@ export function GraphView({
   const { selection, selectNode } = state;
 
   /**
+   * The graph as DRAWN: the capped model, minus anything the legend hides.
+   *
+   * One derivation, so the canvas, the readable table and the agent cannot
+   * disagree about what is on screen. Hiding a label takes its relationships
+   * with it — the canvas already does that through `linkVisibility`, and the
+   * table showed them until this existed.
+   */
+  const visibleModel = useMemo(() => {
+    if (state.hiddenLabels.size === 0) return model;
+    const nodes = model.nodes.filter((node) => !state.hiddenLabels.has(primaryLabel(node)));
+    const ids = new Set(nodes.map((node) => node.id));
+    const links = model.links.filter((link) => {
+      const source = endpointId(link.source);
+      const target = endpointId(link.target);
+      return source !== undefined && target !== undefined && ids.has(source) && ids.has(target);
+    });
+    return { ...model, nodes, links };
+  }, [model, state.hiddenLabels]);
+
+  /**
    * Report changes, and ONLY changes.
    *
    * A host almost always passes these as inline arrows, so their identity is
@@ -273,11 +324,15 @@ export function GraphView({
       unpinAll: () => state.unpinAll(),
       getViewState: () => ({
         selection: state.selection.node,
+        selectedEdge: state.selection.edge,
         query: state.query,
         hiddenLabels: [...state.hiddenLabels],
+        nodes: visibleModel.nodes,
+        edges: visibleModel.links as unknown as GraphEdge[],
+        lossy: model.lossy,
       }),
     }),
-    [model.nodes, selectNode, state],
+    [model.nodes, model.lossy, visibleModel, selectNode, state],
   );
 
   // No canvas in jsdom, and `forceTable` is the print path. `tableRequested`
@@ -352,7 +407,7 @@ export function GraphView({
             <GraphEmptyState />
           ) : useTable ? (
             <GraphTable
-              model={model}
+              model={visibleModel}
               styleMap={styleMap}
               onSelectNode={selectNode}
               className="h-full"

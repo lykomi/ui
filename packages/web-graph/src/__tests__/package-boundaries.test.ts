@@ -44,6 +44,14 @@ const codeOnly = (content: string): string =>
     .replace(/\/\/[^\n]*/g, " ")
     .replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '""');
 
+/**
+ * Comments gone, strings kept — the opposite trade-off from `codeOnly`, and
+ * the one an import scan needs. Line comments are only stripped where they
+ * START a line, so a `https://` inside a string survives.
+ */
+const withoutComments = (content: string): string =>
+  content.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^[ \t]*\/\/[^\n]*/gm, " ");
+
 const importsOf = (content: string): string[] => {
   const out: string[] = [];
   const re = /(?:import|export)\s*[^"';]*?["']([^"']+)["']/g;
@@ -57,8 +65,15 @@ describe("engine isolation", () => {
     // More than one import site means the engine is reachable from the root
     // barrel and stops being code-split — every consumer then downloads and
     // parses force-graph plus the d3 stack whether or not they draw a graph.
+    // Comments stripped first — but NOT with `codeOnly`, which also blanks
+    // string literals and would erase the very specifiers this reads. Prose
+    // matters here: a doc comment explaining a force-graph behaviour is not an
+    // import, and reading raw content made documenting the engine trip the
+    // guard.
     const importers = files
-      .filter((file) => importsOf(file.content).some((spec) => spec.includes("force-graph")))
+      .filter((file) =>
+        importsOf(withoutComments(file.content)).some((spec) => spec.includes("force-graph")),
+      )
       .map((file) => file.path);
     expect(importers).toEqual(["graph-canvas.tsx"]);
   });

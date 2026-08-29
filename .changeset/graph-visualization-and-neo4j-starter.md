@@ -117,3 +117,16 @@ a bare `JSON.stringify`, which throws on a bigint, and the catch reported "not
 equal" — so for a payload carrying one (a database row; the Neo4j driver
 returns them natively) the guard would have minted a fresh id and array on
 every call and re-opened the update loop it was added to close.
+
+What the agent is told is on screen is now read from the VIEW rather than the
+payload, so the render cap and the legend filter cannot make the two disagree:
+`graph_get_view` counts the drawn graph, reports a relationship selection as
+well as a node one, and folds the render cap into `truncated`. The readable
+table honours the legend filter through the same derivation, and a result that
+arrives while the panel is closed is held back and applied on reopen instead of
+being marked handled and lost.
+
+`create-foundry-ui-app` also substitutes `__PROJECT_NAME__` in Python files.
+`.py` was missing from the text-extension allowlist, so every scaffold from
+every preset shipped `FastAPI(title="__PROJECT_NAME__ Agent")` verbatim and
+served the placeholder as its own OpenAPI title.

@@ -201,6 +201,23 @@ export function reconcileGraphModel(
   }
 }
 
+/**
+ * A link's endpoint id, whichever form it is in.
+ *
+ * force-graph REPLACES an endpoint id with the node object once the simulation
+ * has run, so anything reading endpoints after a render has to accept both —
+ * comparing against `node.id` alone silently matches nothing.
+ */
+export function endpointId(end: unknown): string | undefined {
+  if (typeof end === "string") return end;
+  if (typeof end === "number") return String(end);
+  if (typeof end === "object" && end !== null && "id" in end) {
+    const id = (end as { id?: unknown }).id;
+    if (typeof id === "string" || typeof id === "number") return String(id);
+  }
+  return undefined;
+}
+
 /** React binding for {@link reconcileGraphModel}: holds the cache across renders. */
 export function useGraphModel(
   payload: GraphPayload,

@@ -163,45 +163,54 @@ const getView: ClientToolEntry = {
     "this before answering a question about 'this' node or 'the graph' on screen.",
   parameters: { type: "object", properties: {} },
   execute: async () => {
-    const { payload, title, selection, query, hiddenLabels } = graphWorkspaceStore.getState();
-    if (!payload) return ok({ open: false });
+    const { payload, title, handle } = graphWorkspaceStore.getState();
+    if (!payload || !handle) return ok({ open: false });
 
-    // Counted over what is DRAWN, not over the payload. A label switched off
-    // in the legend takes its nodes AND their relationships off the canvas,
-    // so reporting the unfiltered totals would describe a screen nobody is
-    // looking at — and the agent would answer confidently about nodes the
-    // user had deliberately hidden.
-    const hidden = new Set(hiddenLabels);
-    const visibleNodes = payload.nodes.filter((node) => !hidden.has(primaryLabel(node)));
-    const visibleIds = new Set(visibleNodes.map((node) => node.id));
-    const visibleEdges = payload.edges.filter(
-      (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target),
-    );
+    // Read the VIEW, not the payload. Two different things were being lost by
+    // counting the payload: the render cap keeps only the connected core of a
+    // graph too big for one screen, and a label switched off in the legend
+    // takes its nodes and their relationships off the canvas. Either way the
+    // agent was describing a graph the user was not looking at — and could
+    // name a node that is not drawn.
+    const view = handle.getViewState();
 
     const labels: Record<string, number> = {};
-    for (const node of visibleNodes) {
+    for (const node of view.nodes) {
       const label = primaryLabel(node);
       labels[label] = (labels[label] ?? 0) + 1;
     }
     const types: Record<string, number> = {};
-    for (const edge of visibleEdges) {
+    for (const edge of view.edges) {
       const type = edge.type ?? "RELATED";
       types[type] = (types[type] ?? 0) + 1;
     }
     return ok({
       open: true,
       title,
-      nodeCount: visibleNodes.length,
-      edgeCount: visibleEdges.length,
-      truncated: payload.truncated ?? false,
+      nodeCount: view.nodes.length,
+      edgeCount: view.edges.length,
+      // The producer's own truncation OR the render cap. Reporting only the
+      // former said `false` while the UI was showing a loss notice.
+      truncated: (payload.truncated ?? false) || view.lossy,
       labels,
       relationshipTypes: types,
       // Named, so the agent can say "Person is hidden" rather than silently
       // reporting a smaller graph than the query returned.
-      hiddenLabels: [...hiddenLabels],
-      hiddenNodeCount: payload.nodes.length - visibleNodes.length,
-      selectedNode: selection ? describe(selection) : null,
-      search: query || null,
+      hiddenLabels: view.hiddenLabels,
+      hiddenNodeCount: payload.nodes.length - view.nodes.length,
+      selectedNode: view.selection ? describe(view.selection) : null,
+      // A relationship can be selected too, and the drawer shows it. Reporting
+      // only nodes said "nothing is selected" with an edge plainly selected.
+      selectedRelationship: view.selectedEdge
+        ? {
+            id: view.selectedEdge.id,
+            type: view.selectedEdge.type ?? "RELATED",
+            source: view.selectedEdge.source,
+            target: view.selectedEdge.target,
+            properties: view.selectedEdge.properties ?? {},
+          }
+        : null,
+      search: view.query || null,
     });
   },
 };

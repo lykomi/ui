@@ -127,9 +127,25 @@ export function isGraphPayload(value: unknown): value is GraphPayload {
     Array.isArray(value.nodes) &&
     Array.isArray(value.edges) &&
     value.nodes.every(isNode) &&
-    value.edges.every(isEdge)
+    value.edges.every(isEdge) &&
+    isLegend(value.legend)
   );
 }
+
+/**
+ * Producer styling hints, checked for the same reason the nodes are: whatever
+ * passes here is trusted from then on. `legend: { Person: null }` used to be
+ * accepted and then crash `useGraphStyling` on `hint.color`.
+ */
+const isLegend = (value: unknown): boolean =>
+  value === undefined ||
+  (isRecord(value) &&
+    Object.values(value).every(
+      (hint) =>
+        isRecord(hint) &&
+        (hint.color === undefined || typeof hint.color === "string") &&
+        (hint.captionKey === undefined || typeof hint.captionKey === "string"),
+    ));
 
 /**
  * Best-effort extraction of a payload from a tool result.

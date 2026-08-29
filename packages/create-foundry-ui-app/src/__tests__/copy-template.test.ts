@@ -91,6 +91,17 @@ describe("copyTemplate", () => {
     expect(pkg.dependencies.react).toBe("^19.0.0");
   });
 
+  it("rewrites __PROJECT_NAME__ in Python too, which is where it was silently not", async () => {
+    // Every scaffold shipped `FastAPI(title="__PROJECT_NAME__ Agent")`
+    // verbatim, because `.py` was missing from the text-extension allowlist —
+    // so the generated app served the placeholder as its own OpenAPI title.
+    writeFileSync(join(sourceDir, "main.py"), 'app = FastAPI(title="__PROJECT_NAME__ Agent")\n');
+    await copyTemplate({ sourceDir, targetDir, projectName: "my-app" });
+    const main = readFileSync(join(targetDir, "main.py"), "utf8");
+    expect(main).toContain('title="my-app Agent"');
+    expect(main).not.toContain("__PROJECT_NAME__");
+  });
+
   it("rewrites __PROJECT_NAME__ in markdown text files via sentinel", async () => {
     await copyTemplate({ sourceDir, targetDir, projectName: "my-app" });
     const readme = readFileSync(join(targetDir, "README.md"), "utf-8");

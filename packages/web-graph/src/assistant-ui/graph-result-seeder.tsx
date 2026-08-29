@@ -112,6 +112,7 @@ export function GraphResultSeeder() {
     readonly { parts?: readonly ToolishPart[] }[] | undefined;
   const threadId = useAuiState((s) => (s.thread as { threadId?: string }).threadId) as
     string | undefined;
+  const panelOpen = useToolPanelStore((state) => state.isOpen);
   const baseline = useRef<{ threadId: string | undefined; ids: Set<string> } | null>(null);
 
   useEffect(() => {
@@ -131,17 +132,28 @@ export function GraphResultSeeder() {
     // so a streaming turn re-walks the parts array without re-parsing the
     // whole conversation's graphs on every token.
     for (const result of seedableGraphResults(messages, current.ids)) {
-      current.ids.add(result.toolCallId);
+      if (result.autoOpenPanel) {
+        current.ids.add(result.toolCallId);
+        useToolPanelStore.getState().openPanel(graphPanelContent(result.title, result.payload));
+        continue;
+      }
+      // A result that arrives while the panel is CLOSED is not handled, it is
+      // early. Ask for an expansion, close the panel before the tool returns,
+      // reopen it: the merge had nothing to merge into, and marking the call
+      // done anyway meant the answer the user asked for was gone for good.
+      // Held back instead, and applied when the panel comes back — which is
+      // why `panelOpen` is a dependency of this effect.
+      if (!panelOpen) continue;
       // Fold into the graph already open when it is about the same part of
       // the graph. This is what makes expanding a node — and watching the
       // agent write one — read as the workspace growing rather than as a
-      // series of unrelated pictures.
+      // series of unrelated pictures. A `false` here with the panel OPEN is a
+      // real decision — an unrelated result, or nothing new — so it counts as
+      // handled either way.
+      current.ids.add(result.toolCallId);
       mergeIntoOpenGraph(result.payload);
-      if (result.autoOpenPanel) {
-        useToolPanelStore.getState().openPanel(graphPanelContent(result.title, result.payload));
-      }
     }
-  }, [messages, threadId]);
+  }, [messages, threadId, panelOpen]);
 
   return null;
 }
