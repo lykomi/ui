@@ -325,7 +325,7 @@ describe("open-core guards", () => {
       });
     }
 
-    // 4b. The @assistant-ui/tap upper bound must stay.
+    // 4b. The @assistant-ui/tap pin must stay, and must stay below 0.9.13.
     //
     // `@assistant-ui/react@0.15.1` depends on `@assistant-ui/tap: ^0.9.7`, and
     // tap 0.9.13 rewrote its internal `useSyncExternalStore`. assistant-ui was
@@ -335,8 +335,8 @@ describe("open-core guards", () => {
     // succeeds, and the app is dead.
     //
     // Nothing else expresses that constraint — upstream's caret accepts the
-    // broken versions — so a bound removed as tidy-up would ship a chat with
-    // no composer. Measured: 0.9.8 and 0.9.12 green, 0.9.13/0.9.14/0.9.15 red.
+    // broken versions — so a pin removed as tidy-up would ship a chat with no
+    // composer. Measured: 0.9.8 and 0.9.12 green, 0.9.13/0.9.14/0.9.15 red.
     it("pins @assistant-ui/tap below the release that breaks the composer", () => {
       const workspaceYaml = readFileSync(join(ROOT, "pnpm-workspace.yaml"), "utf8");
       const override = workspaceYaml
@@ -347,15 +347,29 @@ describe("open-core guards", () => {
         override,
         "pnpm-workspace.yaml must override @assistant-ui/tap — see the comment beside it",
       ).toBeDefined();
-      // An EXCLUSIVE upper bound no higher than 0.9.13 — the first broken
-      // release, so `<0.9.13` is the widest range that is still safe.
-      const bound = /<\s*(\d+)\.(\d+)\.(\d+)/.exec(override ?? "");
-      expect(bound, `no exclusive upper bound in ${override}`).not.toBeNull();
-      const [major, minor, patch] = bound!.slice(1).map(Number);
-      const rank = (a: number, b: number, c: number) => a * 1e6 + b * 1e3 + c;
+
+      // Accepts an exact version or a range, and asks the same question of
+      // both: can this admit 0.9.13? An exact pin is preferred (a range
+      // spanning two good versions permits a SPLIT, which nothing here would
+      // report), but the pin's job is the version, so the guard checks that.
+      const rank = (major: number, minor: number, patch: number) =>
+        major * 1e6 + minor * 1e3 + patch;
+      const FIRST_BROKEN = rank(0, 9, 13);
+      const constraint = override!.slice(override!.indexOf(":") + 1).trim();
+      const bound = /<\s*(\d+)\.(\d+)\.(\d+)/.exec(constraint);
+      const exact = /^"(\d+)\.(\d+)\.(\d+)"$/.exec(constraint);
+      const parsed = bound ?? exact;
       expect(
-        rank(major, minor, patch) <= rank(0, 9, 13),
-        `@assistant-ui/tap must stay below 0.9.13; this allows up to <${major}.${minor}.${patch}`,
+        parsed,
+        `@assistant-ui/tap must be an exact version or carry an exclusive upper bound, got ${constraint}`,
+      ).not.toBeNull();
+      const [major, minor, patch] = parsed!.slice(1).map(Number);
+      // A `<X` bound is safe when X is at or below the first broken release;
+      // an exact version is safe when it is strictly below it.
+      const ceiling = bound ? rank(major, minor, patch) : rank(major, minor, patch) + 1;
+      expect(
+        ceiling <= FIRST_BROKEN,
+        `@assistant-ui/tap must stay below 0.9.13; ${constraint} does not`,
       ).toBe(true);
     });
 

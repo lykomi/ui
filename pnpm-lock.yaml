@@ -7,7 +7,7 @@ settings:
 overrides:
   react-router: ^7.14.1
   "@assistant-ui/react": ^0.15.1
-  "@assistant-ui/tap": ">=0.9.7 <0.9.13"
+  "@assistant-ui/tap": 0.9.8
   "@ag-ui/client": ^0.0.52
   "@ag-ui/core": ^0.0.52
 
@@ -414,7 +414,7 @@ packages:
       }
     peerDependencies:
       "@assistant-ui/store": ^0.3.0
-      "@assistant-ui/tap": ">=0.9.7 <0.9.13"
+      "@assistant-ui/tap": 0.9.8
       "@types/react": "*"
       assistant-cloud: ^0.1.31
       react: ^18 || ^19
@@ -451,7 +451,7 @@ packages:
         integrity: sha512-D6NgnYEifDcusQd6CbokNutqfHA2OEr1sz0/+ds+Bc7xsm8ghRxkvBubtttIYQKaajALPPJbWcr/zcvGv21g0g==,
       }
     peerDependencies:
-      "@assistant-ui/tap": ">=0.9.7 <0.9.13"
+      "@assistant-ui/tap": 0.9.8
       "@types/react": "*"
       react: ^18 || ^19
     peerDependenciesMeta:
