@@ -39,13 +39,31 @@ export interface GraphWorkspaceState {
   setHiddenLabels: (labels: readonly string[]) => void;
 }
 
-export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) => ({
+/**
+ * Every field of the workspace at rest, in one place.
+ *
+ * `disconnect` and the tests both need "nothing is open", and writing that out
+ * twice is how a field added later gets left out of one of them — zustand's
+ * `setState` MERGES, so a partial reset silently keeps the old value and the
+ * tests become order-dependent. `hiddenLabels` had already drifted that way.
+ */
+const CLOSED = {
   handle: null,
   title: null,
   payload: null,
   selection: null,
   query: "",
-  hiddenLabels: [],
+  hiddenLabels: [] as readonly string[],
+} satisfies Omit<
+  GraphWorkspaceState,
+  "connect" | "disconnect" | "setSelection" | "setQuery" | "setHiddenLabels"
+>;
+
+/** Test seam: put the workspace back to "nothing is open", every field of it. */
+export const _resetGraphWorkspace = (): void => graphWorkspaceStore.setState({ ...CLOSED });
+
+export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) => ({
+  ...CLOSED,
 
   connect: (handle, title, payload) =>
     set((state) => {
@@ -81,14 +99,7 @@ export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) =
     // has already claimed — React unmounts the old tree after mounting the
     // new one, so the order is not the intuitive one.
     if (get().handle !== handle) return;
-    set({
-      handle: null,
-      title: null,
-      payload: null,
-      selection: null,
-      query: "",
-      hiddenLabels: [],
-    });
+    set({ ...CLOSED });
   },
   setSelection: (selection) => set({ selection }),
   setQuery: (query) => set({ query }),

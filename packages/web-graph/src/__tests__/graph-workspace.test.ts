@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
-import { findWorkspaceNode, graphWorkspaceStore, isGraphOpen } from "../graph-workspace.ts";
+import {
+  _resetGraphWorkspace,
+  findWorkspaceNode,
+  graphWorkspaceStore,
+  isGraphOpen,
+} from "../graph-workspace.ts";
 import type { GraphViewHandle } from "../graph-view.tsx";
 
 const payload: GraphPayload = {
@@ -25,13 +30,7 @@ const handle = (): GraphViewHandle => ({
 });
 
 beforeEach(() => {
-  graphWorkspaceStore.setState({
-    handle: null,
-    title: null,
-    payload: null,
-    selection: null,
-    query: "",
-  });
+  _resetGraphWorkspace();
 });
 
 describe("graph workspace", () => {

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
 
 import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
-import { graphWorkspaceStore } from "../graph-workspace.ts";
+import { _resetGraphWorkspace, graphWorkspaceStore } from "../graph-workspace.ts";
 import { mergeIntoOpenGraph } from "../assistant-ui/merge-into-panel.ts";
 import { graphPanelContent, graphPanelPayload } from "../assistant-ui/graph-panel-content.ts";
 import type { GraphViewHandle } from "../graph-view.tsx";
@@ -34,13 +34,7 @@ const open = (payload: GraphPayload) => {
 const onScreen = () => graphPanelPayload(useToolPanelStore.getState().content as never);
 
 beforeEach(() => {
-  graphWorkspaceStore.setState({
-    handle: null,
-    title: null,
-    payload: null,
-    selection: null,
-    query: "",
-  });
+  _resetGraphWorkspace();
   useToolPanelStore.getState().closePanel();
 });
 
