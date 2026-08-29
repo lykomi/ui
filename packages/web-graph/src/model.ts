@@ -229,3 +229,35 @@ export function pruneDanglingEdges(payload: GraphPayload): {
   const edges = payload.edges.filter((e) => ids.has(e.source) && ids.has(e.target));
   return { nodes: payload.nodes, edges, dropped: payload.edges.length - edges.length };
 }
+
+/**
+ * Union two payloads, right-hand side winning on id collisions.
+ *
+ * What "expand" and "the agent just added a node" both need: the new part has
+ * to join the graph on screen, not replace it. Replacing is what makes an
+ * explorer feel like a search box — every step throws away the context of the
+ * step before, and the position of every node the user had already placed.
+ *
+ * The right-hand side wins because it is the fresher read of the same thing:
+ * a node returned again after a property was set carries the new value.
+ */
+export function mergeGraphPayloads(base: GraphPayload, addition: GraphPayload): GraphPayload {
+  const nodes = new Map(base.nodes.map((node) => [node.id, node]));
+  for (const node of addition.nodes) nodes.set(node.id, node);
+  const edges = new Map(base.edges.map((edge) => [edge.id, edge]));
+  for (const edge of addition.edges) edges.set(edge.id, edge);
+
+  return {
+    kind: GRAPH_PAYLOAD_KIND,
+    version: GRAPH_PAYLOAD_VERSION,
+    nodes: [...nodes.values()],
+    edges: [...edges.values()],
+    // Either side hitting a cap means the union is incomplete.
+    truncated: base.truncated || addition.truncated ? true : undefined,
+    stats: { nodeCount: nodes.size, edgeCount: edges.size },
+    // The legend describes labels, which accumulate; meta describes the most
+    // recent query, which does not.
+    legend: base.legend || addition.legend ? { ...base.legend, ...addition.legend } : undefined,
+    meta: addition.meta ?? base.meta,
+  };
+}

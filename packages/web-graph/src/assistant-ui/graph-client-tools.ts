@@ -1,8 +1,14 @@
 import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-agent";
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
-import { coerceGraphPayload, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
+import {
+  coerceGraphPayload,
+  mergeGraphPayloads,
+  primaryLabel,
+  resolveCaption,
+  type GraphNode,
+} from "../model.ts";
 import { findWorkspaceNode, graphWorkspaceStore } from "../graph-workspace.ts";
-import { graphPanelContent } from "./graph-panel-content.ts";
+import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
 
 /**
  * Client tools that let the agent work IN the open graph, not just hand one
@@ -36,14 +42,21 @@ function parseArgs(argsJson: string): Record<string, unknown> {
 const showGraph: ClientToolEntry = {
   name: "graph_show",
   description:
-    "Display a graph in the side panel, replacing whatever is there. Node positions are kept " +
-    "for nodes that were already on screen, so an updated query reads as a change rather than " +
-    "a new picture. Pass the same payload a graph tool returned.",
+    "Show a graph in the side panel. Updates the graph already open rather than opening a " +
+    "second one, and keeps the positions of nodes that were already on screen, so a new " +
+    "result reads as a change rather than a new picture. Set merge: true to ADD to what is " +
+    "on screen — always do that for an expansion or a write, so the new part appears beside " +
+    "what it connects to. Pass the payload a graph tool returned.",
   parameters: {
     type: "object",
     properties: {
       title: { type: "string", description: "Panel heading, e.g. the question this answers." },
       graph: { type: "object", description: "A graph payload (kind: 'foundry.graph')." },
+      merge: {
+        type: "boolean",
+        description:
+          "Add to the graph on screen instead of replacing it. Use for expansions and writes.",
+      },
     },
     required: ["graph"],
   },
@@ -51,9 +64,32 @@ const showGraph: ClientToolEntry = {
     const args = parseArgs(argsJson);
     const payload = coerceGraphPayload(args.graph);
     if (!payload) return fail("That is not a graph payload (expected kind: 'foundry.graph').");
-    const title = typeof args.title === "string" && args.title ? args.title : "Graph";
-    useToolPanelStore.getState().openPanel(graphPanelContent(title, payload) as never);
-    return ok({ shown: true, nodes: payload.nodes.length, edges: payload.edges.length });
+
+    const workspace = graphWorkspaceStore.getState();
+    const merging = args.merge === true && workspace.payload !== null;
+    const next = merging ? mergeGraphPayloads(workspace.payload!, payload) : payload;
+    const title =
+      typeof args.title === "string" && args.title
+        ? args.title
+        : ((merging ? workspace.title : null) ?? "Graph");
+
+    // Update in place when a graph is already up. `openPanel` would do the
+    // same to the store, but going through `setContent` says what is meant:
+    // this is the same workspace changing, not a new one — which is also how
+    // it behaves on screen, since the renderer instance is reused and the
+    // layout reconciles by node id.
+    const panel = useToolPanelStore.getState();
+    const content = graphPanelContent(title, next) as never;
+    if (panel.isOpen && panel.content?.type === GRAPH_PANEL_TYPE) panel.setContent(content);
+    else panel.openPanel(content);
+
+    return ok({
+      shown: true,
+      merged: merging,
+      nodes: next.nodes.length,
+      edges: next.edges.length,
+      added: merging ? next.nodes.length - workspace.payload!.nodes.length : next.nodes.length,
+    });
   },
 };
 

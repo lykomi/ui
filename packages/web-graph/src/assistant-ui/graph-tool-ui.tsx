@@ -6,6 +6,7 @@ import { coerceGraphPayload, type GraphNode, type GraphPayload } from "../model.
 import { GraphView } from "../graph-view.tsx";
 import { GraphProvenance } from "./graph-provenance.tsx";
 import { graphPanelContent } from "./graph-panel-content.ts";
+import { mergeIntoOpenGraph } from "./merge-into-panel.ts";
 
 export interface MakeGraphToolUIOptions {
   /** The agent tool whose result this card renders. */
@@ -89,6 +90,17 @@ export function makeGraphToolUI(options: MakeGraphToolUIOptions) {
         if (!payload) return;
         openPanel(graphPanelContent(panelTitle?.(payload, args) ?? title, payload) as never);
       }, [payload, openPanel, args]);
+
+      // Fold the result into the graph already open, when it is about the same
+      // part of the graph. This is what makes expanding a node — and watching
+      // the agent write one — read as the workspace growing rather than as a
+      // series of unrelated pictures. Once per tool call: `render` re-runs on
+      // every keystroke in the composer.
+      const mergedRef = useRef(new Set<string>());
+      if (payload && !mergedRef.current.has(toolCallId)) {
+        mergedRef.current.add(toolCallId);
+        queueMicrotask(() => mergeIntoOpenGraph(payload));
+      }
 
       if (payload && autoOpenPanel && !autoOpenedRef.current.has(toolCallId)) {
         autoOpenedRef.current.add(toolCallId);

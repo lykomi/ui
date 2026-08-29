@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
+import { primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
+import { submitComposerText } from "@iloveagents/foundry-web-ui";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
 import { GraphContextPinButton, syncGraphSelectionContext } from "./graph-context.tsx";
 
@@ -14,7 +16,25 @@ import { GraphContextPinButton, syncGraphSelectionContext } from "./graph-contex
  */
 export default function GraphPanel({ content }: { content: GraphPanelContentLike }) {
   const handleRef = useRef<GraphViewHandle>(null);
-  const payload = graphPanelPayload(content);
+  // Memoised on the panel's own content, so an unrelated re-render does not
+  // hand `GraphView` a new payload object and re-run the workspace effect.
+  const payload = useMemo(() => graphPanelPayload(content), [content]);
+
+  /**
+   * Expand through the conversation, not behind it.
+   *
+   * The panel cannot query the graph — the Cypher tools live on the server, as
+   * they must. So a double-click asks the agent, in the chat, the way the user
+   * would: the turn is visible, the agent picks the traversal, and the answer
+   * merges into the graph on screen. The expansion becomes part of the
+   * conversation rather than a side effect nobody can refer back to.
+   */
+  const expandNode = useCallback((node: GraphNode) => {
+    const caption = resolveCaption(node);
+    submitComposerText(
+      `Expand "${caption}" (${primaryLabel(node)}) in the graph — node id ${node.id}.`,
+    );
+  }, []);
 
   // Publish this panel as THE live graph, so the agent's client tools can read
   // what is on screen and drive it. Registering the handle is what lets
@@ -51,6 +71,7 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
         variant="full"
         height="100%"
         handleRef={handleRef}
+        onExpandNode={expandNode}
         // The user's clicks and the agent's reads share one piece of state, so
         // "tell me about this node" needs no restating on either side.
         onSelectionChange={(node) => {

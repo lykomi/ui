@@ -233,13 +233,21 @@ export function paintEdgeLabel(
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
 
-  // Knock out the line behind the text — an unbacked label on top of its own
-  // edge is unreadable.
-  const width = ctx.measureText(label).width;
-  ctx.fillStyle = theme.background;
-  ctx.fillRect(-width / 2 - 1 / globalScale, -fontSize, width + 2 / globalScale, fontSize + 1);
+  // A halo, not a knockout box.
+  //
+  // Filling a rectangle behind the label reads as the relationship line being
+  // BROKEN: the gap is the same colour as the canvas and sits exactly where
+  // the eye is following the line. Stroking the glyphs in the background
+  // colour keeps the text readable over the line and over anything crossing
+  // it, and the line stays continuous.
+  const offset = 1.5 / globalScale;
+  ctx.lineWidth = 3 / globalScale;
+  ctx.strokeStyle = theme.background;
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
+  ctx.strokeText(label, 0, -offset);
 
   ctx.fillStyle = theme.mutedForeground;
-  ctx.fillText(label, 0, 0);
+  ctx.fillText(label, 0, -offset);
   ctx.restore();
 }

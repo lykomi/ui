@@ -69,11 +69,35 @@ dark mode without configuration.
 | --------------------- | ------------------------------------------------------ | ------- |
 | `graph_schema`        | Labels, relationship types and property names          | Always  |
 | `graph_read_cypher`   | Read-only Cypher, returned as a subgraph               | Always  |
+| `graph_expand_node`   | A node's neighbourhood — the "expand" of a graph explorer | Always  |
 | `graph_vector_search` | Nodes closest in meaning to a phrase, plus neighbours  | When `NEO4J_VECTOR_INDEX` and `FOUNDRY_EMBEDDING_MODEL` are set |
-| `graph_write_cypher`  | Modifies the graph                                     | Only when `NEO4J_ALLOW_WRITES=true` |
+| `graph_write_cypher`  | Creates and changes nodes and relationships, and returns what it wrote | Only when `NEO4J_ALLOW_WRITES=true` |
 
 They live in `agent/app/graph_tools.py`. Add your own alongside them: return
 the payload `graph_payload.py` builds and it renders as a graph for free.
+
+## The panel is a shared workspace
+
+The graph card in the chat is provenance — most people never open it. The
+interaction is the side panel, and both of you can work in it.
+
+The agent reads it (`graph_get_view` reports what is on screen and what is
+selected) and drives it (`graph_show`, `graph_select_node`, `graph_search`).
+Selecting a node — by hand or by the agent — puts it in the chat context, so
+"tell me about this" needs no restating on either side, and the drawer's pin
+keeps it there after you select something else.
+
+Results that touch what is already on screen are **folded into the open
+graph** rather than replacing it, so expanding a node or watching a write land
+reads as the workspace growing. The agent does not have to ask for that, and
+it is why `graph_write_cypher` is worth ending with a `RETURN`: what it
+returns is what appears.
+
+Double-clicking a node (or the drawer's **Expand**) asks the agent, in the
+chat, to expand it. The panel cannot query the database — the Cypher tools are
+server-side, as they must be — so the request goes through the conversation:
+the turn is visible, the agent picks the traversal, and the answer merges into
+the graph you are looking at.
 
 ### Semantic search
 
@@ -111,6 +135,11 @@ concatenate them into the statement.
 `NEO4J_ALLOW_WRITES` is off by default, and when it is off `graph_write_cypher`
 is **not registered at all** — the model cannot call a tool that was never
 offered to it.
+
+With writes on, the agent can author graph content: "add a Person named X and
+connect her to Y" becomes a `MERGE` that returns the nodes and relationship it
+touched, and those appear in the open graph. `MERGE` over `CREATE` is what the
+agent is instructed to use, so asking twice does not produce two of everything.
 
 Read this before turning it on: **there is no human-approval step.** This stack
 has no round trip for approving a tool call, so an approval gate would emit a

@@ -134,20 +134,90 @@ async def graph_read_cypher(
 
 @tool(approval_mode="never_require")
 async def graph_write_cypher(
-    cypher: Annotated[str, Field(description="A Cypher statement that modifies the graph.")],
+    cypher: Annotated[
+        str,
+        Field(
+            description=(
+                "A Cypher statement that modifies the graph. End it with a RETURN of the "
+                "nodes and relationships it touched (for example "
+                "`MERGE (p:Person {name: $name}) MERGE (p)-[r:DIRECTED]->(m) RETURN p, r, m`) "
+                "so the result can be drawn and the user can see what changed. Put every "
+                "value in `parameters` rather than writing it into the statement. Prefer "
+                "MERGE over CREATE so re-running does not duplicate."
+            )
+        ),
+    ],
     parameters: Annotated[
         dict[str, Any] | None,
         Field(description="Query parameters, referenced as $name in the statement."),
     ] = None,
 ) -> dict[str, Any]:
-    """Modify the graph. Only available when the deployment has enabled writes."""
+    """Create or change nodes and relationships, and return what was written.
+
+    Only available when the deployment has enabled writes. Call ``graph_schema``
+    first so the labels, relationship types and property names match what is
+    already there — a typo does not fail, it silently creates a second kind of
+    thing. After writing, pass the result to ``graph_show`` with ``merge: true``
+    so the new part appears in the open graph beside what it connects to.
+    """
     if not graph_db.writes_enabled():
         return _failure("Writes are disabled for this deployment (NEO4J_ALLOW_WRITES is not set).")
+    started = time.monotonic()
     try:
-        counters = await graph_db.run_write(cypher, parameters)
+        records, counters = await graph_db.run_write(cypher, parameters)
     except Exception as exc:  # noqa: BLE001
         return _failure(f"The write failed. {graph_db.safe_error(exc)}")
-    return {"applied": True, "counters": counters}
+
+    meta = _meta(cypher, started)
+    meta["counters"] = counters
+    payload = records_to_graph_payload(
+        records,
+        max_nodes=graph_db.max_nodes(),
+        max_edges=graph_db.max_edges(),
+        meta=meta,
+    )
+    # `applied` rides alongside the graph so the agent can confirm the change
+    # even when the statement returned nothing to draw.
+    payload["applied"] = True
+    return payload
+
+
+@tool(approval_mode="never_require")
+async def graph_expand_node(
+    node_id: Annotated[
+        str, Field(description="The node's id, as it appears in a graph payload (an elementId).")
+    ],
+    limit: Annotated[int, Field(description="Maximum neighbours to return (1-100).")] = 25,
+) -> dict[str, Any]:
+    """Fetch a node's immediate neighbourhood — the node, its neighbours, and the relationships between.
+
+    This is what "expand" means in a graph explorer, and it is the move people
+    reach for constantly: show me what is around this. Pass the result to
+    ``graph_show`` with ``merge: true`` so the neighbours join the graph on
+    screen instead of replacing it.
+    """
+    started = time.monotonic()
+    cap = max(1, min(int(limit), 100))
+    try:
+        records = await graph_db.run_read(
+            "MATCH (n) WHERE elementId(n) = $id "
+            "OPTIONAL MATCH (n)-[r]-(m) "
+            "RETURN n, r, m LIMIT $cap",
+            {"id": node_id, "cap": cap},
+            row_limit=cap,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _failure(f"Could not expand that node. {graph_db.safe_error(exc)}")
+
+    if not records:
+        return _failure(f"No node with id {node_id!r} — it may have been deleted.")
+
+    return records_to_graph_payload(
+        records,
+        max_nodes=graph_db.max_nodes(),
+        max_edges=graph_db.max_edges(),
+        meta=_meta(None, started),
+    )
 
 
 @tool(approval_mode="never_require")
@@ -336,7 +406,7 @@ def build_graph_tools() -> list[Any]:
       configured, so the local-database quickstart does not offer a tool that
       can only fail.
     """
-    tools: list[Any] = [graph_schema, graph_read_cypher]
+    tools: list[Any] = [graph_schema, graph_read_cypher, graph_expand_node]
     if os.getenv("NEO4J_VECTOR_INDEX") and os.getenv("FOUNDRY_EMBEDDING_MODEL"):
         tools.append(graph_vector_search)
     if graph_db.writes_enabled():
@@ -344,4 +414,9 @@ def build_graph_tools() -> list[Any]:
     return tools
 
 
-GRAPH_TOOLS = build_graph_tools()
+# Deliberately NOT evaluated at import. `build_graph_tools` reads environment
+# that `.env` supplies, and a module-level call runs during the import graph —
+# before `load_dotenv()` has had a chance to put it there. A capability would
+# then be missing with the variable plainly set in the file, which is the kind
+# of "it is configured and it does not work" that costs an evening. Call it
+# from `get_agent()`, which runs on the first request.

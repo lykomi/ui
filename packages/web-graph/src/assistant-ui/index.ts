@@ -10,6 +10,7 @@
 export { GraphToolUI, makeGraphToolUI, type MakeGraphToolUIOptions } from "./graph-tool-ui.tsx";
 export { GraphProvenance } from "./graph-provenance.tsx";
 export { registerGraphPanelRenderer } from "./register-graph-panel.ts";
+export { mergeIntoOpenGraph } from "./merge-into-panel.ts";
 export {
   GRAPH_SELECTION_CONTEXT_KEY,
   GraphContextPinButton,

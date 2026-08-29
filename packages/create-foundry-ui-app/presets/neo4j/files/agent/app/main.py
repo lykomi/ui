@@ -1,13 +1,10 @@
 from contextlib import asynccontextmanager
 
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .agent import get_agent
 from .graph_db import close_driver
-
-load_dotenv()
 
 
 @asynccontextmanager

@@ -14,6 +14,7 @@ export {
   coerceGraphPayload,
   emptyGraphPayload,
   isGraphPayload,
+  mergeGraphPayloads,
   primaryLabel,
   pruneDanglingEdges,
   resolveCaption,

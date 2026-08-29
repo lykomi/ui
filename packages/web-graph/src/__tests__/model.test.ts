@@ -5,6 +5,7 @@ import {
   coerceGraphPayload,
   emptyGraphPayload,
   isGraphPayload,
+  mergeGraphPayloads,
   pruneDanglingEdges,
   resolveCaption,
   type GraphPayload,
@@ -148,5 +149,41 @@ describe("label colour assignment", () => {
       Person: "#123456",
     });
     expect(colors.get("Person")).toBe("#123456");
+  });
+});
+
+describe("mergeGraphPayloads", () => {
+  it("unions nodes and edges by id", () => {
+    const merged = mergeGraphPayloads(
+      payload(),
+      payload({
+        nodes: [{ id: "b" }, { id: "c" }],
+        edges: [{ id: "e2", source: "b", target: "c" }],
+      }),
+    );
+    expect(merged.nodes.map((n) => n.id)).toEqual(["a", "b", "c"]);
+    expect(merged.edges.map((e) => e.id)).toEqual(["e1", "e2"]);
+    expect(merged.stats).toEqual({ nodeCount: 3, edgeCount: 2 });
+  });
+
+  it("lets the newer read win, so a re-fetched node carries its new values", () => {
+    const merged = mergeGraphPayloads(
+      payload({ nodes: [{ id: "a", properties: { year: 1926 } }], edges: [] }),
+      payload({ nodes: [{ id: "a", properties: { year: 1927 } }], edges: [] }),
+    );
+    expect(merged.nodes).toHaveLength(1);
+    expect(merged.nodes[0].properties).toEqual({ year: 1927 });
+  });
+
+  it("keeps the union truncated when either side was", () => {
+    expect(mergeGraphPayloads(payload({ truncated: true }), payload()).truncated).toBe(true);
+    expect(mergeGraphPayloads(payload(), payload({ truncated: true })).truncated).toBe(true);
+    expect(mergeGraphPayloads(payload(), payload()).truncated).toBeUndefined();
+  });
+
+  it("never produces an `error` key, which would mark the tool call failed", () => {
+    const merged = mergeGraphPayloads(payload(), payload());
+    expect(Object.hasOwn(merged, "error")).toBe(false);
+    expect(isGraphPayload(merged)).toBe(true);
   });
 });
