@@ -84,6 +84,8 @@ Tools live in `clientToolRegistry` (vanilla zustand store in `@iloveagents/found
 
 Custom tool UIs are top-level `makeAssistantToolUI(...)` constants rendered as children inside the `AssistantRuntimeProvider` tree (see `client-tool-executor.tsx`).
 
+**A tool UI may DO something when its result lands** — `ShowDocumentToolUI` opens the side panel, a graph card folds the result into the graph already on screen — so it has to be mounted for its result to be acted on. `TurnActivity` is collapsed by default and Radix unmounts a closed panel, which made that quiet row decide whether a result counted; it now passes `forceMount` to `MessageDisclosure` and hides the body with the `hidden` attribute instead. Radix's own `forceMount` leaves the content VISIBLE (it assumes the host hides `data-state="closed"` in CSS), and it spreads caller props over its `hidden`, which is why that attribute is set explicitly.
+
 # Attachments
 
 `FileAttachmentAdapter` (`src/lib/attachment-adapter.ts`) base64-encodes **both images and documents** (PDF/DOCX) and emits file parts, which the AG-UI adapter converts to `binary` message parts (`mimeType` + `data` + `filename`). Documents used to degrade to a `[Attached file: …]` text stub; that silently discarded the bytes, so the model received a filename it could not read. Pass `{ documentMode: "metadata" }` to restore the stub for models that genuinely cannot accept file input.

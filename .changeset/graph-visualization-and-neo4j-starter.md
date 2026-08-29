@@ -61,3 +61,11 @@ Also fixes the foundry-iq preset's README, whose `__PROJECT_NAME__` title had
 been rewritten to `**PROJECT_NAME**` by Prettier — every app scaffolded from
 that preset shipped the corrupted title. `.prettierignore` now covers every
 preset README and a test checks all of them, not just the base template.
+
+A turn's activity row now keeps the cards it folds away MOUNTED, hidden rather
+than absent. A tool UI is not only a picture of a result — `ShowDocumentToolUI`
+opens the side panel when its result lands, and a graph card folds the result
+into the graph already on screen — and Radix unmounts a closed panel, so the
+row was silently deciding whether a result got acted on. Closed by default,
+that meant never: the agent would narrate an expansion the graph panel never
+received.

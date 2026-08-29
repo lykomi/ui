@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
@@ -119,11 +119,43 @@ describe("message foldaways share one row shape", () => {
     parts.current = [{ status: { type: "complete" } }];
     await renderBoth();
 
-    expect(container.querySelectorAll('[data-testid="details"]').length).toBe(0);
+    // Folded means not on screen. The activity row keeps its cards MOUNTED
+    // (see the next test) so it hides them rather than dropping them; the
+    // reasoning row has nothing to run and drops its text outright.
+    const details = container.querySelector('[data-testid="details"]');
+    expect(details?.closest("[hidden]")).not.toBeNull();
     expect(container.textContent).not.toContain("because of the clause");
     // …and both still announce what they are.
     expect(container.textContent).toContain("Reasoning");
     expect(container.textContent).toContain("Worked · 1 tool");
+  });
+
+  it("still MOUNTS the cards it folds away, because a tool card does things", async () => {
+    // A tool UI is not only a picture of a result. `ShowDocumentToolUI` opens
+    // the side panel when its result lands, and a graph card folds the result
+    // into the graph already on screen. Unmounted, none of that runs — so a
+    // row that is closed by default silently decided that no result was ever
+    // acted on. Seen live: an expansion the agent narrated and the graph
+    // panel never received.
+    parts.current = [{ status: { type: "complete" } }];
+    let ran = 0;
+    const Card = () => {
+      useEffect(() => {
+        ran += 1;
+      }, []);
+      return <div data-testid="card">card</div>;
+    };
+
+    await act(async () => {
+      root.render(
+        <TurnActivity indices={[0]} isRunning={false}>
+          <Card />
+        </TurnActivity>,
+      );
+    });
+
+    expect(ran).toBeGreaterThan(0);
+    expect(container.querySelector('[data-testid="card"]')).not.toBeNull();
   });
 
   it("rotates the same caret rather than swapping the glyph", async () => {

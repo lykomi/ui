@@ -52,6 +52,11 @@ Aura instead of local: change `NEO4J_URI` to `neo4j+s://<instance-id>.databases.
    ```
    and render it inside `toolUIs`.
 
+Step 3 is not cosmetic. The card is what folds a result into the graph already
+open, so a graph-returning tool with no card comes back as a generic result and
+the panel never hears about it — the agent narrates an expansion that never
+arrives, and nothing reports a failure.
+
 The agent can also call `show_graph` with a payload to put any graph in the side panel — that card is registered already.
 
 # Where the visualization lives

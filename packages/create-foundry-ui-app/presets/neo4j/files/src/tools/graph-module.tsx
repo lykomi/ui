@@ -37,6 +37,25 @@ const GraphVectorSearchToolUI = makeGraphToolUI({
   title: "Semantic graph search",
 });
 
+// The two collaboration moves. Both need a card of their own, and not for the
+// card's sake: a graph card folds its result into the graph already on screen,
+// so a tool with no card registered comes back as a generic result and the
+// panel never hears about it — the agent narrates an expansion that never
+// arrives.
+const GraphExpandToolUI = makeGraphToolUI({
+  toolName: "graph_expand_node",
+  title: "Expand node",
+});
+
+const GraphWriteToolUI = makeGraphToolUI({
+  toolName: "graph_write_cypher",
+  title: "Graph write",
+  panelTitle: (payload) => {
+    const query = (payload.meta as { query?: string } | undefined)?.query;
+    return query ? `Wrote — ${query.slice(0, 60)}` : "Graph write";
+  },
+});
+
 function useGraphModuleInit() {
   // Teaches the side panel to render `type: "graph"` content. Idempotent, so a
   // StrictMode double-render or a hot reload cannot stack registrations.
@@ -57,6 +76,8 @@ export const graphModule = defineChatModule({
       <GraphSchemaToolUI />
       <GraphReadToolUI />
       <GraphVectorSearchToolUI />
+      <GraphExpandToolUI />
+      <GraphWriteToolUI />
       {/* Lets the agent put any graph in the panel via a `show_graph` tool. */}
       <GraphToolUI />
     </>
