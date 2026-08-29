@@ -199,6 +199,25 @@ interface AppState {
   resetAll: () => void;
 }
 
+/**
+ * Do two keyed context items carry the same value?
+ *
+ * Compares everything the consumer sees, ignoring the identity fields the
+ * store owns (`id`, `createdAt`). `payload` is arbitrary — a selected row, a
+ * graph node and its properties — so it is compared structurally.
+ */
+function sameContextValue(
+  current: ContextItem,
+  next: Omit<ContextItem, "id" | "createdAt">,
+): boolean {
+  const { id: _id, createdAt: _createdAt, ...rest } = current;
+  try {
+    return JSON.stringify(rest) === JSON.stringify(next);
+  } catch {
+    return false; // a cyclic payload is not worth a crash; just write it
+  }
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   // Thread state
   threadActive: false,
@@ -293,11 +312,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       item.label.length > MAX_LABEL_LENGTH
         ? `${item.label.slice(0, MAX_LABEL_LENGTH)}...`
         : item.label;
+    // Setting the same value twice is not a change. Without this the method
+    // mints a fresh `id` and a fresh array every call, so a UI that mirrors a
+    // selection into context — re-asserting the same item as it re-renders —
+    // churns the store, re-renders every subscriber, and can drive itself
+    // into an update loop. The null branch above already declines to write
+    // when nothing changes; this is the same rule for the write path.
+    const current = get().contextItems.find((existing) => existing.key === key);
+    const next = { ...item, key, label };
+    if (current && sameContextValue(current, next)) return;
     set({
-      contextItems: [
-        ...withoutKey,
-        { ...item, key, label, id: crypto.randomUUID(), createdAt: Date.now() },
-      ],
+      contextItems: [...withoutKey, { ...next, id: crypto.randomUUID(), createdAt: Date.now() }],
     });
   },
 

@@ -77,7 +77,10 @@ const selectNode: ClientToolEntry = {
     const node = findWorkspaceNode(needle);
     if (!node) return fail(`No node matching "${needle}" is in the open graph.`);
     handle.select(node.id);
-    handle.centerOn(node.id);
+    // Reveal, not centre: the user framed this graph, and a tool that
+    // re-centres on every mention throws that away. Move only if the node is
+    // off-screen or behind the details drawer.
+    handle.reveal(node.id);
     return ok({ selected: describe(node) });
   },
 };

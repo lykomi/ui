@@ -19,7 +19,13 @@ import type { GraphViewState } from "./use-graph-view-state.ts";
 /** Imperative controls the host can drive through a ref. */
 export interface GraphCanvasHandle {
   zoomToFit: (durationMs?: number, padding?: number) => void;
+  /** Bring a node to the centre of the VISIBLE area — see `insetRight`. */
   centerOn: (nodeId: string, durationMs?: number) => void;
+  /**
+   * Bring a node into view with the SMALLEST pan that does it, and not at all
+   * if it is already comfortably visible.
+   */
+  reveal: (nodeId: string, durationMs?: number) => void;
   /** Re-run the force simulation from a hot state — the "untangle it" action. */
   reheat: () => void;
 }
@@ -32,6 +38,12 @@ export interface GraphCanvasProps {
   width: number;
   height: number;
   onExpandNode?: (node: GraphNode) => void;
+  /**
+   * Pixels of the canvas's right edge covered by an overlay (the details
+   * drawer). Framing has to know: a node centred under the drawer is a node
+   * the user selected and then could not see.
+   */
+  insetRight?: number;
   handleRef?: Ref<GraphCanvasHandle>;
   /** Skip the settle animation for `prefers-reduced-motion`. */
   reducedMotion?: boolean;
@@ -49,6 +61,14 @@ const DOUBLE_CLICK_MS = 350;
  * dense neighbourhood by hand.
  */
 const MAX_ZOOM = 2.2;
+
+/**
+ * How far inside the visible edge a revealed node must sit.
+ *
+ * Bigger than it looks necessary because captions are drawn BELOW their
+ * node: a node exactly on the edge has a legible dot and an unreadable name.
+ */
+const REVEAL_MARGIN = 48;
 
 /**
  * Breathing room around a fitted graph, in screen pixels.
@@ -125,7 +145,7 @@ function tuneForces(
  * own copy, and pulling in a second one to get `forceX` would ship the whole
  * module twice. A d3 force is just a function with an `initialize` hook.
  */
-function cohesionForce(): (alpha: number) => void {
+function cohesionForce() {
   let nodes: EngineNode[] = [];
   const force = (alpha: number) => {
     // Proportional to distance, so distant components are pulled hardest and
@@ -159,6 +179,7 @@ export function GraphCanvas({
   width,
   height,
   onExpandNode,
+  insetRight = 0,
   handleRef,
   reducedMotion = false,
 }: GraphCanvasProps) {
@@ -171,15 +192,39 @@ export function GraphCanvas({
         engineRef.current?.zoomToFit(reducedMotion ? 0 : durationMs, padding),
       centerOn: (nodeId, durationMs = 400) => {
         const node = model.nodes.find((candidate) => candidate.id === nodeId);
-        if (node && typeof node.x === "number" && typeof node.y === "number") {
-          engineRef.current?.centerAt(node.x, node.y, reducedMotion ? 0 : durationMs);
-        }
+        if (!node || typeof node.x !== "number" || typeof node.y !== "number") return;
+        // Offset by half the covered strip, so the node lands in the middle of
+        // what is visible rather than the middle of the canvas. Centring a node
+        // underneath the panel that describes it is the failure this exists to
+        // prevent — and it is the agent's own `graph_select_node` that would
+        // most often cause it.
+        const zoom = engineRef.current?.zoom() || 1;
+        engineRef.current?.centerAt(
+          node.x + insetRight / 2 / zoom,
+          node.y,
+          reducedMotion ? 0 : durationMs,
+        );
+      },
+      reveal: (nodeId, durationMs = 400) => {
+        const engine = engineRef.current;
+        const node = model.nodes.find((candidate) => candidate.id === nodeId);
+        if (!engine || !node || typeof node.x !== "number" || typeof node.y !== "number") return;
+        const screen = engine.graph2ScreenCoords(node.x, node.y);
+        const right = width - insetRight - REVEAL_MARGIN;
+        const bottom = height - REVEAL_MARGIN;
+        // Signed distance out of the comfortable box, zero when inside it.
+        const dx = Math.max(0, screen.x - right) + Math.min(0, screen.x - REVEAL_MARGIN);
+        const dy = Math.max(0, screen.y - bottom) + Math.min(0, screen.y - REVEAL_MARGIN);
+        if (dx === 0 && dy === 0) return;
+        const zoom = engine.zoom() || 1;
+        const centre = engine.centerAt();
+        engine.centerAt(centre.x + dx / zoom, centre.y + dy / zoom, reducedMotion ? 0 : durationMs);
       },
       reheat: () => {
         engineRef.current?.d3ReheatSimulation();
       },
     }),
-    [model.nodes, reducedMotion],
+    [model.nodes, reducedMotion, insetRight, width, height],
   );
 
   /**

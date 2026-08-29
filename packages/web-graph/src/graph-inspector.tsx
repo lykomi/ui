@@ -58,6 +58,16 @@ function PropertyRows({ properties }: { properties: Record<string, unknown> | un
   );
 }
 
+/**
+ * The drawer's width in pixels, matching `w-80` below.
+ *
+ * Exported because the canvas has to know how much of itself is covered:
+ * a node hidden behind the drawer is a node you selected and then could not
+ * see. Kept as a number rather than measured, so the pan can be issued in
+ * the same frame the drawer opens.
+ */
+export const GRAPH_INSPECTOR_WIDTH = 320;
+
 export interface GraphInspectorProps {
   selection: GraphSelection;
   colorForLabel: (label: string) => string;
@@ -121,21 +131,17 @@ export function GraphInspector({
   const frozen = node ? Boolean(isFrozen?.(node)) : false;
 
   return (
-    <div className={cn("absolute inset-0 z-20 flex justify-end", className)}>
-      {/* Light and unblurred on purpose: the drawer is a companion to the
-          graph, not a replacement for it — people read the properties against
-          the shape the node sits in, so that shape has to stay visible. */}
-      <button
-        type="button"
-        aria-label="Close details"
-        onClick={onClose}
-        className="foundry-graph-scrim bg-foreground/10 flex-1 cursor-default"
-      />
+    // Non-modal, and pointer-transparent everywhere but the drawer itself.
+    // No scrim, no click-catcher: with the graph covered by an invisible
+    // button you cannot click the next node, pan, or zoom while a node's
+    // details are open — which is most of what you do with a graph. Dismissal
+    // is the close button, Escape, or simply selecting something else.
+    <div className={cn("pointer-events-none absolute inset-0 z-20 flex justify-end", className)}>
       <aside
         role="dialog"
         aria-modal="false"
         aria-label={node ? "Selected node" : "Selected relationship"}
-        className="foundry-graph-drawer border-border bg-background flex h-full w-80 max-w-[85%] flex-col border-l shadow-2xl"
+        className="foundry-graph-drawer border-border bg-background pointer-events-auto flex h-full w-80 max-w-[85%] flex-col border-l shadow-2xl"
       >
         <header className="border-border flex items-start justify-between gap-3 border-b px-4 py-3">
           <div className="min-w-0">

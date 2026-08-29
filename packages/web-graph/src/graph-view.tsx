@@ -13,7 +13,7 @@ import {
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { primaryLabel, type GraphNode, type GraphPayload } from "./model.ts";
 import { GraphLegend } from "./graph-legend.tsx";
-import { GraphInspector } from "./graph-inspector.tsx";
+import { GraphInspector, GRAPH_INSPECTOR_WIDTH } from "./graph-inspector.tsx";
 import { GraphToolbar } from "./graph-toolbar.tsx";
 import { GraphEmptyState, GraphLossNotice } from "./graph-notice.tsx";
 import { GraphTable } from "./graph-table.tsx";
@@ -37,6 +37,8 @@ const GraphCanvas = lazy(() => import("./graph-canvas.tsx"));
 export interface GraphViewHandle {
   zoomToFit: (durationMs?: number, padding?: number) => void;
   centerOn: (nodeId: string, durationMs?: number) => void;
+  /** Smallest pan that brings a node into view; a no-op if it already is. */
+  reveal: (nodeId: string, durationMs?: number) => void;
   search: (term: string) => void;
   select: (nodeId: string | null) => void;
   unpinAll: () => void;
@@ -68,6 +70,19 @@ export interface GraphViewProps {
   /** Render the table instead of the canvas. Used by tests and print. */
   forceTable?: boolean;
   handleRef?: Ref<GraphViewHandle>;
+}
+
+/**
+ * Run after the frame that opens the details drawer.
+ *
+ * Callers frame a node right after selecting it (`graph_select_node` does
+ * exactly that), and it is the selection that opens the drawer — so on this
+ * tick the width deciding what is visible does not exist yet. Framing now
+ * would put the node underneath the panel about to describe it.
+ */
+function afterDrawer(run: () => void): void {
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
+  else run();
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -129,10 +144,42 @@ export function GraphView({
   }, [model.nodes]);
 
   const { selection, selectNode } = state;
+
+  /**
+   * Report changes, and ONLY changes.
+   *
+   * A host almost always passes these as inline arrows, so their identity is
+   * new on every render and an effect that lists them as dependencies re-runs
+   * every render — firing "the selection changed" when it did not. That is
+   * fine until a listener writes to a store the host also reads, at which
+   * point the notification causes the render that causes the notification.
+   * (It did: routing the selection into the chat context deadlocked the panel
+   * with "Maximum update depth exceeded" the moment a node was selected.)
+   *
+   * Debouncing or stabilising callbacks host-side would paper over it. The
+   * component's own contract is the right place to hold the line: a change
+   * callback fires when the value changes.
+   */
+  const notifiedSelection = useRef<GraphNode | null>(selection.node);
   useEffect(() => {
+    if (notifiedSelection.current === selection.node) return;
+    notifiedSelection.current = selection.node;
     onSelectionChange?.(selection.node);
   }, [selection.node, onSelectionChange]);
+
+  /**
+   * How much of the canvas the details drawer covers.
+   *
+   * Framing reads this so a node is centred in what the user can SEE. Zero
+   * whenever the drawer is closed, so an inline card is unaffected.
+   */
+  const showsInspector = variant === "full" && Boolean(selection.node || selection.edge);
+  const inspectorInset = showsInspector ? Math.min(GRAPH_INSPECTOR_WIDTH, size.width * 0.85) : 0;
+
+  const notifiedQuery = useRef(state.query);
   useEffect(() => {
+    if (notifiedQuery.current === state.query) return;
+    notifiedQuery.current = state.query;
     onQueryChange?.(state.query);
   }, [state.query, onQueryChange]);
 
@@ -140,7 +187,10 @@ export function GraphView({
     handleRef,
     () => ({
       zoomToFit: (durationMs, padding) => canvasRef.current?.zoomToFit(durationMs, padding),
-      centerOn: (nodeId, durationMs) => canvasRef.current?.centerOn(nodeId, durationMs),
+      centerOn: (nodeId, durationMs) =>
+        afterDrawer(() => canvasRef.current?.centerOn(nodeId, durationMs)),
+      reveal: (nodeId, durationMs) =>
+        afterDrawer(() => canvasRef.current?.reveal(nodeId, durationMs)),
       search: (term) => state.setQuery(term),
       select: (nodeId) =>
         selectNode(nodeId === null ? null : (model.nodes.find((n) => n.id === nodeId) ?? null)),
@@ -218,6 +268,7 @@ export function GraphView({
                   width={size.width}
                   height={size.height}
                   onExpandNode={onExpandNode}
+                  insetRight={inspectorInset}
                   handleRef={canvasRef}
                   reducedMotion={reducedMotion}
                 />
@@ -225,7 +276,7 @@ export function GraphView({
             </Suspense>
           )}
 
-          {variant === "full" && (selection.node || selection.edge) && (
+          {showsInspector && (
             <GraphInspector
               selection={selection}
               colorForLabel={styleMap.colorForLabel}
