@@ -20,7 +20,7 @@ import { useEffect, useRef } from "react";
 import { useAuiState } from "@assistant-ui/react";
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
 import { graphToolBindings } from "./graph-tool-registry.ts";
-import { graphPanelContent } from "./graph-panel-content.ts";
+import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
 import { mergeIntoOpenGraph } from "./merge-into-panel.ts";
 import type { GraphPayload } from "../model.ts";
 
@@ -112,7 +112,13 @@ export function GraphResultSeeder() {
     readonly { parts?: readonly ToolishPart[] }[] | undefined;
   const threadId = useAuiState((s) => (s.thread as { threadId?: string }).threadId) as
     string | undefined;
-  const panelOpen = useToolPanelStore((state) => state.isOpen);
+  // A GRAPH panel, not any panel. `isOpen` alone let a result be marked
+  // handled while a PDF was up: the merge rejected the non-graph content and
+  // the call was consumed anyway, so opening the graph later could never
+  // apply it — the same loss the closed-panel deferral was added to prevent.
+  const graphPanelOpen = useToolPanelStore(
+    (state) => state.isOpen && state.content?.type === GRAPH_PANEL_TYPE,
+  );
   const baseline = useRef<{ threadId: string | undefined; ids: Set<string> } | null>(null);
 
   useEffect(() => {
@@ -141,9 +147,9 @@ export function GraphResultSeeder() {
       // early. Ask for an expansion, close the panel before the tool returns,
       // reopen it: the merge had nothing to merge into, and marking the call
       // done anyway meant the answer the user asked for was gone for good.
-      // Held back instead, and applied when the panel comes back — which is
-      // why `panelOpen` is a dependency of this effect.
-      if (!panelOpen) continue;
+      // Held back instead, and applied when a graph panel comes back — which
+      // is why `graphPanelOpen` is a dependency of this effect.
+      if (!graphPanelOpen) continue;
       // Fold into the graph already open when it is about the same part of
       // the graph. This is what makes expanding a node — and watching the
       // agent write one — read as the workspace growing rather than as a
@@ -153,7 +159,7 @@ export function GraphResultSeeder() {
       current.ids.add(result.toolCallId);
       mergeIntoOpenGraph(result.payload);
     }
-  }, [messages, threadId, panelOpen]);
+  }, [messages, threadId, graphPanelOpen]);
 
   return null;
 }

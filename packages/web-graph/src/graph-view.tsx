@@ -344,18 +344,35 @@ export function GraphView({
           selectNode(null);
           return true;
         }
-        const node = model.nodes.find((n) => n.id === nodeId) ?? null;
+        // The DRAWN nodes: a label hidden in the legend is as absent from the
+        // canvas as one the render cap dropped, and reporting success for it
+        // opens a drawer describing something invisible.
+        const node = visibleModel.nodes.find((n) => n.id === nodeId) ?? null;
         if (node) selectNode(node);
         return node !== null;
       },
       unpinAll: () => state.unpinAll(),
       getViewState: () => ({
         selection: state.selection.node,
-        selectedEdge: state.selection.edge,
         query: state.query,
         hiddenLabels: [...state.hiddenLabels],
         nodes: visibleModel.nodes,
-        edges: visibleModel.links as unknown as GraphEdge[],
+        // Normalised, because force-graph REPLACES a link's `source`/`target`
+        // with the node objects once it has run — so handing these out raw
+        // put whole simulation objects, mutable layout fields and all, where
+        // a caller expects an id.
+        edges: visibleModel.links.map((link) => ({
+          ...(link as unknown as GraphEdge),
+          source: endpointId(link.source) ?? "",
+          target: endpointId(link.target) ?? "",
+        })),
+        selectedEdge: state.selection.edge
+          ? {
+              ...state.selection.edge,
+              source: endpointId(state.selection.edge.source) ?? "",
+              target: endpointId(state.selection.edge.target) ?? "",
+            }
+          : null,
         lossy: model.lossy,
       }),
     }),

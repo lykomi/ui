@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
 import {
+  endpointId,
   reconcileGraphModel,
   selectConnectedCore,
   type EngineNode,
@@ -172,5 +173,25 @@ describe("selectConnectedCore", () => {
       [4, 5],
     ]);
     expect(selectConnectedCore(payload.nodes, payload.edges, 5)).toHaveLength(5);
+  });
+});
+
+describe("endpointId", () => {
+  it("reads an endpoint in either form", () => {
+    // A link arrives with string ids and comes back carrying whole node
+    // objects: force-graph swaps them in place once the simulation has run.
+    // Anything reading endpoints after a render has to accept both, or it
+    // silently matches nothing.
+    expect(endpointId("n1")).toBe("n1");
+    expect(endpointId(7)).toBe("7");
+    expect(endpointId({ id: "n1", x: 12.5, y: -3, vx: 0.1 })).toBe("n1");
+    expect(endpointId({ id: 7 })).toBe("7");
+  });
+
+  it("reports nothing rather than guessing", () => {
+    expect(endpointId(undefined)).toBeUndefined();
+    expect(endpointId(null)).toBeUndefined();
+    expect(endpointId({})).toBeUndefined();
+    expect(endpointId({ id: { nested: true } })).toBeUndefined();
   });
 });

@@ -212,10 +212,12 @@ interface AppState {
 function stableStringify(value: unknown): string {
   const seen = new WeakSet<object>();
   return JSON.stringify(value, (_key, item: unknown) => {
-    // Tagged, not bare: `10n` and the string "10" are different values, and
-    // collapsing both to "10" would make a change between them read as
-    // unchanged — leaving stale context attached to every later message.
-    if (typeof item === "bigint") return `${item.toString()}n`;
+    // A STRUCTURED tag, not a string one. `10n` -> "10" collided with the
+    // string "10"; `10n` -> "10n" merely moved the collision to the string
+    // "10n". No string encoding can be unambiguous when the value it competes
+    // with is itself an arbitrary string, so the bigint becomes an object —
+    // and a string is never deep-equal to an object.
+    if (typeof item === "bigint") return { __bigint: item.toString() };
     if (typeof item === "object" && item !== null) {
       if (seen.has(item)) return "[circular]";
       seen.add(item);

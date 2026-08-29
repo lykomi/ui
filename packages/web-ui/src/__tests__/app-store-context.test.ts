@@ -91,6 +91,24 @@ describe("keyed context items", () => {
     expect(useAppStore.getState().contextItems).toBe(first);
   });
 
+  it("does not mistake a changed bigint for the string of its digits", () => {
+    // The comparison has to be lossless in BOTH directions. Rendering a bigint
+    // as its own digits made `10n` and `"10"` the same signature, so a real
+    // edit read as "no change" and the context the agent answers from kept the
+    // old value while the UI showed the new one.
+    const store = useAppStore.getState();
+    const item = (views: unknown) => ({
+      ...note("Metropolis"),
+      payload: { kind: "text" as const, text: "Metropolis", views } as never,
+    });
+
+    store.setContextItem("graph.selection", item(10n));
+    const first = useAppStore.getState().contextItems;
+    store.setContextItem("graph.selection", item("10"));
+
+    expect(useAppStore.getState().contextItems).not.toBe(first);
+  });
+
   it("leaves other keys and the user's own pins alone", () => {
     const store = useAppStore.getState();
     store.addContextItem(note("a note the user pinned"));

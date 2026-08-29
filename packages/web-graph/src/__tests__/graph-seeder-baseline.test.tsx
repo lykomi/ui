@@ -31,6 +31,7 @@ const { GraphResultSeeder } = await import("../assistant-ui/graph-result-seeder.
 const { useToolPanelStore } = await import("@iloveagents/foundry-web-ui");
 const { _resetGraphToolBindings, registerGraphTool } =
   await import("../assistant-ui/graph-tool-registry.ts");
+const { graphPanelContent } = await import("../assistant-ui/graph-panel-content.ts");
 const { coerceGraphPayload } = await import("../model.ts");
 
 const graph = (id: string): GraphPayload => ({
@@ -45,6 +46,9 @@ const call = (toolCallId: string, id: string) => ({
     { type: "tool-call", toolName: "graph_expand_node", toolCallId, args: {}, result: graph(id) },
   ],
 });
+
+const openGraphPanel = () =>
+  useToolPanelStore.setState({ isOpen: true, content: graphPanelContent("Graph", graph("seed")) });
 
 let container: HTMLDivElement;
 let root: Root;
@@ -61,10 +65,11 @@ beforeEach(() => {
   merged.calls = [];
   thread.messages = [];
   thread.threadId = "t1";
-  // A merge needs somewhere to merge INTO. The seeder holds a result back
-  // while the panel is closed rather than marking it handled, so these tests
-  // would otherwise assert against a deliberately deferred no-op.
-  useToolPanelStore.setState({ isOpen: true });
+  // A merge needs somewhere to merge INTO, and that somewhere has to be a
+  // GRAPH. The seeder holds a result back while no graph panel is up rather
+  // than marking it handled, so these tests would otherwise assert against a
+  // deliberately deferred no-op.
+  openGraphPanel();
   _resetGraphToolBindings();
   registerGraphTool({
     toolName: "graph_expand_node",
@@ -89,7 +94,7 @@ describe("GraphResultSeeder", () => {
     // Ask for an expansion, close the panel before the tool returns, reopen:
     // the merge had nothing to merge into, and marking the call handled anyway
     // meant the answer the user asked for was gone for good.
-    useToolPanelStore.setState({ isOpen: false });
+    act(() => useToolPanelStore.setState({ isOpen: false }));
     thread.messages = [{ parts: [] }];
     render();
 
@@ -97,7 +102,29 @@ describe("GraphResultSeeder", () => {
     render();
     expect(merged.calls).toHaveLength(0);
 
-    act(() => useToolPanelStore.setState({ isOpen: true }));
+    act(() => openGraphPanel());
+    expect(merged.calls.map((p) => p.nodes[0].id)).toEqual(["a"]);
+  });
+
+  it("holds a result back while a NON-graph panel is up", () => {
+    // `isOpen` alone let a result be consumed while a PDF was on screen: the
+    // merge rejected the non-graph content and the call was marked handled
+    // anyway, so opening the graph afterwards could never apply it — the same
+    // loss the closed-panel deferral exists to prevent.
+    act(() =>
+      useToolPanelStore.setState({
+        isOpen: true,
+        content: { title: "Report", type: "document", content: "..." },
+      }),
+    );
+    thread.messages = [{ parts: [] }];
+    render();
+
+    thread.messages = [call("c1", "a")];
+    render();
+    expect(merged.calls).toHaveLength(0);
+
+    act(() => openGraphPanel());
     expect(merged.calls.map((p) => p.nodes[0].id)).toEqual(["a"]);
   });
 

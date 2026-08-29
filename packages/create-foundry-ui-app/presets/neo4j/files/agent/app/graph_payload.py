@@ -26,6 +26,15 @@ MAX_PROPERTY_CHARS = 500
 # How deep to walk a record value looking for graph entities.
 _MAX_DEPTH = 12
 
+# JavaScript has no integer type: `JSON.parse` reads every number as an IEEE-754
+# double and silently rounds anything past 2**53-1. Neo4j integers are signed
+# 64-bit, so a counter, a hash or an epoch in microseconds can land beyond that
+# — and the browser would then display a neighbouring number, with nothing
+# anywhere reporting a problem. Out-of-range values go over as strings, which is
+# lossless and reads correctly in the property table; in-range ones stay numbers
+# so ordinary counts still behave like counts.
+JS_MAX_SAFE_INTEGER = 2**53 - 1
+
 
 def _clip(text: str) -> str:
     if len(text) <= MAX_PROPERTY_CHARS:
@@ -40,8 +49,12 @@ def to_json_value(value: Any) -> Any:
     blow up serialization at the FastAPI boundary — a failure that surfaces as
     an opaque 500 long after the query succeeded.
     """
-    if value is None or isinstance(value, (bool, int, float)):
+    if value is None or isinstance(value, (bool, float)):
         return value
+    if isinstance(value, int):
+        if -JS_MAX_SAFE_INTEGER <= value <= JS_MAX_SAFE_INTEGER:
+            return value
+        return str(value)
     if isinstance(value, str):
         return _clip(value)
     if isinstance(value, (bytes, bytearray)):

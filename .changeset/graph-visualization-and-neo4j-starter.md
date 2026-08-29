@@ -136,3 +136,29 @@ draw on. The check was `typeof HTMLCanvasElement === "undefined"`, which jsdom
 satisfies while refusing to give a 2D context — so a consumer's test rendering
 `GraphView` took the engine path and hit unimplemented canvas APIs instead of
 the fallback. It asks for the context now.
+
+A result is now held back until a GRAPH panel is open, not just any panel.
+`isOpen` alone let one be consumed while a document was on screen: the merge
+rejected the non-graph content and the call was marked handled anyway, so
+opening the graph afterwards could never apply it — the same loss the
+closed-panel deferral exists to prevent.
+
+`graph_get_view` reports edge endpoints as ids. force-graph replaces a link's
+`source`/`target` with the node objects once the simulation has run, so handing
+the links out raw put whole simulation objects — mutable layout fields and all
+— where the caller reads an id. `select` searches the drawn nodes too, so
+asking for one the legend has hidden is refused rather than opening the drawer
+on something invisible.
+
+Both change-signature comparisons — the graph payload's and
+`setContextItem`'s — tag a `bigint` structurally rather than as a string.
+Rendering `10n` as `"10"` collided with the string `"10"`, and `"10n"` merely
+moved the collision to the string `"10n"`; no string encoding is unambiguous
+when the value it competes with is itself an arbitrary string. A real edit
+between the two therefore read as no change, leaving the drawer and the chat
+context on the old value.
+
+The Neo4j preset serialises integers outside JavaScript's safe range as
+strings. Neo4j integers are signed 64-bit and `JSON.parse` reads every number
+as a double, so a value past 2^53-1 arrived in the browser silently rounded to
+a neighbouring one.

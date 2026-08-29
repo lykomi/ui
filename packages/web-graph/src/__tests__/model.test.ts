@@ -196,7 +196,17 @@ describe("safeStringify", () => {
     // so opening the panel for an otherwise perfect payload failed before
     // anything rendered.
     expect(() => JSON.stringify({ n: 1n })).toThrow();
-    expect(safeStringify({ n: 1n })).toBe('{"n":"1"}');
+    expect(safeStringify({ n: 1n })).toBe('{"n":{"__bigint":"1"}}');
+  });
+
+  it("keeps a bigint distinguishable from a string that looks like one", () => {
+    // The output is a change SIGNATURE: `merge-into-panel` and the selection
+    // guard both decide "did this actually change" by comparing two of these.
+    // A bigint rendered as its own digits collides with the string of those
+    // digits, so `10n -> "10"` (and the follow-up `10n -> "10n"`) both made a
+    // real edit look like no change, and the drawer kept the old value.
+    expect(safeStringify({ n: 10n })).not.toBe(safeStringify({ n: "10" }));
+    expect(safeStringify({ n: 10n })).not.toBe(safeStringify({ n: "10n" }));
   });
 
   it("survives a cycle", () => {
