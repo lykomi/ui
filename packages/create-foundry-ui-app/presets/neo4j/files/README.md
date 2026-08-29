@@ -48,8 +48,10 @@ seed a fresh Aura instance too, if you want the same demo data there.
 ## Exploring the graph
 
 Every graph-returning tool renders as a card in the chat with the node and
-relationship counts. Expand it for an inline graph, or **Open in panel** for
-the full-size view.
+relationship counts. The card is **provenance**: expand it for the Cypher that
+ran, the result summary and the raw payload. The graph itself goes to the side
+panel — **Open in panel**, or just ask, since the agent puts results there
+itself.
 
 | Gesture              | What it does                                        |
 | -------------------- | --------------------------------------------------- |

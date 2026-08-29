@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { Share2 } from "lucide-react";
 import { ToolCallCard, useToolPanelStore } from "@iloveagents/foundry-web-ui";
@@ -78,10 +78,6 @@ export function makeGraphToolUI(options: MakeGraphToolUIOptions) {
     toolName,
     render: ({ args, result, status, toolCallId }) => {
       const openPanel = useToolPanelStore((state) => state.openPanel);
-      // `render` re-runs on every state change; without this the panel would
-      // re-open every time the user typed in the composer. Keyed on the tool
-      // call so a second query in the same thread still opens.
-      const autoOpenedRef = useRef(new Set<string>());
       const [expanded, setExpanded] = useState(defaultExpanded);
 
       const payload = status.type === "complete" ? extract(result, args) : null;
@@ -91,22 +87,41 @@ export function makeGraphToolUI(options: MakeGraphToolUIOptions) {
         openPanel(graphPanelContent(panelTitle?.(payload, args) ?? title, payload) as never);
       }, [payload, openPanel, args]);
 
-      // Fold the result into the graph already open, when it is about the same
-      // part of the graph. This is what makes expanding a node — and watching
-      // the agent write one — read as the workspace growing rather than as a
-      // series of unrelated pictures. Once per tool call: `render` re-runs on
-      // every keystroke in the composer.
-      const mergedRef = useRef(new Set<string>());
-      if (payload && !mergedRef.current.has(toolCallId)) {
-        mergedRef.current.add(toolCallId);
-        queueMicrotask(() => mergeIntoOpenGraph(payload));
-      }
+      /**
+       * Everything the arrival of a result should DO, in an effect.
+       *
+       * The obvious shape — check a ref during render and `queueMicrotask` the
+       * work — reads as if deferring the write makes it safe, and it does not:
+       * scheduling from render is still a side effect in render, so it can run
+       * before the commit it belongs to, or twice.
+       *
+       * The dependencies are the tool call and whether it has produced a
+       * payload yet, NOT the payload itself: `extract` builds a new object
+       * every render, so keying on it would re-run on every keystroke in the
+       * composer — re-opening the panel each time, which is the behaviour the
+       * old ref-guards existed to prevent. The value is read through a ref so
+       * the effect always sees the latest one without depending on it.
+       */
+      const latestPayload = useRef(payload);
+      latestPayload.current = payload;
+      const hasPayload = payload !== null;
 
-      if (payload && autoOpenPanel && !autoOpenedRef.current.has(toolCallId)) {
-        autoOpenedRef.current.add(toolCallId);
-        // Deferred: opening a panel writes a store during render otherwise.
-        queueMicrotask(open);
-      }
+      useEffect(() => {
+        const current = latestPayload.current;
+        if (!current) return;
+        // Fold the result into the graph already open, when it is about the
+        // same part of the graph. This is what makes expanding a node — and
+        // watching the agent write one — read as the workspace growing rather
+        // than as a series of unrelated pictures.
+        mergeIntoOpenGraph(current);
+        if (autoOpenPanel) {
+          openPanel(graphPanelContent(panelTitle?.(current, args) ?? title, current) as never);
+        }
+        // `args` is deliberately absent: the effect must fire once when the
+        // result lands, and re-running it because a re-render produced a new
+        // args object would re-open the panel.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [toolCallId, hasPayload, autoOpenPanel, openPanel]);
 
       let description: string;
       if (status.type === "running") description = "Querying the graph…";
