@@ -40,7 +40,13 @@ export interface GraphViewHandle {
   /** Smallest pan that brings a node into view; a no-op if it already is. */
   reveal: (nodeId: string, durationMs?: number) => void;
   search: (term: string) => void;
-  select: (nodeId: string | null) => void;
+  /**
+   * Select a node by id, or clear with `null`. Returns whether it worked:
+   * a node in the payload can still be absent from what is RENDERED, because
+   * `selectConnectedCore` caps a large graph — and a caller that assumed
+   * success would tell the user about a node that is not on screen.
+   */
+  select: (nodeId: string | null) => boolean;
   unpinAll: () => void;
 }
 
@@ -120,6 +126,9 @@ export function GraphView({
   handleRef,
 }: GraphViewProps) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  // The canvas is opaque to a screen reader; the table is the same graph as
+  // real DOM. Off by default, one button away.
+  const [tableRequested, setTableRequested] = useState(false);
   const [canvasHost, setCanvasHost] = useState<HTMLDivElement | null>(null);
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const theme = useGraphTheme(container);
@@ -192,15 +201,24 @@ export function GraphView({
       reveal: (nodeId, durationMs) =>
         afterDrawer(() => canvasRef.current?.reveal(nodeId, durationMs)),
       search: (term) => state.setQuery(term),
-      select: (nodeId) =>
-        selectNode(nodeId === null ? null : (model.nodes.find((n) => n.id === nodeId) ?? null)),
+      select: (nodeId) => {
+        if (nodeId === null) {
+          selectNode(null);
+          return true;
+        }
+        const node = model.nodes.find((n) => n.id === nodeId) ?? null;
+        if (node) selectNode(node);
+        return node !== null;
+      },
       unpinAll: () => state.unpinAll(),
     }),
     [model.nodes, selectNode, state],
   );
 
-  // No canvas in jsdom, and `forceTable` is the print/a11y path.
-  const useTable = forceTable || typeof HTMLCanvasElement === "undefined";
+  // No canvas in jsdom, and `forceTable` is the print path. `tableRequested`
+  // is the user asking, from the toolbar.
+  const noCanvas = typeof HTMLCanvasElement === "undefined";
+  const useTable = forceTable || noCanvas || tableRequested;
   const isEmpty = model.nodes.length === 0;
 
   return (
@@ -219,6 +237,12 @@ export function GraphView({
         onReheat={() => canvasRef.current?.reheat()}
         pinnedCount={state.pinnedIds.size}
         onUnpinAll={state.unpinAll}
+        showsTable={useTable}
+        // No control where there is no choice: a host that pinned the table
+        // with `forceTable`, or an environment with no canvas to go back to.
+        onToggleTable={
+          forceTable || noCanvas ? undefined : () => setTableRequested((shown) => !shown)
+        }
         className="shrink-0"
       />
 
@@ -246,6 +270,17 @@ export function GraphView({
       <div className="flex min-h-0 flex-1">
         <div
           ref={setCanvasHost}
+          // A canvas is one opaque element to a screen reader — the nodes and
+          // relationships are pixels, and no labelling changes that. So the
+          // region says what it holds and where the readable form is; the
+          // toolbar's button is what gets you there.
+          role={useTable ? undefined : "img"}
+          aria-label={
+            useTable
+              ? undefined
+              : `Graph: ${model.nodes.length} nodes, ${model.links.length} relationships. ` +
+                `Use "Show as a table" for a readable version.`
+          }
           className="border-border bg-background relative min-h-0 flex-1 overflow-hidden rounded-lg border"
         >
           {isEmpty ? (

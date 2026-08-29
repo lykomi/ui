@@ -1,4 +1,4 @@
-import { Maximize2, PinOff, Play, Search, X } from "lucide-react";
+import { Maximize2, PinOff, Play, Search, Share2, Table2, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface GraphToolbarProps {
@@ -12,6 +12,13 @@ export interface GraphToolbarProps {
   onReheat: () => void;
   pinnedCount: number;
   onUnpinAll: () => void;
+  /**
+   * Whether the table is showing, and how to swap. Omitted where there is no
+   * choice to offer — a host that pinned the view with `forceTable`, or an
+   * environment with no canvas at all.
+   */
+  showsTable?: boolean;
+  onToggleTable?: () => void;
   className?: string;
 }
 
@@ -29,6 +36,8 @@ export function GraphToolbar({
   onReheat,
   pinnedCount,
   onUnpinAll,
+  showsTable,
+  onToggleTable,
   className,
 }: GraphToolbarProps) {
   return (
@@ -64,6 +73,24 @@ export function GraphToolbar({
         {nodeCount} nodes · {edgeCount} rels
       </span>
 
+      {/* The canvas is one opaque element to assistive technology, and no
+          amount of labelling changes that — the nodes and relationships are
+          pixels. The table is the same data as a real DOM tree, so the honest
+          answer is to make it reachable rather than to describe a picture.
+          A control, not a permanently mounted duplicate: a capped graph is
+          still 1,500 rows nobody asked for. */}
+      {onToggleTable && (
+        <button
+          type="button"
+          onClick={onToggleTable}
+          title={showsTable ? "Show the graph" : "Show as a table"}
+          aria-pressed={showsTable}
+          className={iconButton}
+        >
+          {showsTable ? <Share2 className="size-3.5" /> : <Table2 className="size-3.5" />}
+          <span className="sr-only">{showsTable ? "Show the graph" : "Show as a table"}</span>
+        </button>
+      )}
       {pinnedCount > 0 && (
         <button type="button" onClick={onUnpinAll} title="Unpin all nodes" className={iconButton}>
           <PinOff className="size-3.5" />

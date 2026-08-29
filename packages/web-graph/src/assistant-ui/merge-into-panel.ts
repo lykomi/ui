@@ -1,5 +1,5 @@
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
-import { mergeGraphPayloads, type GraphPayload } from "../model.ts";
+import { mergeGraphPayloads, type GraphEdge, type GraphNode, type GraphPayload } from "../model.ts";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
 import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
 
@@ -33,13 +33,23 @@ export function mergeIntoOpenGraph(payload: GraphPayload): boolean {
   const onScreen = new Set(current.nodes.map((node) => node.id));
   if (!payload.nodes.some((node) => onScreen.has(node.id))) return false;
 
-  // Nothing new: re-setting identical content would churn the store and
-  // re-run the panel's effects for no visible change.
-  const known = new Set([...onScreen, ...current.edges.map((edge) => edge.id)]);
-  const adds =
-    payload.nodes.some((node) => !known.has(node.id)) ||
-    payload.edges.some((edge) => !known.has(edge.id));
-  if (!adds) return false;
+  // Nothing new AND nothing changed: re-setting identical content would churn
+  // the store and re-run the panel's effects for no visible difference.
+  //
+  // "New" is not enough on its own. `MATCH (n) SET n.status = $status RETURN n`
+  // is an ordinary write whose result carries only ids the graph already has,
+  // and an id-only test threw it away — leaving the details drawer showing the
+  // property the user just changed, at its old value. `mergeGraphPayloads`
+  // already lets the fresher entity win; this test only decides whether to ask
+  // it to.
+  const byId = new Map<string, GraphNode | GraphEdge>();
+  for (const node of current.nodes) byId.set(node.id, node);
+  for (const edge of current.edges) byId.set(edge.id, edge);
+  const differs = (entity: GraphNode | GraphEdge) => {
+    const existing = byId.get(entity.id);
+    return existing === undefined || JSON.stringify(existing) !== JSON.stringify(entity);
+  };
+  if (!payload.nodes.some(differs) && !payload.edges.some(differs)) return false;
 
   panel.setContent(graphPanelContent(content.title, mergeGraphPayloads(current, payload)) as never);
   return true;

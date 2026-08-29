@@ -92,7 +92,9 @@ def relationship_to_graph_edge(rel: neo4j.graph.Relationship) -> dict[str, Any] 
     }
 
 
-def _collect(value: Any, nodes: dict[str, Any], edges: dict[str, Any], depth: int) -> None:
+def _collect(
+    value: Any, nodes: dict[str, Any], edges: dict[str, Any], depth: int
+) -> None:
     """Walk a record value, picking out every node and relationship.
 
     Recursive rather than shape-matched on purpose: the tool takes arbitrary
@@ -198,6 +200,7 @@ def records_to_graph_payload(
     max_nodes: int,
     max_edges: int,
     meta: dict[str, Any] | None = None,
+    rows_truncated: bool = False,
 ) -> dict[str, Any]:
     """Build the payload. Never returns a top-level ``error`` key.
 
@@ -235,7 +238,10 @@ def records_to_graph_payload(
         "edges": kept_edges,
         "stats": {"nodeCount": total_nodes, "edgeCount": total_edges},
     }
-    if total_nodes > len(kept_nodes) or total_edges > len(kept_edges):
+    # `rows_truncated` is the caller's row cap, which this function cannot see:
+    # it only ever receives the rows that survived it, so without being told it
+    # would call a half-answer complete.
+    if rows_truncated or total_nodes > len(kept_nodes) or total_edges > len(kept_edges):
         payload["truncated"] = True
     if meta:
         payload["meta"] = meta

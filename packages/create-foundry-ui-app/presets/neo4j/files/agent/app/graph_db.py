@@ -51,7 +51,11 @@ def database() -> str:
 
 
 def writes_enabled() -> bool:
-    return (os.getenv("NEO4J_ALLOW_WRITES") or "").strip().lower() in {"1", "true", "yes"}
+    return (os.getenv("NEO4J_ALLOW_WRITES") or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
 
 
 def get_driver() -> neo4j.AsyncDriver:
@@ -70,7 +74,10 @@ def get_driver() -> neo4j.AsyncDriver:
             )
         _driver = neo4j.AsyncGraphDatabase.driver(
             uri,
-            auth=(os.getenv("NEO4J_USERNAME") or "neo4j", os.getenv("NEO4J_PASSWORD") or ""),
+            auth=(
+                os.getenv("NEO4J_USERNAME") or "neo4j",
+                os.getenv("NEO4J_PASSWORD") or "",
+            ),
             connection_acquisition_timeout=30,
             max_transaction_retry_time=15,
         )
@@ -150,13 +157,19 @@ async def run_read(
     parameters: dict[str, Any] | None = None,
     *,
     row_limit: int | None = None,
-) -> list[neo4j.Record]:
-    """Run a read-only query.
+) -> tuple[list[neo4j.Record], bool]:
+    """Run a read-only query; return its rows AND whether the cap cut them off.
 
     Read-only is enforced by the SERVER: the session opens in ``READ`` access
     mode, and a write raises ``Neo.ClientError.Statement.AccessMode`` before
     anything is committed. The keyword scan above only front-runs that with a
     friendlier message.
+
+    The truncation flag is not decoration. Callers report ``truncated`` from
+    the NODE and EDGE caps, which say nothing about rows: a query returning
+    500 rows would come back as 200 and be reported complete, so a search or
+    an expansion could omit most of its answer and look whole. One row is
+    pulled past the cap to find out, then dropped.
     """
     if looks_like_write(cypher):
         raise WriteNotAllowed(
@@ -172,15 +185,19 @@ async def run_read(
     ) as session:
         result = await session.run(query, parameters or {})
         rows: list[neo4j.Record] = []
+        truncated = False
         async for record in result:
-            rows.append(record)
             # Stop pulling rather than rewriting the statement with a LIMIT —
             # injecting one into arbitrary Cypher (unions, subqueries, an
-            # existing LIMIT) goes wrong in ways that are hard to see.
+            # existing LIMIT) goes wrong in ways that are hard to see. The one
+            # row past the cap is what distinguishes "exactly `limit` rows"
+            # from "more than we will show".
             if len(rows) >= limit:
+                truncated = True
                 break
+            rows.append(record)
         await result.consume()
-        return rows
+        return rows, truncated
 
 
 async def run_write(

@@ -89,6 +89,10 @@ export function findWorkspaceNode(needle: string): GraphNode | null {
   if (byId) return byId;
 
   const lower = needle.trim().toLowerCase();
+  // Every caption `.includes("")`, so a blank selector would match the first
+  // node and the tool would report a confident, arbitrary selection. A missing
+  // argument has to fail, not pick.
+  if (lower.length === 0) return null;
   const captionOf = (node: GraphNode) =>
     (node.caption ?? String(node.properties?.name ?? node.properties?.title ?? "")).toLowerCase();
 

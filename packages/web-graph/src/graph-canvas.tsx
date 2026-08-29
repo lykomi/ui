@@ -520,6 +520,37 @@ export function GraphCanvas({
     [model.links.length, theme, captioned],
   );
 
+  /**
+   * Freezing is a fact about the ENGINE, not about a React Set.
+   *
+   * The Freeze button and the right-click action only ever added an id to
+   * `pinnedIds`; the simulation never heard about it, so a node the UI marked
+   * frozen carried on drifting. The inverse was broken too: `onNodeDragEnd`
+   * writes `fx`/`fy` directly, so "Unpin all" cleared the set and left every
+   * dragged node nailed in place with no marker to say why.
+   *
+   * One reconciliation, both directions. Mutating the node objects is the
+   * interface force-graph offers — they are the same objects the simulation
+   * holds — so the reheat is what makes the change visible.
+   */
+  useEffect(() => {
+    let changed = false;
+    for (const node of model.nodes) {
+      const shouldPin = pinnedIds.has(node.id);
+      const isPinned = node.fx != null || node.fy != null;
+      if (shouldPin === isPinned) continue;
+      if (shouldPin) {
+        node.fx = node.x;
+        node.fy = node.y;
+      } else {
+        node.fx = undefined;
+        node.fy = undefined;
+      }
+      changed = true;
+    }
+    if (changed) engineRef.current?.d3ReheatSimulation();
+  }, [pinnedIds, model.nodes]);
+
   return (
     <ForceGraph2D<EngineNode, EngineLink>
       ref={engineRef}

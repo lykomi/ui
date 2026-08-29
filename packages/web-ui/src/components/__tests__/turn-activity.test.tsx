@@ -148,7 +148,8 @@ describe("TurnActivity — one row for what a turn did", () => {
     // Hidden, not absent: the cards stay mounted so a tool UI's own effects
     // still run (see `message-disclosure.test.tsx`). What this test pins is
     // that none of it is on the page until the reader asks.
-    const shown = () => container.querySelector('[data-testid="body"]')?.closest("[hidden]") == null;
+    const shown = () =>
+      container.querySelector('[data-testid="body"]')?.closest("[hidden]") == null;
     expect(container.querySelector('[data-testid="body"]')).not.toBeNull();
     expect(shown()).toBe(false);
 

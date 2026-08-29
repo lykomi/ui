@@ -3,7 +3,7 @@ import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
 import { primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
-import { submitComposerText } from "@iloveagents/foundry-web-ui";
+import { submitComposerText, useToolPanelStore } from "@iloveagents/foundry-web-ui";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
 import { GraphContextPinButton, syncGraphSelectionContext } from "./graph-context.tsx";
 
@@ -19,6 +19,7 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
   // Memoised on the panel's own content, so an unrelated re-render does not
   // hand `GraphView` a new payload object and re-run the workspace effect.
   const payload = useMemo(() => graphPanelPayload(content), [content]);
+  const isOpen = useToolPanelStore((state) => state.isOpen);
 
   /**
    * Expand through the conversation, not behind it.
@@ -39,17 +40,32 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
   // Publish this panel as THE live graph, so the agent's client tools can read
   // what is on screen and drive it. Registering the handle is what lets
   // `graph_select_node` and `graph_search` reach into a mounted view.
+  //
+  // Gated on `isOpen`, because closing the panel does not unmount it — the
+  // tool panel slides off-screen with `translate-x-full` and stays in the
+  // tree. Without this the workspace stayed connected to a graph nobody could
+  // see, and `graph_get_view` went on describing it.
   useEffect(() => {
     const handle = handleRef.current;
-    if (!handle || !payload) return;
+    if (!handle || !payload || !isOpen) return;
     graphWorkspaceStore.getState().connect(handle, content.title, payload);
-    return () => {
-      graphWorkspaceStore.getState().disconnect(handle);
-      // Otherwise a node from a closed panel stays in the chat context and
-      // the agent answers about a graph nobody can see.
-      syncGraphSelectionContext(null, "");
-    };
-  }, [content.title, payload]);
+    return () => graphWorkspaceStore.getState().disconnect(handle);
+  }, [content.title, payload, isOpen]);
+
+  /**
+   * The selected node leaves the conversation when the graph does — and not
+   * before.
+   *
+   * This used to ride in the cleanup above, which made it fire on every
+   * payload change: an in-place merge, the thing this panel is built around,
+   * dropped the user's selected node out of the chat context even though it
+   * was still on screen and still selected. Visibility is its own lifetime.
+   */
+  useEffect(() => {
+    if (isOpen) return;
+    syncGraphSelectionContext(null, "");
+  }, [isOpen]);
+  useEffect(() => () => syncGraphSelectionContext(null, ""), []);
 
   if (!payload) {
     return <GraphEmptyState message="This panel does not contain a readable graph." />;

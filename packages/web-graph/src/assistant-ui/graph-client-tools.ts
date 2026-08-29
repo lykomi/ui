@@ -112,7 +112,17 @@ const selectNode: ClientToolEntry = {
     if (!handle) return fail("No graph is open. Call graph_show first.");
     const node = findWorkspaceNode(needle);
     if (!node) return fail(`No node matching "${needle}" is in the open graph.`);
-    handle.select(node.id);
+    // A node can be in the workspace payload and still not be RENDERED — the
+    // view caps a large graph to its connected core — and reporting a
+    // selection that did not happen sends the agent on to describe something
+    // the user cannot see.
+    if (!handle.select(node.id)) {
+      return fail(
+        `"${resolveCaption(node)}" is in this result but not drawn — the view is showing the ` +
+          `most connected part of a graph too large for one screen. Narrow the query to bring ` +
+          `it in.`,
+      );
+    }
     // Reveal, not centre: the user framed this graph, and a tool that
     // re-centres on every mention throws that away. Move only if the node is
     // off-screen or behind the details drawer.

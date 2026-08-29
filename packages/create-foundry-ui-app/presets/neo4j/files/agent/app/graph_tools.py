@@ -60,17 +60,20 @@ async def graph_schema() -> dict[str, Any]:
         # db.schema.visualization() returns the schema AS A GRAPH — nodes for
         # labels, relationships for types — so the very first thing the user
         # sees renders in the graph view instead of as a wall of JSON.
-        records = await graph_db.run_read("CALL db.schema.visualization()")
+        records, rows_truncated = await graph_db.run_read(
+            "CALL db.schema.visualization()"
+        )
         payload = records_to_graph_payload(
             records,
             max_nodes=graph_db.max_nodes(),
             max_edges=graph_db.max_edges(),
             meta=_meta("CALL db.schema.visualization()", started),
+            rows_truncated=rows_truncated,
         )
         # The visualization gives shape but not property names; those are what
         # the model actually needs to write a working query.
         try:
-            props = await graph_db.run_read(
+            props, _ = await graph_db.run_read(
                 "CALL db.schema.nodeTypeProperties() "
                 "YIELD nodeLabels, propertyName, propertyTypes "
                 "RETURN nodeLabels, propertyName, propertyTypes"
@@ -111,7 +114,7 @@ async def graph_read_cypher(
     """Run a read-only Cypher query and return the matching subgraph."""
     started = time.monotonic()
     try:
-        records = await graph_db.run_read(cypher, parameters)
+        records, rows_truncated = await graph_db.run_read(cypher, parameters)
     except graph_db.WriteNotAllowed as exc:
         return _failure(str(exc))
     except Exception as exc:  # noqa: BLE001
@@ -122,12 +125,14 @@ async def graph_read_cypher(
         max_nodes=graph_db.max_nodes(),
         max_edges=graph_db.max_edges(),
         meta=_meta(cypher, started),
+        rows_truncated=rows_truncated,
     )
     if not payload["nodes"]:
         # A query that returned scalars is legitimate; hand the values back so
         # the agent can still answer, and let the empty graph render as empty.
         payload["meta"]["rows"] = [
-            {key: to_json_value(value) for key, value in record.items()} for record in records[:25]
+            {key: to_json_value(value) for key, value in record.items()}
+            for record in records[:25]
         ]
     return payload
 
@@ -161,7 +166,9 @@ async def graph_write_cypher(
     so the new part appears in the open graph beside what it connects to.
     """
     if not graph_db.writes_enabled():
-        return _failure("Writes are disabled for this deployment (NEO4J_ALLOW_WRITES is not set).")
+        return _failure(
+            "Writes are disabled for this deployment (NEO4J_ALLOW_WRITES is not set)."
+        )
     started = time.monotonic()
     try:
         records, counters = await graph_db.run_write(cypher, parameters)
@@ -185,9 +192,14 @@ async def graph_write_cypher(
 @tool(approval_mode="never_require")
 async def graph_expand_node(
     node_id: Annotated[
-        str, Field(description="The node's id, as it appears in a graph payload (an elementId).")
+        str,
+        Field(
+            description="The node's id, as it appears in a graph payload (an elementId)."
+        ),
     ],
-    limit: Annotated[int, Field(description="Maximum neighbours to return (1-100).")] = 25,
+    limit: Annotated[
+        int, Field(description="Maximum neighbours to return (1-100).")
+    ] = 25,
 ) -> dict[str, Any]:
     """Fetch a node's immediate neighbourhood — the node, its neighbours, and the relationships between.
 
@@ -199,11 +211,15 @@ async def graph_expand_node(
     started = time.monotonic()
     cap = max(1, min(int(limit), 100))
     try:
-        records = await graph_db.run_read(
+        records, rows_truncated = await graph_db.run_read(
             "MATCH (n) WHERE elementId(n) = $id "
             "OPTIONAL MATCH (n)-[r]-(m) "
             "RETURN n, r, m LIMIT $cap",
-            {"id": node_id, "cap": cap},
+            # One past the cap, because the LIMIT is inside the STATEMENT: ask
+            # for exactly `cap` and the server hands back exactly `cap`, and a
+            # node with a hundred neighbours is indistinguishable from one with
+            # twenty-five. `run_read` drops the extra row and reports the cut.
+            {"id": node_id, "cap": cap + 1},
             row_limit=cap,
         )
     except Exception as exc:  # noqa: BLE001
@@ -217,12 +233,18 @@ async def graph_expand_node(
         max_nodes=graph_db.max_nodes(),
         max_edges=graph_db.max_edges(),
         meta=_meta(None, started),
+        rows_truncated=rows_truncated,
     )
 
 
 @tool(approval_mode="never_require")
 async def graph_vector_search(
-    query: Annotated[str, Field(description="Natural-language text to find semantically similar nodes for.")],
+    query: Annotated[
+        str,
+        Field(
+            description="Natural-language text to find semantically similar nodes for."
+        ),
+    ],
     limit: Annotated[int, Field(description="How many nodes to return (1-50).")] = 10,
 ) -> dict[str, Any]:
     """Find nodes whose embedding is closest to the query text, with their neighbours.
@@ -249,7 +271,7 @@ async def graph_vector_search(
         # Two statements rather than one: OPTIONAL MATCH on a supernode inside
         # the same query multiplies rows by its degree, and the hit list is
         # what the score belongs to.
-        hits = await graph_db.run_read(
+        hits, _ = await graph_db.run_read(
             "CALL db.index.vector.queryNodes($index, $k, $embedding) "
             "YIELD node, score RETURN node, score",
             {"index": index_name, "k": k, "embedding": embedding},
@@ -264,9 +286,8 @@ async def graph_vector_search(
             scores.append({"id": node.element_id, "score": float(record["score"])})
 
         if nodes:
-            neighbours = await graph_db.run_read(
-                "MATCH (n)-[r]-(m) WHERE elementId(n) IN $ids "
-                "RETURN r, m LIMIT $cap",
+            neighbours, _ = await graph_db.run_read(
+                "MATCH (n)-[r]-(m) WHERE elementId(n) IN $ids RETURN r, m LIMIT $cap",
                 {"ids": list(nodes), "cap": fanout * len(nodes)},
                 row_limit=fanout * len(nodes),
             )
@@ -297,6 +318,9 @@ async def graph_vector_search(
         "stats": {"nodeCount": len(nodes), "edgeCount": len(edges)},
         "meta": meta,
     }
+    # No row-cap flag here on purpose: `k` and the fan-out cap are what this
+    # tool was ASKED for, so returning exactly that many is the answer rather
+    # than a partial one. Only the node/edge caps below cut into it.
     if len(nodes) > len(kept_nodes) or len(edges) > len(kept_edges):
         payload["truncated"] = True
     return payload if kept_nodes else empty_payload(meta)

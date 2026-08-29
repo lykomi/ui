@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GraphEdge, GraphNode, GraphPayload } from "./model.ts";
 
 /** What the user currently has selected. `null` when nothing is selected. */
@@ -89,6 +89,30 @@ export function useGraphViewState(
     () => matchNodes(payload.nodes, query, captionOf),
     [payload.nodes, query, captionOf],
   );
+
+  /**
+   * A selection outlives its node otherwise.
+   *
+   * `graph_show` replacing an open graph reuses the renderer deliberately —
+   * that is what makes a refined query read as a change — but the drawer would
+   * go on describing a node the canvas no longer contains, with an Expand
+   * button that queries something nobody can see.
+   *
+   * Only DROPS; it never swaps in the equivalent node from the new payload.
+   * Hosts pass `data` as a fresh object on many renders, and replacing the
+   * selection with an equal-but-different object every time is a render loop.
+   */
+  useEffect(() => {
+    setSelection((prev) => {
+      if (prev.node && !payload.nodes.some((node) => node.id === prev.node?.id)) {
+        return EMPTY_SELECTION;
+      }
+      if (prev.edge && !payload.edges.some((edge) => edge.id === prev.edge?.id)) {
+        return EMPTY_SELECTION;
+      }
+      return prev;
+    });
+  }, [payload]);
 
   const selectNode = useCallback((node: GraphNode | null) => {
     setSelection({ node, edge: null });

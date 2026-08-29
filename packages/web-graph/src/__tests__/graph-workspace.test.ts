@@ -18,7 +18,7 @@ const handle = (): GraphViewHandle => ({
   zoomToFit: vi.fn(),
   centerOn: vi.fn(),
   search: vi.fn(),
-  select: vi.fn(),
+  select: vi.fn(() => true),
   unpinAll: vi.fn(),
 });
 
@@ -94,6 +94,14 @@ describe("findWorkspaceNode", () => {
 
   it("returns null rather than guessing", () => {
     expect(findWorkspaceNode("Nosferatu")).toBeNull();
+  });
+
+  it("refuses a blank selector instead of picking the first node", () => {
+    // Every caption `.includes("")`, so a missing or whitespace-only argument
+    // used to come back as a confident selection of whatever happened to be
+    // first — and the agent would then describe it to the user.
+    expect(findWorkspaceNode("")).toBeNull();
+    expect(findWorkspaceNode("   ")).toBeNull();
   });
 
   it("drops a selection that does not belong to the newly connected graph", () => {
