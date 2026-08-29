@@ -184,8 +184,13 @@ export interface PositionedLink {
 const asPositioned = (end: PositionedLink["source"]): PositionedNode | null =>
   typeof end === "object" && end !== null ? end : null;
 
-/** Below this zoom, relationship labels collide into noise. */
-export const EDGE_LABEL_MIN_SCALE = 1.4;
+/**
+ * How much longer than its label an edge must be before the label is drawn.
+ *
+ * Room at both ends, so the text stops short of the two nodes instead of
+ * running under them.
+ */
+const EDGE_LABEL_FIT = 1.6;
 
 /**
  * Draw the relationship type at the midpoint of an edge.
@@ -202,7 +207,7 @@ export function paintEdgeLabel(
   ctx: CanvasRenderingContext2D,
   globalScale: number,
 ): void {
-  if (globalScale < EDGE_LABEL_MIN_SCALE || !label) return;
+  if (!label) return;
   const source = asPositioned(link.source);
   const target = asPositioned(link.target);
   if (!source || !target) return;
@@ -227,9 +232,20 @@ export function paintEdgeLabel(
   // graph, where zoom-to-fit lands at a high scale, the label renders enormous.
   const fontSize = 9 / globalScale;
   ctx.save();
+  ctx.font = `${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+
+  // Does the label fit ON the edge, as opposed to merely not colliding with
+  // anything? Placement decides the second question; this is the first, and it
+  // is the one a rectangle cannot answer — a long word across a short edge
+  // clears its neighbours and still reads as belonging to neither end.
+  const edgeLength = Math.hypot(x2 - x1, y2 - y1);
+  if (ctx.measureText(label).width * EDGE_LABEL_FIT > edgeLength) {
+    ctx.restore();
+    return;
+  }
+
   ctx.translate(midX, midY);
   ctx.rotate(angle);
-  ctx.font = `${fontSize}px ui-sans-serif, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
 

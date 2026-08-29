@@ -1,16 +1,32 @@
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, type Ref } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
 import { primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
 import {
-  FULL_CAPTION_SCALE,
-  captionBudget,
   paintEdgeLabel,
   paintNode,
   paintNodePointerArea,
+  truncateCaption,
   type PositionedLink,
   type PositionedNode,
 } from "./graph-canvas-paint.ts";
 import { edgeTooltip, nodeTooltip } from "./graph-tooltip.ts";
+import {
+  LabelTier,
+  captionRect,
+  createCaptionMeasurer,
+  edgeLabelRect,
+  nodeRect,
+  placeLabels,
+  type LabelCandidate,
+} from "./caption-placement.ts";
 import type { EngineLink, EngineNode, GraphModel } from "./use-graph-model.ts";
 import type { GraphStyleMap } from "./use-graph-styling.ts";
 import type { GraphTheme } from "./theme.ts";
@@ -145,6 +161,43 @@ function tuneForces(
  * own copy, and pulling in a second one to get `forceX` would ship the whole
  * module twice. A d3 force is just a function with an `initialize` hook.
  */
+/** Namespaces edge labels in the placement set, which node ids also live in. */
+const EDGE_LABEL_PREFIX = "edge:";
+
+/** Set equality by membership — cheaper than rebuilding and re-rendering. */
+/**
+ * How often the caption placement may be recomputed, in milliseconds.
+ *
+ * Driven from `onRenderFramePre`, which fires ~60 times a second, so it needs a
+ * throttle. Ten passes a second is imperceptible for labels appearing and
+ * disappearing, and the placement is skipped entirely when it comes out the
+ * same (see `sameIds`), so a settled graph costs a cheap scan and no renders.
+ */
+const CAPTION_INTERVAL_MS = 100;
+
+/** Set equality by membership — cheaper than rebuilding and re-rendering. */
+/**
+ * TEMPORARY probe: does `onRenderFramePre` actually fire?
+ *
+ * `onEngineTick` and `onEngineStop` are in the same typings and never run
+ * through the react-kapsule wrapper, so the frame hook cannot be assumed to
+ * work either. Logs once and gets deleted along with this comment as soon as
+ * the answer is recorded in AGENTS.md.
+ */
+let framesSeen = 0;
+function probeFrameHook(): void {
+  framesSeen += 1;
+  if (framesSeen === 1 || framesSeen === 60) {
+    console.info(`[foundry-graph probe] onRenderFramePre fired ${framesSeen}x`);
+  }
+}
+
+function sameIds(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const id of a) if (!b.has(id)) return false;
+  return true;
+}
+
 function cohesionForce() {
   let nodes: EngineNode[] = [];
   const force = (alpha: number) => {
@@ -227,41 +280,6 @@ export function GraphCanvas({
     [model.nodes, reducedMotion, insetRight, width, height],
   );
 
-  /**
-   * Keep the whole graph in frame while the layout settles.
-   *
-   * Driven from React on an interval rather than from force-graph's
-   * `onEngineTick` / `onEngineStop`: those callbacks do not fire through the
-   * react-kapsule wrapper (verified in a browser — the imperative
-   * `zoomToFit` works, the callbacks never run), so anything hung off them
-   * silently never happens.
-   *
-   * Without this the first seconds show whatever fraction of the graph the
-   * random initial layout put on screen, usually wildly zoomed in. Re-framing
-   * as it forms means the layout is legible the whole time.
-   *
-   * It stops once the simulation has settled: a view that re-frames itself
-   * after the user has panned somewhere is worse than one that never fits.
-   * Re-runs on resize, because the panel is drag-resizable and has a
-   * fullscreen toggle.
-   */
-  useEffect(() => {
-    if (width === 0 || height === 0) return;
-    tuneForces(engineRef.current, model.nodes.length, (node) => styleMap.styleForNode(node).radius);
-
-    const deadline = Date.now() + cooldownFor(model.nodes.length) + FIT_TAIL_MS;
-    // Fit immediately so nothing is off-screen even for one frame.
-    engineRef.current?.zoomToFit(0, FIT_PADDING);
-    const timer = setInterval(() => {
-      if (Date.now() > deadline) {
-        clearInterval(timer);
-        return;
-      }
-      engineRef.current?.zoomToFit(0, FIT_PADDING);
-    }, FIT_INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, [model, width, height, styleMap]);
-
   const {
     selection,
     hoveredId,
@@ -307,11 +325,140 @@ export function GraphCanvas({
     [onExpandNode, selectNode],
   );
 
-  // Recomputed only when the data or the styling changes — not per frame.
-  const captioned = useMemo(
-    () => captionBudget(model.nodes, (node) => styleMap.styleForNode(node as EngineNode).radius),
-    [model.nodes, styleMap],
+  /**
+   * Captions that can be drawn without overprinting each other.
+   *
+   * Recomputed from SCREEN positions, so it has to run after the engine has
+   * placed the nodes and again whenever the view moves. `onRenderFramePre`
+   * would be the natural home — reset per frame, no staleness — but callbacks
+   * on this wrapper are not to be trusted (`onEngineTick` and `onEngineStop`
+   * never fire), so this is driven from React and the frame hook is only used
+   * as a signal that the view changed.
+   */
+  const measure = useMemo(() => createCaptionMeasurer(), []);
+  // Relationship types are painted at 9px, not 11px — a different font, so a
+  // different cache.
+  const measureEdge = useMemo(
+    () => createCaptionMeasurer("9px ui-sans-serif, system-ui, sans-serif"),
+    [],
   );
+  const [captioned, setCaptioned] = useState<Set<string>>(() => new Set());
+  const captionInputsRef = useRef({ selectedId: "", hoveredId: "", matchedIds: new Set<string>() });
+
+  const recomputeCaptions = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine || width === 0 || height === 0) return;
+    const zoom = engine.zoom() || 1;
+    const { selectedId, hoveredId: hovered, matchedIds: matches } = captionInputsRef.current;
+
+    const screens = new Map<string, { x: number; y: number; radius: number }>();
+    const obstacles: { id: string; rect: ReturnType<typeof nodeRect> }[] = [];
+    const candidates: LabelCandidate[] = [];
+
+    for (const node of model.nodes) {
+      if (typeof node.x !== "number" || typeof node.y !== "number") continue;
+      if (isHidden(node)) continue;
+      const style = styleMap.styleForNode(node);
+      const screen = engine.graph2ScreenCoords(node.x, node.y);
+      const id = String(node.id);
+      const radius = style.radius * zoom;
+      screens.set(id, { x: screen.x, y: screen.y, radius });
+      obstacles.push({ id, rect: nodeRect(screen.x, screen.y, radius) });
+      if (!style.caption) continue;
+      candidates.push({
+        id,
+        rect: captionRect(screen.x, screen.y, radius, measure(truncateCaption(style.caption))),
+        tier:
+          id === selectedId || id === hovered
+            ? LabelTier.Pinned
+            : matches.has(id)
+              ? LabelTier.Match
+              : LabelTier.Caption,
+        weight: style.radius,
+        exempt: [id],
+      });
+    }
+
+    // Relationship types compete in the same pass, one tier down. They overlap
+    // captions as readily as captions overlap each other, and a `DIRECTED` you
+    // cannot read is a smaller loss than a `Metropolis` you cannot read.
+    for (const link of model.links) {
+      const type = (link as EngineLink).type;
+      if (!type) continue;
+      const source = screens.get(String((link.source as EngineNode)?.id ?? link.source));
+      const target = screens.get(String((link.target as EngineNode)?.id ?? link.target));
+      if (!source || !target) continue;
+      const sourceId = String((link.source as EngineNode)?.id ?? link.source);
+      const targetId = String((link.target as EngineNode)?.id ?? link.target);
+      candidates.push({
+        id: `${EDGE_LABEL_PREFIX}${(link as EngineLink).id}`,
+        rect: edgeLabelRect(source.x, source.y, target.x, target.y, measureEdge(type)),
+        tier: LabelTier.Edge,
+        weight: 0,
+        exempt: [sourceId, targetId],
+      });
+    }
+
+    const next = placeLabels(candidates, { obstacles, viewport: { width, height } });
+    // Replace only on a real change: this runs on every frame the view moves,
+    // and a new Set each time would re-render the whole canvas for nothing.
+    setCaptioned((prev) => (sameIds(prev, next) ? prev : next));
+  }, [model.nodes, model.links, styleMap, isHidden, measure, measureEdge, width, height]);
+
+  const lastPlacedRef = useRef(0);
+  const handleFramePre = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPlacedRef.current < CAPTION_INTERVAL_MS) return;
+    lastPlacedRef.current = now;
+    recomputeCaptions();
+  }, [recomputeCaptions]);
+
+  /**
+   * Keep the whole graph in frame while the layout settles.
+   *
+   * Driven from React on an interval rather than from force-graph's
+   * `onEngineTick` / `onEngineStop`: those callbacks do not fire through the
+   * react-kapsule wrapper (verified in a browser — the imperative
+   * `zoomToFit` works, the callbacks never run), so anything hung off them
+   * silently never happens.
+   *
+   * Without this the first seconds show whatever fraction of the graph the
+   * random initial layout put on screen, usually wildly zoomed in. Re-framing
+   * as it forms means the layout is legible the whole time.
+   *
+   * It stops once the simulation has settled: a view that re-frames itself
+   * after the user has panned somewhere is worse than one that never fits.
+   * Re-runs on resize, because the panel is drag-resizable and has a
+   * fullscreen toggle.
+   */
+  useEffect(() => {
+    if (width === 0 || height === 0) return;
+    tuneForces(engineRef.current, model.nodes.length, (node) => styleMap.styleForNode(node).radius);
+
+    const deadline = Date.now() + cooldownFor(model.nodes.length) + FIT_TAIL_MS;
+    // Fit immediately so nothing is off-screen even for one frame.
+    engineRef.current?.zoomToFit(0, FIT_PADDING);
+    const timer = setInterval(() => {
+      if (Date.now() > deadline) {
+        clearInterval(timer);
+        return;
+      }
+      engineRef.current?.zoomToFit(0, FIT_PADDING);
+    }, FIT_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [model, width, height, styleMap]);
+
+  // Selection, hover and search decide a caption's priority, so a change to
+  // any of them re-places. Held in a ref as well so the framing interval and
+  // the zoom handler can read them without being rebuilt on every hover.
+  useEffect(() => {
+    captionInputsRef.current = {
+      selectedId: selection.node ? String(selection.node.id) : "",
+      hoveredId: hoveredId ?? "",
+      matchedIds,
+    };
+    recomputeCaptions();
+  }, [selection.node, hoveredId, matchedIds, recomputeCaptions]);
 
   const nodeCanvasObject = useCallback(
     (node: PositionedNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -329,14 +476,10 @@ export function GraphCanvas({
           // running, nothing is dimmed.
           dimmed: query.length > 0 && !isMatch,
           pinned: pinnedIds.has(graphNode.id),
-          // Whatever the user is pointing at or searching for is always
-          // named, however far out they are.
-          showCaption:
-            isSelected ||
-            isHovered ||
-            isMatch ||
-            globalScale >= FULL_CAPTION_SCALE ||
-            captioned.has(graphNode.id),
+          // Placement decides, and it already knows about selection, hover
+          // and search — see `recomputeCaptions`. Re-adding "always show the
+          // selected node" here would put back the overlaps.
+          showCaption: captioned.has(graphNode.id),
         },
         theme,
         ctx,
@@ -357,9 +500,10 @@ export function GraphCanvas({
     (link: PositionedLink, ctx: CanvasRenderingContext2D, globalScale: number) => {
       // Only worth drawing while the graph is sparse enough to read.
       if (model.links.length > 300) return;
+      if (!captioned.has(`${EDGE_LABEL_PREFIX}${(link as EngineLink).id}`)) return;
       paintEdgeLabel(link, (link as EngineLink).type ?? "", theme, ctx, globalScale);
     },
-    [model.links.length, theme],
+    [model.links.length, theme, captioned],
   );
 
   return (
@@ -391,6 +535,11 @@ export function GraphCanvas({
       linkDirectionalArrowRelPos={1}
       linkDirectionalArrowColor={() => theme.mutedForeground}
       d3VelocityDecay={0.32}
+      // Every way a label can move — the layout settling, a pan, a zoom, or the
+      // user dragging one node — shows up as a rendered frame, and nothing else
+      // reports all four. `onRenderFramePre` DOES fire through this wrapper,
+      // unlike `onEngineTick`/`onEngineStop`; verified in a browser.
+      onRenderFramePre={handleFramePre}
       onNodeClick={handleNodeClick}
       onNodeRightClick={(node) => togglePinned(String(node.id))}
       onLinkClick={(link) => selectEdge(link as unknown as GraphEdge)}
