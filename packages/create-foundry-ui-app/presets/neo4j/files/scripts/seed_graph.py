@@ -126,6 +126,24 @@ def load_env() -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
+def _quote_identifier(name: str) -> str:
+    """Backtick-quote an index name for a statement that cannot parameterise it.
+
+    Cypher takes no parameter in an index name, so it has to be interpolated —
+    the one place in this script where a value reaches the query as text. The
+    value is a developer's own `.env` setting rather than user input, so this
+    is about the failure that actually happens: a name with a space or a
+    hyphen produces an opaque Cypher syntax error a long way from its cause.
+    Quoting makes those names work, and doubling any backtick keeps a name
+    that contains one from ending the quote early.
+    """
+    if not name.strip():
+        raise ValueError("NEO4J_VECTOR_INDEX is empty.")
+    if "\n" in name or "\r" in name:
+        raise ValueError(f"NEO4J_VECTOR_INDEX must be a single line, got {name!r}.")
+    return "`" + name.replace("`", "``") + "`"
+
+
 async def embed_and_index(driver: neo4j.AsyncDriver, database: str) -> None:
     """Add embeddings and a vector index, when an embedding model is configured.
 
@@ -153,7 +171,7 @@ async def embed_and_index(driver: neo4j.AsyncDriver, database: str) -> None:
             {"vectors": vectors},
         )
         await session.run(
-            f"CREATE VECTOR INDEX {index_name} IF NOT EXISTS "
+            f"CREATE VECTOR INDEX {_quote_identifier(index_name)} IF NOT EXISTS "
             "FOR (m:Movie) ON (m.embedding) "
             "OPTIONS {indexConfig: {"
             "`vector.dimensions`: $dimensions, "

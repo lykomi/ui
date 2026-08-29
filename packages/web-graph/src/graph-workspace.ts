@@ -37,7 +37,30 @@ export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) =
   selection: null,
   query: "",
 
-  connect: (handle, title, payload) => set({ handle, title, payload }),
+  connect: (handle, title, payload) =>
+    set((state) => {
+      // A selection has to belong to the graph it is reported against.
+      //
+      // React mounts a replacement panel BEFORE unmounting the old one, and
+      // `disconnect` deliberately no-ops once a newer panel has claimed the
+      // workspace — so without this the previous graph's selection survives
+      // into the new one, and `graph_get_view` tells the agent a node is
+      // selected that is not on screen.
+      //
+      // Keeping it when it survives matters just as much: a merge changes
+      // `payload` on the SAME panel, and clearing unconditionally would drop
+      // the user's selection every time the agent expanded a node.
+      const samePanel = state.handle === handle;
+      const stillThere =
+        state.selection !== null && payload.nodes.some((node) => node.id === state.selection?.id);
+      return {
+        handle,
+        title,
+        payload,
+        selection: stillThere ? state.selection : null,
+        query: samePanel ? state.query : "",
+      };
+    }),
   disconnect: (handle) => {
     // Guard against a stale unmount clearing a workspace that a NEWER panel
     // has already claimed — React unmounts the old tree after mounting the

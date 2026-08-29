@@ -57,8 +57,20 @@ function toId(value: unknown): string | null {
   if (typeof value === "string" && value.length > 0) return value;
   if (typeof value === "number" || typeof value === "bigint") return String(value);
   if (isRecord(value)) {
-    if (typeof value.low === "number") return String(value.low);
-    if (typeof value.elementId === "string") return value.elementId;
+    // An elementId is exact; prefer it whenever the record carries one.
+    if (typeof value.elementId === "string" && value.elementId.length > 0) {
+      return value.elementId;
+    }
+    if (typeof value.low === "number") {
+      // A Neo4j Integer is a 64-bit value split across two 32-bit words, and
+      // `low` alone is only the bottom half. Dropping `high` makes every id
+      // past 2^32 collide with one below it — and a collision here does not
+      // fail, it silently points edges at the wrong nodes. BigInt, because
+      // the whole point is values a double cannot hold exactly.
+      const low = BigInt(value.low >>> 0);
+      const high = typeof value.high === "number" ? BigInt(value.high) : 0n;
+      return String((high << 32n) + low);
+    }
   }
   return null;
 }

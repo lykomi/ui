@@ -88,4 +88,26 @@ describe("graphFromNeo4j", () => {
     expect(() => graphFromNeo4j([cyclic])).not.toThrow();
     expect(graphFromNeo4j([cyclic]).nodes).toHaveLength(1);
   });
+
+  it("keeps the high word of a legacy Integer id", () => {
+    // A Neo4j Integer is 64 bits split across two 32-bit words. Reading only
+    // `low` makes every id past 2^32 collide with one below it — and a
+    // collision does not fail, it points edges at the wrong nodes.
+    const big = { low: 1, high: 1 }; // 2^32 + 1
+    const small = { low: 1, high: 0 };
+    const payload = graphFromNeo4j([
+      { n: { identity: big, labels: ["A"], properties: { name: "far" } } },
+      { m: { identity: small, labels: ["A"], properties: { name: "near" } } },
+    ]);
+    expect(payload.nodes).toHaveLength(2);
+    expect(new Set(payload.nodes.map((node) => node.id)).size).toBe(2);
+    expect(payload.nodes.map((node) => node.id)).toContain("4294967297");
+  });
+
+  it("prefers an elementId over a numeric identity on the same record", () => {
+    const payload = graphFromNeo4j([
+      { n: { elementId: "4:abc:7", low: 7, labels: ["A"], properties: {} } },
+    ]);
+    expect(payload.nodes[0]?.id).toBe("4:abc:7");
+  });
 });

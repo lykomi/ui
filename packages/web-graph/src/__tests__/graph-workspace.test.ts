@@ -95,4 +95,28 @@ describe("findWorkspaceNode", () => {
   it("returns null rather than guessing", () => {
     expect(findWorkspaceNode("Nosferatu")).toBeNull();
   });
+
+  it("drops a selection that does not belong to the newly connected graph", () => {
+    // React mounts a replacement panel before unmounting the old one, and
+    // `disconnect` no-ops once a newer panel has claimed the workspace — so
+    // without this the old graph's selection is what `graph_get_view` reports.
+    graphWorkspaceStore.getState().connect(handle(), "First", payload);
+    graphWorkspaceStore.getState().setSelection(payload.nodes[0]);
+
+    const other: GraphPayload = { ...payload, nodes: [{ id: "zzz" }], edges: [] };
+    graphWorkspaceStore.getState().connect(handle(), "Second", other);
+    expect(graphWorkspaceStore.getState().selection).toBeNull();
+  });
+
+  it("keeps a selection that survives into the new payload", () => {
+    // A merge re-connects the SAME panel with a bigger payload. Clearing here
+    // would drop the user's selection every time the agent expanded a node.
+    const only = handle();
+    graphWorkspaceStore.getState().connect(only, "Graph", payload);
+    graphWorkspaceStore.getState().setSelection(payload.nodes[0]);
+
+    const grown: GraphPayload = { ...payload, nodes: [...payload.nodes, { id: "n9" }] };
+    graphWorkspaceStore.getState().connect(only, "Graph", grown);
+    expect(graphWorkspaceStore.getState().selection?.id).toBe(payload.nodes[0].id);
+  });
 });
