@@ -9,6 +9,8 @@
 
 export { GraphToolUI, makeGraphToolUI, type MakeGraphToolUIOptions } from "./graph-tool-ui.tsx";
 export { GraphProvenance } from "./graph-provenance.tsx";
+export { GraphResultSeeder, seedableGraphResults } from "./graph-result-seeder.tsx";
+export { graphToolBindings, type GraphToolBinding } from "./graph-tool-registry.ts";
 export { registerGraphPanelRenderer } from "./register-graph-panel.ts";
 export { mergeIntoOpenGraph } from "./merge-into-panel.ts";
 export {

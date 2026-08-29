@@ -1,5 +1,6 @@
 import { defineChatModule } from "@iloveagents/foundry-web-shell";
 import {
+  GraphResultSeeder,
   GraphToolUI,
   makeGraphToolUI,
   registerGraphClientTools,
@@ -38,10 +39,10 @@ const GraphVectorSearchToolUI = makeGraphToolUI({
 });
 
 // The two collaboration moves. Both need a card of their own, and not for the
-// card's sake: a graph card folds its result into the graph already on screen,
-// so a tool with no card registered comes back as a generic result and the
-// panel never hears about it — the agent narrates an expansion that never
-// arrives.
+// card's sake: binding a card is what registers the tool as graph-shaped, and
+// `GraphResultSeeder` below is what folds its result into the graph already on
+// screen. A tool with no card is a tool the panel never hears about — the
+// agent narrates an expansion that never arrives.
 const GraphExpandToolUI = makeGraphToolUI({
   toolName: "graph_expand_node",
   title: "Expand node",
@@ -78,6 +79,11 @@ export const graphModule = defineChatModule({
       <GraphVectorSearchToolUI />
       <GraphExpandToolUI />
       <GraphWriteToolUI />
+      {/* Headless, and load-bearing: the cards above live inside the turn's
+          collapsed activity strip and do not mount until someone expands it.
+          This watches the thread's own parts instead, so a result reaches the
+          panel whether or not anybody opened the card. */}
+      <GraphResultSeeder />
       {/* Lets the agent put any graph in the panel via a `show_graph` tool. */}
       <GraphToolUI />
     </>

@@ -159,26 +159,43 @@ const getView: ClientToolEntry = {
     "this before answering a question about 'this' node or 'the graph' on screen.",
   parameters: { type: "object", properties: {} },
   execute: async () => {
-    const { payload, title, selection, query } = graphWorkspaceStore.getState();
+    const { payload, title, selection, query, hiddenLabels } = graphWorkspaceStore.getState();
     if (!payload) return ok({ open: false });
+
+    // Counted over what is DRAWN, not over the payload. A label switched off
+    // in the legend takes its nodes AND their relationships off the canvas,
+    // so reporting the unfiltered totals would describe a screen nobody is
+    // looking at — and the agent would answer confidently about nodes the
+    // user had deliberately hidden.
+    const hidden = new Set(hiddenLabels);
+    const visibleNodes = payload.nodes.filter((node) => !hidden.has(primaryLabel(node)));
+    const visibleIds = new Set(visibleNodes.map((node) => node.id));
+    const visibleEdges = payload.edges.filter(
+      (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target),
+    );
+
     const labels: Record<string, number> = {};
-    for (const node of payload.nodes) {
+    for (const node of visibleNodes) {
       const label = primaryLabel(node);
       labels[label] = (labels[label] ?? 0) + 1;
     }
     const types: Record<string, number> = {};
-    for (const edge of payload.edges) {
+    for (const edge of visibleEdges) {
       const type = edge.type ?? "RELATED";
       types[type] = (types[type] ?? 0) + 1;
     }
     return ok({
       open: true,
       title,
-      nodeCount: payload.nodes.length,
-      edgeCount: payload.edges.length,
+      nodeCount: visibleNodes.length,
+      edgeCount: visibleEdges.length,
       truncated: payload.truncated ?? false,
       labels,
       relationshipTypes: types,
+      // Named, so the agent can say "Person is hidden" rather than silently
+      // reporting a smaller graph than the query returned.
+      hiddenLabels: [...hiddenLabels],
+      hiddenNodeCount: payload.nodes.length - visibleNodes.length,
       selectedNode: selection ? describe(selection) : null,
       search: query || null,
     });

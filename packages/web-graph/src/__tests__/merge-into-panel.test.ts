@@ -1,22 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
 
-// The web-ui barrel builds a theme store at IMPORT time and jsdom has no
-// `matchMedia`. `vi.hoisted` is what runs before the imports it has to precede;
-// nothing here reads a theme.
-vi.hoisted(() => {
-  globalThis.window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
-  })) as unknown as typeof window.matchMedia;
-});
-
 import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
 import { mergeIntoOpenGraph } from "../assistant-ui/merge-into-panel.ts";

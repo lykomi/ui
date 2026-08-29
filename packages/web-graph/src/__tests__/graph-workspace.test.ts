@@ -17,6 +17,7 @@ const payload: GraphPayload = {
 const handle = (): GraphViewHandle => ({
   zoomToFit: vi.fn(),
   centerOn: vi.fn(),
+  reveal: vi.fn(),
   search: vi.fn(),
   select: vi.fn(() => true),
   unpinAll: vi.fn(),
@@ -94,6 +95,24 @@ describe("findWorkspaceNode", () => {
 
   it("returns null rather than guessing", () => {
     expect(findWorkspaceNode("Nosferatu")).toBeNull();
+  });
+
+  it("finds a node by the caption the CANVAS draws, not an approximation", () => {
+    // A local caption rule (caption / name / title) left every other way a
+    // node gets its caption — a producer's `legend.captionKey`, `displayName`,
+    // `label`, the first short string property — visible on screen and
+    // unselectable by the text on it.
+    graphWorkspaceStore.getState().connect(handle(), "t", {
+      ...payload,
+      legend: { Film: { captionKey: "originalTitle" } },
+      nodes: [
+        { id: "k", labels: ["Film"], properties: { originalTitle: "Der müde Tod", title: "x" } },
+        { id: "d", properties: { displayName: "Destiny" } },
+      ],
+      edges: [],
+    });
+    expect(findWorkspaceNode("Der müde Tod")?.id).toBe("k");
+    expect(findWorkspaceNode("Destiny")?.id).toBe("d");
   });
 
   it("refuses a blank selector instead of picking the first node", () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { Share2 } from "lucide-react";
 import { ToolCallCard, useToolPanelStore } from "@iloveagents/foundry-web-ui";
@@ -6,7 +6,7 @@ import { coerceGraphPayload, type GraphNode, type GraphPayload } from "../model.
 import { GraphView } from "../graph-view.tsx";
 import { GraphProvenance } from "./graph-provenance.tsx";
 import { graphPanelContent } from "./graph-panel-content.ts";
-import { mergeIntoOpenGraph } from "./merge-into-panel.ts";
+import { registerGraphTool } from "./graph-tool-registry.ts";
 
 export interface MakeGraphToolUIOptions {
   /** The agent tool whose result this card renders. */
@@ -74,9 +74,16 @@ export function makeGraphToolUI(options: MakeGraphToolUIOptions) {
     onExpandNode,
   } = options;
 
+  // Registering the BINDING, not just the card. `GraphResultSeeder` reads this
+  // to fold a result into the open graph, because the card itself may never
+  // mount — it lives inside the turn's collapsed activity strip. Binding a
+  // card is therefore all a new graph tool needs; there is no second
+  // registration to forget.
+  registerGraphTool({ toolName, title, extract, panelTitle, autoOpenPanel });
+
   return makeAssistantToolUI<Record<string, unknown>, unknown>({
     toolName,
-    render: ({ args, result, status, toolCallId }) => {
+    render: ({ args, result, status }) => {
       const openPanel = useToolPanelStore((state) => state.openPanel);
       const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -86,42 +93,6 @@ export function makeGraphToolUI(options: MakeGraphToolUIOptions) {
         if (!payload) return;
         openPanel(graphPanelContent(panelTitle?.(payload, args) ?? title, payload) as never);
       }, [payload, openPanel, args]);
-
-      /**
-       * Everything the arrival of a result should DO, in an effect.
-       *
-       * The obvious shape — check a ref during render and `queueMicrotask` the
-       * work — reads as if deferring the write makes it safe, and it does not:
-       * scheduling from render is still a side effect in render, so it can run
-       * before the commit it belongs to, or twice.
-       *
-       * The dependencies are the tool call and whether it has produced a
-       * payload yet, NOT the payload itself: `extract` builds a new object
-       * every render, so keying on it would re-run on every keystroke in the
-       * composer — re-opening the panel each time, which is the behaviour the
-       * old ref-guards existed to prevent. The value is read through a ref so
-       * the effect always sees the latest one without depending on it.
-       */
-      const latestPayload = useRef(payload);
-      latestPayload.current = payload;
-      const hasPayload = payload !== null;
-
-      useEffect(() => {
-        const current = latestPayload.current;
-        if (!current) return;
-        // Fold the result into the graph already open, when it is about the
-        // same part of the graph. This is what makes expanding a node — and
-        // watching the agent write one — read as the workspace growing rather
-        // than as a series of unrelated pictures.
-        mergeIntoOpenGraph(current);
-        if (autoOpenPanel) {
-          openPanel(graphPanelContent(panelTitle?.(current, args) ?? title, current) as never);
-        }
-        // `args` is deliberately absent: the effect must fire once when the
-        // result lands, and re-running it because a re-render produced a new
-        // args object would re-open the panel.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [toolCallId, hasPayload, autoOpenPanel, openPanel]);
 
       let description: string;
       if (status.type === "running") description = "Querying the graph…";

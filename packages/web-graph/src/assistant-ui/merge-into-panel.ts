@@ -24,6 +24,12 @@ import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
  */
 export function mergeIntoOpenGraph(payload: GraphPayload): boolean {
   const current = graphWorkspaceStore.getState().payload;
+  // An empty payload is not a merge. It is usually a write that DELETED
+  // something, and merging cannot express a removal — there is no row for a
+  // node that no longer exists, and nothing here can know which ids went. The
+  // write tool therefore marks its own result `view_stale` and tells the agent
+  // to re-read; silently treating this as "no change" is what would leave the
+  // panel drawing a node the database no longer has.
   if (!current || payload.nodes.length === 0) return false;
 
   const panel = useToolPanelStore.getState();

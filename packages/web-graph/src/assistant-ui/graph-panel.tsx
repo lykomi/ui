@@ -98,6 +98,7 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
         }}
         inspectorActions={(node) => <GraphContextPinButton node={node} />}
         onQueryChange={(query) => graphWorkspaceStore.getState().setQuery(query)}
+        onFilterChange={(labels) => graphWorkspaceStore.getState().setHiddenLabels(labels)}
       />
     </div>
   );

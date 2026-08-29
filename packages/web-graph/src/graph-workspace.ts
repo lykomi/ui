@@ -1,5 +1,5 @@
 import { createStore } from "zustand/vanilla";
-import type { GraphNode, GraphPayload } from "./model.ts";
+import { primaryLabel, resolveCaption, type GraphNode, type GraphPayload } from "./model.ts";
 import type { GraphViewHandle } from "./graph-view.tsx";
 
 /**
@@ -23,11 +23,20 @@ export interface GraphWorkspaceState {
   selection: GraphNode | null;
   /** The active search term, if any. */
   query: string;
+  /**
+   * Labels the user has switched OFF in the legend.
+   *
+   * Published because what the agent sees has to be what the user sees: a
+   * hidden label's nodes and relationships are not drawn, and an account of
+   * "the graph" that counts them describes a screen nobody is looking at.
+   */
+  hiddenLabels: readonly string[];
 
   connect: (handle: GraphViewHandle, title: string, payload: GraphPayload) => void;
   disconnect: (handle: GraphViewHandle) => void;
   setSelection: (node: GraphNode | null) => void;
   setQuery: (query: string) => void;
+  setHiddenLabels: (labels: readonly string[]) => void;
 }
 
 export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) => ({
@@ -36,6 +45,7 @@ export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) =
   payload: null,
   selection: null,
   query: "",
+  hiddenLabels: [],
 
   connect: (handle, title, payload) =>
     set((state) => {
@@ -59,6 +69,7 @@ export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) =
         payload,
         selection: stillThere ? state.selection : null,
         query: samePanel ? state.query : "",
+        hiddenLabels: samePanel ? state.hiddenLabels : [],
       };
     }),
   disconnect: (handle) => {
@@ -66,10 +77,18 @@ export const graphWorkspaceStore = createStore<GraphWorkspaceState>((set, get) =
     // has already claimed — React unmounts the old tree after mounting the
     // new one, so the order is not the intuitive one.
     if (get().handle !== handle) return;
-    set({ handle: null, title: null, payload: null, selection: null, query: "" });
+    set({
+      handle: null,
+      title: null,
+      payload: null,
+      selection: null,
+      query: "",
+      hiddenLabels: [],
+    });
   },
   setSelection: (selection) => set({ selection }),
   setQuery: (query) => set({ query }),
+  setHiddenLabels: (hiddenLabels) => set({ hiddenLabels }),
 }));
 
 /** Is a graph panel currently open? */
@@ -93,8 +112,12 @@ export function findWorkspaceNode(needle: string): GraphNode | null {
   // node and the tool would report a confident, arbitrary selection. A missing
   // argument has to fail, not pick.
   if (lower.length === 0) return null;
+  // The SAME resolver the canvas paints with. A local approximation of it
+  // (caption / name / title) left every other way a node gets its caption —
+  // a producer's `legend.captionKey`, `displayName`, `label`, the first short
+  // string property — visible on screen and unselectable by the text on it.
   const captionOf = (node: GraphNode) =>
-    (node.caption ?? String(node.properties?.name ?? node.properties?.title ?? "")).toLowerCase();
+    resolveCaption(node, payload.legend?.[primaryLabel(node)]?.captionKey).toLowerCase();
 
   return (
     payload.nodes.find((node) => captionOf(node) === lower) ??

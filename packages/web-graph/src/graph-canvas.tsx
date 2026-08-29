@@ -34,7 +34,9 @@ import type { GraphViewState } from "./use-graph-view-state.ts";
 
 /** Imperative controls the host can drive through a ref. */
 export interface GraphCanvasHandle {
-  zoomToFit: (durationMs?: number, padding?: number) => void;
+  /** Frame the whole graph. Padding is not a parameter: the fit has to
+   *  account for the details drawer, which only the canvas knows about. */
+  zoomToFit: (durationMs?: number) => void;
   /** Bring a node to the centre of the VISIBLE area — see `insetRight`. */
   centerOn: (nodeId: string, durationMs?: number) => void;
   /**
@@ -237,12 +239,33 @@ export function GraphCanvas({
   reducedMotion = false,
 }: GraphCanvasProps) {
   const engineRef = useRef<ForceGraphMethods<EngineNode, EngineLink> | undefined>(undefined);
+  const insetRightRef = useRef(insetRight);
+  insetRightRef.current = insetRight;
+
+  /**
+   * Frame the graph into what the user can SEE, not into the whole canvas.
+   *
+   * `zoomToFit` knows nothing about the details drawer, so a fit ran while one
+   * is open settles half the graph underneath it — and because a merge changes
+   * the model, the fit loop it restarts would undo the `reveal` that had just
+   * brought the selected node clear. Its padding is uniform, so the extra room
+   * it leaves on the other three sides is corrected by nudging the camera.
+   */
+  const fit = useCallback((durationMs = 0) => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    const inset = insetRightRef.current;
+    engine.zoomToFit(durationMs, FIT_PADDING + inset / 2);
+    if (inset <= 0) return;
+    const zoom = engine.zoom() || 1;
+    const centre = engine.centerAt();
+    engine.centerAt(centre.x + inset / 2 / zoom, centre.y, durationMs);
+  }, []);
 
   useImperativeHandle(
     handleRef,
     () => ({
-      zoomToFit: (durationMs = 400, padding = FIT_PADDING) =>
-        engineRef.current?.zoomToFit(reducedMotion ? 0 : durationMs, padding),
+      zoomToFit: (durationMs = 400) => fit(reducedMotion ? 0 : durationMs),
       centerOn: (nodeId, durationMs = 400) => {
         const node = model.nodes.find((candidate) => candidate.id === nodeId);
         if (!node || typeof node.x !== "number" || typeof node.y !== "number") return;
@@ -445,22 +468,35 @@ export function GraphCanvas({
    * Re-runs on resize, because the panel is drag-resizable and has a
    * fullscreen toggle.
    */
+  // `styleMap` is rebuilt whenever the THEME changes, because it carries the
+  // resolved canvas colours — and the fit loop below must not restart for a
+  // colour. A user who switched to dark mode after arranging the graph lost
+  // their view and could not get it back for the ~6.6s the loop runs. Read
+  // through a ref so only the layout inputs are dependencies.
+  const radiusRef = useRef((node: EngineNode) => styleMap.styleForNode(node).radius);
+  radiusRef.current = (node: EngineNode) => styleMap.styleForNode(node).radius;
+
   useEffect(() => {
     if (width === 0 || height === 0) return;
-    tuneForces(engineRef.current, model.nodes.length, (node) => styleMap.styleForNode(node).radius);
+    tuneForces(engineRef.current, model.nodes.length, (node) => radiusRef.current(node));
 
     const deadline = Date.now() + cooldownFor(model.nodes.length) + FIT_TAIL_MS;
     // Fit immediately so nothing is off-screen even for one frame.
-    engineRef.current?.zoomToFit(0, FIT_PADDING);
+    fit();
     const timer = setInterval(() => {
       if (Date.now() > deadline) {
         clearInterval(timer);
         return;
       }
-      engineRef.current?.zoomToFit(0, FIT_PADDING);
+      fit();
     }, FIT_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [model, width, height, styleMap]);
+    // `fit` reads the drawer's width through a ref rather than taking it as a
+    // dependency: opening the drawer must not restart the fit loop, or the
+    // click that means "tell me about this node" would re-frame the graph the
+    // user had arranged. `reveal` is what handles the drawer opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [model, width, height, fit]);
 
   // Selection, hover and search decide a caption's priority, so a change to
   // any of them re-places. Held in a ref as well so the framing interval and

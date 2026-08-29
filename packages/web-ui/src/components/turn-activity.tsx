@@ -77,13 +77,6 @@ export function TurnActivity({
       // call count, whether anything failed, whether there is thinking to
       // read. A screen-reader user got strictly less than a sighted one.
       ariaLabel={`${summary} — ${isOpen ? "hide" : "show"} details`}
-      // The cards stay mounted while the row is closed. A tool UI is not
-      // only a picture of a result — `ShowDocumentToolUI` opens the side
-      // panel when its result lands, and a graph card folds the result into
-      // the graph already on screen. Unmounted, none of that runs, so this
-      // row silently decided whether a result was acted on. Closed by
-      // default, that meant never.
-      forceMount
       data-turn-activity
     >
       <div className="flex flex-col gap-2">{children}</div>

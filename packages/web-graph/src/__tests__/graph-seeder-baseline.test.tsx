@@ -1,0 +1,138 @@
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
+
+/**
+ * The watcher's whole job is knowing which results are NEW. Everything else it
+ * does is delegated, so this is what is worth pinning.
+ */
+const thread = vi.hoisted(() => ({
+  messages: [] as unknown[],
+  threadId: "t1" as string | undefined,
+}));
+// Only `useAuiState` is replaced: the web-ui barrel this file reaches through
+// registers its own tool UIs at import time and needs the real
+// `makeAssistantToolUI`.
+vi.mock("@assistant-ui/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@assistant-ui/react")>()),
+  useAuiState: (selector: (s: unknown) => unknown) => selector({ thread }),
+}));
+
+const merged = vi.hoisted(() => ({ calls: [] as GraphPayload[] }));
+vi.mock("../assistant-ui/merge-into-panel.ts", () => ({
+  mergeIntoOpenGraph: (payload: GraphPayload) => {
+    merged.calls.push(payload);
+    return true;
+  },
+}));
+
+const { GraphResultSeeder } = await import("../assistant-ui/graph-result-seeder.tsx");
+const { _resetGraphToolBindings, registerGraphTool } =
+  await import("../assistant-ui/graph-tool-registry.ts");
+const { coerceGraphPayload } = await import("../model.ts");
+
+const graph = (id: string): GraphPayload => ({
+  kind: GRAPH_PAYLOAD_KIND,
+  version: GRAPH_PAYLOAD_VERSION,
+  nodes: [{ id }],
+  edges: [],
+});
+
+const call = (toolCallId: string, id: string) => ({
+  parts: [
+    { type: "tool-call", toolName: "graph_expand_node", toolCallId, args: {}, result: graph(id) },
+  ],
+});
+
+let container: HTMLDivElement;
+let root: Root;
+let priorActEnvironment: unknown;
+
+const render = () => act(() => root.render(<GraphResultSeeder />));
+
+beforeEach(() => {
+  priorActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  merged.calls = [];
+  thread.messages = [];
+  thread.threadId = "t1";
+  _resetGraphToolBindings();
+  registerGraphTool({
+    toolName: "graph_expand_node",
+    title: "Expand node",
+    extract: (result) => coerceGraphPayload(result),
+    autoOpenPanel: false,
+  });
+});
+
+afterEach(() => {
+  act(() => root.unmount());
+  container.remove();
+  if (priorActEnvironment === undefined) {
+    delete (globalThis as { IS_REACT_ACT_ENVIRONMENT?: unknown }).IS_REACT_ACT_ENVIRONMENT;
+  } else {
+    globalThis.IS_REACT_ACT_ENVIRONMENT = priorActEnvironment;
+  }
+});
+
+describe("GraphResultSeeder", () => {
+  it("acts on a result that arrives while the thread is open", () => {
+    thread.messages = [{ parts: [] }];
+    render();
+    expect(merged.calls).toHaveLength(0);
+
+    thread.messages = [{ parts: [] }, call("c1", "a")];
+    render();
+    expect(merged.calls.map((p) => p.nodes[0].id)).toEqual(["a"]);
+  });
+
+  it("does not replay the history of a reopened conversation", () => {
+    // Opening a saved chat rehydrates every turn it ever had. Without a
+    // baseline the last graph in it lands on whatever the user was doing.
+    thread.messages = [call("old-1", "x"), call("old-2", "y")];
+    render();
+    expect(merged.calls).toHaveLength(0);
+  });
+
+  it("takes its baseline on the first NON-EMPTY view, not the first render", () => {
+    // A resumed thread mounts with no messages and fills them in later. A
+    // baseline taken on the first effect records an empty set, and the whole
+    // history then looks new.
+    render();
+    thread.messages = [call("old-1", "x")];
+    render();
+    expect(merged.calls).toHaveLength(0);
+
+    thread.messages = [call("old-1", "x"), call("new-1", "z")];
+    render();
+    expect(merged.calls.map((p) => p.nodes[0].id)).toEqual(["z"]);
+  });
+
+  it("re-baselines when the thread changes, so one thread's history is not another's news", () => {
+    thread.messages = [call("a-1", "x")];
+    render();
+
+    thread.threadId = "t2";
+    thread.messages = [call("b-1", "y"), call("b-2", "z")];
+    render();
+    expect(merged.calls).toHaveLength(0);
+
+    thread.messages = [call("b-1", "y"), call("b-2", "z"), call("b-3", "w")];
+    render();
+    expect(merged.calls.map((p) => p.nodes[0].id)).toEqual(["w"]);
+  });
+
+  it("acts on each result once, however often the thread re-renders", () => {
+    thread.messages = [{ parts: [] }];
+    render();
+    thread.messages = [call("c1", "a")];
+    render();
+    render();
+    render();
+    expect(merged.calls).toHaveLength(1);
+  });
+});

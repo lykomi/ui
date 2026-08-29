@@ -62,10 +62,28 @@ been rewritten to `**PROJECT_NAME**` by Prettier — every app scaffolded from
 that preset shipped the corrupted title. `.prettierignore` now covers every
 preset README and a test checks all of them, not just the base template.
 
-A turn's activity row now keeps the cards it folds away MOUNTED, hidden rather
-than absent. A tool UI is not only a picture of a result — `ShowDocumentToolUI`
-opens the side panel when its result lands, and a graph card folds the result
-into the graph already on screen — and Radix unmounts a closed panel, so the
-row was silently deciding whether a result got acted on. Closed by default,
-that meant never: the agent would narrate an expansion the graph panel never
-received.
+Folding a result into the open graph is a headless watcher, `GraphResultSeeder`,
+rather than a side effect of rendering the tool card. It has to be: the card
+lives inside the turn's collapsed activity strip, which does not mount until
+the reader expands it, so the merge never ran — the agent would name four new
+relationships and the panel would sit unchanged, with nothing reporting a
+failure. Binding a card with `makeGraphToolUI` is what registers a tool as
+graph-shaped, so there is one registration rather than two, and the watcher
+only acts on results that arrive after the thread has settled, so reopening a
+saved conversation does not replay its history over what the user is doing.
+
+`graph_get_view` reports the graph as DRAWN rather than as queried — a label
+switched off in the legend takes its nodes and relationships out of the counts
+and is named in the result — and `graph_select_node` resolves captions with the
+same rule the canvas paints with, so a node is never visible on screen and
+unselectable by the text on it. The graph is also reachable as a table from the
+toolbar, with the canvas region labelled to say so, because a canvas is one
+opaque element to a screen reader.
+
+In the Neo4j preset: the scaffold keeps the base template's optional voice
+module (it was dropped when the preset replaced `main.tsx`, so a generated app
+installed `foundry-web-voice` and could never enable it); the embedding
+endpoint is derived from the resource rather than by appending `/models` to a
+project endpoint, which produced a path that does not exist; and a write that
+deletes says so in its result, because a deletion cannot be merged into the
+graph on screen.

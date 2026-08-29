@@ -32,7 +32,6 @@ export function MessageDisclosure({
   onOpenChange,
   tone = "muted",
   ariaLabel,
-  forceMount,
   children,
   ...rest
 }: {
@@ -44,17 +43,6 @@ export function MessageDisclosure({
   /** ``destructive`` is for a run where everything failed; nothing else. */
   tone?: "muted" | "destructive";
   ariaLabel?: string;
-  /**
-   * Keep the body mounted while the row is closed, hidden rather than absent.
-   *
-   * For a row whose contents are only text this is waste. For one holding tool
-   * cards it is correctness: a tool UI may DO something when its result lands
-   * — open a panel, fold the result into the workspace already on screen — and
-   * an unmounted card never runs. That made the fold decide whether a result
-   * was processed, which is not a disclosure's job. Seen live: a graph
-   * expansion the agent narrated correctly and the panel never received.
-   */
-  forceMount?: boolean;
   children: ReactNode;
 } & Record<`data-${string}`, unknown>) {
   return (
@@ -122,16 +110,7 @@ export function MessageDisclosure({
           />
         </button>
       </CollapsibleTrigger>
-      {/* `forceMount` keeps Radix from unmounting the body, and then leaves it
-          VISIBLE — it assumes the host hides a `data-state="closed"` panel in
-          CSS, which is how its animated examples work. We have no animation
-          here, so the `hidden` attribute is the honest way to say it: gone
-          from the page and gone from the accessibility tree, without a
-          stylesheet having to agree. Radix spreads our props over its own
-          `hidden`, so this wins — but only when we pass it, hence the
-          conditional rather than a `hidden={undefined}` that would blank
-          Radix's value on the ordinary path. */}
-      <CollapsibleContent {...(forceMount ? { forceMount: true, hidden: !open } : {})}>
+      <CollapsibleContent>
         {/* Indented under the label, so the body hangs beneath the words
             rather than beneath the row's left edge. */}
         <div className="mt-1.5 ml-3 border-l border-border pl-3">{children}</div>

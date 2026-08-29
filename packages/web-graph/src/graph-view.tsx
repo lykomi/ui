@@ -35,7 +35,7 @@ import type { GraphCanvasHandle } from "./graph-canvas.tsx";
 const GraphCanvas = lazy(() => import("./graph-canvas.tsx"));
 
 export interface GraphViewHandle {
-  zoomToFit: (durationMs?: number, padding?: number) => void;
+  zoomToFit: (durationMs?: number) => void;
   centerOn: (nodeId: string, durationMs?: number) => void;
   /** Smallest pan that brings a node into view; a no-op if it already is. */
   reveal: (nodeId: string, durationMs?: number) => void;
@@ -67,6 +67,14 @@ export interface GraphViewProps {
   onSelectionChange?: (node: GraphNode | null) => void;
   /** Fires when the search term changes, whoever changed it. */
   onQueryChange?: (query: string) => void;
+  /**
+   * Fires when the legend filter changes: the labels currently switched OFF.
+   *
+   * Hosts publish it so anything REPORTING on the graph agrees with what is
+   * drawn — a hidden label's nodes and relationships are not on screen, and
+   * counting them describes a screen nobody is looking at.
+   */
+  onFilterChange?: (hiddenLabels: readonly string[]) => void;
   /**
    * Extra footer actions for the details drawer, rendered for the selected
    * node. The host owns them — the view has no opinion about what "pin to
@@ -121,6 +129,7 @@ export function GraphView({
   onExpandNode,
   onSelectionChange,
   onQueryChange,
+  onFilterChange,
   inspectorActions,
   forceTable = false,
   handleRef,
@@ -169,12 +178,38 @@ export function GraphView({
    * component's own contract is the right place to hold the line: a change
    * callback fires when the value changes.
    */
-  const notifiedSelection = useRef<GraphNode | null>(selection.node);
+  /**
+   * Identity is not enough to say the selection is unchanged.
+   *
+   * `reconcileGraphModel` refreshes a node's `labels`/`caption`/`properties`
+   * IN PLACE, precisely so the simulation keeps its position — so after a
+   * merge that rewrote the selected node, the object is the same object with
+   * different data. The drawer re-rendered and showed the new values; the
+   * listener never fired, and `syncGraphSelectionContext` snapshots
+   * `properties` into the chat context, so the agent went on answering about
+   * "this node" from the values before the write.
+   *
+   * A value signature keeps the loop-prevention this guard exists for — it
+   * changes only when the data actually changes — while noticing that case.
+   */
+  const selectionSignature = selection.node
+    ? JSON.stringify([
+        selection.node.id,
+        selection.node.labels ?? [],
+        selection.node.caption ?? null,
+        selection.node.properties ?? {},
+      ])
+    : null;
+  const notifiedSelection = useRef(selectionSignature);
   useEffect(() => {
-    if (notifiedSelection.current === selection.node) return;
-    notifiedSelection.current = selection.node;
+    if (notifiedSelection.current === selectionSignature) return;
+    notifiedSelection.current = selectionSignature;
     onSelectionChange?.(selection.node);
-  }, [selection.node, onSelectionChange]);
+    // `selection.node` is read, not depended on: the signature is what decides
+    // whether anything changed, and listing the object would re-fire on the
+    // in-place refresh this is built to see through.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionSignature, onSelectionChange]);
 
   /**
    * How much of the canvas the details drawer covers.
@@ -192,10 +227,24 @@ export function GraphView({
     onQueryChange?.(state.query);
   }, [state.query, onQueryChange]);
 
+  // Same shape, same reason: hosts pass an inline arrow, so the change has to
+  // be detected from the VALUE. Sorted so a Set rebuilt in a different order
+  // is not reported as a change.
+  const hiddenLabels = useMemo(
+    () => [...state.hiddenLabels].sort().join("\u0000"),
+    [state.hiddenLabels],
+  );
+  const notifiedHidden = useRef(hiddenLabels);
+  useEffect(() => {
+    if (notifiedHidden.current === hiddenLabels) return;
+    notifiedHidden.current = hiddenLabels;
+    onFilterChange?.(hiddenLabels.length === 0 ? [] : hiddenLabels.split("\u0000"));
+  }, [hiddenLabels, onFilterChange]);
+
   useImperativeHandle(
     handleRef,
     () => ({
-      zoomToFit: (durationMs, padding) => canvasRef.current?.zoomToFit(durationMs, padding),
+      zoomToFit: (durationMs) => canvasRef.current?.zoomToFit(durationMs),
       centerOn: (nodeId, durationMs) =>
         afterDrawer(() => canvasRef.current?.centerOn(nodeId, durationMs)),
       reveal: (nodeId, durationMs) =>

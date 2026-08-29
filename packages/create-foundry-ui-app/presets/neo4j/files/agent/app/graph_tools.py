@@ -164,6 +164,12 @@ async def graph_write_cypher(
     already there — a typo does not fail, it silently creates a second kind of
     thing. After writing, pass the result to ``graph_show`` with ``merge: true``
     so the new part appears in the open graph beside what it connects to.
+
+    A DELETION is the exception, and the result says so. Merging can add and
+    update; it cannot remove, and a deleted node has no row to return — so the
+    graph on screen would go on showing what is no longer in the database.
+    After a delete, re-run the read that produced the view and call
+    ``graph_show`` WITHOUT ``merge``.
     """
     if not graph_db.writes_enabled():
         return _failure(
@@ -177,6 +183,17 @@ async def graph_write_cypher(
 
     meta = _meta(cypher, started)
     meta["counters"] = counters
+    # A deletion cannot be merged into the open graph — there is no row for a
+    # node that no longer exists — so the panel keeps drawing it. Nothing on
+    # the client can know which ids went, so the agent is told plainly rather
+    # than left to infer it from the counters.
+    if counters.get("nodes_deleted") or counters.get("relationships_deleted"):
+        meta["view_stale"] = True
+        meta["note"] = (
+            "This write DELETED something, and a deletion cannot be merged into the graph on "
+            "screen — it still shows what was removed. Re-run the read that produced the view "
+            "and call graph_show WITHOUT merge."
+        )
     payload = records_to_graph_payload(
         records,
         max_nodes=graph_db.max_nodes(),
@@ -342,17 +359,29 @@ _CREDENTIAL: Any = None
 def _models_endpoint() -> str | None:
     """The inference endpoint to embed against.
 
-    `FOUNDRY_MODELS_ENDPOINT` wins. Failing that, derive it from the Azure
-    OpenAI / Foundry resource endpoint the rest of the app already has —
-    `https://<resource>.cognitiveservices.azure.com` serves the inference API
-    under `/models`, so requiring a second, near-identical variable would be
-    configuration for its own sake.
+    `FOUNDRY_MODELS_ENDPOINT` wins. Failing that, derive it from the resource
+    endpoint the rest of the app already has: a resource serves the inference
+    API under ``/models``, so requiring a second, near-identical variable
+    would be configuration for its own sake.
+
+    A **project** endpoint is not a resource endpoint, though. It has the shape
+    ``https://<resource>.services.ai.azure.com/api/projects/<project>``, and
+    appending ``/models`` to that produces a path that does not exist —
+    silently, since ``build_graph_tools()`` registers vector search on the
+    model and index variables alone, so the tool appears and every embedding
+    request 404s. The project path is stripped back to the resource first.
     """
     explicit = os.getenv("FOUNDRY_MODELS_ENDPOINT")
     if explicit:
         return explicit.rstrip("/")
     base = os.getenv("AZURE_OPENAI_ENDPOINT") or os.getenv("FOUNDRY_PROJECT_ENDPOINT")
-    return f"{base.rstrip('/')}/models" if base else None
+    if not base:
+        return None
+    root = base.rstrip("/")
+    marker = "/api/projects/"
+    if marker in root:
+        root = root[: root.index(marker)]
+    return f"{root}/models"
 
 
 def _embedding_credential() -> tuple[Any, bool]:

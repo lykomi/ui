@@ -84,7 +84,11 @@ Tools live in `clientToolRegistry` (vanilla zustand store in `@iloveagents/found
 
 Custom tool UIs are top-level `makeAssistantToolUI(...)` constants rendered as children inside the `AssistantRuntimeProvider` tree (see `client-tool-executor.tsx`).
 
-**A tool UI may DO something when its result lands** — `ShowDocumentToolUI` opens the side panel, a graph card folds the result into the graph already on screen — so it has to be mounted for its result to be acted on. `TurnActivity` is collapsed by default and Radix unmounts a closed panel, which made that quiet row decide whether a result counted; it now passes `forceMount` to `MessageDisclosure` and hides the body with the `hidden` attribute instead. Radix's own `forceMount` leaves the content VISIBLE (it assumes the host hides `data-state="closed"` in CSS), and it spreads caller props over its `hidden`, which is why that attribute is set explicitly.
+**A tool UI must not be where a result gets ACTED on.** Cards render inside `TurnActivity`, which is collapsed by default, and Radix unmounts a closed `CollapsibleContent` — so anything a card DOES when its result lands (open a panel, fold the result into what is on screen, start a poll) never happens unless the reader expands that turn. Downstream this has cost two real bugs: a deep-research task nobody polled (ltwlf/lastspace#650) and a graph expansion the panel never received.
+
+The answer is a **headless watcher over the thread's own parts**, mounted once alongside the tool UIs and independent of what is expanded — `CitationSeeder`/`TaskSeeder` in `@ltwlf/spaces-web-ui`, `GraphResultSeeder` in `@iloveagents/foundry-web-graph`. Give it a baseline taken on the first non-empty view of a thread, or reopening a saved conversation replays its entire history. Force-mounting the fold is the tempting one-line alternative and it is worse: every card in every transcript then costs something, and history replays anyway.
+
+`ShowDocumentToolUI` in this package still auto-opens from render and so is subject to exactly this — it works when the turn is expanded and not otherwise.
 
 # Attachments
 
