@@ -12,7 +12,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 /** Every runtime package a generated app can depend on. */
@@ -33,7 +33,7 @@ const firstJson = (value) => (Array.isArray(value) ? value[0] : value);
  * @returns {Map<string, string>} package name -> `file:` specifier
  */
 export function packWorkspace({ root, packDir, packages = WORKSPACE_PACKAGES, pnpm }) {
-  execFileSync("mkdir", ["-p", packDir], { cwd: root, stdio: "inherit" });
+  mkdirSync(packDir, { recursive: true });
   const tarballs = new Map();
   for (const pkgDir of packages) {
     const output = execFileSync(
