@@ -202,28 +202,59 @@ interface AppState {
 /**
  * Structural comparison that survives what a `payload` actually carries.
  *
- * `JSON.stringify` throws on a `bigint`, and a bigint is not exotic here: a
- * payload is often a database row, and the Neo4j driver returns them natively.
- * Falling back to "not equal" on the throw looks safe and is not — the guard
- * below would then treat every identical value as new, mint a fresh id and
- * array on every call, and re-open the update loop it exists to close, for
- * precisely the graphs most likely to hit it.
+ * Compared by WALKING the two values, not by serialising them. A payload is
+ * often a database row, and a `bigint` is ordinary there — the Neo4j driver
+ * returns them natively — which rules out `JSON.stringify` twice over. It
+ * throws on a bigint outright, and the obvious repair (a replacer that tags
+ * one) cannot be made correct: `10n` as `"10"` collides with the string
+ * `"10"`, as `"10n"` with the string `"10n"`, as `{__bigint:"10"}` with a
+ * payload field that happens to be that object. `payload` is arbitrary, so
+ * every encoding can be imitated by data shaped like the encoding, and a
+ * collision here makes a real change read as "unchanged" — leaving stale
+ * context attached to every later message.
+ *
+ * Comparing types directly has nothing to imitate: `typeof 10n` is not
+ * `typeof "10"`. It is also key-order independent (which the serialising
+ * version never actually was, despite its name) and cheaper, since it stops at
+ * the first difference instead of building two strings.
+ *
+ * Cycles are tracked as PAIRS. A single visited-set marks an object on first
+ * sight, so the second appearance of a shared but acyclic sub-object reads as
+ * a cycle — and two values differing only there would compare equal.
  */
-function stableStringify(value: unknown): string {
-  const seen = new WeakSet<object>();
-  return JSON.stringify(value, (_key, item: unknown) => {
-    // A STRUCTURED tag, not a string one. `10n` -> "10" collided with the
-    // string "10"; `10n` -> "10n" merely moved the collision to the string
-    // "10n". No string encoding can be unambiguous when the value it competes
-    // with is itself an arbitrary string, so the bigint becomes an object —
-    // and a string is never deep-equal to an object.
-    if (typeof item === "bigint") return { __bigint: item.toString() };
-    if (typeof item === "object" && item !== null) {
-      if (seen.has(item)) return "[circular]";
-      seen.add(item);
-    }
-    return item;
-  });
+function deepEqual(a: unknown, b: unknown, seen?: Map<object, Set<object>>): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== "object" || a === null || b === null) return false;
+
+  const left = a as object;
+  const right = b as object;
+  const pairs = seen ?? new Map<object, Set<object>>();
+  const already = pairs.get(left);
+  // Assumed equal while in flight: two structures that recurse identically are
+  // equal, and re-entering would not terminate.
+  if (already?.has(right)) return true;
+  if (already) already.add(right);
+  else pairs.set(left, new Set([right]));
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    if (left.length !== right.length) return false;
+    return left.every((item, index) => deepEqual(item, right[index], pairs));
+  }
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = new Set(Object.keys(right));
+  if (leftKeys.length !== rightKeys.size) return false;
+  return leftKeys.every(
+    (key) =>
+      rightKeys.has(key) &&
+      deepEqual(
+        (left as Record<string, unknown>)[key],
+        (right as Record<string, unknown>)[key],
+        pairs,
+      ),
+  );
 }
 
 /**
@@ -238,7 +269,7 @@ function sameContextValue(
   next: Omit<ContextItem, "id" | "createdAt">,
 ): boolean {
   const { id: _id, createdAt: _createdAt, ...rest } = current;
-  return stableStringify(rest) === stableStringify(next);
+  return deepEqual(rest, next);
 }
 
 export const useAppStore = create<AppState>((set, get) => ({

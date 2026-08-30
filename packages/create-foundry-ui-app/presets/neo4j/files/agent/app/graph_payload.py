@@ -8,6 +8,7 @@ Keep the field names here in step with ``GraphPayload`` in that package.
 from __future__ import annotations
 
 import datetime as _dt
+import math
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -49,8 +50,24 @@ def to_json_value(value: Any) -> Any:
     blow up serialization at the FastAPI boundary — a failure that surfaces as
     an opaque 500 long after the query succeeded.
     """
-    if value is None or isinstance(value, (bool, float)):
+    if value is None or isinstance(value, bool):
         return value
+    if isinstance(value, float):
+        # `NaN` and `+/-Infinity` are real float values that Cypher can both
+        # compute (`0.0/0.0`, `toFloat('Infinity')`) and return. JSON has no
+        # spelling for them: `json.dumps` emits the bare tokens `NaN` and
+        # `Infinity`, which `JSON.parse` REJECTS, and strict mode raises
+        # instead — so either way a query that succeeded dies at the transport
+        # boundary as an opaque failure, which is the exact thing this
+        # function exists to prevent.
+        if math.isfinite(value):
+            return value
+        # Spelled the way Cypher and JavaScript spell them, not the way Python
+        # does (`nan`, `inf`), so the property table reads back what the
+        # database would show.
+        if math.isnan(value):
+            return "NaN"
+        return "Infinity" if value > 0 else "-Infinity"
     if isinstance(value, int):
         if -JS_MAX_SAFE_INTEGER <= value <= JS_MAX_SAFE_INTEGER:
             return value

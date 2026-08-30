@@ -49,10 +49,43 @@ The split is the point. A dashboard that only draws a graph must not load the ch
 - **Freezing is engine state, not a React `Set`.** force-graph reads `fx`/`fy` off the node objects; `pinnedIds` is only what the UI draws. An effect reconciles the two in both directions — otherwise Freeze marked a node that carried on drifting, and Unpin All cleared the markers while leaving every dragged node nailed down.
 - **The canvas is opaque to assistive technology.** `GraphTable` is the readable form, and it is reachable from the toolbar rather than mounted alongside — a capped graph is still 1,500 rows nobody asked for. The canvas region carries `role="img"` and a label that says so.
 - **`graphWorkspaceStore.disconnect` checks handle identity.** React mounts a replacement panel before unmounting the old one, so a stale cleanup would otherwise blank the live workspace.
+- **A legend filter is a view toggle, not a deletion.** Hiding a selected
+  node's label does not clear the selection — the drawer stays open and its
+  properties are what the user is reading, and clearing would throw away a
+  choice one click restores. But `select` refuses a hidden node (reporting
+  success would open the drawer on something invisible) and `graph_get_view`
+  says `selectedNodeHidden`, so the result never claims a node is both
+  selected and absent from its own `nodes` list.
+- **The readable table has to reach everything the canvas does.** Relationship
+  rows carry a control on the type, not just text: the drawer has always
+  handled edges, and without it a keyboard or screen-reader user could read
+  that a relationship exists and never see one of its properties while a mouse
+  user clicks the same line and gets all of them.
 - **What the agent reports must be what the user sees.** `graph_get_view` counts over the DRAWN graph, not the payload: a label switched off in the legend takes its nodes and their relationships off the canvas, and the hidden labels are named in the result so the agent can say "Person is hidden" rather than quietly reporting a smaller graph than the query returned. `graph_select_node` resolves captions with `resolveCaption` and the payload's own `legend.captionKey` — the same rule the canvas paints with — or a node would be visible on screen and unselectable by the text on it.
 - **A deletion cannot be merged.** Merging adds and updates; there is no row for a node that no longer exists, and nothing on the client can know which ids went. `graph_write_cypher` therefore marks a deleting write `view_stale` and tells the agent to re-read and `graph_show` WITHOUT merge. Treating an empty write payload as "no change" is what would leave the panel drawing a node the database no longer has.
+- **Displaying a value and comparing two are different jobs.** `safeStringify`
+  is the DISPLAY and transport form — the panel's Copy button, the card's raw
+  result, the tool results the agent reads — and it renders a `bigint` as its
+  decimal string, which is lossy and right: a reader wants `10`. `deepEqual` is
+  the COMPARISON form, and it does not serialise at all. Three review rounds
+  found three collisions trying to serve both from one string: `10n` as `"10"`
+  collides with the string `"10"`, as `"10n"` with `"10n"`, as
+  `{__bigint:"10"}` with a property that IS that object. `properties` is
+  `unknown`, so every encoding can be imitated by data shaped like the
+  encoding; comparing types has nothing to imitate. Do not merge them back
+  together, and do not reach for a fourth tag. (`deepEqual` also tracks cycles
+  as PAIRS — a single visited-set reports the second sighting of a shared but
+  acyclic sub-object as a cycle, which made values that differ there compare
+  equal.)
+- **`stats` means totals BEFORE truncation, so a merge can rarely state it.**
+  With nothing capped, the union's retained counts are those totals. Once
+  either producer truncated, the union's real total is not derivable here at
+  all — each side knows its own pre-cap count, and how far the two full sets
+  overlap is exactly what the capped rows would have said. `mergeGraphPayloads`
+  omits the field there rather than passing retained counts off as totals;
+  `truncated` carries the signal on its own.
 - **A change callback fires when the value changes.** Hosts pass `onSelectionChange` as an inline arrow, so an effect listing it as a dependency runs every render. Harmless until a listener writes a store the host reads — then the notification causes the render that causes the notification. Selecting a node deadlocked the panel with "Maximum update depth exceeded" exactly this way.
-- **…and identity is not the value.** `reconcileGraphModel` refreshes a node's `labels`/`caption`/`properties` IN PLACE so the simulation keeps its position, so after a merge the selected node is the same object with different data. An identity check therefore said "unchanged", the drawer showed the new values, and the chat context — which snapshots `properties` — kept answering from the old ones. The guard compares a value signature.
+- **…and identity is not the value.** `reconcileGraphModel` refreshes a node's `labels`/`caption`/`properties` IN PLACE so the simulation keeps its position, so after a merge the selected node is the same object with different data. An identity check therefore said "unchanged", the drawer showed the new values, and the chat context — which snapshots `properties` — kept answering from the old ones. The guard compares the VALUE, with `deepEqual`.
 - **The drawer slides with a CSS keyframe, not a mount effect.** The obvious version (mount at `translate-x-full`, flip in an effect) needs a state write per selection change, and a selection change is what re-renders the graph around it.
 
 # Layout

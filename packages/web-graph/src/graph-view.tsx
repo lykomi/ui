@@ -12,8 +12,8 @@ import {
 } from "react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
+  deepEqual,
   primaryLabel,
-  safeStringify,
   type GraphEdge,
   type GraphNode,
   type GraphPayload,
@@ -84,6 +84,8 @@ export interface GraphViewState_Reported {
   selectedEdge: GraphEdge | null;
   query: string;
   hiddenLabels: string[];
+  /** Whether the selected node is among the DRAWN nodes. False when none. */
+  selectionDrawn: boolean;
   /** Nodes actually drawn: capped to the connected core, legend filter applied. */
   nodes: GraphNode[];
   /** Relationships actually drawn, re-filtered against the surviving nodes. */
@@ -278,27 +280,31 @@ export function GraphView({
    * `properties` into the chat context, so the agent went on answering about
    * "this node" from the values before the write.
    *
-   * A value signature keeps the loop-prevention this guard exists for — it
+   * Comparing the VALUE keeps the loop-prevention this guard exists for — it
    * changes only when the data actually changes — while noticing that case.
+   * Held as a value rather than a serialized signature so nothing stringifies
+   * a node\'s whole property bag on every render, and so a `bigint` property
+   * cannot collide with the string of its own digits.
    */
-  const selectionSignature = selection.node
-    ? safeStringify([
+  const selectionValue = selection.node
+    ? [
         selection.node.id,
         selection.node.labels ?? [],
         selection.node.caption ?? null,
         selection.node.properties ?? {},
-      ])
+      ]
     : null;
-  const notifiedSelection = useRef(selectionSignature);
+  const notifiedSelection = useRef(selectionValue);
   useEffect(() => {
-    if (notifiedSelection.current === selectionSignature) return;
-    notifiedSelection.current = selectionSignature;
+    if (deepEqual(notifiedSelection.current, selectionValue)) return;
+    notifiedSelection.current = selectionValue;
     onSelectionChange?.(selection.node);
-    // `selection.node` is read, not depended on: the signature is what decides
-    // whether anything changed, and listing the object would re-fire on the
-    // in-place refresh this is built to see through.
+    // Deliberately runs on EVERY render, gated by the comparison above rather
+    // than by a dependency list. The case this exists to catch is
+    // `reconcileGraphModel` refreshing the selected node IN PLACE — the object
+    // is identical, so no dependency can see it; only re-reading the value can.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectionSignature, onSelectionChange]);
+  });
 
   /**
    * How much of the canvas the details drawer covers.
@@ -307,6 +313,23 @@ export function GraphView({
    * whenever the drawer is closed, so an inline card is unaffected.
    */
   const showsInspector = variant === "full" && Boolean(selection.node || selection.edge);
+
+  /**
+   * Matches AMONG THE DRAWN NODES.
+   *
+   * `matchedIds` is computed from the payload, which is what the canvas needs
+   * — it dims by id and only ever paints visible nodes anyway. The toolbar is
+   * different: it states a number to the user. Counting the payload let it
+   * report "1 match" with every node on screen dimmed and nothing found,
+   * whenever the only hit was one the render cap dropped or the legend hid.
+   */
+  const visibleMatchCount = useMemo(() => {
+    if (state.matchedIds.size === 0) return 0;
+    return visibleModel.nodes.reduce(
+      (count, node) => (state.matchedIds.has(node.id) ? count + 1 : count),
+      0,
+    );
+  }, [state.matchedIds, visibleModel.nodes]);
   const inspectorInset = showsInspector ? Math.min(GRAPH_INSPECTOR_WIDTH, size.width * 0.85) : 0;
 
   const notifiedQuery = useRef(state.query);
@@ -354,6 +377,17 @@ export function GraphView({
       unpinAll: () => state.unpinAll(),
       getViewState: () => ({
         selection: state.selection.node,
+        // A legend filter is a view toggle, not a deletion, so hiding a
+        // selected node\'s label does NOT clear the selection — the drawer
+        // stays open and its properties are still on screen, which is what
+        // the user is reading. But `nodes` below excludes it, so reporting
+        // the selection bare made this result contradict itself. Saying
+        // whether it is drawn is what lets the agent be precise: "selected,
+        // though its label is hidden" rather than a node that is somehow both
+        // selected and absent.
+        selectionDrawn: state.selection.node
+          ? visibleModel.nodes.some((node) => node.id === state.selection.node?.id)
+          : false,
         query: state.query,
         hiddenLabels: [...state.hiddenLabels],
         nodes: visibleModel.nodes,
@@ -394,7 +428,7 @@ export function GraphView({
       <GraphToolbar
         query={state.query}
         onQueryChange={state.setQuery}
-        matchCount={state.matchedIds.size}
+        matchCount={visibleMatchCount}
         nodeCount={model.nodes.length}
         edgeCount={model.links.length}
         onZoomToFit={() => canvasRef.current?.zoomToFit()}
@@ -454,6 +488,7 @@ export function GraphView({
               model={visibleModel}
               styleMap={styleMap}
               onSelectNode={selectNode}
+              onSelectEdge={state.selectEdge}
               className="h-full"
             />
           ) : (

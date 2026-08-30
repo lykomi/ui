@@ -79,6 +79,39 @@ describe("GraphViewHandle", () => {
     expect(view.hiddenLabels).toEqual(["Person"]);
   });
 
+  it("counts search matches among the DRAWN nodes only", () => {
+    // The toolbar states a number to the user. Counted from the payload, it
+    // reported a match while every node on screen was dimmed and nothing was
+    // found — whenever the only hit was one the legend hid or the cap dropped.
+    const matchLabel = () =>
+      [...container.querySelectorAll("span")]
+        .map((el) => el.getAttribute("aria-label"))
+        .find((label) => label?.includes("matching"));
+
+    act(() => {
+      handle.current!.search("Fritz");
+    });
+    expect(matchLabel()).toBe("1 matching node");
+    hideLabel("Person");
+    expect(matchLabel()).toBe("0 matching nodes");
+  });
+
+  it("says when the selection is no longer drawn, without dropping it", () => {
+    // A legend filter is a view toggle, not a deletion: the drawer stays open
+    // and its properties are what the user is reading. But `nodes` excludes
+    // the node, so reporting the selection bare made the result contradict
+    // itself.
+    act(() => {
+      handle.current!.select("n2");
+    });
+    expect(handle.current!.getViewState().selectionDrawn).toBe(true);
+    hideLabel("Person");
+    const view = handle.current!.getViewState();
+    expect(view.selection?.id).toBe("n2");
+    expect(view.selectionDrawn).toBe(false);
+    expect(view.nodes.map((n) => n.id)).not.toContain("n2");
+  });
+
   it("refuses to select a node the legend has hidden", () => {
     // Reporting success opens the drawer on something invisible, and the agent
     // then describes a node the user cannot see.

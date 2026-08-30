@@ -1,7 +1,7 @@
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
 import {
+  deepEqual,
   mergeGraphPayloads,
-  safeStringify,
   type GraphEdge,
   type GraphNode,
   type GraphPayload,
@@ -74,7 +74,7 @@ export function mergeIntoOpenGraph(payload: GraphPayload): boolean {
   for (const edge of current.edges) byId.set(edge.id, edge);
   const differs = (entity: GraphNode | GraphEdge) => {
     const existing = byId.get(entity.id);
-    return existing === undefined || safeStringify(existing) !== safeStringify(entity);
+    return existing === undefined || !deepEqual(existing, entity);
   };
   if (!payload.nodes.some(differs) && !payload.edges.some(differs)) return false;
 

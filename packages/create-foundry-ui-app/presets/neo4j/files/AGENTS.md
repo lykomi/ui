@@ -39,6 +39,19 @@ Aura instead of local: change `NEO4J_URI` to `neo4j+s://<instance-id>.databases.
 - **Read-only is enforced by the server**, via `READ` access mode in `graph_db.run_read`. The keyword scan is a friendlier error message, not the boundary. Do not weaken the access mode on the assumption that the regex has it covered.
 - **Writes are gated by registration, not approval.** There is no human-approval round trip in this stack — `approval_mode="always_require"` would emit a request nothing answers and the run would stall. `build_graph_tools()` therefore omits the write tool entirely unless `NEO4J_ALLOW_WRITES` is set. Same for vector search when it is not configured.
 - **Neo4j 5.23 or newer.** `graph_vector_search` uses the scoped subquery `CALL (n) { … }` to cap neighbours PER HIT; the pre-5.23 spelling still works but is deprecated on every server this preset targets. `neo4j:5-community` and Aura are both well past it.
+- **JSON cannot carry every number Neo4j can.** `to_json_value` narrows both
+  ends: an integer outside ±(2^53−1) goes over as a string, because
+  `JSON.parse` reads every number as a double and would silently round it; a
+  non-finite float goes over as `"NaN"`/`"Infinity"`, because `json.dumps`
+  emits those as bare tokens the browser REJECTS — an otherwise successful
+  query then dies at the transport boundary rather than in the query. Both
+  keep ordinary numbers as numbers.
+- **The local database listens on loopback only.** `docker-compose.yml` binds
+  `127.0.0.1:7474` and `127.0.0.1:7687` deliberately. The password is
+  published in that file so the quickstart has no setup step, which is exactly
+  why the port must not be: the default `"7687:7687"` form listens on every
+  interface, so on a shared network anyone routable could read and rewrite the
+  graph.
 - **Parameters, never string interpolation.** Cypher is built as a constant with `$name` placeholders. No f-strings, no `.format()`, no `%`.
 - **`vite.config.ts` chunk order.** `react-force-graph-2d`, `react-kapsule` and `foundry-web-graph` all contain "react"; the `vendor-graph` rule has to come before `id.includes("react")` or the whole force engine lands in `vendor-react`.
 - **`src/index.css` needs the `@source` line for `foundry-web-graph/dist`.** Tailwind v4 cannot infer classes from package output without it, and the graph chrome renders unstyled.

@@ -1,6 +1,6 @@
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useMemo } from "react";
-import { primaryLabel, type GraphNode } from "./model.ts";
+import { primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
 import { endpointId, type GraphModel } from "./use-graph-model.ts";
 import type { GraphStyleMap } from "./use-graph-styling.ts";
 
@@ -8,6 +8,16 @@ export interface GraphTableProps {
   model: GraphModel;
   styleMap: GraphStyleMap;
   onSelectNode?: (node: GraphNode) => void;
+  /**
+   * Open a relationship in the inspector.
+   *
+   * The drawer has always handled edges; only the canvas could reach them.
+   * This table IS the accessibility surface — the canvas is one opaque element
+   * to a screen reader — so without this a keyboard user could read that a
+   * relationship exists and never see a single one of its properties, while a
+   * mouse user clicks the same line and gets all of them.
+   */
+  onSelectEdge?: (edge: GraphEdge) => void;
   className?: string;
 }
 
@@ -19,7 +29,13 @@ export interface GraphTableProps {
  * anyone using one. It is also what renders when there is no canvas at all —
  * jsdom in tests, and print.
  */
-export function GraphTable({ model, styleMap, onSelectNode, className }: GraphTableProps) {
+export function GraphTable({
+  model,
+  styleMap,
+  onSelectNode,
+  onSelectEdge,
+  className,
+}: GraphTableProps) {
   // Counted once, not per row. The old version filtered the whole link array
   // for every node — quadratic, and this is the ACCESSIBILITY path, where a
   // capped graph can still carry 1,500 nodes and 3,000 edges.
@@ -99,6 +115,7 @@ export function GraphTable({ model, styleMap, onSelectNode, className }: GraphTa
         <table className="w-full border-collapse text-left text-xs">
           <caption className="sr-only">
             Relationships: {model.links.length} of them, as source, type and target
+            {onSelectEdge ? "; the type opens its properties" : ""}
           </caption>
           <thead className="text-muted-foreground sticky top-0">
             <tr className="border-border bg-card border-b">
@@ -117,7 +134,29 @@ export function GraphTable({ model, styleMap, onSelectNode, className }: GraphTa
             {model.links.map((link) => (
               <tr key={link.id} className="border-border/60 border-b last:border-0">
                 <td className="px-2 py-1">{captionFor(endpointId(link.source))}</td>
-                <td className="text-muted-foreground px-2 py-1">{link.type ?? "RELATED"}</td>
+                <td className="text-muted-foreground px-2 py-1">
+                  {onSelectEdge ? (
+                    <button
+                      type="button"
+                      // Endpoints normalised for the same reason
+                      // `getViewState` normalises them: force-graph swaps a
+                      // link\'s `source`/`target` for the node objects once it
+                      // has run, and the inspector reads ids.
+                      onClick={() =>
+                        onSelectEdge({
+                          ...(link as unknown as GraphEdge),
+                          source: endpointId(link.source) ?? "",
+                          target: endpointId(link.target) ?? "",
+                        })
+                      }
+                      className="hover:text-foreground focus-visible:ring-ring rounded text-left underline decoration-dotted underline-offset-2 focus-visible:outline-none focus-visible:ring-1"
+                    >
+                      {link.type ?? "RELATED"}
+                    </button>
+                  ) : (
+                    (link.type ?? "RELATED")
+                  )}
+                </td>
                 <td className="px-2 py-1">{captionFor(endpointId(link.target))}</td>
               </tr>
             ))}

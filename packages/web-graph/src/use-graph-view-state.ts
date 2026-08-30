@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { safeStringify, type GraphEdge, type GraphNode, type GraphPayload } from "./model.ts";
+import { deepEqual, type GraphEdge, type GraphNode, type GraphPayload } from "./model.ts";
 
 /** What the user currently has selected. `null` when nothing is selected. */
 export interface GraphSelection {
@@ -118,7 +118,7 @@ export function useGraphViewState(
         // reselecting it. Swapped only when the content actually differs, so
         // a host handing us a fresh `data` object on every render cannot turn
         // this into a loop.
-        if (safeStringify(fresh) !== safeStringify(prev.edge)) {
+        if (!deepEqual(fresh, prev.edge)) {
           return { node: null, edge: fresh };
         }
       }

@@ -55,6 +55,24 @@ describe("GraphView without a usable canvas", () => {
     expect(container.textContent).toContain("DIRECTED");
   });
 
+  it("lets a relationship be opened from the table, not only from the canvas", () => {
+    // The drawer has handled edges since it was written; only the canvas could
+    // reach them. This table IS the accessibility surface, so without a
+    // control here a keyboard user could read that a relationship exists and
+    // never see one of its properties, while a mouse user clicks the same
+    // line and gets all of them.
+    act(() => root.render(<GraphView data={payload} />));
+
+    const typeButton = [...container.querySelectorAll("button")].find(
+      (b) => b.textContent === "DIRECTED",
+    );
+    expect(typeButton, "no control on the relationship row").toBeTruthy();
+
+    act(() => typeButton!.click());
+    // The inspector opens on the relationship and shows what it carries.
+    expect(container.textContent).toContain("DIRECTED");
+  });
+
   it("offers no table toggle where there is no canvas to go back to", () => {
     act(() => root.render(<GraphView data={payload} />));
     // The legend chips carry `aria-pressed` too, so this looks for the

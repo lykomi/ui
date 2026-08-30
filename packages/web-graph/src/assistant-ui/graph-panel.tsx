@@ -3,7 +3,7 @@ import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
 import { primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
-import { submitComposerText, useToolPanelStore } from "@iloveagents/foundry-web-ui";
+import { submitComposerText, useAppStore, useToolPanelStore } from "@iloveagents/foundry-web-ui";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
 import { GraphContextPinButton, syncGraphSelectionContext } from "./graph-context.tsx";
 
@@ -20,6 +20,7 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
   // hand `GraphView` a new payload object and re-run the workspace effect.
   const payload = useMemo(() => graphPanelPayload(content), [content]);
   const isOpen = useToolPanelStore((state) => state.isOpen);
+  const currentPage = useAppStore((state) => state.currentPage);
 
   /**
    * Expand through the conversation, not behind it.
@@ -62,7 +63,16 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
     workspace.setHiddenLabels(view.hiddenLabels);
     syncGraphSelectionContext(view.selection, `graph:${content.title}`);
     return () => graphWorkspaceStore.getState().disconnect(handle);
-  }, [content.title, payload, isOpen]);
+    // `currentPage` is a dependency for the same reason `isOpen` is, and it is
+    // easy to miss because the panel does not move: `setCurrentPage` clears
+    // every keyed and ephemeral context item on navigation, on the reasonable
+    // assumption that a keyed item tracks UI the navigation just unmounted.
+    // The tool panel is the exception — it belongs to the shell, so the graph
+    // and its open drawer survive a route change while the selected node
+    // silently drops out of the conversation. Nothing fires to put it back:
+    // the selection did not change. Re-running this republishes it, which is
+    // the same job it already does for reopening a closed panel.
+  }, [content.title, payload, isOpen, currentPage]);
 
   /**
    * The selected node leaves the conversation when the graph does — and not

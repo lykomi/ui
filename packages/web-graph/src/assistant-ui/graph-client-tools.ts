@@ -199,6 +199,13 @@ const getView: ClientToolEntry = {
       hiddenLabels: view.hiddenLabels,
       hiddenNodeCount: payload.nodes.length - view.nodes.length,
       selectedNode: view.selection ? describe(view.selection) : null,
+      // A selected node whose label the legend hides stays selected — the
+      // drawer is still open and its properties are still what the user is
+      // reading — but it is NOT in `nodeCount` or among the drawn nodes. Said
+      // plainly here, so the agent can answer "selected, though its label is
+      // currently hidden" instead of describing a node this same result says
+      // is not on screen.
+      selectedNodeHidden: view.selection ? !view.selectionDrawn : false,
       // A relationship can be selected too, and the drawer shows it. Reporting
       // only nodes said "nothing is selected" with an edge plainly selected.
       selectedRelationship: view.selectedEdge

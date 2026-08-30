@@ -290,7 +290,19 @@ export function mergeGraphPayloads(base: GraphPayload, addition: GraphPayload): 
     edges: [...edges.values()],
     // Either side hitting a cap means the union is incomplete.
     truncated: base.truncated || addition.truncated ? true : undefined,
-    stats: { nodeCount: nodes.size, edgeCount: edges.size },
+    // `stats` means totals BEFORE truncation, so it can only be stated when
+    // nothing was truncated — there the retained counts ARE those totals.
+    // Once either producer capped, the union's true total is not derivable
+    // from anything here: each side knows its own pre-cap count, and how much
+    // those two sets OVERLAP is exactly what the capped rows would have said.
+    // Publishing the retained counts under this field understated a merge of
+    // a 500-node truncated read as ~300 and called it a total; the field is
+    // optional, so the honest answer is to omit it and let `truncated` carry
+    // the "incomplete" signal on its own.
+    stats:
+      base.truncated || addition.truncated
+        ? undefined
+        : { nodeCount: nodes.size, edgeCount: edges.size },
     // The legend describes labels, which accumulate; meta describes the most
     // recent query, which does not.
     legend: base.legend || addition.legend ? { ...base.legend, ...addition.legend } : undefined,
@@ -301,24 +313,31 @@ export function mergeGraphPayloads(base: GraphPayload, addition: GraphPayload): 
 /**
  * `JSON.stringify` that survives what a graph actually carries.
  *
+ * This is the DISPLAY and TRANSPORT form: the panel's `content` string behind
+ * the Copy button, the raw-result view on the card, and the tool results the
+ * model reads. It is deliberately NOT the form used to decide whether a value
+ * changed — see {@link deepEqual}, and the note below for why the two must
+ * stay apart.
+ *
  * `properties` is `unknown` by design — it is whatever the database had — and
  * the Neo4j driver hands back native `bigint` when configured with
  * `useBigInt`, which `JSON.stringify` THROWS on. So opening the panel for an
  * otherwise perfect payload could fail before anything rendered. Bigints
  * become their decimal string (which is what the inspector already displays),
  * and a cycle becomes `"[circular]"` rather than an exception.
+ *
+ * That string tag is LOSSY — `10n` and `"10"` come out the same — and that is
+ * correct here. A reader wants `10`, and so does the model: a stretch of this
+ * function's history tagged the bigint to keep an equality check honest, and
+ * the cost was a node property reaching the agent as `{"__bigint":"10"}`
+ * instead of a number. Equality is a different job; give it {@link deepEqual}.
  */
 export function safeStringify(value: unknown, space?: number): string {
   const seen = new WeakSet<object>();
   return JSON.stringify(
     value,
     (_key, item: unknown) => {
-      // A STRUCTURED tag, not a string one. `10n` -> "10" collided with the string
-      // "10"; `10n` -> "10n" merely moved the collision to the string "10n". No
-      // string encoding can be unambiguous when the value it competes with is
-      // itself an arbitrary string, so the bigint becomes an object — and a
-      // string is never deep-equal to an object.
-      if (typeof item === "bigint") return { __bigint: item.toString() };
+      if (typeof item === "bigint") return item.toString();
       if (typeof item === "object" && item !== null) {
         if (seen.has(item)) return "[circular]";
         seen.add(item);
@@ -326,5 +345,62 @@ export function safeStringify(value: unknown, space?: number): string {
       return item;
     },
     space,
+  );
+}
+
+/**
+ * Did this value actually change?
+ *
+ * Compared structurally, WITHOUT serialising — which is the whole point. This
+ * question was answered three times by stringifying with a tag for `bigint`,
+ * and each tag collided with the data it competed against: `10n` as `"10"`
+ * collides with the string `"10"`, as `"10n"` with the string `"10n"`, and as
+ * `{__bigint:"10"}` with a property that happens to be that object. There is
+ * no fourth tag that works, because `properties` is `unknown` — any encoding
+ * can be imitated by data shaped like the encoding.
+ *
+ * Comparing types directly has no encoding to imitate: `typeof 10n` is not
+ * `typeof "10"`, and the question is settled in one step.
+ *
+ * It also drops a subtler bug the string form carried. Those replacers marked
+ * every visited object in one `WeakSet`, so the SECOND appearance of a shared
+ * but perfectly acyclic sub-object (the same `properties` on two nodes)
+ * serialised as `"[circular]"` — making values that differ there compare
+ * equal. Cycles are tracked as PAIRS here, so a repeat is only a cycle when
+ * both sides repeat together.
+ */
+export function deepEqual(a: unknown, b: unknown, seen?: Map<object, Set<object>>): boolean {
+  if (Object.is(a, b)) return true;
+  // Different types can never be equal, which is exactly the bigint case.
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== "object" || a === null || b === null) return false;
+
+  const left = a as object;
+  const right = b as object;
+  const pairs = seen ?? new Map<object, Set<object>>();
+  const already = pairs.get(left);
+  // Assumed equal while the comparison is in flight: two structures that
+  // recurse identically are equal, and re-entering would not terminate.
+  if (already?.has(right)) return true;
+  if (already) already.add(right);
+  else pairs.set(left, new Set([right]));
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    if (left.length !== right.length) return false;
+    return left.every((item, index) => deepEqual(item, right[index], pairs));
+  }
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = new Set(Object.keys(right));
+  if (leftKeys.length !== rightKeys.size) return false;
+  return leftKeys.every(
+    (key) =>
+      rightKeys.has(key) &&
+      deepEqual(
+        (left as Record<string, unknown>)[key],
+        (right as Record<string, unknown>)[key],
+        pairs,
+      ),
   );
 }

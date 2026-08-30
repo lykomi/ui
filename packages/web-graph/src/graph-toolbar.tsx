@@ -54,7 +54,13 @@ export function GraphToolbar({
         />
         {query.length > 0 && (
           <>
-            <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+            {/* Labelled: a bare number beside a search box is "1" to a screen
+                reader, with nothing saying what it counts. */}
+            <span
+              className="text-muted-foreground shrink-0 text-xs tabular-nums"
+              title={`${matchCount} matching ${matchCount === 1 ? "node" : "nodes"}`}
+              aria-label={`${matchCount} matching ${matchCount === 1 ? "node" : "nodes"}`}
+            >
               {matchCount}
             </span>
             <button

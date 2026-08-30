@@ -3,6 +3,7 @@ import {
   GRAPH_PAYLOAD_KIND,
   GRAPH_PAYLOAD_VERSION,
   coerceGraphPayload,
+  deepEqual,
   emptyGraphPayload,
   isGraphPayload,
   mergeGraphPayloads,
@@ -196,23 +197,80 @@ describe("safeStringify", () => {
     // so opening the panel for an otherwise perfect payload failed before
     // anything rendered.
     expect(() => JSON.stringify({ n: 1n })).toThrow();
-    expect(safeStringify({ n: 1n })).toBe('{"n":{"__bigint":"1"}}');
+    expect(safeStringify({ n: 1n })).toBe('{"n":"1"}');
   });
 
-  it("keeps a bigint distinguishable from a string that looks like one", () => {
-    // The output is a change SIGNATURE: `merge-into-panel` and the selection
-    // guard both decide "did this actually change" by comparing two of these.
-    // A bigint rendered as its own digits collides with the string of those
-    // digits, so `10n -> "10"` (and the follow-up `10n -> "10n"`) both made a
-    // real edit look like no change, and the drawer kept the old value.
-    expect(safeStringify({ n: 10n })).not.toBe(safeStringify({ n: "10" }));
-    expect(safeStringify({ n: 10n })).not.toBe(safeStringify({ n: "10n" }));
+  it("renders a bigint as a plain number-like string, because a READER reads this", () => {
+    // This is the display and transport form: the panel's Copy button, the
+    // card's raw result, and the tool results the agent reads. A stretch of
+    // this function's history tagged the bigint to keep an equality check
+    // honest, and a node property reached the model as `{"__bigint":"10"}`
+    // instead of a number. Equality is `deepEqual`'s job now.
+    expect(safeStringify({ views: 10n })).toBe('{"views":"10"}');
+    expect(safeStringify({ views: 10n })).not.toContain("__bigint");
   });
 
   it("survives a cycle", () => {
     const node: Record<string, unknown> = { id: "a" };
     node.self = node;
     expect(safeStringify(node)).toContain("[circular]");
+  });
+});
+
+describe("deepEqual", () => {
+  it("separates a bigint from every string that could stand for it", () => {
+    // Three rounds of review found three collisions on this one value, each
+    // from a different encoding: `10n` as `"10"` collides with the string
+    // "10", as `"10n"` with the string "10n", as `{__bigint:"10"}` with a
+    // property that IS that object. `properties` is `unknown`, so any
+    // encoding can be imitated by data shaped like it. Comparing types has
+    // nothing to imitate.
+    expect(deepEqual({ n: 10n }, { n: "10" })).toBe(false);
+    expect(deepEqual({ n: 10n }, { n: "10n" })).toBe(false);
+    expect(deepEqual({ n: 10n }, { n: { __bigint: "10" } })).toBe(false);
+    expect(deepEqual({ n: 10n }, { n: 10n })).toBe(true);
+    expect(deepEqual({ n: 10n }, { n: 11n })).toBe(false);
+  });
+
+  it("does not mistake a shared sub-object for a cycle", () => {
+    // The serialising versions marked every visited object in ONE set, so the
+    // second appearance of a shared but perfectly acyclic sub-object came out
+    // as "[circular]" — and two values differing only there compared equal.
+    const shared = { name: "Ada" };
+    const a = { left: shared, right: shared };
+    const b = { left: { name: "Ada" }, right: { name: "Grace" } };
+    expect(deepEqual(a, b)).toBe(false);
+    expect(deepEqual(a, { left: { name: "Ada" }, right: { name: "Ada" } })).toBe(true);
+  });
+
+  it("terminates on a cycle", () => {
+    const a: Record<string, unknown> = { id: "a" };
+    a.self = a;
+    const b: Record<string, unknown> = { id: "a" };
+    b.self = b;
+    expect(deepEqual(a, b)).toBe(true);
+
+    const c: Record<string, unknown> = { id: "c" };
+    c.self = c;
+    expect(deepEqual(a, c)).toBe(false);
+  });
+
+  it("ignores key order and respects key count", () => {
+    expect(deepEqual({ a: 1, b: 2 }, { b: 2, a: 1 })).toBe(true);
+    expect(deepEqual({ a: 1 }, { a: 1, b: undefined })).toBe(false);
+  });
+
+  it("does not conflate an array with an object that has the same indices", () => {
+    expect(deepEqual([1, 2], { 0: 1, 1: 2 })).toBe(false);
+    expect(deepEqual([1, 2], [1, 2])).toBe(true);
+    expect(deepEqual([1, 2], [1, 2, 3])).toBe(false);
+  });
+
+  it("treats null, undefined and NaN the way a change check should", () => {
+    expect(deepEqual(null, undefined)).toBe(false);
+    expect(deepEqual(null, {})).toBe(false);
+    // `Object.is` — an unchanged NaN is not a change.
+    expect(deepEqual({ n: NaN }, { n: NaN })).toBe(true);
   });
 });
 

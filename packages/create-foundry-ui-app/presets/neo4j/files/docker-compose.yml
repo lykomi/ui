@@ -10,9 +10,18 @@ services:
   neo4j:
     image: neo4j:5-community
     container_name: __PROJECT_NAME__-neo4j
+    # Bound to the loopback interface, NOT to every interface. The password
+    # three lines down is published in this file — that is the point of it, so
+    # the quickstart has no setup step — which is exactly why the database
+    # must not be reachable from the network. The default `"7687:7687"` form
+    # listens on 0.0.0.0, so on a laptop sharing a café or office network, or
+    # on a cloud workstation, anyone routable could read and rewrite the graph.
+    # Both the agent and Neo4j Browser connect from this host, so nothing is
+    # lost; drop the prefix deliberately if you need remote access, and change
+    # the password when you do.
     ports:
-      - "7474:7474" # HTTP browser
-      - "7687:7687" # Bolt
+      - "127.0.0.1:7474:7474" # HTTP browser
+      - "127.0.0.1:7687:7687" # Bolt
     environment:
       NEO4J_AUTH: neo4j/localdevpassword
       # Vector indexes need 5.13+; 5-community is well past that.

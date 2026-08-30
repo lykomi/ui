@@ -162,3 +162,46 @@ The Neo4j preset serialises integers outside JavaScript's safe range as
 strings. Neo4j integers are signed 64-bit and `JSON.parse` reads every number
 as a double, so a value past 2^53-1 arrived in the browser silently rounded to
 a neighbouring one.
+
+Serialising a value and comparing two are now separate functions, because they
+want opposite things. `safeStringify` is the display and transport form — the
+panel's Copy button, the card's raw result, the tool results the agent reads —
+and renders a `bigint` as its decimal string, which is lossy and right: a
+reader wants `10`. Comparisons go through a new `deepEqual`, which does not
+serialise at all. Three encodings had collided in turn (`10n` as `"10"` with
+the string `"10"`, as `"10n"` with `"10n"`, as `{__bigint:"10"}` with a
+property that IS that object), and none could not: `properties` is `unknown`,
+so any encoding can be imitated by data shaped like it. `setContextItem`'s
+guard moves to the same comparison. Both also stop reading a shared but
+acyclic sub-object as a cycle, which had made values differing only there
+compare equal.
+
+`mergeGraphPayloads` states `stats` only when neither side was truncated. The
+field means totals BEFORE truncation; publishing the client-side union's
+retained counts under it reported a merge of a 500-node truncated read as
+~300 and called it a total. Once either producer capped, the union's real
+total is not derivable — how far the two full sets overlap is exactly what the
+capped rows would have said — so the field is omitted and `truncated` carries
+the signal.
+
+The readable table can open a relationship, not just list one. The drawer has
+always handled edges and only the canvas could reach them, so a keyboard or
+screen-reader user could read that a relationship exists and never see one of
+its properties. The search-match count is also read from the drawn graph, so
+it cannot report a match while every node on screen is dimmed, and it carries
+a label — a bare number beside a search box says nothing to a screen reader.
+
+Hiding a selected node's label no longer makes the view state contradict
+itself: the selection stays (a legend filter is a view toggle, not a deletion,
+and the drawer showing that node is itself on screen) and `graph_get_view`
+reports `selectedNodeHidden`. The graph panel also republishes its selection
+on navigation — the tool panel belongs to the shell and survives a route
+change, while `setCurrentPage` clears keyed context items, so the node the
+user was still looking at silently left the conversation.
+
+In the Neo4j preset: non-finite floats (`NaN`, `Infinity`) are serialised as
+strings. `json.dumps` emits them as bare tokens that `JSON.parse` rejects and
+strict mode refuses outright, so a query that succeeded died at the transport
+boundary. The local `docker-compose.yml` also binds Neo4j to `127.0.0.1`
+rather than every interface — the password is published in that file so the
+quickstart has no setup step, which is precisely why the port should not be.
