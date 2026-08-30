@@ -506,18 +506,6 @@ export function GraphView({
       <div className="flex min-h-0 flex-1">
         <div
           ref={setCanvasHost}
-          // A canvas is one opaque element to a screen reader — the nodes and
-          // relationships are pixels, and no labelling changes that. So the
-          // region says what it holds and where the readable form is; the
-          // toolbar's button is what gets you there.
-          role={useTable ? undefined : "img"}
-          aria-label={
-            useTable
-              ? undefined
-              : // Same numbers the sighted user is given, for the same reason.
-                `Graph: ${visibleModel.nodes.length} nodes, ${visibleModel.links.length} relationships. ` +
-                `Use "Show as a table" for a readable version.`
-          }
           className="border-border bg-background relative min-h-0 flex-1 overflow-hidden rounded-lg border"
         >
           {isEmpty ? (
@@ -531,22 +519,43 @@ export function GraphView({
               className="h-full"
             />
           ) : (
-            <Suspense fallback={<GraphEmptyState message="Loading graph…" />}>
-              {size.width > 0 && size.height > 0 && (
-                <GraphCanvas
-                  model={model}
-                  styleMap={styleMap}
-                  theme={theme}
-                  state={state}
-                  width={size.width}
-                  height={size.height}
-                  onExpandNode={onExpandNode}
-                  insetRight={inspectorInset}
-                  handleRef={canvasRef}
-                  reducedMotion={reducedMotion}
-                />
-              )}
-            </Suspense>
+            // `role="img"` wraps the CANVAS ONLY. ARIA exposes the descendants
+            // of an image as presentational, so with this on the box that also
+            // holds `GraphInspector`, selecting a node deleted the whole
+            // drawer — its dialog, its property rows, its Pin/Freeze/Expand
+            // controls — from the accessibility tree, at exactly the moment
+            // the user asked to inspect something.
+            //
+            // The canvas itself genuinely is one opaque element to a screen
+            // reader: the nodes and relationships are pixels, and no labelling
+            // changes that. So the region says what it holds and where the
+            // readable form is; the toolbar's button is what gets you there.
+            <div
+              role="img"
+              aria-label={
+                // Same numbers the sighted user is given, for the same reason.
+                `Graph: ${visibleModel.nodes.length} nodes, ${visibleModel.links.length} relationships. ` +
+                `Use "Show as a table" for a readable version.`
+              }
+              className="absolute inset-0"
+            >
+              <Suspense fallback={<GraphEmptyState message="Loading graph…" />}>
+                {size.width > 0 && size.height > 0 && (
+                  <GraphCanvas
+                    model={model}
+                    styleMap={styleMap}
+                    theme={theme}
+                    state={state}
+                    width={size.width}
+                    height={size.height}
+                    onExpandNode={onExpandNode}
+                    insetRight={inspectorInset}
+                    handleRef={canvasRef}
+                    reducedMotion={reducedMotion}
+                  />
+                )}
+              </Suspense>
+            </div>
           )}
 
           {showsInspector && (

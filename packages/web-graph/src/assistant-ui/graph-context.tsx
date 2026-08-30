@@ -98,7 +98,19 @@ function isPinnedGraphNode(item: { key?: string; payload: unknown }, nodeId: str
  * item into a persistent pin (it drops the key), so pinning and then selecting
  * elsewhere leaves the pin standing.
  */
-export function GraphContextPinButton({ node }: { node: GraphNode }) {
+export function GraphContextPinButton({
+  node,
+  captionKey,
+}: {
+  node: GraphNode;
+  /**
+   * The payload's caption key for this node's label — the same one the canvas
+   * paints with. Unpinning rebuilds the tracking item, and without it the chip
+   * the user reads (and the `preview` the agent reads) reverts to a default
+   * caption that may appear nowhere on screen.
+   */
+  captionKey?: string;
+}) {
   const items = useAppStore((s) => s.contextItems);
   const promoteContextItem = useAppStore((s) => s.promoteContextItem);
   const removeContextItem = useAppStore((s) => s.removeContextItem);
@@ -115,11 +127,11 @@ export function GraphContextPinButton({ node }: { node: GraphNode }) {
       // until they select something else. Unpinning means "stop keeping this
       // one", not "forget what I have selected", so the tracking item comes
       // back.
-      syncGraphSelectionContext(node, pinned.sourcePage ?? "");
+      syncGraphSelectionContext(node, pinned.sourcePage ?? "", captionKey);
       return;
     }
     if (tracked) promoteContextItem(tracked.id);
-  }, [node, pinned, tracked, promoteContextItem, removeContextItem]);
+  }, [node, captionKey, pinned, tracked, promoteContextItem, removeContextItem]);
 
   return (
     <button

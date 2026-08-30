@@ -145,7 +145,9 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
             node ? captionKeyFor(node) : undefined,
           );
         }}
-        inspectorActions={(node) => <GraphContextPinButton node={node} />}
+        inspectorActions={(node) => (
+          <GraphContextPinButton node={node} captionKey={captionKeyFor(node)} />
+        )}
         onQueryChange={(query) => graphWorkspaceStore.getState().setQuery(query)}
         onFilterChange={(labels) => graphWorkspaceStore.getState().setHiddenLabels(labels)}
       />

@@ -303,6 +303,54 @@ async def graph_expand_node(
     )
 
 
+def _cap_vector_nodes(
+    hit_ids: list[str], per_hit: dict[str, list[str]], limit: int
+) -> list[str]:
+    """Spend the node budget across the hits, not down the arrival order.
+
+    The neighbour query already caps fan-out PER HIT, so no single high-degree
+    hit can eat the whole neighbourhood. Taking a prefix of the merged node
+    dict afterwards puts that bias straight back: the hits themselves come
+    first (they are the answer, and they are ranked), then every neighbour of
+    hit 1, then every neighbour of hit 2 — so once the total passes the cap,
+    the late hits arrive on screen as bare, unconnected dots while the early
+    ones sit in a hairball. Reachable with the tool's own arguments: 25 hits at
+    the default fan-out of 15 is 400 nodes against a 300 cap.
+
+    So: keep the hits first, in score order, then take one neighbour from each
+    hit in turn until the budget runs out. Every hit that has neighbours gets
+    some before any hit gets its second.
+    """
+    kept = list(hit_ids[:limit])
+    seen = set(kept)
+    # Only reached when every hit fits, so `hit_ids` and the kept hits are the
+    # same list; a cap tighter than the hit count spends nothing on neighbours.
+    budget = limit - len(kept)
+    depth = 0
+    while budget > 0:
+        exhausted = True
+        for hit_id in hit_ids:
+            if budget <= 0:
+                break
+            bucket = per_hit.get(hit_id) or []
+            if depth >= len(bucket):
+                continue
+            exhausted = False
+            neighbour = bucket[depth]
+            # Already kept: a hit, or a neighbour two hits share. Skipping it
+            # without spending budget is the point — the slot goes to a node
+            # that is not on screen yet.
+            if neighbour in seen:
+                continue
+            seen.add(neighbour)
+            kept.append(neighbour)
+            budget -= 1
+        if exhausted:
+            break
+        depth += 1
+    return kept
+
+
 @tool(approval_mode="never_require")
 async def graph_vector_search(
     query: Annotated[
@@ -346,9 +394,17 @@ async def graph_vector_search(
         nodes: dict[str, Any] = {}
         edges: dict[str, Any] = {}
         scores: list[dict[str, Any]] = []
+        # Which hit each neighbour arrived for, in arrival order. The node cap
+        # below spends its budget across these buckets rather than down the
+        # merged dict, so the fan-out stays per hit all the way to the payload.
+        hit_ids: list[str] = []
+        per_hit: dict[str, list[str]] = {}
         for record in hits:
             node = record["node"]
-            nodes.setdefault(node.element_id, node_to_graph_node(node))
+            if node.element_id not in nodes:
+                nodes[node.element_id] = node_to_graph_node(node)
+                hit_ids.append(node.element_id)
+                per_hit[node.element_id] = []
             scores.append({"id": node.element_id, "score": float(record["score"])})
 
         if nodes:
@@ -365,20 +421,26 @@ async def graph_vector_search(
             neighbours, _ = await graph_db.run_read(
                 "MATCH (n) WHERE elementId(n) IN $ids "
                 "CALL (n) { MATCH (n)-[r]-(m) RETURN r, m LIMIT $fanout } "
-                "RETURN r, m",
-                {"ids": list(nodes), "fanout": fanout},
-                row_limit=fanout * len(nodes),
+                # `elementId(n)`, not `n` — which hit the row belongs to is all
+                # the cap needs, and the node itself is already in hand.
+                "RETURN elementId(n) AS hit, r, m",
+                {"ids": hit_ids, "fanout": fanout},
+                row_limit=fanout * len(hit_ids),
             )
             for record in neighbours:
                 neighbour = record["m"]
                 nodes.setdefault(neighbour.element_id, node_to_graph_node(neighbour))
+                bucket = per_hit.get(record["hit"])
+                if bucket is not None:
+                    bucket.append(neighbour.element_id)
                 edge = relationship_to_graph_edge(record["r"])
                 if edge is not None:
                     edges.setdefault(edge["id"], edge)
     except Exception as exc:  # noqa: BLE001
         return _failure(f"Vector search failed. {graph_db.safe_error(exc)}")
 
-    kept_nodes = dict(list(nodes.items())[: graph_db.max_nodes()])
+    kept_ids = _cap_vector_nodes(hit_ids, per_hit, graph_db.max_nodes())
+    kept_nodes = {node_id: nodes[node_id] for node_id in kept_ids}
     kept_edges = [
         edge
         for edge in edges.values()

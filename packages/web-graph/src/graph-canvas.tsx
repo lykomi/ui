@@ -271,6 +271,44 @@ export function GraphCanvas({
     engine.centerAt(centre.x + inset / 2 / zoom, centre.y, durationMs);
   }, []);
 
+  /**
+   * Restart the layout.
+   *
+   * `d3ReheatSimulation` only sets `alpha` back to 1 and un-pauses the engine
+   * — the ticks themselves happen in the render loop, one per frame, and under
+   * reduced motion `cooldownTicks`/`cooldownTime` are 0, so the engine stops
+   * again on the very next frame having ticked nothing. Reheat was a button
+   * that did nothing at all for exactly the users who cannot see a layout
+   * settle and most need it re-run.
+   *
+   * The warmup ticks are the settle those users get, and they run
+   * SYNCHRONOUSLY whenever force-graph re-runs its update — which a new
+   * `graphData` identity is what causes. So: reset alpha, then re-identify the
+   * data. Same restart, arrived at without motion.
+   */
+  const [layoutEpoch, setLayoutEpoch] = useState(0);
+  const reheat = useCallback(() => {
+    engineRef.current?.d3ReheatSimulation();
+    if (reducedMotion) setLayoutEpoch((epoch) => epoch + 1);
+  }, [reducedMotion]);
+
+  /**
+   * Memoised, and that is load-bearing twice over.
+   *
+   * An inline `{ nodes, links }` is a new object on every render, and
+   * react-kapsule forwards a prop whose identity changed — so a hover, a
+   * search keystroke or a selection re-ran force-graph's whole update: the
+   * warmup ticks again (all of them, synchronously, under reduced motion) and
+   * `resetCountdown`, which restarts the cooldown clock. A graph the user was
+   * hovering therefore never reached its settle. Handing the same object back
+   * until the model or the layout epoch actually changes is what makes the
+   * update mean "the graph changed".
+   */
+  const graphData = useMemo(
+    () => ({ nodes: model.nodes, links: model.links }),
+    [model.nodes, model.links, layoutEpoch],
+  );
+
   useImperativeHandle(
     handleRef,
     () => ({
@@ -305,11 +343,9 @@ export function GraphCanvas({
         const centre = engine.centerAt();
         engine.centerAt(centre.x + dx / zoom, centre.y + dy / zoom, reducedMotion ? 0 : durationMs);
       },
-      reheat: () => {
-        engineRef.current?.d3ReheatSimulation();
-      },
+      reheat,
     }),
-    [model.nodes, reducedMotion, insetRight, width, height],
+    [model.nodes, reducedMotion, insetRight, width, height, reheat],
   );
 
   const {
@@ -599,13 +635,13 @@ export function GraphCanvas({
       }
       changed = true;
     }
-    if (changed) engineRef.current?.d3ReheatSimulation();
-  }, [pinnedIds, model.nodes]);
+    if (changed) reheat();
+  }, [pinnedIds, model.nodes, reheat]);
 
   return (
     <ForceGraph2D<EngineNode, EngineLink>
       ref={engineRef}
-      graphData={{ nodes: model.nodes, links: model.links }}
+      graphData={graphData}
       width={width}
       height={height}
       backgroundColor="transparent"
