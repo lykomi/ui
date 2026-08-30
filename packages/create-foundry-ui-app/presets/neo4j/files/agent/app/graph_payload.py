@@ -123,7 +123,11 @@ def relationship_to_graph_edge(rel: neo4j.graph.Relationship) -> dict[str, Any] 
 
 
 def _collect(
-    value: Any, nodes: dict[str, Any], edges: dict[str, Any], depth: int
+    value: Any,
+    nodes: dict[str, Any],
+    edges: dict[str, Any],
+    depth: int,
+    stubs: set[str] | None = None,
 ) -> None:
     """Walk a record value, picking out every node and relationship.
 
@@ -131,11 +135,26 @@ def _collect(
     Cypher, so the result might be bare entities, a path, a ``collect()`` list,
     or a map projection. Recursion makes ``RETURN *`` work as well as a careful
     projection, which is what an agent-written query usually is.
+
+    ``stubs`` records ids that so far exist only because a relationship named
+    them. Measured against a live server: a relationship returned on its own
+    (``MATCH ()-[r]->() RETURN r``) hands back endpoints with NO labels and NO
+    properties. When the same node also appears in the record, the driver
+    hydrates one object and there is nothing to choose between — but across
+    ROWS the stub can land first, and plain ``setdefault`` would then keep it
+    and discard the full node the query actually returned, drawing a nameless
+    circle with an empty inspector.
     """
+    if stubs is None:
+        stubs = set()
     if depth > _MAX_DEPTH or value is None:
         return
     if isinstance(value, neo4j.graph.Node):
-        nodes.setdefault(value.element_id, node_to_graph_node(value))
+        # A real node always wins over an endpoint stub; two real nodes with
+        # the same id are the same node, so first-wins still holds there.
+        if value.element_id not in nodes or value.element_id in stubs:
+            nodes[value.element_id] = node_to_graph_node(value)
+            stubs.discard(value.element_id)
         return
     if isinstance(value, neo4j.graph.Relationship):
         edge = relationship_to_graph_edge(value)
@@ -144,22 +163,27 @@ def _collect(
         # A relationship carries its endpoints, and a query that returns only
         # relationships still needs to render the nodes at both ends.
         for end in (value.start_node, value.end_node):
-            if end is not None:
-                nodes.setdefault(end.element_id, node_to_graph_node(end))
+            if end is None or end.element_id in nodes:
+                continue
+            nodes[end.element_id] = node_to_graph_node(end)
+            # Only a bare endpoint is replaceable. One that arrived carrying
+            # its labels or properties is as good as the node itself.
+            if not end.labels and not dict(end):
+                stubs.add(end.element_id)
         return
     if isinstance(value, neo4j.graph.Path):
         for node in value.nodes:
-            _collect(node, nodes, edges, depth + 1)
+            _collect(node, nodes, edges, depth + 1, stubs)
         for rel in value.relationships:
-            _collect(rel, nodes, edges, depth + 1)
+            _collect(rel, nodes, edges, depth + 1, stubs)
         return
     if isinstance(value, Mapping):
         for nested in value.values():
-            _collect(nested, nodes, edges, depth + 1)
+            _collect(nested, nodes, edges, depth + 1, stubs)
         return
     if isinstance(value, (list, tuple, set, frozenset)):
         for nested in value:
-            _collect(nested, nodes, edges, depth + 1)
+            _collect(nested, nodes, edges, depth + 1, stubs)
 
 
 def select_connected_core(
@@ -241,9 +265,10 @@ def records_to_graph_payload(
     """
     nodes: dict[str, Any] = {}
     edges: dict[str, Any] = {}
+    stubs: set[str] = set()
     for record in records:
         for value in record.values():
-            _collect(value, nodes, edges, 0)
+            _collect(value, nodes, edges, 0, stubs)
 
     total_nodes = len(nodes)
     total_edges = len(edges)

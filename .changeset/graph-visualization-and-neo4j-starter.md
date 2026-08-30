@@ -267,3 +267,33 @@ distinct ids could collapse to one key and attach edges to the wrong nodes.
 
 A result held back for a closed panel is remembered as deferred, so it is no
 longer re-extracted on every streamed token for the rest of the turn.
+
+An ambiguous caption is answered as a question rather than a guess.
+`graph_select_node` matched by caption with `find`, so two nodes sharing a
+name — ordinary in a real graph — resolved to whichever the producer returned
+first, and the agent then described the wrong node with nothing on screen to
+show it had picked. Several matches now come back with their ids so the agent
+can select precisely or ask.
+
+A full node replaces a relationship-endpoint stub. Measured against a live
+server: a relationship returned on its own hands back endpoints with no labels
+and no properties, and `setdefault` kept that stub even when a later row
+returned the same node in full — drawing a nameless circle with an empty
+inspector for a node the query had actually returned.
+
+The selected-node chat context is captioned with the payload's
+`legend.captionKey`, like every other path that names a node, and is not
+recreated when the user has already pinned that node — a route change or a
+merge otherwise handed the agent the same node twice under entries whose
+properties could disagree.
+
+The read-only keyword scan no longer rejects legitimate reads. Neo4j
+identifiers are source-defined, so `Set` and `Call` are legal labels and
+`MATCH (n:Call) RETURN n` was refused as a write. The scan skips backtick-
+quoted identifiers and only matches keywords in clause position — never after
+`:`, `.` or a backtick. The server's READ access mode is what enforces
+read-only, so narrowing the friendly message costs no safety.
+
+The package README documents the Tailwind v4 `@source` directive. `styles.css`
+carries the palette, not the component styling, and Tailwind does not scan
+`node_modules` — so a consumer following the README got an unstyled graph.

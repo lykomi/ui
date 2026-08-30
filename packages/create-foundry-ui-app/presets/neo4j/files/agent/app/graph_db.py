@@ -117,16 +117,29 @@ _DANGEROUS_CALL = re.compile(
 
 _COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
 _STRING = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"", re.DOTALL)
-_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# A bare word, NOT one used as a name. Neo4j identifiers are source-defined,
+# so `Set`, `Create` and `Call` are all legal labels — `MATCH (n:\`Set\`)` and
+# `MATCH (n:Call) RETURN n` are ordinary reads, and matching the word anywhere
+# refused them with a "write not allowed" error the user could do nothing
+# about. A keyword in CLAUSE position is never preceded by `:` (a label or
+# relationship type), `.` (a property), or a backtick (a quoted identifier),
+# and is never followed by `` ` `` either. The server\'s READ access mode is
+# what actually enforces this, so narrowing the friendly scan costs no safety.
+_WORD = re.compile(r"(?<![:.`\w])([A-Za-z_][A-Za-z0-9_]*)(?!`)")
+
+# Backtick-quoted identifiers are removed before the scan for the same reason
+# strings and comments are: `MATCH (n:\`DELETE ME\`)` is a label, not a clause.
+_BACKTICKED = re.compile(r"`[^`]*`")
 
 
 def strip_noise(cypher: str) -> str:
     """Remove comments and string literals before scanning for keywords.
 
     Without this, ``MATCH (n) WHERE n.note = 'please delete me' RETURN n`` reads
-    as a write, and ``MATCH (n) //CREATE`` reads as one too.
+    as a write, ``MATCH (n) //CREATE`` reads as one too, and a backtick-quoted
+    label like ``MATCH (n:`DELETE ME`)`` reads as one as well.
     """
-    return _STRING.sub(" ", _COMMENT.sub(" ", cypher))
+    return _BACKTICKED.sub(" ", _STRING.sub(" ", _COMMENT.sub(" ", cypher)))
 
 
 def looks_like_write(cypher: str) -> bool:

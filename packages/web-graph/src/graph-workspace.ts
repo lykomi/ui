@@ -116,7 +116,15 @@ export const isGraphOpen = (): boolean => graphWorkspaceStore.getState().payload
  * The agent refers to nodes the way the user does ("select Metropolis"), not
  * by the database's element id, which it has usually never seen.
  */
-export function findWorkspaceNode(needle: string): GraphNode | null {
+/** Several nodes answer to the same text; the caller must disambiguate. */
+export interface AmbiguousMatch {
+  ambiguous: GraphNode[];
+}
+
+export const isAmbiguous = (value: unknown): value is AmbiguousMatch =>
+  typeof value === "object" && value !== null && "ambiguous" in value;
+
+export function findWorkspaceNode(needle: string): GraphNode | AmbiguousMatch | null {
   const { payload } = graphWorkspaceStore.getState();
   if (!payload) return null;
   const byId = payload.nodes.find((node) => node.id === needle);
@@ -134,9 +142,18 @@ export function findWorkspaceNode(needle: string): GraphNode | null {
   const captionOf = (node: GraphNode) =>
     resolveCaption(node, payload.legend?.[primaryLabel(node)]?.captionKey).toLowerCase();
 
-  return (
-    payload.nodes.find((node) => captionOf(node) === lower) ??
-    payload.nodes.find((node) => captionOf(node).includes(lower)) ??
-    null
-  );
+  // Duplicate captions are ordinary in a real graph — two people with the
+  // same name, two films with the same title — and `find` answered those with
+  // whichever the producer happened to return first. The tool then reported a
+  // confident selection and the agent described the wrong node, with nothing
+  // on screen to show it had guessed. An exact match on ONE node is an answer;
+  // more than one is a question for the caller, who has the ids.
+  const exact = payload.nodes.filter((node) => captionOf(node) === lower);
+  if (exact.length === 1) return exact[0] ?? null;
+  if (exact.length > 1) return { ambiguous: exact };
+
+  const partial = payload.nodes.filter((node) => captionOf(node).includes(lower));
+  if (partial.length === 1) return partial[0] ?? null;
+  if (partial.length > 1) return { ambiguous: partial };
+  return null;
 }

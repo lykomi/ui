@@ -4,6 +4,7 @@ import {
   _resetGraphWorkspace,
   findWorkspaceNode,
   graphWorkspaceStore,
+  isAmbiguous,
   isGraphOpen,
 } from "../graph-workspace.ts";
 import type { GraphViewHandle } from "../graph-view.tsx";
@@ -145,5 +146,47 @@ describe("findWorkspaceNode", () => {
     const grown: GraphPayload = { ...payload, nodes: [...payload.nodes, { id: "n9" }] };
     graphWorkspaceStore.getState().connect(only, "Graph", grown);
     expect(graphWorkspaceStore.getState().selection?.id).toBe(payload.nodes[0].id);
+  });
+});
+
+describe("an ambiguous caption is a question, not a guess", () => {
+  const payload = {
+    kind: GRAPH_PAYLOAD_KIND,
+    version: GRAPH_PAYLOAD_VERSION,
+    nodes: [
+      { id: "p1", labels: ["Person"], properties: { name: "John Smith" } },
+      { id: "p2", labels: ["Person"], properties: { name: "John Smith" } },
+      { id: "m1", labels: ["Movie"], properties: { title: "Solo" } },
+    ],
+    edges: [],
+  } as const;
+
+  beforeEach(() => {
+    _resetGraphWorkspace();
+    graphWorkspaceStore.setState({ payload: payload as never });
+  });
+
+  it("refuses to pick one of two nodes with the same caption", () => {
+    // Duplicate names are ordinary in a real graph, and `find` answered with
+    // whichever the producer returned first — a confident wrong selection the
+    // user has no way to see.
+    const match = findWorkspaceNode("John Smith");
+    expect(isAmbiguous(match)).toBe(true);
+    if (isAmbiguous(match)) {
+      expect(match.ambiguous.map((n) => n.id).sort()).toEqual(["p1", "p2"]);
+    }
+  });
+
+  it("still answers when the caption identifies exactly one", () => {
+    expect((findWorkspaceNode("Solo") as { id?: string })?.id).toBe("m1");
+  });
+
+  it("answers by id even when the caption is ambiguous", () => {
+    expect((findWorkspaceNode("p2") as { id?: string })?.id).toBe("p2");
+  });
+
+  it("treats a partial term matching several as ambiguous too", () => {
+    const match = findWorkspaceNode("john");
+    expect(isAmbiguous(match)).toBe(true);
   });
 });

@@ -15,6 +15,23 @@ entry point; the chat integration is in another. Import only what you use.
 pnpm add @iloveagents/foundry-web-graph
 ```
 
+### Tailwind v4 hosts: point Tailwind at this package
+
+`styles.css` carries the `--graph-1..8` palette and the rules Tailwind cannot
+express — it is **not** the component styling. `GraphView` is built from
+utility classes, and Tailwind v4 does not scan `node_modules`, so without a
+`@source` directive the graph renders with no spacing, borders or typography:
+
+```css
+@import "tailwindcss";
+@source "../node_modules/@iloveagents/foundry-web-graph/dist";
+
+@import "@iloveagents/foundry-web-graph/styles.css";
+```
+
+(Adjust the relative path to your stylesheet\'s location. Apps scaffolded by
+`create-foundry-ui-app --preset neo4j` already have this.)
+
 ## Drawing a graph
 
 ```tsx

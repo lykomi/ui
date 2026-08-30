@@ -10,7 +10,7 @@ import {
   type GraphNode,
   type GraphPayload,
 } from "../model.ts";
-import { findWorkspaceNode, graphWorkspaceStore } from "../graph-workspace.ts";
+import { findWorkspaceNode, graphWorkspaceStore, isAmbiguous } from "../graph-workspace.ts";
 import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
 
 /**
@@ -131,8 +131,23 @@ const selectNode: ClientToolEntry = {
     if (!handle) return fail("No graph is open. Call graph_show first.");
     const legend = openPayload?.legend;
     const captionOf = (node: GraphNode) => describe(node, legend).caption;
-    const node = findWorkspaceNode(needle);
-    if (!node) return fail(`No node matching "${needle}" is in the open graph.`);
+    const match = findWorkspaceNode(needle);
+    if (!match) return fail(`No node matching "${needle}" is in the open graph.`);
+    // Several nodes answer to that text. Picking one would be a confident
+    // wrong answer the user cannot see — duplicate captions are ordinary — so
+    // hand back the candidates WITH their ids, which is what the agent needs
+    // to ask a real question or select precisely.
+    if (isAmbiguous(match)) {
+      const options = match.ambiguous
+        .slice(0, 10)
+        .map((n) => `${describe(n, openPayload?.legend).caption} (id ${n.id})`)
+        .join(", ");
+      return fail(
+        `"${needle}" matches ${match.ambiguous.length} nodes in the open graph: ${options}. ` +
+          `Select by id, or ask the user which one they mean.`,
+      );
+    }
+    const node = match;
     // A node can be in the workspace payload and still not be RENDERED — the
     // view caps a large graph to its connected core — and reporting a
     // selection that did not happen sends the agent on to describe something

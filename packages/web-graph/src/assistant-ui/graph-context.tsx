@@ -14,8 +14,12 @@ import { jsonSafe, primaryLabel, resolveCaption, type GraphNode } from "../model
  */
 export const GRAPH_SELECTION_CONTEXT_KEY = "graph.selection";
 
-function contextItemFor(node: GraphNode, sourcePage: string) {
-  const caption = resolveCaption(node);
+function contextItemFor(node: GraphNode, sourcePage: string, captionKey?: string) {
+  // Captioned with the payload\'s own `legend.captionKey`, like the canvas,
+  // the expansion prompt and the client tools. Without it the chip the user
+  // reads — and the `preview` the agent reads — can name the selected node
+  // something that appears nowhere on screen.
+  const caption = resolveCaption(node, captionKey);
   return {
     key: GRAPH_SELECTION_CONTEXT_KEY,
     type: "ref" as const,
@@ -52,9 +56,37 @@ function contextItemFor(node: GraphNode, sourcePage: string) {
  * is selected is simply part of the conversation — and because it is keyed,
  * selecting something else swaps it instead of piling up.
  */
-export function syncGraphSelectionContext(node: GraphNode | null, sourcePage: string): void {
-  const { setContextItem } = useAppStore.getState();
-  setContextItem(GRAPH_SELECTION_CONTEXT_KEY, node ? contextItemFor(node, sourcePage) : null);
+export function syncGraphSelectionContext(
+  node: GraphNode | null,
+  sourcePage: string,
+  captionKey?: string,
+): void {
+  const { setContextItem, contextItems } = useAppStore.getState();
+  if (!node) {
+    setContextItem(GRAPH_SELECTION_CONTEXT_KEY, null);
+    return;
+  }
+  // Already pinned? Then the node is in the conversation once, deliberately,
+  // and the tracking item would make it twice. `promoteContextItem` drops the
+  // key to pin, so nothing stops this from re-adding a keyed copy on the next
+  // republish — a route change or a merge — and the agent would be handed the
+  // same node under two entries whose properties can disagree after a merge.
+  if (contextItems.some((item) => isPinnedGraphNode(item, node.id))) {
+    setContextItem(GRAPH_SELECTION_CONTEXT_KEY, null);
+    return;
+  }
+  setContextItem(GRAPH_SELECTION_CONTEXT_KEY, contextItemFor(node, sourcePage, captionKey));
+}
+
+/** A user\'s pin of this exact node: promoted, so it carries no key. */
+function isPinnedGraphNode(item: { key?: string; payload: unknown }, nodeId: string): boolean {
+  const payload = item.payload as { kind?: string; refType?: string; refId?: string };
+  return (
+    item.key === undefined &&
+    payload?.kind === "ref" &&
+    payload.refType === "graph-node" &&
+    payload.refId === nodeId
+  );
 }
 
 /**
@@ -72,13 +104,7 @@ export function GraphContextPinButton({ node }: { node: GraphNode }) {
   const removeContextItem = useAppStore((s) => s.removeContextItem);
 
   const tracked = items.find((item) => item.key === GRAPH_SELECTION_CONTEXT_KEY);
-  const pinned = items.find(
-    (item) =>
-      item.key === undefined &&
-      item.payload.kind === "ref" &&
-      item.payload.refType === "graph-node" &&
-      item.payload.refId === node.id,
-  );
+  const pinned = items.find((item) => isPinnedGraphNode(item, node.id));
 
   const toggle = useCallback(() => {
     if (pinned) {

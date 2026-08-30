@@ -31,21 +31,30 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
    * merges into the graph on screen. The expansion becomes part of the
    * conversation rather than a side effect nobody can refer back to.
    */
-  const expandNode = useCallback(
+  /**
+   * The payload's caption key for this node's label.
+   *
+   * Every path that NAMES a node — the expansion prompt, the chat-context
+   * chip, the client tools — resolves through the same rule the canvas paints
+   * by, or the same node ends up with two names and the agent discusses one
+   * the user cannot see.
+   */
+  const captionKeyFor = useCallback(
     (node: GraphNode) => {
-      // Captioned with the payload\'s own `legend.captionKey` — the same rule
-      // the canvas paints with, and the one `graph_select_node` resolves by.
-      // Without it the turn names the node something the user cannot see on
-      // screen, which is confusing in the transcript and worse when the agent
-      // takes that text as the thing to look up.
-      const label = primaryLabel(node);
       const legend = payload?.legend;
-      const captionKey = legend && hasOwn(legend, label) ? legend[label]?.captionKey : undefined;
-      submitComposerText(
-        `Expand "${resolveCaption(node, captionKey)}" (${label}) in the graph — node id ${node.id}.`,
-      );
+      const label = primaryLabel(node);
+      return legend && hasOwn(legend, label) ? legend[label]?.captionKey : undefined;
     },
     [payload],
+  );
+
+  const expandNode = useCallback(
+    (node: GraphNode) => {
+      submitComposerText(
+        `Expand "${resolveCaption(node, captionKeyFor(node))}" (${primaryLabel(node)}) in the graph — node id ${node.id}.`,
+      );
+    },
+    [captionKeyFor],
   );
 
   // Publish this panel as THE live graph, so the agent's client tools can read
@@ -71,7 +80,11 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
     workspace.setSelection(view.selection);
     workspace.setQuery(view.query);
     workspace.setHiddenLabels(view.hiddenLabels);
-    syncGraphSelectionContext(view.selection, `graph:${content.title}`);
+    syncGraphSelectionContext(
+      view.selection,
+      `graph:${content.title}`,
+      view.selection ? captionKeyFor(view.selection) : undefined,
+    );
     return () => graphWorkspaceStore.getState().disconnect(handle);
     // `currentPage` is a dependency for the same reason `isOpen` is, and it is
     // easy to miss because the panel does not move: `setCurrentPage` clears
@@ -126,7 +139,11 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
           graphWorkspaceStore.getState().setSelection(node);
           // The selected node joins the conversation automatically, so
           // "tell me about this" needs no restating on either side.
-          syncGraphSelectionContext(node, `graph:${content.title}`);
+          syncGraphSelectionContext(
+            node,
+            `graph:${content.title}`,
+            node ? captionKeyFor(node) : undefined,
+          );
         }}
         inspectorActions={(node) => <GraphContextPinButton node={node} />}
         onQueryChange={(query) => graphWorkspaceStore.getState().setQuery(query)}
