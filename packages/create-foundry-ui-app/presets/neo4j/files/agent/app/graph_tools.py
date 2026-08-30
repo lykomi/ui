@@ -303,28 +303,31 @@ async def graph_expand_node(
     )
 
 
-def _cap_vector_nodes(
-    hit_ids: list[str], per_hit: dict[str, list[str]], limit: int
+def _round_robin(
+    hit_ids: list[str],
+    buckets: dict[str, list[str]],
+    limit: int,
+    seed: list[str] | None = None,
 ) -> list[str]:
-    """Spend the node budget across the hits, not down the arrival order.
+    """Spend a budget across the hits, not down the arrival order.
 
     The neighbour query already caps fan-out PER HIT, so no single high-degree
-    hit can eat the whole neighbourhood. Taking a prefix of the merged node
-    dict afterwards puts that bias straight back: the hits themselves come
-    first (they are the answer, and they are ranked), then every neighbour of
-    hit 1, then every neighbour of hit 2 — so once the total passes the cap,
-    the late hits arrive on screen as bare, unconnected dots while the early
-    ones sit in a hairball. Reachable with the tool's own arguments: 25 hits at
-    the default fan-out of 15 is 400 nodes against a 300 cap.
+    hit can eat the neighbourhood. Taking a prefix of the merged result
+    afterwards puts that bias straight back: everything belonging to hit 1,
+    then hit 2, and once the total passes the cap the late hits arrive on
+    screen with nothing around them while the early ones sit in a hairball.
+    Reachable with the tool's own arguments — 25 hits at the default fan-out of
+    15 is 400 nodes against a 300 cap.
 
-    So: keep the hits first, in score order, then take one neighbour from each
-    hit in turn until the budget runs out. Every hit that has neighbours gets
+    So: take one item from each hit in turn. Every hit that has anything gets
     some before any hit gets its second.
+
+    ``seed`` is what is kept unconditionally before the budget is shared out —
+    the hits themselves, for the node cap, because they are the answer and they
+    are ranked. The edge cap has no seed.
     """
-    kept = list(hit_ids[:limit])
+    kept = list(seed or [])[:limit]
     seen = set(kept)
-    # Only reached when every hit fits, so `hit_ids` and the kept hits are the
-    # same list; a cap tighter than the hit count spends nothing on neighbours.
     budget = limit - len(kept)
     depth = 0
     while budget > 0:
@@ -332,18 +335,19 @@ def _cap_vector_nodes(
         for hit_id in hit_ids:
             if budget <= 0:
                 break
-            bucket = per_hit.get(hit_id) or []
+            bucket = buckets.get(hit_id) or []
             if depth >= len(bucket):
                 continue
             exhausted = False
-            neighbour = bucket[depth]
-            # Already kept: a hit, or a neighbour two hits share. Skipping it
-            # without spending budget is the point — the slot goes to a node
-            # that is not on screen yet.
-            if neighbour in seen:
+            item = bucket[depth]
+            # Already kept: a hit, or something two hits share — a common
+            # neighbour, or the relationship between two hits, which is in
+            # both their buckets. Skipping it without spending budget is the
+            # point: the slot goes to something not on screen yet.
+            if item in seen:
                 continue
-            seen.add(neighbour)
-            kept.append(neighbour)
+            seen.add(item)
+            kept.append(item)
             budget -= 1
         if exhausted:
             break
@@ -394,17 +398,20 @@ async def graph_vector_search(
         nodes: dict[str, Any] = {}
         edges: dict[str, Any] = {}
         scores: list[dict[str, Any]] = []
-        # Which hit each neighbour arrived for, in arrival order. The node cap
-        # below spends its budget across these buckets rather than down the
-        # merged dict, so the fan-out stays per hit all the way to the payload.
+        # Which hit each neighbour and each relationship arrived for, in
+        # arrival order. BOTH caps below spend their budget across these
+        # buckets rather than down the merged dict, so the fan-out stays per
+        # hit all the way to the payload.
         hit_ids: list[str] = []
         per_hit: dict[str, list[str]] = {}
+        per_hit_edges: dict[str, list[str]] = {}
         for record in hits:
             node = record["node"]
             if node.element_id not in nodes:
                 nodes[node.element_id] = node_to_graph_node(node)
                 hit_ids.append(node.element_id)
                 per_hit[node.element_id] = []
+                per_hit_edges[node.element_id] = []
             scores.append({"id": node.element_id, "score": float(record["score"])})
 
         if nodes:
@@ -436,16 +443,37 @@ async def graph_vector_search(
                 edge = relationship_to_graph_edge(record["r"])
                 if edge is not None:
                     edges.setdefault(edge["id"], edge)
+                    edge_bucket = per_hit_edges.get(record["hit"])
+                    if edge_bucket is not None:
+                        edge_bucket.append(edge["id"])
     except Exception as exc:  # noqa: BLE001
         return _failure(f"Vector search failed. {graph_db.safe_error(exc)}")
 
-    kept_ids = _cap_vector_nodes(hit_ids, per_hit, graph_db.max_nodes())
-    kept_nodes = {node_id: nodes[node_id] for node_id in kept_ids}
+    kept_nodes = {
+        node_id: nodes[node_id]
+        for node_id in _round_robin(
+            hit_ids, per_hit, graph_db.max_nodes(), seed=hit_ids
+        )
+    }
+    # The edge budget gets the same rule, and needs it for the same reason: a
+    # prefix here would hand every relationship to the early hits and undo the
+    # node cap's work, leaving the late hits' retained neighbours drawn as
+    # unconnected dots. Endpoints are checked first — an edge whose node was
+    # just capped away would dangle — so the round-robin only ever spends the
+    # budget on relationships that can actually be drawn.
+    drawable = {
+        hit_id: [
+            edge_id
+            for edge_id in bucket
+            if edges[edge_id]["source"] in kept_nodes
+            and edges[edge_id]["target"] in kept_nodes
+        ]
+        for hit_id, bucket in per_hit_edges.items()
+    }
     kept_edges = [
-        edge
-        for edge in edges.values()
-        if edge["source"] in kept_nodes and edge["target"] in kept_nodes
-    ][: graph_db.max_edges()]
+        edges[edge_id]
+        for edge_id in _round_robin(hit_ids, drawable, graph_db.max_edges())
+    ]
 
     meta = _meta(None, started)
     meta["scores"] = scores
