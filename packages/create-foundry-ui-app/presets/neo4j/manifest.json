@@ -11,7 +11,8 @@
     "graph:up": "docker compose up -d",
     "graph:down": "docker compose down",
     "graph:seed": "uv run --project agent python scripts/seed_graph.py",
-    "graph:reset": "uv run --project agent python scripts/seed_graph.py --reset"
+    "graph:reset": "uv run --project agent python scripts/seed_graph.py --reset",
+    "test:agent": "cd agent && uv run --group dev pytest"
   },
   "envVars": [
     {

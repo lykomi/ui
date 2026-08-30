@@ -20,6 +20,21 @@ dependencies = [
   "uvicorn[standard]>=0.34.0",
 ]
 
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+# `auto` so an async test needs no per-test marker — the whole graph surface is
+# async, and a forgotten marker silently passes without running the body.
+asyncio_mode = "auto"
+testpaths = ["tests"]
+# `app` is not an installed package (package = false), so the agent directory
+# has to be on the path for `from app import ...` to resolve.
+pythonpath = ["."]
+
 [tool.uv]
 package = false
 prerelease = "allow"

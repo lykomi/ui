@@ -50,7 +50,12 @@ describe("resolvePreset", () => {
       "graph:down",
       "graph:seed",
       "graph:reset",
+      "test:agent",
     ]);
+    // `cd agent` first, like `dev:agent`: pytest reads its configuration from
+    // agent/pyproject.toml, and from the app root it would find neither that
+    // nor the tests directory — and would exit 0 having run nothing.
+    expect(r.extraScripts?.["test:agent"]).toMatch(/^cd agent && /);
   });
 
   it("rejects unknown presets with a clear error", async () => {

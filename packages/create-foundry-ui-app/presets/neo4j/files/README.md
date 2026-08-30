@@ -18,6 +18,7 @@ az login                              # or set AZURE_CLIENT_ID/SECRET/TENANT_ID
 pnpm graph:up                         # Neo4j in Docker, credentials already in .env.example
 pnpm graph:seed                       # a small demo graph: films, the people who made them, genres
 pnpm dev                              # http://localhost:8010
+pnpm test:agent                       # the graph tools (live tests skip without a database)
 ```
 
 Then ask it something:
@@ -155,6 +156,18 @@ For a genuinely read-only deployment, create a dedicated database user:
 CREATE USER readonly SET PASSWORD 'change-me' CHANGE NOT REQUIRED;
 GRANT ROLE reader TO readonly;
 ```
+
+**`GRANT ROLE` needs Neo4j Enterprise.** Role-based access control is not in
+Community — which is what `docker-compose.yml` here runs. `CREATE USER`
+succeeds, then `GRANT ROLE` fails with `Unsupported administration command`,
+and the new user has the same full access as every other. Verified on both
+editions; do not assume the recipe took effect because its first line did.
+
+On Community the boundary is the one this code already gives you: leave
+`NEO4J_ALLOW_WRITES` unset and `build_graph_tools()` never registers the write
+tool, so the agent has no way to ask for one — and point it at data you can
+afford to lose. On Enterprise or Aura, grant the role and let the database
+enforce it.
 
 Database permissions are the only guarantee that survives a bug in this code.
 
