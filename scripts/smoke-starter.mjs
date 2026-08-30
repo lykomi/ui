@@ -12,6 +12,13 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import {
+  applyLocalPacks,
+  assertNoAssistantUiPins,
+  packWorkspace,
+  WORKSPACE_PACKAGES,
+} from "./lib/local-packs.mjs";
+
 const root = resolve(import.meta.dirname, "..");
 const workDir = mkdtempSync(join(tmpdir(), "foundry-ui-starter-"));
 const packDir = join(workDir, "packs");
@@ -39,14 +46,7 @@ const browserSmokeWatchdog = runBrowserSmoke
     }, 8 * 60_000)
   : null;
 
-const packages = [
-  "packages/agent",
-  "packages/web-primitives",
-  "packages/web-ui",
-  "packages/web-graph",
-  "packages/web-shell",
-  "packages/web-voice",
-];
+const packages = WORKSPACE_PACKAGES;
 
 function resolvePnpmCommand() {
   if (process.env.PNPM_EXECUTABLE) {
@@ -85,20 +85,6 @@ function runOutput(command, args, options = {}) {
     throw new Error(`${command} ${args.join(" ")} failed with exit code ${result.status}`);
   }
   return output;
-}
-
-function runJson(command, args, options = {}) {
-  const output = execFileSync(command, args, {
-    cwd: options.cwd ?? root,
-    env: process.env,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "inherit"],
-  });
-  return JSON.parse(output);
-}
-
-function firstJson(value) {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 async function runPnpmLiveOutput(args, options = {}) {
@@ -404,66 +390,12 @@ async function runBrowserStarterSmoke() {
   }
 }
 
-run("mkdir", ["-p", packDir]);
-
-const tarballs = new Map();
-for (const pkgDir of packages) {
-  const pack = firstJson(
-    runJson(
-      pnpmCommand.command,
-      [...pnpmCommand.prefixArgs, "pack", "--json", "--pack-destination", packDir],
-      {
-        cwd: join(root, pkgDir),
-      },
-    ),
-  );
-  tarballs.set(
-    pack.name,
-    `file:${pack.filename.startsWith("/") ? pack.filename : join(packDir, pack.filename)}`,
-  );
-}
+const tarballs = packWorkspace({ root, packDir, packages, pnpm: pnpmCommand });
 
 run("node", ["packages/create-foundry-ui-app/dist/index.mjs", appDir, "--no-install"]);
 
-const packageJsonPath = join(appDir, "package.json");
-const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-// The generated app's OWN overrides live in pnpm-workspace.yaml, and adding a
-// `pnpm.overrides` block to package.json makes pnpm use that instead — silently
-// dropping them. This test therefore cannot see a bad override in the template,
-// which is exactly how a pinned `@assistant-ui/store` shipped in every scaffold
-// while this test stayed green. Assert the file is clean of the pins that can
-// only do harm before neutralising it.
-const workspaceYamlPath = join(appDir, "pnpm-workspace.yaml");
-if (existsSync(workspaceYamlPath)) {
-  const yaml = readFileSync(workspaceYamlPath, "utf8");
-  for (const pinned of ["@assistant-ui/store", "@assistant-ui/core", "@assistant-ui/tap"]) {
-    if (new RegExp(`^\\s+"?${pinned.replace("/", "\\/")}"?\\s*:`, "m").test(yaml)) {
-      throw new Error(
-        `The scaffold's pnpm-workspace.yaml pins ${pinned}. Pinning a transitive of ` +
-          `@assistant-ui/react freezes one node of a graph that keeps moving, and the ` +
-          `generated app stops building. Remove it from the template.`,
-      );
-    }
-  }
-}
-
-const generatedOverrides = packageJson.overrides ?? {};
-for (const [name, specifier] of tarballs) {
-  packageJson.dependencies[name] = specifier;
-}
-packageJson.pnpm = {
-  ...(packageJson.pnpm ?? {}),
-  overrides: {
-    ...generatedOverrides,
-    ...(packageJson.pnpm?.overrides ?? {}),
-    ...Object.fromEntries(tarballs),
-  },
-};
-packageJson.overrides = {
-  ...generatedOverrides,
-  ...Object.fromEntries(tarballs),
-};
-writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+assertNoAssistantUiPins(join(appDir, "pnpm-workspace.yaml"), { existsSync });
+applyLocalPacks(appDir, tarballs);
 
 await runPnpmLiveOutput(["install", "--frozen-lockfile=false"], {
   cwd: appDir,

@@ -64,3 +64,71 @@ jobs:
 
       - name: Smoke generated starter in browser
         run: pnpm smoke:starter:browser
+
+  neo4j-preset:
+    name: Neo4j preset
+    runs-on: ubuntu-latest
+    services:
+      # A real server, because the two claims worth testing are properties of
+      # Neo4j rather than of our code: that a READ-mode session refuses a
+      # write, and what the driver actually hydrates for the endpoints of a
+      # bare relationship. A fake would assert only what we already believe.
+      neo4j:
+        image: neo4j:5-community
+        env:
+          NEO4J_AUTH: neo4j/testpassword
+          NEO4J_server_memory_pagecache_size: 256M
+          NEO4J_server_memory_heap_max__size: 512M
+        ports:
+          - 7687:7687
+          - 7474:7474
+        options: >-
+          --health-cmd "wget -qO- http://localhost:7474 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: testpassword
+      NEO4J_DATABASE: neo4j
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      # The scaffolding CLI runs from `dist`, and the smoke installs the
+      # generated app from freshly packed tarballs — so this has to be the
+      # working tree's build, not the last release.
+      - name: Build the workspace
+        run: pnpm build
+
+      # Scaffolds --preset neo4j, installs from local packs, builds it, and
+      # checks the bundle: the vendor-graph chunk order, the Tailwind @source
+      # that the graph chrome needs, and that the module registered its tools.
+      # `--out` keeps the app for the steps below rather than a temp dir.
+      - name: Scaffold and build the neo4j starter
+        run: pnpm smoke:neo4j --out "$RUNNER_TEMP/neo4j-app"
+
+      # No FOUNDRY_EMBEDDING_MODEL, so the seed skips embeddings and the vector
+      # index — the graph itself needs no model, and the suite does not test
+      # semantic search for that reason.
+      - name: Seed the demo graph
+        run: pnpm graph:seed
+        working-directory: ${{ runner.temp }}/neo4j-app
+
+      - name: Run the preset's agent tests
+        run: pnpm test:agent
+        working-directory: ${{ runner.temp }}/neo4j-app

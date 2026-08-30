@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "license": "MIT",
-  "description": "Open-source agent UI starter — AG-UI protocol, Microsoft Agent Framework, Azure Foundry. Cross-runtime transport + React shell.",
+  "description": "Open-source agent UI starter \u2014 AG-UI protocol, Microsoft Agent Framework, Azure Foundry. Cross-runtime transport + React shell.",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -19,6 +19,7 @@
     "check:sensitive": "node scripts/check-sensitive-terms.mjs",
     "smoke:starter": "node scripts/smoke-starter.mjs",
     "smoke:starter:browser": "node scripts/smoke-starter.mjs --browser",
+    "smoke:neo4j": "node scripts/smoke-neo4j-preset.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build": "pnpm --filter @iloveagents/foundry-agent build && pnpm --filter @iloveagents/foundry-web-primitives build && pnpm --filter @iloveagents/foundry-web-ui build && pnpm --filter @iloveagents/foundry-web-graph build && pnpm --filter @iloveagents/foundry-web-shell build && pnpm --filter @iloveagents/foundry-web-voice build && pnpm --filter create-foundry-ui-app build",

@@ -18,6 +18,7 @@ az login                              # or set AZURE_CLIENT_ID/SECRET/TENANT_ID
 pnpm graph:up                         # Neo4j in Docker, credentials already in .env.example
 pnpm graph:seed                       # a small demo graph: films, the people who made them, genres
 pnpm dev                              # http://localhost:8010
+pnpm test:agent                       # the graph tools (live tests skip without a database)
 ```
 
 Then ask it something:

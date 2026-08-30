@@ -99,8 +99,17 @@ pnpm install
 pnpm test           # build + lint + typecheck + unit (pre-commit suite)
 pnpm test:unit      # vitest run across packages
 pnpm typecheck      # tsc --noEmit across packages
+pnpm smoke:starter  # scaffold the default preset from local packs and build it
+pnpm smoke:neo4j    # same for the neo4j preset, plus its bundle assertions
 pnpm changeset      # add a versioning changeset before committing
 ```
+
+The starter smokes install a generated app from freshly PACKED tarballs, never
+from npm — a scaffold pins published versions, so a smoke that installed those
+would test the last release rather than the change in hand. The neo4j one also
+carries the assertions for things that break silently and still build: the
+`vendor-graph` chunk order, the Tailwind `@source` the graph chrome needs, and
+whether the module registered its tools at all.
 
 # Open-core packaging (history)
 

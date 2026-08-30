@@ -30,6 +30,18 @@ pnpm dev
 
 The UI runs on `http://localhost:8010`, the agent service on `http://localhost:8020`; Vite proxies `/api/agent` to it. Neo4j Browser is on `http://localhost:7474`.
 
+```bash
+pnpm test:agent      # the graph tools, in `agent/tests/`
+```
+
+Two halves. The pure tests — payload coercion, connected-core capping, the
+per-hit budget, the write-keyword scan — run anywhere. The live tests need a
+database and SKIP without one, so `pnpm test:agent` is green and meaningful
+before you have started anything; point `NEO4J_URI` at a server (a `.env` is
+enough) and they run. They are what pins the two claims a mock cannot: that a
+`READ`-mode session is refused a write BY THE SERVER, and what the driver
+really hydrates for the endpoints of a bare relationship.
+
 Aura instead of local: change `NEO4J_URI` to `neo4j+s://<instance-id>.databases.neo4j.io` and the credentials. No code is Aura-specific.
 
 # Conventions that are easy to break
