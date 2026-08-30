@@ -16,7 +16,11 @@ import neo4j
 import pytest
 
 from app import graph_db
-from app.graph_payload import GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION
+from app.graph_payload import (
+    GRAPH_PAYLOAD_KIND,
+    GRAPH_PAYLOAD_VERSION,
+    records_to_graph_payload,
+)
 from app.graph_tools import graph_expand_node, graph_read_cypher, graph_schema
 
 pytestmark = pytest.mark.skipif(
@@ -74,16 +78,18 @@ class TestReadOnlyIsEnforcedByTheServer:
     no matter how good the regex is.
     """
 
-    async def test_a_read_session_refuses_a_write(self):
-        driver = graph_db.get_driver()
-        async with driver.session(
-            database=graph_db.database(), default_access_mode=neo4j.READ_ACCESS
-        ) as session:
-            with pytest.raises(neo4j.exceptions.ClientError) as excinfo:
-                result = await session.run(
-                    "CREATE (n:__TestOnly__ {marker: 'should never exist'}) RETURN n"
-                )
-                await result.consume()
+    async def test_run_read_is_refused_a_write_by_the_server(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        # Through `run_read`, with only the keyword scan disabled. Opening a
+        # READ session directly would pin NEO4J's behaviour and not ours —
+        # `run_read` could be changed to WRITE_ACCESS and such a test would
+        # stay green while the documented boundary was gone.
+        monkeypatch.setattr(graph_db, "looks_like_write", lambda _cypher: False)
+        with pytest.raises(neo4j.exceptions.ClientError) as excinfo:
+            await graph_db.run_read(
+                "CREATE (n:__TestOnly__ {marker: 'should never exist'}) RETURN n"
+            )
         assert "AccessMode" in excinfo.value.code
 
     async def test_nothing_was_written(self):
@@ -115,15 +121,42 @@ class TestPayloadsComeBackRenderable:
         assert payload["edges"], "no relationships came back"
         assert payload["nodes"], "relationships arrived with no endpoints"
 
-    async def test_a_node_and_its_relationships_together_keep_the_full_node(self):
-        # Across rows a bare endpoint can arrive before the real node. The real
-        # one has to win, or the query's own result is discarded in favour of
-        # a stub.
+    async def test_endpoints_in_the_same_record_arrive_hydrated(self):
+        # Documents WHY the test below needs two results. Within one result the
+        # driver caches a node by element id and fills it in, so a relationship
+        # returned alongside its endpoints never yields a stub — measured, and
+        # true even across rows of a UNION ALL, where `rel.start_node is node`.
         payload = await unwrap(graph_read_cypher)(
             "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 10"
         )
         assert_is_graph_payload(payload)
-        assert all(n["labels"] for n in payload["nodes"]), "an endpoint stub survived"
+        assert all(n["labels"] for n in payload["nodes"])
+
+    async def test_a_stub_from_one_result_loses_to_the_full_node_from_another(self):
+        # THE regression the stub rule exists for, and it needs records from two
+        # SEPARATE results to exist at all: a relationship returned alone hands
+        # back endpoints with no labels and no properties, and a plain
+        # `setdefault` would keep that bare endpoint and discard the real node
+        # the second query returned — drawing a nameless circle with an empty
+        # inspector.
+        rel_rows, _ = await graph_db.run_read("MATCH ()-[r]->() RETURN r LIMIT 1")
+        endpoint_id = rel_rows[0]["r"].start_node.element_id
+        assert not list(rel_rows[0]["r"].start_node.labels), (
+            "a relationship returned alone no longer yields a bare endpoint — "
+            "the premise of the stub rule has changed"
+        )
+        node_rows, _ = await graph_db.run_read(
+            "MATCH (n) WHERE elementId(n) = $id RETURN n", {"id": endpoint_id}
+        )
+        assert list(node_rows[0]["n"].labels)
+
+        # Stub first, full node second: the order that makes first-wins lose.
+        payload = records_to_graph_payload(
+            list(rel_rows) + list(node_rows), max_nodes=50, max_edges=50
+        )
+        kept = next(n for n in payload["nodes"] if n["id"] == endpoint_id)
+        assert kept["labels"], "the endpoint stub survived and the real node was dropped"
+        assert kept["properties"]
 
     async def test_the_schema_is_itself_a_renderable_graph(self):
         # The schema comes back as a `foundry.graph` payload — labels as nodes,

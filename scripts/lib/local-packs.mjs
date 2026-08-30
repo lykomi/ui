@@ -12,8 +12,28 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
+/**
+ * How to invoke pnpm here.
+ *
+ * `PNPM_EXECUTABLE` first: an environment can supply pnpm explicitly without
+ * putting a `pnpm` binary on PATH, and then a bare `pnpm` is an ENOENT. Shared
+ * rather than copied — the second copy of this had already lost that branch.
+ */
+export function resolvePnpmCommand() {
+  if (process.env.PNPM_EXECUTABLE) {
+    return { command: process.env.PNPM_EXECUTABLE, prefixArgs: [] };
+  }
+  if (process.env.COREPACK_ROOT) {
+    const corepackPnpm = join(process.env.COREPACK_ROOT, "dist", "pnpm.js");
+    if (existsSync(corepackPnpm)) {
+      return { command: process.execPath, prefixArgs: [corepackPnpm] };
+    }
+  }
+  return { command: "pnpm", prefixArgs: [] };
+}
 
 /** Every runtime package a generated app can depend on. */
 export const WORKSPACE_PACKAGES = [

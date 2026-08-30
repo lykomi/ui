@@ -19,7 +19,12 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { applyLocalPacks, assertNoAssistantUiPins, packWorkspace } from "./lib/local-packs.mjs";
+import {
+  applyLocalPacks,
+  assertNoAssistantUiPins,
+  packWorkspace,
+  resolvePnpmCommand,
+} from "./lib/local-packs.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const workDir = mkdtempSync(join(tmpdir(), "foundry-ui-neo4j-"));
@@ -38,15 +43,6 @@ if (
 }
 const appDir = outIndex === -1 ? join(workDir, "app") : resolve(process.argv[outIndex + 1]);
 
-function resolvePnpmCommand() {
-  if (process.env.COREPACK_ROOT) {
-    const corepackPnpm = join(process.env.COREPACK_ROOT, "dist", "pnpm.js");
-    if (existsSync(corepackPnpm)) {
-      return { command: process.execPath, prefixArgs: [corepackPnpm] };
-    }
-  }
-  return { command: "pnpm", prefixArgs: [] };
-}
 const pnpm = resolvePnpmCommand();
 
 const run = (command, args, options = {}) =>

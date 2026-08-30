@@ -16,6 +16,7 @@ import {
   applyLocalPacks,
   assertNoAssistantUiPins,
   packWorkspace,
+  resolvePnpmCommand,
   WORKSPACE_PACKAGES,
 } from "./lib/local-packs.mjs";
 
@@ -47,21 +48,6 @@ const browserSmokeWatchdog = runBrowserSmoke
   : null;
 
 const packages = WORKSPACE_PACKAGES;
-
-function resolvePnpmCommand() {
-  if (process.env.PNPM_EXECUTABLE) {
-    return { command: process.env.PNPM_EXECUTABLE, prefixArgs: [] };
-  }
-
-  if (process.env.COREPACK_ROOT) {
-    const corepackPnpm = join(process.env.COREPACK_ROOT, "dist", "pnpm.js");
-    if (existsSync(corepackPnpm)) {
-      return { command: process.execPath, prefixArgs: [corepackPnpm] };
-    }
-  }
-
-  return { command: "pnpm", prefixArgs: [] };
-}
 
 const pnpmCommand = resolvePnpmCommand();
 
