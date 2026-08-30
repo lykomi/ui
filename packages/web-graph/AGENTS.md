@@ -25,6 +25,17 @@ The split is the point. A dashboard that only draws a graph must not load the ch
 - **The merge is a headless watcher, not a side effect of the card.** `GraphResultSeeder` reads the thread's own parts. It has to be: the card lives inside the turn's collapsed "Worked · 3 tools" strip, which does not mount until the reader expands it — so a merge hung off rendering never ran. Seen live: the agent named four new relationships and the panel stayed at three nodes, with nothing reporting a failure. Same failure, same shape and same answer as `CitationSeeder`/`TaskSeeder` in `@ltwlf/spaces-web-ui` (ltwlf/lastspace#650). Force-mounting the strip instead was tried and rejected — it makes a disclosure's contents cost something in every transcript, and replays every historical result on a reopened chat.
 - **Binding a card is what makes a tool graph-shaped.** `makeGraphToolUI` registers the tool name, `extract` and `panelTitle` in `graph-tool-registry.ts`; the watcher reads that. A graph-returning tool with no card is a tool nothing reads — the Neo4j preset shipped `graph_expand_node` and `graph_write_cypher` that way. One registration, not two, so there is nothing separate to forget.
 - **The watcher takes a baseline, and takes it late.** Only results appearing after the thread has settled are acted on, or reopening a saved conversation would throw its last graph over whatever the user was doing. The baseline is taken on the first NON-EMPTY view (a resumed thread mounts empty and fills in later, so an early baseline makes the whole history look new) and re-taken when the thread identity changes.
+- **A deferral needs a reason knowable WITHOUT the payload.** A result waits
+  when no valid merge target exists yet — the panel is closed, or what is open
+  is not a graph. Both are decidable from the panel alone, so nothing is
+  consumed and nothing is retried. A merge that ran and returned `false` is a
+  DECISION and counts as handled, even though that means a result deferred for
+  graph A is spent if the user opens unrelated graph B first. That case is
+  known and left alone: "unrelated result" and "right result, wrong graph" are
+  the same signal — a rejected overlap — so telling them apart would mean
+  retaining every rejected result and re-attempting it on each panel change,
+  i.e. an unbounded queue and a re-attempt loop, to save something the tool
+  card's "Open in panel" action already recovers.
 - **That is also why it is not the model's job.** Asking the agent to call `graph_show` after every read makes the main interaction depend on it remembering, and puts two tool calls in one turn — which is where the AG-UI client-tool replay gets into trouble (a duplicate `TOOL_CALL_START`, seen live). One tool call per turn, and the panel keeps itself current.
 - **`graph_show` updates in place.** It calls `setContent` when a graph panel is already open rather than `openPanel`, because this is the same workspace changing. The renderer instance is reused and `reconcileGraphModel` keeps positions by node id, so a refined query reads as a change.
 - **Expansion goes through the conversation.** The panel cannot query — the Cypher tools are server-side — so a double-click submits a chat turn naming the node and its id. The turn is visible, and the answer merges. `GraphView` itself still just takes `onExpandNode`; it never queries anything.
