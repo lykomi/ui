@@ -155,3 +155,33 @@ describe("relationship-only results", () => {
     expect(target?.properties?.title).toBe("Metropolis");
   });
 });
+
+describe("numeric identities", () => {
+  const withIdentity = (identity: unknown) => ({
+    identity,
+    labels: ["Movie"],
+    properties: { title: "Metropolis" },
+  });
+
+  it("takes a safe integer identity", () => {
+    const result = graphFromNeo4j([[withIdentity(42)]]);
+    expect(result.nodes.map((n) => n.id)).toEqual(["42"]);
+  });
+
+  it("refuses a number that has already lost precision", () => {
+    // Past 2**53-1 the rounding happened before this code ran, so
+    // `String(value)` faithfully stringifies the WRONG number and two distinct
+    // ids collapse to one key — which does not fail, it attaches edges to the
+    // wrong nodes. A caller with ids that large has exact forms available: a
+    // string, a bigint, an elementId, or {low, high}.
+    const result = graphFromNeo4j([[withIdentity(2 ** 53 + 2)]]);
+    expect(result.nodes).toEqual([]);
+  });
+
+  it("still takes the exact forms for the same magnitude", () => {
+    expect(graphFromNeo4j([[withIdentity(9007199254740993n)]]).nodes[0]?.id).toBe(
+      "9007199254740993",
+    );
+    expect(graphFromNeo4j([[withIdentity({ low: 1, high: 1 })]]).nodes[0]?.id).toBe("4294967297");
+  });
+});

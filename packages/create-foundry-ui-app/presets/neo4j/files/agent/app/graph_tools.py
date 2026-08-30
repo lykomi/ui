@@ -42,6 +42,25 @@ def _meta(cypher: str | None, started: float) -> dict[str, Any]:
     return meta
 
 
+# Counter keys that mean the database actually changed. `contains_updates` is
+# the driver's own summary flag; the rest are named because a server may omit
+# it, and a write that changed nothing must not be reported as stale.
+_CHANGE_COUNTERS = (
+    "contains_updates",
+    "nodes_created",
+    "nodes_deleted",
+    "relationships_created",
+    "relationships_deleted",
+    "properties_set",
+    "labels_added",
+    "labels_removed",
+)
+
+
+def _changed(counters: dict[str, Any]) -> bool:
+    return any(counters.get(key) for key in _CHANGE_COUNTERS)
+
+
 def _failure(message: str) -> dict[str, Any]:
     """A failed tool call. The `error` key is what marks it failed in the UI —
     which is exactly why a successful payload must never carry one."""
@@ -213,6 +232,23 @@ async def graph_write_cypher(
         meta=meta,
         rows_truncated=rows_truncated,
     )
+    # A write that CHANGED something and returned nothing to draw leaves the
+    # panel exactly as stale as a deletion does, and for the same reason: the
+    # merge has no rows to apply. `MATCH ... SET ...` with no RETURN is an
+    # ordinary thing for a model to generate, so it cannot be left to the
+    # deletion branch above — without this the drawer goes on showing the
+    # property at its old value and nothing says otherwise.
+    if not meta.get("view_stale") and _changed(counters) and not payload["nodes"]:
+        meta["view_stale"] = True
+        meta["note"] = (
+            "This write CHANGED the database but returned no nodes or relationships, so the "
+            "graph on screen still shows the values from before it. Re-run the read that "
+            "produced the view, or re-run this statement with a RETURN of what it touched."
+        )
+        # Set explicitly rather than relying on `records_to_graph_payload`
+        # having stored this same dict by reference — it does, and that is not
+        # a thing the next reader should have to know.
+        payload["meta"] = meta
     # `applied` rides alongside the graph so the agent can confirm the change
     # even when the statement returned nothing to draw.
     payload["applied"] = True

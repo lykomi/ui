@@ -463,8 +463,12 @@ export function GraphView({
         query={state.query}
         onQueryChange={state.setQuery}
         matchCount={visibleMatchCount}
-        nodeCount={model.nodes.length}
-        edgeCount={model.links.length}
+        // The DRAWN graph, like every other count on this screen. Reading the
+        // capped-but-unfiltered model meant switching a label off left the
+        // toolbar saying "2 nodes · 1 rels" beside a canvas showing one node
+        // and no relationships.
+        nodeCount={visibleModel.nodes.length}
+        edgeCount={visibleModel.links.length}
         onZoomToFit={() => canvasRef.current?.zoomToFit()}
         onReheat={() => canvasRef.current?.reheat()}
         pinnedCount={state.pinnedIds.size}
@@ -510,7 +514,8 @@ export function GraphView({
           aria-label={
             useTable
               ? undefined
-              : `Graph: ${model.nodes.length} nodes, ${model.links.length} relationships. ` +
+              : // Same numbers the sighted user is given, for the same reason.
+                `Graph: ${visibleModel.nodes.length} nodes, ${visibleModel.links.length} relationships. ` +
                 `Use "Show as a table" for a readable version.`
           }
           className="border-border bg-background relative min-h-0 flex-1 overflow-hidden rounded-lg border"

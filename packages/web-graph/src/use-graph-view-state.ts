@@ -126,8 +126,7 @@ export function useGraphViewState(
     });
 
     // Pins are ids, and an id outlives the node it named. `graph_show`
-    // replacing the graph, or a merge pushing a node past the render cap,
-    // left the pin in the set: the toolbar counted a pin nothing shows, Unpin
+    // replacing the graph left the pin in the set: the toolbar counted a pin nothing shows, Unpin
     // All had something to clear that was not there, and — the part that is
     // not merely cosmetic — a LATER graph containing the same id got that
     // node frozen on arrival, by a pin the user made for a different graph.

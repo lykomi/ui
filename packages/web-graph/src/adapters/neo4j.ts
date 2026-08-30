@@ -55,7 +55,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  */
 function toId(value: unknown): string | null {
   if (typeof value === "string" && value.length > 0) return value;
-  if (typeof value === "number" || typeof value === "bigint") return String(value);
+  if (typeof value === "bigint") return String(value);
+  // A `number` only when it can still BE the id. Past 2**53-1 a double has
+  // already lost the low bits — by the time this runs the rounding has
+  // happened, so `String(value)` faithfully stringifies the wrong number and
+  // two distinct ids collapse to one key. Same consequence as the `low`-only
+  // bug below: it does not fail, it points edges at the wrong nodes. A caller
+  // holding larger ids has exact forms available — a string, a bigint, an
+  // `elementId`, or `{low, high}`.
+  if (typeof value === "number") return Number.isSafeInteger(value) ? String(value) : null;
   if (isRecord(value)) {
     // An elementId is exact; prefer it whenever the record carries one.
     if (typeof value.elementId === "string" && value.elementId.length > 0) {

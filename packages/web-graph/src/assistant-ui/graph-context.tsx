@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { Pin, PinOff } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useAppStore } from "@iloveagents/foundry-web-ui";
-import { primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
+import { jsonSafe, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
 
 /**
  * The context key the graph's selection occupies.
@@ -27,7 +27,15 @@ function contextItemFor(node: GraphNode, sourcePage: string) {
       preview: caption,
       // The agent gets the node's own data, so it can answer about "this
       // node" without a round trip back through a tool.
-      meta: { labels: node.labels ?? [], properties: node.properties ?? {} },
+      //
+      // A JSON-SAFE copy, not the live object. This item is attached to every
+      // subsequent turn and serialized by the HTTP agent, so a single native
+      // `bigint` in `properties` — which is what the Neo4j driver returns
+      // under `useBigInt` — throws inside someone else's `JSON.stringify`.
+      // That does not lose a property, it stops the user sending any message
+      // at all for as long as the node stays selected. Copying also detaches
+      // it from a node object the simulation keeps mutating.
+      meta: jsonSafe({ labels: node.labels ?? [], properties: node.properties ?? {} }),
     },
     sourcePage,
     // Ephemeral: it follows the selection. Pinning promotes it, which drops

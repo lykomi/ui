@@ -120,6 +120,8 @@ export function GraphResultSeeder() {
     (state) => state.isOpen && state.content?.type === GRAPH_PANEL_TYPE,
   );
   const baseline = useRef<{ threadId: string | undefined; ids: Set<string> } | null>(null);
+  /** Seen, extracted, and waiting for a graph panel. Cleared with the baseline. */
+  const deferred = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const current = baseline.current;
@@ -127,6 +129,7 @@ export function GraphResultSeeder() {
     if (current === null || current.threadId !== threadId) {
       // Nothing to anchor to yet — an empty thread may simply not have loaded.
       if (!messages || messages.length === 0) return;
+      deferred.current.clear();
       baseline.current = {
         threadId,
         ids: new Set(seedableGraphResults(messages).map((result) => result.toolCallId)),
@@ -137,7 +140,11 @@ export function GraphResultSeeder() {
     // Everything already acted on is skipped before its payload is extracted,
     // so a streaming turn re-walks the parts array without re-parsing the
     // whole conversation's graphs on every token.
-    for (const result of seedableGraphResults(messages, current.ids)) {
+    // Handled OR deferred: both are "do not extract this again". They stay
+    // separate sets because only `ids` means finished — a deferred call has to
+    // become extractable again the moment a graph panel is there for it.
+    const skip = graphPanelOpen ? current.ids : new Set([...current.ids, ...deferred.current]);
+    for (const result of seedableGraphResults(messages, skip)) {
       if (result.autoOpenPanel) {
         current.ids.add(result.toolCallId);
         useToolPanelStore.getState().openPanel(graphPanelContent(result.title, result.payload));
@@ -149,7 +156,18 @@ export function GraphResultSeeder() {
       // done anyway meant the answer the user asked for was gone for good.
       // Held back instead, and applied when a graph panel comes back — which
       // is why `graphPanelOpen` is a dependency of this effect.
-      if (!graphPanelOpen) continue;
+      if (!graphPanelOpen) {
+        // Deferred, and REMEMBERED as deferred. Leaving it out of `deferred`
+        // as well as out of `ids` meant `seedableGraphResults` re-extracted it
+        // on every pass — and a pass happens per streamed token — so a graph
+        // held back while the panel was closed re-validated every node and
+        // edge of itself for the rest of the turn. That is the same cost the
+        // `skip` parameter exists to avoid; this set is the half of it the
+        // deferral had quietly opted out of.
+        deferred.current.add(result.toolCallId);
+        continue;
+      }
+      deferred.current.delete(result.toolCallId);
       // Fold into the graph already open when it is about the same part of
       // the graph. This is what makes expanding a node — and watching the
       // agent write one — read as the workspace growing rather than as a

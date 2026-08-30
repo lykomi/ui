@@ -240,3 +240,30 @@ render-capped one, since narrowing the query cannot bring back a label the user
 switched off, and double-click expansion captions the node with the payload's
 own `legend.captionKey` — the rule the canvas paints by — so the turn names it
 what the user sees.
+
+The selected node's properties are copied into the chat context in JSON-safe
+form. That item rides along on every subsequent turn and is serialised by the
+HTTP agent, so one native `bigint` — what the Neo4j driver returns under
+`useBigInt` — threw inside someone else's `JSON.stringify` and stopped the
+user sending any message at all while that node stayed selected. The details
+drawer formats structured property values with the same serialiser, where raw
+`JSON.stringify` had been throwing and falling back to `[object Object]`,
+hiding the value in the panel whose whole job is showing it.
+
+Toolbar counts and the canvas `aria-label` report the drawn graph, so switching
+a label off no longer leaves "2 nodes · 1 rels" beside a canvas showing one
+node and nothing joining it. `graph_select_node` and `graph_get_view` caption
+nodes with the payload's own `legend.captionKey`, matching how the graph is
+matched and painted.
+
+A write that changed the database and returned nothing to draw is marked
+`view_stale`, as deletions already were: `MATCH … SET …` with no `RETURN` is
+ordinary for a model to generate, and the merge has no rows to apply, so the
+drawer went on showing the property at its old value with nothing saying so.
+
+The browser Neo4j adapter refuses a numeric identity outside JavaScript's safe
+integer range instead of stringifying an already-rounded value, where two
+distinct ids could collapse to one key and attach edges to the wrong nodes.
+
+A result held back for a closed panel is remembered as deferred, so it is no
+longer re-extracted on every streamed token for the rest of the turn.

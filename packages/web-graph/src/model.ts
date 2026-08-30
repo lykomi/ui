@@ -360,6 +360,19 @@ export function safeStringify(value: unknown, space?: number): string {
 }
 
 /**
+ * A structurally identical value that `JSON.stringify` cannot choke on.
+ *
+ * For anything that will be TRANSPORTED by someone else\'s serializer — the
+ * chat context rides along on every turn and is serialized by the HTTP agent,
+ * far from here — a raw `properties` object is a hazard: one native `bigint`
+ * and the request body throws, which does not degrade, it stops the user
+ * sending messages at all while that node is selected.
+ */
+export function jsonSafe<T>(value: T): T {
+  return JSON.parse(safeStringify(value)) as T;
+}
+
+/**
  * Did this value actually change?
  *
  * Compared structurally, WITHOUT serialising — which is the whole point. This

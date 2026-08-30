@@ -1,7 +1,13 @@
 import { useEffect, type ReactNode } from "react";
 import { Maximize2, Snowflake, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
-import { primaryLabel, resolveCaption, type GraphEdge, type GraphNode } from "./model.ts";
+import {
+  primaryLabel,
+  resolveCaption,
+  safeStringify,
+  type GraphEdge,
+  type GraphNode,
+} from "./model.ts";
 import type { GraphSelection } from "./use-graph-view-state.ts";
 
 /** Render a property value without collapsing structure into "[object Object]". */
@@ -12,11 +18,11 @@ function formatValue(value: unknown): string {
     return String(value);
   }
   if (Array.isArray(value)) return value.map(formatValue).join(", ");
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
+  // `safeStringify`, not `JSON.stringify`: a structured property containing a
+  // `bigint` (`{ count: 10n }`) THROWS, and the fallback then renders
+  // "[object Object]" — hiding the value in the one panel whose entire job is
+  // showing it. Cycles are handled for the same reason.
+  return safeStringify(value);
 }
 
 /**

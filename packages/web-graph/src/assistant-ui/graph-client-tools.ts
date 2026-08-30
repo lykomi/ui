@@ -2,11 +2,13 @@ import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-a
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
 import {
   coerceGraphPayload,
+  hasOwn,
   mergeGraphPayloads,
   primaryLabel,
   resolveCaption,
   safeStringify,
   type GraphNode,
+  type GraphPayload,
 } from "../model.ts";
 import { findWorkspaceNode, graphWorkspaceStore } from "../graph-workspace.ts";
 import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
@@ -21,12 +23,25 @@ import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
  * you can have a conversation with about the picture.
  */
 
-const describe = (node: GraphNode) => ({
-  id: node.id,
-  labels: node.labels ?? [],
-  caption: resolveCaption(node),
-  properties: node.properties ?? {},
-});
+/**
+ * A node as the AGENT should see it — captioned the way the canvas paints it.
+ *
+ * The payload\'s `legend.captionKey` is a supported part of the contract, and
+ * where a producer sets one, resolving without it names the node something
+ * that appears nowhere on screen. `findWorkspaceNode` already matches with the
+ * legend key, so without this the tool could find a node by the caption the
+ * user can see and then report a different name back.
+ */
+const describe = (node: GraphNode, legend?: GraphPayload["legend"]) => {
+  const label = primaryLabel(node);
+  const captionKey = legend && hasOwn(legend, label) ? legend[label]?.captionKey : undefined;
+  return {
+    id: node.id,
+    labels: node.labels ?? [],
+    caption: resolveCaption(node, captionKey),
+    properties: node.properties ?? {},
+  };
+};
 
 // Not `JSON.stringify`: every one of these results carries node properties
 // straight out of the database, and a `bigint` there would throw inside the
@@ -112,8 +127,10 @@ const selectNode: ClientToolEntry = {
   execute: async (argsJson) => {
     const args = parseArgs(argsJson);
     const needle = typeof args.node === "string" ? args.node : "";
-    const { handle } = graphWorkspaceStore.getState();
+    const { handle, payload: openPayload } = graphWorkspaceStore.getState();
     if (!handle) return fail("No graph is open. Call graph_show first.");
+    const legend = openPayload?.legend;
+    const captionOf = (node: GraphNode) => describe(node, legend).caption;
     const node = findWorkspaceNode(needle);
     if (!node) return fail(`No node matching "${needle}" is in the open graph.`);
     // A node can be in the workspace payload and still not be RENDERED — the
@@ -129,12 +146,12 @@ const selectNode: ClientToolEntry = {
       const label = primaryLabel(node);
       if (hidden.includes(label)) {
         return fail(
-          `"${resolveCaption(node)}" is in this result but hidden: the "${label}" filter is ` +
+          `"${captionOf(node)}" is in this result but hidden: the "${label}" filter is ` +
             `switched off in the legend. Ask the user to turn it back on to see this node.`,
         );
       }
       return fail(
-        `"${resolveCaption(node)}" is in this result but not drawn — the view is showing the ` +
+        `"${captionOf(node)}" is in this result but not drawn — the view is showing the ` +
           `most connected part of a graph too large for one screen. Narrow the query to bring ` +
           `it in.`,
       );
@@ -143,7 +160,7 @@ const selectNode: ClientToolEntry = {
     // re-centres on every mention throws that away. Move only if the node is
     // off-screen or behind the details drawer.
     handle.reveal(node.id);
-    return ok({ selected: describe(node) });
+    return ok({ selected: describe(node, legend) });
   },
 };
 
@@ -216,7 +233,7 @@ const getView: ClientToolEntry = {
       // reporting a smaller graph than the query returned.
       hiddenLabels: view.hiddenLabels,
       hiddenNodeCount: payload.nodes.length - view.nodes.length,
-      selectedNode: view.selection ? describe(view.selection) : null,
+      selectedNode: view.selection ? describe(view.selection, payload.legend) : null,
       // A selected node whose label the legend hides stays selected — the
       // drawer is still open and its properties are still what the user is
       // reading — but it is NOT in `nodeCount` or among the drawn nodes. Said

@@ -109,6 +109,16 @@ describe("GraphViewHandle", () => {
     expect(pinButton(), "pin survived its node").toBeFalsy();
   });
 
+  it("counts the DRAWN graph in the toolbar and the canvas label", () => {
+    // A legend toggle is a primary control, so this is what a user sees every
+    // time they use one: the toolbar said "2 nodes · 1 rels" beside a canvas
+    // showing one node and nothing joining it, and the canvas `aria-label`
+    // repeated the same wrong totals to a screen reader.
+    expect(container.textContent).toContain("2 nodes · 1 rels");
+    hideLabel("Person");
+    expect(container.textContent).toContain("1 nodes · 0 rels");
+  });
+
   it("reports edge endpoints as ids", () => {
     // force-graph REPLACES `source`/`target` with the node objects once the
     // simulation has run, so handing the links out raw put whole simulation
