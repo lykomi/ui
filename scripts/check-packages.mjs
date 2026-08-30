@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 
+import { resolvePnpmCommand } from "./lib/local-packs.mjs";
 import { foundryWorkspaceVersions, scaffoldPinSources } from "./scaffold-pins.mjs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -52,21 +53,6 @@ function fail(message) {
 
 function readPackageJson(dir) {
   return JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-}
-
-function resolvePnpmCommand() {
-  if (process.env.PNPM_EXECUTABLE) {
-    return { command: process.env.PNPM_EXECUTABLE, prefixArgs: [] };
-  }
-
-  if (process.env.COREPACK_ROOT) {
-    const corepackPnpm = join(process.env.COREPACK_ROOT, "dist", "pnpm.js");
-    if (existsSync(corepackPnpm)) {
-      return { command: process.execPath, prefixArgs: [corepackPnpm] };
-    }
-  }
-
-  return { command: "pnpm", prefixArgs: [] };
 }
 
 const pnpmCommand = resolvePnpmCommand();
