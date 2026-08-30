@@ -333,15 +333,26 @@ export function mergeGraphPayloads(base: GraphPayload, addition: GraphPayload): 
  * instead of a number. Equality is a different job; give it {@link deepEqual}.
  */
 export function safeStringify(value: unknown, space?: number): string {
-  const seen = new WeakSet<object>();
+  // ANCESTORS of the value being written, not everything ever seen. A single
+  // visited-set calls the second sighting of a shared object a cycle, and two
+  // nodes sharing one `properties` object is an ordinary thing for a hand-built
+  // payload or a browser-side adapter to produce — so the panel's copied
+  // content, and the tool results the agent reads, carried a literal
+  // "[circular]" where real data belonged. A repeat is only a cycle if the
+  // object is on the path back to the root.
+  //
+  // `JSON.stringify` walks depth-first and calls the replacer with `this` bound
+  // to the container it is writing into, which is what makes the path
+  // reconstructible: pop until the top of the stack is this item's parent.
+  const path: unknown[] = [];
   return JSON.stringify(
     value,
-    (_key, item: unknown) => {
+    function (this: unknown, _key, item: unknown) {
       if (typeof item === "bigint") return item.toString();
-      if (typeof item === "object" && item !== null) {
-        if (seen.has(item)) return "[circular]";
-        seen.add(item);
-      }
+      if (typeof item !== "object" || item === null) return item;
+      while (path.length > 0 && path[path.length - 1] !== this) path.pop();
+      if (path.includes(item)) return "[circular]";
+      path.push(item);
       return item;
     },
     space,
@@ -369,6 +380,27 @@ export function safeStringify(value: unknown, space?: number): string {
  * equal. Cycles are tracked as PAIRS here, so a repeat is only a cycle when
  * both sides repeat together.
  */
+/**
+ * `Object.hasOwn`, which this repo\'s ES2020 target does not have.
+ *
+ * Needed wherever a key comes from the payload: labels and relationship types
+ * are whatever the producer called them, and `record["constructor"]` finds a
+ * function on the prototype rather than reporting the key as absent.
+ */
+export function hasOwn(target: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(target, key);
+}
+
+function isDate(value: object): value is Date {
+  return Object.prototype.toString.call(value) === "[object Date]";
+}
+
+/** Own enumerable keys describe this object completely. */
+function isPlainObject(value: object): boolean {
+  const proto = Object.getPrototypeOf(value) as unknown;
+  return proto === Object.prototype || proto === null;
+}
+
 export function deepEqual(a: unknown, b: unknown, seen?: Map<object, Set<object>>): boolean {
   if (Object.is(a, b)) return true;
   // Different types can never be equal, which is exactly the bigint case.
@@ -390,6 +422,19 @@ export function deepEqual(a: unknown, b: unknown, seen?: Map<object, Set<object>
     if (left.length !== right.length) return false;
     return left.every((item, index) => deepEqual(item, right[index], pairs));
   }
+
+  // Enumerable keys only describe a PLAIN object. A `Date`, `Map`, `Set` or
+  // `RegExp` keeps its state internally and has none, so comparing key sets
+  // said two different dates were the same value — and this guard's entire job
+  // is deciding whether something changed. `Date` is worth spelling out
+  // because it is what a host or an adapter actually puts in a property; every
+  // other exotic object falls through to "not equal unless identical", which
+  // is the safe direction: a spurious change costs one redundant update, a
+  // missed one loses the user's data silently.
+  if (isDate(left) || isDate(right)) {
+    return isDate(left) && isDate(right) && Object.is(left.getTime(), right.getTime());
+  }
+  if (!isPlainObject(left) || !isPlainObject(right)) return false;
 
   const leftKeys = Object.keys(left);
   const rightKeys = new Set(Object.keys(right));

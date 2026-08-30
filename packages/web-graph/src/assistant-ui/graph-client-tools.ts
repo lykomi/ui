@@ -121,6 +121,18 @@ const selectNode: ClientToolEntry = {
     // selection that did not happen sends the agent on to describe something
     // the user cannot see.
     if (!handle.select(node.id)) {
+      // Two different reasons a node is not drawn, and they need opposite
+      // advice. A legend filter is undone by turning the label back on;
+      // narrowing the query cannot bring back something the USER switched off,
+      // so telling the agent to narrow sends it somewhere that cannot work.
+      const hidden = handle.getViewState().hiddenLabels;
+      const label = primaryLabel(node);
+      if (hidden.includes(label)) {
+        return fail(
+          `"${resolveCaption(node)}" is in this result but hidden: the "${label}" filter is ` +
+            `switched off in the legend. Ask the user to turn it back on to see this node.`,
+        );
+      }
       return fail(
         `"${resolveCaption(node)}" is in this result but not drawn — the view is showing the ` +
           `most connected part of a graph too large for one screen. Narrow the query to bring ` +
@@ -174,15 +186,21 @@ const getView: ClientToolEntry = {
     // name a node that is not drawn.
     const view = handle.getViewState();
 
-    const labels: Record<string, number> = {};
+    // Counted into a `Map`, not `{}`. Labels and relationship types come from
+    // the payload, which is source-neutral and untrusted — a graph is free to
+    // have a label called `constructor` or `toString`, and reading those off
+    // an object literal finds an inherited function instead of "not counted
+    // yet". The count then either throws or lands in the result as something
+    // that is not a number.
+    const labels = new Map<string, number>();
     for (const node of view.nodes) {
       const label = primaryLabel(node);
-      labels[label] = (labels[label] ?? 0) + 1;
+      labels.set(label, (labels.get(label) ?? 0) + 1);
     }
-    const types: Record<string, number> = {};
+    const types = new Map<string, number>();
     for (const edge of view.edges) {
       const type = edge.type ?? "RELATED";
-      types[type] = (types[type] ?? 0) + 1;
+      types.set(type, (types.get(type) ?? 0) + 1);
     }
     return ok({
       open: true,
@@ -192,8 +210,8 @@ const getView: ClientToolEntry = {
       // The producer's own truncation OR the render cap. Reporting only the
       // former said `false` while the UI was showing a loss notice.
       truncated: (payload.truncated ?? false) || view.lossy,
-      labels,
-      relationshipTypes: types,
+      labels: Object.fromEntries(labels),
+      relationshipTypes: Object.fromEntries(types),
       // Named, so the agent can say "Person is hidden" rather than silently
       // reporting a smaller graph than the query returned.
       hiddenLabels: view.hiddenLabels,

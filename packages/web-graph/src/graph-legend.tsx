@@ -4,7 +4,7 @@ import type { GraphStyleMap } from "./use-graph-styling.ts";
 export interface GraphLegendProps {
   styleMap: GraphStyleMap;
   /** Node count per label, so the legend doubles as a breakdown. */
-  counts: Record<string, number>;
+  counts: ReadonlyMap<string, number>;
   hiddenLabels: Set<string>;
   onToggleLabel: (label: string) => void;
   onShowAll: () => void;
@@ -54,7 +54,7 @@ export function GraphLegend({
               style={{ backgroundColor: styleMap.colorForLabel(label) }}
             />
             <span className={cn(hidden && "line-through")}>{label}</span>
-            <span className="text-muted-foreground tabular-nums">{counts[label] ?? 0}</span>
+            <span className="text-muted-foreground tabular-nums">{counts.get(label) ?? 0}</span>
           </button>
         );
       })}

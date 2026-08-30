@@ -53,6 +53,62 @@ afterEach(() => {
 });
 
 describe("GraphViewHandle", () => {
+  it("keeps ONE handle object, live across view-state changes", () => {
+    // `GraphPanel` stores `handleRef.current` in the workspace at connect time
+    // and reconnects only when the payload, title or panel visibility change.
+    // A handle rebuilt on every render therefore leaves the workspace — and
+    // so every client tool — holding a closure over the view as it was when
+    // the panel opened: `graph_get_view` answering without the search the
+    // user has since typed, `graph_select_node` accepting a node hidden after
+    // connection.
+    const connected = handle.current!;
+
+    act(() => {
+      handle.current!.search("Fritz");
+    });
+    hideLabel("Movie");
+
+    // Identity first: this is what the workspace holds.
+    expect(handle.current).toBe(connected);
+    // And it answers with the CURRENT view, not the one it was built with.
+    const view = connected.getViewState();
+    expect(view.query).toBe("Fritz");
+    expect(view.hiddenLabels).toEqual(["Movie"]);
+    expect(view.nodes.map((n) => n.id)).toEqual(["n2"]);
+  });
+
+  it("drops a pin when its node leaves the payload", () => {
+    // A pin is an id, and an id outlives the node it named. Left in the set, a
+    // later graph carrying the same id gets that node frozen on arrival — by a
+    // pin the user made for a different graph entirely.
+    const pinButton = () =>
+      [...container.querySelectorAll("button")].find(
+        (b) => b.getAttribute("title") === "Unpin all nodes",
+      );
+    expect(pinButton()).toBeFalsy();
+
+    act(() => {
+      handle.current!.select("n2");
+    });
+    const freeze = [...container.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Freeze"),
+    );
+    expect(freeze, "no Freeze control on the drawer").toBeTruthy();
+    act(() => freeze!.click());
+    expect(pinButton(), "pin was not registered").toBeTruthy();
+
+    // A graph that no longer has n2.
+    act(() =>
+      root.render(
+        <GraphView
+          data={{ ...payload, nodes: [payload.nodes[0]!], edges: [] }}
+          handleRef={handle}
+        />,
+      ),
+    );
+    expect(pinButton(), "pin survived its node").toBeFalsy();
+  });
+
   it("reports edge endpoints as ids", () => {
     // force-graph REPLACES `source`/`target` with the node objects once the
     // simulation has run, so handing the links out raw put whole simulation

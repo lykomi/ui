@@ -84,10 +84,20 @@ The split is the point. A dashboard that only draws a graph must not load the ch
   `{__bigint:"10"}` with a property that IS that object. `properties` is
   `unknown`, so every encoding can be imitated by data shaped like the
   encoding; comparing types has nothing to imitate. Do not merge them back
-  together, and do not reach for a fourth tag. (`deepEqual` also tracks cycles
-  as PAIRS — a single visited-set reports the second sighting of a shared but
-  acyclic sub-object as a cycle, which made values that differ there compare
-  equal.)
+  together, and do not reach for a fourth tag.
+- **A repeat is not a cycle.** Both functions track only the ANCESTORS of the
+  value in hand — `safeStringify` by walking the container chain `JSON.stringify`
+  binds as `this`, `deepEqual` by remembering PAIRS. A single visited-set calls
+  the second sighting of a shared object circular, and two nodes sharing one
+  `properties` object is ordinary for a hand-built payload or a browser-side
+  adapter: values differing only there compared equal, and the panel\'s copied
+  content and the tool results the agent reads carried a literal `"[circular]"`
+  where real data belonged.
+- **Enumerable keys only describe a PLAIN object.** `deepEqual` compares a
+  `Date` by its time and treats every other exotic object as unequal unless
+  identical. Comparing key sets said two different dates were the same value —
+  and a missed change loses data silently, where a spurious one costs a
+  redundant update.
 - **`stats` means totals BEFORE truncation, so a merge can rarely state it.**
   With nothing capped, the union's retained counts are those totals. Once
   either producer truncated, the union's real total is not derivable here at
@@ -95,6 +105,28 @@ The split is the point. A dashboard that only draws a graph must not load the ch
   overlap is exactly what the capped rows would have said. `mergeGraphPayloads`
   omits the field there rather than passing retained counts off as totals;
   `truncated` carries the signal on its own.
+- **The handle is ONE object for the life of the view.** `GraphPanel` stores
+  `handleRef.current` in the workspace when it connects, and reconnects only on
+  a payload, title or visibility change — so a `useImperativeHandle` whose
+  dependency list includes the view state (`useGraphViewState` returns a fresh
+  object literal every render, so that means _every_ render) leaves the
+  workspace, and every client tool through it, holding a closure over the view
+  as it was when the panel opened. `graph_get_view` answered without the search
+  the user had since typed. Nothing surfaced it, because a merge changes the
+  payload and so happens to reconnect. The deps are `[]` and the methods read a
+  `live` ref, refreshed each render.
+- **Keys that come from the payload are untrusted.** Labels and relationship
+  types are whatever the producer called them, and a graph may perfectly well
+  have a label named `constructor` or `toString`. `counts[label]`,
+  `overrides?.[label]` and `captionKeys[label]` on an object literal then find
+  an inherited function instead of reporting the key absent — a legend chip
+  showing a stringified function, a caption key that is a method. Accumulate
+  into a `Map`, and read with `hasOwn` (in `model.ts`, because the repo targets
+  ES2020 and `Object.hasOwn` is not available).
+- **A pin is an id, and an id outlives its node.** `pinnedIds` is pruned
+  against the incoming payload on every reconciliation. Left alone, `graph_show`
+  replacing the graph kept a pin nothing shows — and a LATER graph carrying the
+  same id got that node frozen on arrival, by a pin made for a different graph.
 - **A change callback fires when the value changes.** Hosts pass `onSelectionChange` as an inline arrow, so an effect listing it as a dependency runs every render. Harmless until a listener writes a store the host reads — then the notification causes the render that causes the notification. Selecting a node deadlocked the panel with "Maximum update depth exceeded" exactly this way.
 - **…and identity is not the value.** `reconcileGraphModel` refreshes a node's `labels`/`caption`/`properties` IN PLACE so the simulation keeps its position, so after a merge the selected node is the same object with different data. An identity check therefore said "unchanged", the drawer showed the new values, and the chat context — which snapshots `properties` — kept answering from the old ones. The guard compares the VALUE, with `deepEqual`.
 - **The drawer slides with a CSS keyframe, not a mount effect.** The obvious version (mount at `translate-x-full`, flip in an effect) needs a state write per selection change, and a selection change is what re-renders the graph around it.

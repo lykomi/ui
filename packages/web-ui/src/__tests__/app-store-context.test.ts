@@ -109,6 +109,25 @@ describe("keyed context items", () => {
     expect(useAppStore.getState().contextItems).not.toBe(first);
   });
 
+  it("notices a changed value that carries no enumerable keys", () => {
+    // A `Date` keeps its state internally, so comparing key sets said two
+    // different instants were the same value — and this guard decides whether
+    // the context attached to later messages is stale.
+    const store = useAppStore.getState();
+    const item = (at: unknown) => ({
+      ...note("Metropolis"),
+      payload: { kind: "text" as const, text: "Metropolis", at } as never,
+    });
+
+    store.setContextItem("graph.selection", item(new Date(1)));
+    const first = useAppStore.getState().contextItems;
+    store.setContextItem("graph.selection", item(new Date(1)));
+    expect(useAppStore.getState().contextItems).toBe(first);
+
+    store.setContextItem("graph.selection", item(new Date(2)));
+    expect(useAppStore.getState().contextItems).not.toBe(first);
+  });
+
   it("leaves other keys and the user's own pins alone", () => {
     const store = useAppStore.getState();
     store.addContextItem(note("a note the user pinned"));

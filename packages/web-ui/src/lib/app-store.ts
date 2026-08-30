@@ -222,6 +222,16 @@ interface AppState {
  * sight, so the second appearance of a shared but acyclic sub-object reads as
  * a cycle — and two values differing only there would compare equal.
  */
+function isDate(value: object): value is Date {
+  return Object.prototype.toString.call(value) === "[object Date]";
+}
+
+/** Own enumerable keys describe this object completely. */
+function isPlainObject(value: object): boolean {
+  const proto = Object.getPrototypeOf(value) as unknown;
+  return proto === Object.prototype || proto === null;
+}
+
 function deepEqual(a: unknown, b: unknown, seen?: Map<object, Set<object>>): boolean {
   if (Object.is(a, b)) return true;
   if (typeof a !== typeof b) return false;
@@ -242,6 +252,19 @@ function deepEqual(a: unknown, b: unknown, seen?: Map<object, Set<object>>): boo
     if (left.length !== right.length) return false;
     return left.every((item, index) => deepEqual(item, right[index], pairs));
   }
+
+  // Enumerable keys only describe a PLAIN object. A `Date`, `Map`, `Set` or
+  // `RegExp` keeps its state internally and has none, so comparing key sets
+  // said two different dates were the same value — and this guard's entire job
+  // is deciding whether something changed. `Date` is worth spelling out
+  // because it is what a host or an adapter actually puts in a property; every
+  // other exotic object falls through to "not equal unless identical", which
+  // is the safe direction: a spurious change costs one redundant update, a
+  // missed one loses the user's data silently.
+  if (isDate(left) || isDate(right)) {
+    return isDate(left) && isDate(right) && Object.is(left.getTime(), right.getTime());
+  }
+  if (!isPlainObject(left) || !isPlainObject(right)) return false;
 
   const leftKeys = Object.keys(left);
   const rightKeys = new Set(Object.keys(right));

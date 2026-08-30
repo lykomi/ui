@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
-import { primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
+import { hasOwn, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
 import { submitComposerText, useAppStore, useToolPanelStore } from "@iloveagents/foundry-web-ui";
@@ -31,12 +31,22 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
    * merges into the graph on screen. The expansion becomes part of the
    * conversation rather than a side effect nobody can refer back to.
    */
-  const expandNode = useCallback((node: GraphNode) => {
-    const caption = resolveCaption(node);
-    submitComposerText(
-      `Expand "${caption}" (${primaryLabel(node)}) in the graph — node id ${node.id}.`,
-    );
-  }, []);
+  const expandNode = useCallback(
+    (node: GraphNode) => {
+      // Captioned with the payload\'s own `legend.captionKey` — the same rule
+      // the canvas paints with, and the one `graph_select_node` resolves by.
+      // Without it the turn names the node something the user cannot see on
+      // screen, which is confusing in the transcript and worse when the agent
+      // takes that text as the thing to look up.
+      const label = primaryLabel(node);
+      const legend = payload?.legend;
+      const captionKey = legend && hasOwn(legend, label) ? legend[label]?.captionKey : undefined;
+      submitComposerText(
+        `Expand "${resolveCaption(node, captionKey)}" (${label}) in the graph — node id ${node.id}.`,
+      );
+    },
+    [payload],
+  );
 
   // Publish this panel as THE live graph, so the agent's client tools can read
   // what is on screen and drive it. Registering the handle is what lets

@@ -215,6 +215,39 @@ describe("safeStringify", () => {
     node.self = node;
     expect(safeStringify(node)).toContain("[circular]");
   });
+
+  it("does not call a shared sub-object a cycle", () => {
+    // Two nodes sharing one `properties` object is ordinary for a hand-built
+    // payload or a browser-side adapter. A single visited-set called the
+    // second sighting circular, so the panel's Copy button and the tool
+    // results the agent reads carried a literal "[circular]" where real data
+    // belonged — fabricated content, in the one output a human reads back.
+    const shared = { name: "Ada" };
+    const payload = {
+      nodes: [
+        { id: "a", properties: shared },
+        { id: "b", properties: shared },
+      ],
+    };
+    const out = safeStringify(payload);
+    expect(out).not.toContain("[circular]");
+    expect(JSON.parse(out)).toEqual({
+      nodes: [
+        { id: "a", properties: { name: "Ada" } },
+        { id: "b", properties: { name: "Ada" } },
+      ],
+    });
+  });
+
+  it("still catches a cycle nested below a shared object", () => {
+    const shared: Record<string, unknown> = { name: "Ada" };
+    const root: Record<string, unknown> = { left: shared, right: shared };
+    shared.back = root;
+    const out = safeStringify(root);
+    expect(out).toContain("[circular]");
+    // The sibling is still written in full, not collapsed with it.
+    expect((out.match(/Ada/g) ?? []).length).toBe(2);
+  });
 });
 
 describe("deepEqual", () => {
@@ -264,6 +297,25 @@ describe("deepEqual", () => {
     expect(deepEqual([1, 2], { 0: 1, 1: 2 })).toBe(false);
     expect(deepEqual([1, 2], [1, 2])).toBe(true);
     expect(deepEqual([1, 2], [1, 2, 3])).toBe(false);
+  });
+
+  it("compares objects whose state is not in their enumerable keys", () => {
+    // Two different dates have the same (empty) key set, so a key-set
+    // comparison called them equal — and this guard decides whether a value
+    // changed. A property holding a Date is what a host or a browser-side
+    // adapter actually produces.
+    expect(deepEqual({ at: new Date(1) }, { at: new Date(2) })).toBe(false);
+    expect(deepEqual({ at: new Date(1) }, { at: new Date(1) })).toBe(true);
+    expect(deepEqual({ at: new Date(1) }, { at: {} })).toBe(false);
+
+    // Everything else exotic falls to "not equal unless identical" — the safe
+    // direction, since a spurious change costs a redundant update and a missed
+    // one loses data.
+    expect(deepEqual({ m: new Map([["a", 1]]) }, { m: new Map() })).toBe(false);
+    expect(deepEqual({ s: new Set([1]) }, { s: new Set([2]) })).toBe(false);
+    expect(deepEqual({ r: /a/ }, { r: /b/ })).toBe(false);
+    const shared = new Map([["a", 1]]);
+    expect(deepEqual({ m: shared }, { m: shared })).toBe(true);
   });
 
   it("treats null, undefined and NaN the way a change check should", () => {

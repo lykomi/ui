@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  hasOwn,
   primaryLabel,
   resolveCaption,
   type GraphEdge,
@@ -78,7 +79,9 @@ function buildLabelColors(
 
   const assignable = [...labels].sort();
   for (const label of assignable) {
-    const override = overrides?.[label];
+    // An own-key check because a label is untrusted: `overrides?.["toString"]`
+    // finds a function on the prototype and paints a node with it.
+    const override = overrides && hasOwn(overrides, label) ? overrides[label] : undefined;
     if (override) {
       out.set(label, override);
       continue;
@@ -129,7 +132,7 @@ export function useGraphStyling(
 
     // Producer-supplied legend colours are an override of last resort — the
     // host's explicit `styling.colors` still wins.
-    const producerColors: Record<string, string> = {};
+    const producerColors: Record<string, string> = Object.create(null) as Record<string, string>;
     for (const [label, hint] of Object.entries(payload.legend ?? {})) {
       if (hint.color) producerColors[label] = hint.color;
     }
@@ -138,11 +141,17 @@ export function useGraphStyling(
       ...(styling?.colors ?? {}),
     });
 
-    const captionKeys: Record<string, string> = {};
+    // A `Map`, because the keys are LABELS and labels come from the payload.
+    // A graph with a label called `constructor` or `toString` reads an
+    // inherited function out of an object literal, and it would be handed to
+    // `resolveCaption` as the caption key.
+    const captionKeys = new Map<string, string>();
     for (const [label, hint] of Object.entries(payload.legend ?? {})) {
-      if (hint.captionKey) captionKeys[label] = hint.captionKey;
+      if (hint.captionKey) captionKeys.set(label, hint.captionKey);
     }
-    Object.assign(captionKeys, styling?.captionKeys ?? {});
+    for (const [label, key] of Object.entries(styling?.captionKeys ?? {})) {
+      captionKeys.set(label, key);
+    }
 
     const colorForLabel = (label: string) =>
       colors.get(label) ?? theme.palette[0] ?? theme.foreground;
@@ -175,8 +184,11 @@ export function useGraphStyling(
       const label = primaryLabel(node);
       const style: NodeStyle = {
         color: colorForLabel(label),
-        caption: resolveCaption(node, captionKeys[label]),
-        radius: BASE_RADIUS * degreeScale(node.id) * (styling?.sizes?.[label] ?? 1),
+        caption: resolveCaption(node, captionKeys.get(label)),
+        radius:
+          BASE_RADIUS *
+          degreeScale(node.id) *
+          (styling?.sizes && hasOwn(styling.sizes, label) ? (styling.sizes[label] ?? 1) : 1),
       };
       styleCache.set(node.id, style);
       return style;

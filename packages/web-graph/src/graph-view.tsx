@@ -223,11 +223,16 @@ export function GraphView({
   const state = useGraphViewState(data, captionOf);
   const size = useElementSize(canvasHost);
 
+  // A `Map`, not `{}`. Labels come from the payload and the payload is
+  // source-neutral — nothing stops a graph from having a label called
+  // `constructor` or `toString`, and both the write (`out[label] ?? 0`) and
+  // the legend\'s read would then find an inherited function where a count
+  // belongs, so the chip shows a stringified function or `NaN`.
   const counts = useMemo(() => {
-    const out: Record<string, number> = {};
+    const out = new Map<string, number>();
     for (const node of model.nodes) {
       const label = primaryLabel(node);
-      out[label] = (out[label] ?? 0) + 1;
+      out.set(label, (out.get(label) ?? 0) + 1);
     }
     return out;
   }, [model.nodes]);
@@ -353,6 +358,29 @@ export function GraphView({
     onFilterChange?.(hiddenLabels.length === 0 ? [] : hiddenLabels.split("\u0000"));
   }, [hiddenLabels, onFilterChange]);
 
+  /**
+   * Everything the handle answers from, refreshed every render.
+   *
+   * The handle itself must be ONE object for the life of the view.
+   * `GraphPanel` stores `handleRef.current` in the workspace when it connects
+   * and reconnects only on a payload, title or visibility change — so a handle
+   * rebuilt whenever the view state changed left the workspace, and every
+   * client tool through it, holding a closure over the view as it was when the
+   * panel opened. `graph_get_view` would answer without the search the user
+   * had since typed; `graph_select_node` would accept a node hidden after
+   * connection. Nothing surfaced it, because a merge changes the payload and
+   * so happens to reconnect.
+   *
+   * `useGraphViewState` returns a fresh object literal every render, which is
+   * what made `state` in a dependency list mean "every render".
+   */
+  const live = useRef({ model, visibleModel, state, selectNode });
+  // Assigned during render on purpose: the handle's methods are only ever
+  // called imperatively — by the host, or by a client tool the agent ran —
+  // never while rendering, so there is nothing here to tear. Deferring it to
+  // an effect would leave the handle a render behind instead.
+  live.current = { model, visibleModel, state, selectNode };
+
   useImperativeHandle(
     handleRef,
     () => ({
@@ -361,56 +389,62 @@ export function GraphView({
         afterDrawer(() => canvasRef.current?.centerOn(nodeId, durationMs)),
       reveal: (nodeId, durationMs) =>
         afterDrawer(() => canvasRef.current?.reveal(nodeId, durationMs)),
-      search: (term) => state.setQuery(term),
+      search: (term) => live.current.state.setQuery(term),
       select: (nodeId) => {
+        const { visibleModel: drawn, selectNode: choose } = live.current;
         if (nodeId === null) {
-          selectNode(null);
+          choose(null);
           return true;
         }
         // The DRAWN nodes: a label hidden in the legend is as absent from the
         // canvas as one the render cap dropped, and reporting success for it
         // opens a drawer describing something invisible.
-        const node = visibleModel.nodes.find((n) => n.id === nodeId) ?? null;
-        if (node) selectNode(node);
+        const node = drawn.nodes.find((n) => n.id === nodeId) ?? null;
+        if (node) choose(node);
         return node !== null;
       },
-      unpinAll: () => state.unpinAll(),
-      getViewState: () => ({
-        selection: state.selection.node,
-        // A legend filter is a view toggle, not a deletion, so hiding a
-        // selected node\'s label does NOT clear the selection — the drawer
-        // stays open and its properties are still on screen, which is what
-        // the user is reading. But `nodes` below excludes it, so reporting
-        // the selection bare made this result contradict itself. Saying
-        // whether it is drawn is what lets the agent be precise: "selected,
-        // though its label is hidden" rather than a node that is somehow both
-        // selected and absent.
-        selectionDrawn: state.selection.node
-          ? visibleModel.nodes.some((node) => node.id === state.selection.node?.id)
-          : false,
-        query: state.query,
-        hiddenLabels: [...state.hiddenLabels],
-        nodes: visibleModel.nodes,
-        // Normalised, because force-graph REPLACES a link's `source`/`target`
-        // with the node objects once it has run — so handing these out raw
-        // put whole simulation objects, mutable layout fields and all, where
-        // a caller expects an id.
-        edges: visibleModel.links.map((link) => ({
-          ...(link as unknown as GraphEdge),
-          source: endpointId(link.source) ?? "",
-          target: endpointId(link.target) ?? "",
-        })),
-        selectedEdge: state.selection.edge
-          ? {
-              ...state.selection.edge,
-              source: endpointId(state.selection.edge.source) ?? "",
-              target: endpointId(state.selection.edge.target) ?? "",
-            }
-          : null,
-        lossy: model.lossy,
-      }),
+      unpinAll: () => live.current.state.unpinAll(),
+      getViewState: () => {
+        const { state, visibleModel, model } = live.current;
+        return {
+          selection: state.selection.node,
+          // A legend filter is a view toggle, not a deletion, so hiding a
+          // selected node\'s label does NOT clear the selection — the drawer
+          // stays open and its properties are still on screen, which is what
+          // the user is reading. But `nodes` below excludes it, so reporting
+          // the selection bare made this result contradict itself. Saying
+          // whether it is drawn is what lets the agent be precise: "selected,
+          // though its label is hidden" rather than a node that is somehow both
+          // selected and absent.
+          selectionDrawn: state.selection.node
+            ? visibleModel.nodes.some((node) => node.id === state.selection.node?.id)
+            : false,
+          query: state.query,
+          hiddenLabels: [...state.hiddenLabels],
+          nodes: visibleModel.nodes,
+          // Normalised, because force-graph REPLACES a link's `source`/`target`
+          // with the node objects once it has run — so handing these out raw
+          // put whole simulation objects, mutable layout fields and all, where
+          // a caller expects an id.
+          edges: visibleModel.links.map((link) => ({
+            ...(link as unknown as GraphEdge),
+            source: endpointId(link.source) ?? "",
+            target: endpointId(link.target) ?? "",
+          })),
+          selectedEdge: state.selection.edge
+            ? {
+                ...state.selection.edge,
+                source: endpointId(state.selection.edge.source) ?? "",
+                target: endpointId(state.selection.edge.target) ?? "",
+              }
+            : null,
+          lossy: model.lossy,
+        };
+      },
     }),
-    [model.nodes, model.lossy, visibleModel, selectNode, state],
+    // Empty ON PURPOSE — see `live` above. One handle for the life of the
+    // view; everything it answers from is read at call time.
+    [],
   );
 
   // `forceTable` is the print path; `tableRequested` is the user asking, from

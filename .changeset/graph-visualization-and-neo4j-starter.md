@@ -205,3 +205,38 @@ strict mode refuses outright, so a query that succeeded died at the transport
 boundary. The local `docker-compose.yml` also binds Neo4j to `127.0.0.1`
 rather than every interface — the password is published in that file so the
 quickstart has no setup step, which is precisely why the port should not be.
+
+The view handle is one object for the life of the view. `GraphPanel` stores it
+in the workspace when it connects and reconnects only on a payload, title or
+visibility change, so a handle rebuilt whenever the view state changed left
+every client tool holding a closure over the view as it was when the panel
+opened — `graph_get_view` answering without the search the user had since
+typed, `graph_select_node` accepting a node hidden after connection. A merge
+changes the payload and so happens to reconnect, which is why nothing surfaced
+it.
+
+`safeStringify` tracks only the ancestors of the value it is writing, matching
+the change already made to `deepEqual`. A single visited-set called the second
+sighting of a shared object a cycle, and two nodes sharing one `properties`
+object is ordinary for a hand-built payload or a browser-side adapter — so the
+panel's copied content and the tool results the agent reads carried a literal
+`"[circular]"` where real data belonged. `deepEqual` also compares a `Date` by
+its time and treats other exotic objects as unequal unless identical; enumerable
+keys do not describe them, so two different dates compared equal.
+
+Keys taken from the payload are treated as untrusted throughout. Labels and
+relationship types are whatever the producer called them, so a graph with a
+label named `constructor` or `toString` read an inherited function out of an
+object literal where a count, a colour override or a caption key belonged.
+Counts accumulate into a `Map` and lookups go through an own-key check.
+
+Pins are pruned when their nodes leave the payload. A pin is an id, and an id
+outlives the node it named: `graph_show` replacing the graph kept a pin nothing
+shows, and a later graph carrying the same id had that node frozen on arrival
+by a pin made for a different graph.
+
+`graph_select_node` also distinguishes a legend-hidden node from a
+render-capped one, since narrowing the query cannot bring back a label the user
+switched off, and double-click expansion captions the node with the payload's
+own `legend.captionKey` — the rule the canvas paints by — so the turn names it
+what the user sees.
