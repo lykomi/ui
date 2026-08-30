@@ -82,10 +82,18 @@ jobs:
         ports:
           - 7687:7687
           - 7474:7474
+        # `cypher-shell`, not an HTTP probe on 7474: every test here connects
+        # over Bolt, and this is the only check that proves Bolt AND auth are
+        # actually serving. Measured on this image, HTTP happens to come up
+        # 0-6s AFTER Bolt, so a 7474 probe is adequate today — but that
+        # ordering is an undocumented boot detail, and `wget` being present is
+        # a second unowned assumption. This is what the preset's own
+        # docker-compose.yml uses; one convention, and it tests the
+        # requirement rather than a proxy for it.
         options: >-
-          --health-cmd "wget -qO- http://localhost:7474 || exit 1"
+          --health-cmd "cypher-shell -u neo4j -p testpassword 'RETURN 1' || exit 1"
           --health-interval 10s
-          --health-timeout 5s
+          --health-timeout 10s
           --health-retries 30
     env:
       NEO4J_URI: bolt://localhost:7687
