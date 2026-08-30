@@ -1,11 +1,11 @@
 {
   "name": "neo4j",
   "version": "0.1.0",
-  "description": "Neo4j graph starter \u2014 schema, read-only Cypher and semantic search tools, with an interactive Bloom-like graph visualization. Runs against a local database or Neo4j Aura.",
+  "description": "Neo4j graph starter — schema, read-only Cypher and semantic search tools, with an interactive Bloom-like graph visualization. Runs against a local database or Neo4j Aura.",
   "extends": "default",
   "filesDir": "files",
   "extraDependencies": {
-    "@iloveagents/foundry-web-graph": "0.1.0"
+    "@iloveagents/foundry-web-graph": "0.2.0"
   },
   "extraScripts": {
     "graph:up": "docker compose up -d",
@@ -40,7 +40,7 @@
     },
     {
       "name": "NEO4J_ALLOW_WRITES",
-      "description": "Set to true to register the write tool. Off by default \u2014 with it unset the agent has no way to modify the graph, and there is no human-approval step in front of writes.",
+      "description": "Set to true to register the write tool. Off by default — with it unset the agent has no way to modify the graph, and there is no human-approval step in front of writes.",
       "required": false,
       "secret": false
     },
