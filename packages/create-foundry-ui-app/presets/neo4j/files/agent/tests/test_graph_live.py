@@ -21,7 +21,12 @@ from app.graph_payload import (
     GRAPH_PAYLOAD_VERSION,
     records_to_graph_payload,
 )
-from app.graph_tools import graph_expand_node, graph_read_cypher, graph_schema
+from app.graph_tools import (
+    graph_expand_node,
+    graph_read_cypher,
+    graph_schema,
+    graph_vector_search,
+)
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("NEO4J_URI"),
@@ -201,3 +206,102 @@ class TestTruncationIsReported:
         payload = await unwrap(graph_read_cypher)("MATCH (n) RETURN n LIMIT 3")
         assert payload.get("truncated") is not True
         assert payload["stats"]["nodeCount"] == len(payload["nodes"])
+
+
+class TestTheVectorToolSpendsItsBudgetAcrossHits:
+    """`_round_robin` is unit-tested; this pins that the TOOL still uses it.
+
+    Swapping either budget call back to a prefix slice leaves every direct test
+    of `_round_robin` green while late semantic-search hits go back to being
+    drawn as unconnected dots — so the rule has to be pinned where it is
+    APPLIED, not only where it is defined.
+
+    The tool's two queries are replayed from REAL records fetched out of the
+    live database, keyed the way the tool keys them. Nothing fabricates a driver
+    type: a hand-built Node would assert against a shape the server may not
+    send, which is the failure this file exists to avoid. Only `embed_query` is
+    faked, because it is the one part needing a model rather than a database.
+
+    The hits are ordered by degree, highest first, and the neighbour rows are
+    grouped per hit the way the tool's own per-hit subquery returns them. That
+    ordering is the whole point: a prefix slice then spends the entire budget
+    on the first, busiest hit, which is exactly the regression. A fixture where
+    every hit has a similar handful of neighbours does NOT discriminate — a
+    prefix spreads across hits by accident and the test passes on broken code.
+    """
+
+    @staticmethod
+    async def _replayable(monkeypatch: pytest.MonkeyPatch, *, wanted: int = 4):
+        """Real records for both of the tool's queries, busiest hit first."""
+        hits, _ = await graph_db.run_read(
+            "MATCH (n)--(m) WITH n, count(DISTINCT m) AS degree "
+            "ORDER BY degree DESC, elementId(n) LIMIT $wanted "
+            "RETURN n AS node, 1.0 AS score",
+            {"wanted": wanted},
+        )
+        assert len(hits) >= 2, "need several connected nodes to distribute between"
+        hit_ids = [record["node"].element_id for record in hits]
+        rows, _ = await graph_db.run_read(
+            "MATCH (n)-[r]-(m) WHERE elementId(n) IN $ids "
+            "RETURN elementId(n) AS hit, r, m",
+            {"ids": hit_ids},
+        )
+        # Grouped per hit, in hit order — what the per-hit subquery produces.
+        neighbours = sorted(rows, key=lambda record: hit_ids.index(record["hit"]))
+        assert sum(1 for r in neighbours if r["hit"] == hit_ids[0]) >= 3, (
+            "the busiest hit needs several neighbours or a prefix cannot starve the rest"
+        )
+
+        async def replay(cypher, parameters=None, *, row_limit=None):
+            return (hits, False) if "queryNodes" in cypher else (neighbours, False)
+
+        monkeypatch.setattr(graph_db, "run_read", replay)
+        monkeypatch.setattr("app.graph_tools.embed_query", _fixed_embedding)
+        monkeypatch.setenv("NEO4J_VECTOR_INDEX", "irrelevant-the-query-is-replayed")
+        return hit_ids, neighbours
+
+    async def test_the_node_budget_reaches_more_than_the_first_hit(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        hit_ids, neighbours = await self._replayable(monkeypatch)
+        # Two neighbour slots for several hits: a prefix gives both to the first.
+        monkeypatch.setenv("NEO4J_MAX_NODES", str(len(hit_ids) + 2))
+        monkeypatch.setenv("NEO4J_MAX_EDGES", "600")
+
+        payload = await unwrap(graph_vector_search)("anything", limit=len(hit_ids))
+        assert_is_graph_payload(payload)
+        kept = {node["id"] for node in payload["nodes"]}
+        assert set(hit_ids) <= kept, "a hit was capped away; the hits seed the budget"
+
+        owners = {
+            record["hit"]
+            for record in neighbours
+            if record["m"].element_id in kept and record["m"].element_id not in hit_ids
+        }
+        assert len(owners) > 1, (
+            "every retained neighbour belongs to one hit — the node budget is a prefix again"
+        )
+
+    async def test_the_edge_budget_reaches_more_than_the_first_hit(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        hit_ids, _ = await self._replayable(monkeypatch)
+        # Keep every node, so only the EDGE budget is doing the choosing.
+        monkeypatch.setenv("NEO4J_MAX_NODES", "600")
+        monkeypatch.setenv("NEO4J_MAX_EDGES", str(len(hit_ids)))
+
+        payload = await unwrap(graph_vector_search)("anything", limit=len(hit_ids))
+        assert_is_graph_payload(payload)
+        seeds = set(hit_ids)
+        hits_with_an_edge = {
+            end for edge in payload["edges"] for end in (edge["source"], edge["target"])
+        } & seeds
+        assert len(hits_with_an_edge) > 1, (
+            "every retained edge touches one hit — the edge budget is a prefix again, "
+            "and the late hits are drawn as unconnected dots"
+        )
+
+
+async def _fixed_embedding(_text: str) -> list[float]:
+    """The one fake here: embedding needs a model, everything else a database."""
+    return [0.0, 0.0, 0.0]

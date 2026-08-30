@@ -149,22 +149,62 @@ if (!graphChunks.some(holdsWrapper)) {
 // Tailwind v4 cannot infer classes from package output without an explicit
 // `@source`. Without it the graph chrome renders unstyled — a build that
 // succeeds and a UI that is visibly broken.
+//
+// Checking for `--graph-1` does NOT test that: the palette is declared in
+// `styles.css`, so importing the stylesheet is enough and the token survives
+// with the `@source` line deleted. Measured — removing it drops 1743 bytes and
+// exactly 23 utility classes while `--graph-1` stays put.
+//
+// So this checks utilities that ONLY exist because Tailwind scanned the
+// package's `dist`. Any one is enough to prove scanning happened; several are
+// listed so that refactoring one away in the package does not turn CI red for
+// the wrong reason. If scanning stops, all of them go at once.
 const css = readAll(".css");
+const scannedOnlyUtilities = [
+  "divide-border\\/60", // the inspector's property table
+  "decoration-dotted",
+  "underline-offset-2",
+  "max-h-64",
+];
+if (!scannedOnlyUtilities.some((utility) => css.includes(utility))) {
+  throw new Error(
+    "None of the graph chrome's utility classes are in the built CSS, so Tailwind did not " +
+      "scan the package. src/index.css needs its @source directive for " +
+      "@iloveagents/foundry-web-graph/dist — without it the graph builds and renders unstyled.",
+  );
+}
 if (!css.includes("--graph-1")) {
   throw new Error(
-    "The graph palette is missing from the built CSS. src/index.css needs its " +
-      "@source directive for @iloveagents/foundry-web-graph/dist.",
+    "The --graph-1 palette is missing — foundry-web-graph/styles.css is not imported.",
   );
 }
 
-// The card, the panel renderer and the client tools only exist if the module
-// registered them. A scaffold that builds but registers nothing renders every
-// graph result as a plain tool card.
+// The cards and the client tools are registered by two different calls, and
+// have to be checked separately.
+//
+// `foundry.graph` and `graph_show` both come from `registerGraphClientTools()`
+// alone, so asserting only those would stay green with the whole `toolUIs`
+// fragment deleted — and then every SERVER graph tool renders as a generic
+// result and nothing folds it into the panel. The server tool names appear
+// only where `makeGraphToolUI` binds them, so they are what pins the cards.
 const js = readAll(".js");
 for (const marker of ["foundry.graph", "graph_show"]) {
   if (!js.includes(marker)) {
     throw new Error(
-      `"${marker}" is absent from the bundle — src/tools/graph-module.tsx is not wired in.`,
+      `"${marker}" is absent from the bundle — registerGraphClientTools() is not wired in.`,
+    );
+  }
+}
+// `graph_schema` and `graph_expand_node` appear NOWHERE in
+// @iloveagents/foundry-web-graph's dist, so in this bundle they can only come
+// from the scaffold's own `makeGraphToolUI` bindings. `graph_read_cypher` is
+// deliberately not in this list: the package carries it in a JSDoc example, and
+// a comment that survives bundling would make the check vacuous.
+for (const toolName of ["graph_schema", "graph_expand_node"]) {
+  if (!js.includes(toolName)) {
+    throw new Error(
+      `"${toolName}" is absent from the bundle — its makeGraphToolUI card is not registered, ` +
+        `so that tool's results would render as a generic card and never reach the panel.`,
     );
   }
 }
