@@ -107,6 +107,15 @@ const FIT_PADDING = 64;
  */
 const cooldownFor = (nodeCount: number) => (nodeCount > 600 ? 3500 : 6000);
 
+/**
+ * Ticks to run before the first paint when the user has asked for no motion.
+ *
+ * These are synchronous, so the number is a budget rather than a quality
+ * target: enough for the layout to read as a graph, capped so a large result
+ * cannot freeze the tab. d3-force is mostly converged well before 300.
+ */
+const warmupFor = (nodeCount: number) => (nodeCount > 600 ? 120 : 300);
+
 /** How often to re-frame while the layout is still moving. */
 const FIT_INTERVAL_MS = 150;
 /** Keep re-framing a little past the cooldown so the final shape is included. */
@@ -643,6 +652,14 @@ export function GraphCanvas({
         node.fy = node.y;
         if (!pinnedIds.has(String(node.id))) togglePinned(String(node.id));
       }}
+      // Reduced motion means "do not ANIMATE the settle", not "do not settle".
+      // `cooldownTime: 0` alone stopped the simulation before it had arranged
+      // anything, so these users got the engine's initial placement — a
+      // scatter with edges crossing at random, which is not a graph. The ticks
+      // run synchronously before the first paint instead: the same layout,
+      // arrived at without motion. Bounded, because they block.
+      warmupTicks={reducedMotion ? warmupFor(model.nodes.length) : 0}
+      cooldownTicks={reducedMotion ? 0 : undefined}
       cooldownTime={reducedMotion ? 0 : cooldownFor(model.nodes.length)}
     />
   );

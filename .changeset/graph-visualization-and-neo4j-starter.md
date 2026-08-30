@@ -297,3 +297,19 @@ read-only, so narrowing the friendly message costs no safety.
 The package README documents the Tailwind v4 `@source` directive. `styles.css`
 carries the palette, not the component styling, and Tailwind does not scan
 `node_modules` — so a consumer following the README got an unstyled graph.
+
+`prefers-reduced-motion` now means "do not animate the settle", not "do not
+settle". Setting the cooldown to zero stopped the simulation before it had
+arranged anything, so those users were shown the engine's initial placement —
+a scatter with edges crossing at random, which is not a graph. A bounded set
+of warmup ticks runs before the first paint instead: the same layout, arrived
+at without motion.
+
+The Neo4j preset registers its panel renderer and client tools in an effect
+rather than in the `useInit` body. `useInit` runs on every shell render and
+both registries replace their collection on each call, so registration was
+writing to two stores during render and notifying subscribers mid-render on
+every route change. It also omits `stats` when the row cap truncated a read:
+the field means totals before truncation, and the retained prefix is not that
+— a 500-node query under the default 200-row cap reported 200 as the database
+total.

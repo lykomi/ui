@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { defineChatModule } from "@iloveagents/foundry-web-shell";
 import {
   GraphResultSeeder,
@@ -58,15 +59,26 @@ const GraphWriteToolUI = makeGraphToolUI({
 });
 
 function useGraphModuleInit() {
-  // Teaches the side panel to render `type: "graph"` content. Idempotent, so a
-  // StrictMode double-render or a hot reload cannot stack registrations.
-  registerGraphPanelRenderer();
-  // Gives the agent graph_show / graph_select_node / graph_search /
-  // graph_get_view, executed in the browser against the open panel. This is
-  // what makes the graph a workspace the two of you share rather than a
-  // picture the agent hands over: it can see what you have selected and act
-  // on it, and you can see what it did.
-  registerGraphClientTools();
+  // In an EFFECT, not the hook body. `useInit` runs on every `ShellLayout`
+  // render, and both registries replace their collection on each call — so
+  // registering here directly wrote to two stores during render, notifying
+  // subscribed components mid-render on every route change and theme flip.
+  // Idempotent either way (a StrictMode double-render or a hot reload cannot
+  // stack them), but idempotent is not the same as free.
+  //
+  // Safe to defer: the panel renderer is only needed once graph content
+  // exists, and the client tools once the agent calls one — both far after
+  // mount.
+  useEffect(() => {
+    // Teaches the side panel to render `type: "graph"` content.
+    registerGraphPanelRenderer();
+    // Gives the agent graph_show / graph_select_node / graph_search /
+    // graph_get_view, executed in the browser against the open panel. This is
+    // what makes the graph a workspace the two of you share rather than a
+    // picture the agent hands over: it can see what you have selected and act
+    // on it, and you can see what it did.
+    registerGraphClientTools();
+  }, []);
 }
 
 export const graphModule = defineChatModule({

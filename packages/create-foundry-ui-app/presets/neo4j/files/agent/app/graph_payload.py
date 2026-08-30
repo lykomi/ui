@@ -291,8 +291,15 @@ def records_to_graph_payload(
         "version": GRAPH_PAYLOAD_VERSION,
         "nodes": list(kept_nodes.values()),
         "edges": kept_edges,
-        "stats": {"nodeCount": total_nodes, "edgeCount": total_edges},
     }
+    # `stats` means totals BEFORE truncation, and these counts are only that
+    # when every row reached us. Once the caller's row cap has cut the result,
+    # `total_nodes` is the count of the RETAINED prefix — a 500-node query with
+    # the default 200-row cap would report 200 and call it the database total.
+    # The node/edge caps below are different: they drop from a complete count,
+    # so the totals are still known and worth reporting.
+    if not rows_truncated:
+        payload["stats"] = {"nodeCount": total_nodes, "edgeCount": total_edges}
     # `rows_truncated` is the caller's row cap, which this function cannot see:
     # it only ever receives the rows that survived it, so without being told it
     # would call a half-answer complete.
