@@ -1,7 +1,7 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { useRef } from "react";
 import { FileText } from "lucide-react";
-import { useToolPanelStore } from "../lib/tool-panel-store.ts";
+import { useToolPanelStore, type ToolPanelContent } from "../lib/tool-panel-store.ts";
 import { ToolCallCard } from "./tool-call-card.tsx";
 
 interface ShowDocumentArgs {
@@ -32,7 +32,7 @@ export const ShowDocumentToolUI = makeAssistantToolUI<ShowDocumentArgs, ShowDocu
         openPanel({
           title: args.title,
           content: args.content,
-          type: (args.type as "markdown" | "text" | "page" | "pdf") || "markdown",
+          type: (args.type as ToolPanelContent["type"]) || "markdown",
         });
       });
     }
@@ -53,7 +53,7 @@ export const ShowDocumentToolUI = makeAssistantToolUI<ShowDocumentArgs, ShowDocu
         openPanel({
           title: args.title,
           content: args.content,
-          type: (args.type as "markdown" | "text" | "page" | "pdf") || "markdown",
+          type: (args.type as ToolPanelContent["type"]) || "markdown",
         });
       }
     };

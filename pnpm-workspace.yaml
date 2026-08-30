@@ -15,6 +15,33 @@ ignoredBuiltDependencies:
 overrides:
   react-router: "^7.14.1"
   "@assistant-ui/react": "^0.15.1"
+  # Upper bound, not a preference. `@assistant-ui/react@0.15.1` depends on
+  # `@assistant-ui/tap: ^0.9.7`, and tap 0.9.13 rewrote its internal
+  # `useSyncExternalStore` — it now reads `getServerSnapshot()` while a fiber
+  # `isNeverMounted` and force-updates from an effect whenever the snapshot
+  # differs. assistant-ui 0.15.1 was built against the old semantics and does
+  # not survive it: the composer silently drops ALL typed input (value stays
+  # ""), and the console shows "The result of getSnapshot should be cached to
+  # avoid an infinite loop". Nothing throws at install or build time, so the
+  # caret range would hand a working app a dead composer on a routine
+  # `pnpm update`.
+  #
+  # Measured against this repo's suite: 0.9.8 and 0.9.12 green, 0.9.13, 0.9.14
+  # and 0.9.15 red. Re-test with `pnpm -F @iloveagents/foundry-web-ui test:unit`
+  # before moving it — `composer-input-strictmode.test.tsx` and
+  # `voice-adapter-registry.test.tsx` are the ones that catch it. Drop the pin
+  # when a tap release restores the behaviour, or when `@assistant-ui/react`
+  # ships built against the new one.
+  #
+  # EXACT rather than a range spanning the good versions, because a range
+  # permits a SPLIT. tap is a regular dependency of `@assistant-ui/react` and
+  # a PEER of `@assistant-ui/core`/`store`, so react's snapshot key is not
+  # tap-qualified: react could sit on one permitted copy while core and store
+  # resolve another, and nothing would report it. tap keeps module-local
+  # execution context and marker symbols, so two copies is its own failure
+  # mode on top of the version one. (Codex caught this on the downstream
+  # mirror; the range that was here first would have allowed it.)
+  "@assistant-ui/tap": "0.9.8"
   "@ag-ui/client": "^0.0.52"
   "@ag-ui/core": "^0.0.52"
 

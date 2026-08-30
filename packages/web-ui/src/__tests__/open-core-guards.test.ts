@@ -40,6 +40,14 @@ const OPEN_CORE_GRAPH: Record<string, string[]> = {
     "@iloveagents/foundry-web-primitives",
     "@iloveagents/foundry-agent",
   ],
+  // The graph package sits ABOVE web-ui, never below it: web-ui must not gain
+  // an edge to web-graph, or `react-force-graph-2d` would land in the install
+  // of every consumer that only wants a chat.
+  "@iloveagents/foundry-web-graph": [
+    "@iloveagents/foundry-web-primitives",
+    "@iloveagents/foundry-web-ui",
+    "@iloveagents/foundry-agent",
+  ],
   "@iloveagents/foundry-web-shell": [
     "@iloveagents/foundry-web-primitives",
     "@iloveagents/foundry-web-ui",
@@ -316,6 +324,54 @@ describe("open-core guards", () => {
         ).toEqual([]);
       });
     }
+
+    // 4b. The @assistant-ui/tap pin must stay, and must stay below 0.9.13.
+    //
+    // `@assistant-ui/react@0.15.1` depends on `@assistant-ui/tap: ^0.9.7`, and
+    // tap 0.9.13 rewrote its internal `useSyncExternalStore`. assistant-ui was
+    // built against the old semantics and does not survive the new ones: the
+    // composer silently drops every keystroke, with only a console line about
+    // an uncached `getSnapshot` to show for it. Install succeeds, the build
+    // succeeds, and the app is dead.
+    //
+    // Nothing else expresses that constraint — upstream's caret accepts the
+    // broken versions — so a pin removed as tidy-up would ship a chat with no
+    // composer. Measured: 0.9.8 and 0.9.12 green, 0.9.13/0.9.14/0.9.15 red.
+    it("pins @assistant-ui/tap below the release that breaks the composer", () => {
+      const workspaceYaml = readFileSync(join(ROOT, "pnpm-workspace.yaml"), "utf8");
+      const override = workspaceYaml
+        .split("\n")
+        .map((line) => line.replace(/#.*$/, "").trim())
+        .find((line) => line.startsWith('"@assistant-ui/tap":'));
+      expect(
+        override,
+        "pnpm-workspace.yaml must override @assistant-ui/tap — see the comment beside it",
+      ).toBeDefined();
+
+      // Accepts an exact version or a range, and asks the same question of
+      // both: can this admit 0.9.13? An exact pin is preferred (a range
+      // spanning two good versions permits a SPLIT, which nothing here would
+      // report), but the pin's job is the version, so the guard checks that.
+      const rank = (major: number, minor: number, patch: number) =>
+        major * 1e6 + minor * 1e3 + patch;
+      const FIRST_BROKEN = rank(0, 9, 13);
+      const constraint = override!.slice(override!.indexOf(":") + 1).trim();
+      const bound = /<\s*(\d+)\.(\d+)\.(\d+)/.exec(constraint);
+      const exact = /^"(\d+)\.(\d+)\.(\d+)"$/.exec(constraint);
+      const parsed = bound ?? exact;
+      expect(
+        parsed,
+        `@assistant-ui/tap must be an exact version or carry an exclusive upper bound, got ${constraint}`,
+      ).not.toBeNull();
+      const [major, minor, patch] = parsed!.slice(1).map(Number);
+      // A `<X` bound is safe when X is at or below the first broken release;
+      // an exact version is safe when it is strictly below it.
+      const ceiling = bound ? rank(major, minor, patch) : rank(major, minor, patch) + 1;
+      expect(
+        ceiling <= FIRST_BROKEN,
+        `@assistant-ui/tap must stay below 0.9.13; ${constraint} does not`,
+      ).toBe(true);
+    });
 
     // 5. Sibling foundry-* packages must never be peerDependencies.
     //

@@ -71,6 +71,63 @@ describe("keyed context items", () => {
     expect(useAppStore.getState().contextItems.map((i) => i.persistence)).toEqual(["persistent"]);
   });
 
+  it("re-setting an identical item does nothing, even one carrying a bigint", () => {
+    // The guard exists to stop a UI that mirrors a selection into context from
+    // minting a fresh id and array on every render and driving itself into an
+    // update loop. A bigint is not exotic where these payloads come from — the
+    // Neo4j driver returns them natively — and comparing with a bare
+    // `JSON.stringify` THROWS on one, so "not equal" on the throw would have
+    // re-opened the loop for exactly the data most likely to hit it.
+    const store = useAppStore.getState();
+    const withBigint = () => ({
+      ...note("Metropolis"),
+      payload: { kind: "text" as const, text: "Metropolis", views: 10n } as never,
+    });
+
+    store.setContextItem("graph.selection", withBigint());
+    const first = useAppStore.getState().contextItems;
+    store.setContextItem("graph.selection", withBigint());
+
+    expect(useAppStore.getState().contextItems).toBe(first);
+  });
+
+  it("does not mistake a changed bigint for the string of its digits", () => {
+    // The comparison has to be lossless in BOTH directions. Rendering a bigint
+    // as its own digits made `10n` and `"10"` the same signature, so a real
+    // edit read as "no change" and the context the agent answers from kept the
+    // old value while the UI showed the new one.
+    const store = useAppStore.getState();
+    const item = (views: unknown) => ({
+      ...note("Metropolis"),
+      payload: { kind: "text" as const, text: "Metropolis", views } as never,
+    });
+
+    store.setContextItem("graph.selection", item(10n));
+    const first = useAppStore.getState().contextItems;
+    store.setContextItem("graph.selection", item("10"));
+
+    expect(useAppStore.getState().contextItems).not.toBe(first);
+  });
+
+  it("notices a changed value that carries no enumerable keys", () => {
+    // A `Date` keeps its state internally, so comparing key sets said two
+    // different instants were the same value — and this guard decides whether
+    // the context attached to later messages is stale.
+    const store = useAppStore.getState();
+    const item = (at: unknown) => ({
+      ...note("Metropolis"),
+      payload: { kind: "text" as const, text: "Metropolis", at } as never,
+    });
+
+    store.setContextItem("graph.selection", item(new Date(1)));
+    const first = useAppStore.getState().contextItems;
+    store.setContextItem("graph.selection", item(new Date(1)));
+    expect(useAppStore.getState().contextItems).toBe(first);
+
+    store.setContextItem("graph.selection", item(new Date(2)));
+    expect(useAppStore.getState().contextItems).not.toBe(first);
+  });
+
   it("leaves other keys and the user's own pins alone", () => {
     const store = useAppStore.getState();
     store.addContextItem(note("a note the user pinned"));

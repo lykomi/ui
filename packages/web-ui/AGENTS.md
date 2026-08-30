@@ -84,6 +84,12 @@ Tools live in `clientToolRegistry` (vanilla zustand store in `@iloveagents/found
 
 Custom tool UIs are top-level `makeAssistantToolUI(...)` constants rendered as children inside the `AssistantRuntimeProvider` tree (see `client-tool-executor.tsx`).
 
+**A tool UI must not be where a result gets ACTED on.** Cards render inside `TurnActivity`, which is collapsed by default, and Radix unmounts a closed `CollapsibleContent` — so anything a card DOES when its result lands (open a panel, fold the result into what is on screen, start a poll) never happens unless the reader expands that turn. Downstream this has cost two real bugs: a deep-research task nobody polled (ltwlf/lastspace#650) and a graph expansion the panel never received.
+
+The answer is a **headless watcher over the thread's own parts**, mounted once alongside the tool UIs and independent of what is expanded — `CitationSeeder`/`TaskSeeder` in `@ltwlf/spaces-web-ui`, `GraphResultSeeder` in `@iloveagents/foundry-web-graph`. Give it a baseline taken on the first non-empty view of a thread, or reopening a saved conversation replays its entire history. Force-mounting the fold is the tempting one-line alternative and it is worse: every card in every transcript then costs something, and history replays anyway.
+
+`ShowDocumentToolUI` in this package still auto-opens from render and so is subject to exactly this — it works when the turn is expanded and not otherwise.
+
 # Attachments
 
 `FileAttachmentAdapter` (`src/lib/attachment-adapter.ts`) base64-encodes **both images and documents** (PDF/DOCX) and emits file parts, which the AG-UI adapter converts to `binary` message parts (`mimeType` + `data` + `filename`). Documents used to degrade to a `[Attached file: …]` text stub; that silently discarded the bytes, so the model received a filename it could not read. Pass `{ documentMode: "metadata" }` to restore the stub for models that genuinely cannot accept file input.

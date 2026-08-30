@@ -1,0 +1,83 @@
+{
+  "name": "@iloveagents/foundry-web-graph",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Graph visualization for Foundry UI — a Bloom-like force-directed graph view, a source-agnostic graph payload contract, and an optional assistant-ui tool card + panel renderer.",
+  "keywords": [
+    "react",
+    "graph",
+    "visualization",
+    "force-directed",
+    "neo4j",
+    "cypher",
+    "foundry-ui",
+    "assistant-ui"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iLoveAgents/foundry-ui.git",
+    "directory": "packages/web-graph"
+  },
+  "homepage": "https://github.com/iLoveAgents/foundry-ui/tree/main/packages/web-graph#readme",
+  "bugs": "https://github.com/iLoveAgents/foundry-ui/issues",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./adapters/neo4j": {
+      "types": "./dist/adapters/index.d.ts",
+      "import": "./dist/adapters/index.js"
+    },
+    "./assistant-ui": {
+      "types": "./dist/assistant-ui/index.d.ts",
+      "import": "./dist/assistant-ui/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist && cp src/styles.css dist/styles.css",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": ">=0.400.0",
+    "@assistant-ui/react": "^0.15.1",
+    "zustand": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@assistant-ui/react": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@iloveagents/foundry-agent": "workspace:^",
+    "@iloveagents/foundry-web-primitives": "workspace:^",
+    "@iloveagents/foundry-web-ui": "workspace:^",
+    "react-force-graph-2d": "^1.29.1"
+  },
+  "devDependencies": {
+    "@assistant-ui/react": "^0.15.1",
+    "@types/react": "^19.2.2",
+    "jsdom": "^28.1.0",
+    "lucide-react": ">=0.400.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.4",
+    "zustand": "^5.0.0"
+  }
+}

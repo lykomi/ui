@@ -10,7 +10,7 @@ export type ToolCallStatus =
   | { type: "incomplete"; reason?: string }
   | { type: "requires-action"; reason?: string };
 
-interface ToolCallCardProps {
+export interface ToolCallCardProps {
   icon?: ReactNode;
   title: string;
   description?: string;
@@ -22,6 +22,18 @@ interface ToolCallCardProps {
   };
   children?: ReactNode;
   className?: string;
+  /** Start expanded. Ignored when `open` is supplied. */
+  defaultOpen?: boolean;
+  /**
+   * Controlled expansion.
+   *
+   * A card whose body is expensive to mount — a live force simulation, a media
+   * player — needs to know whether it is expanded so it can defer that cost,
+   * and needs to react when the user opens it. Left undefined, the card manages
+   * its own state exactly as before.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ToolCallCard({
@@ -32,8 +44,17 @@ export function ToolCallCard({
   action,
   children,
   className,
+  defaultOpen = false,
+  open,
+  onOpenChange,
 }: ToolCallCardProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : uncontrolledOpen;
+  const setIsOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
 
   const isSuccess = status.type === "complete";
   const isError = status.type === "incomplete" && status.reason === "error";

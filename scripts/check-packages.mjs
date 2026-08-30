@@ -19,6 +19,10 @@ const packages = [
     runtime: true,
   },
   {
+    dir: "packages/web-graph",
+    runtime: true,
+  },
+  {
     dir: "packages/web-shell",
     runtime: true,
   },

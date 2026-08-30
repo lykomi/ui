@@ -133,6 +133,7 @@ agent sits on a finished review indefinitely, or asks for it again.
    sibling environment's** identities (an environment named `foo` builds a
    prefix that also matches everything belonging to `foo-two`), and a purge
    that could have destroyed a secrets vault the deployment did not own.
+
 7. **Answer in the thread, then resolve it.** A reply is how the next reader
    knows a finding was considered rather than missed, and it is what makes
    round N+1 shorter.

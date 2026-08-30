@@ -18,6 +18,8 @@ export interface PresetManifest {
   filesDir?: string;
   extraDependencies?: Record<string, string>;
   extraDevDependencies?: Record<string, string>;
+  /** npm scripts merged into the generated `package.json`. */
+  extraScripts?: Record<string, string>;
   envVars?: PresetEnvVar[];
   postInstall?: { scripts?: Array<{ command: string; description: string }> };
 }
@@ -28,6 +30,7 @@ export interface ResolvedPreset {
   overlayDir?: string;
   extraDependencies?: Record<string, string>;
   extraDevDependencies?: Record<string, string>;
+  extraScripts?: Record<string, string>;
   envVars?: PresetEnvVar[];
   postInstall?: PresetManifest["postInstall"];
 }
@@ -39,6 +42,9 @@ export interface ResolvedPreset {
  *   agent service, and hello/weather demo tools.
  * - `foundry-iq`: default plus an Azure AI Search Foundry IQ knowledge-base
  *   retrieval tool using the documented MCP endpoint shape.
+ * - `neo4j`: default plus Neo4j graph tools (schema, read-only Cypher,
+ *   semantic search) and an interactive graph visualization. Works against a
+ *   local database or Neo4j Aura — only the connection URI differs.
  */
 export async function resolvePreset(name: string): Promise<ResolvedPreset> {
   if (name === "default") {
@@ -47,7 +53,7 @@ export async function resolvePreset(name: string): Promise<ResolvedPreset> {
       templateDir: bundledTemplateDir(),
     };
   }
-  if (name === "foundry-iq") {
+  if (name === "foundry-iq" || name === "neo4j") {
     return await loadBundledManifestPreset({ name, presetRoot: bundledPresetDir(name) });
   }
   throw new Error(`Unknown preset: ${name}`);
@@ -126,6 +132,7 @@ function buildResolvedPreset(
     overlayDir,
     extraDependencies: manifest.extraDependencies,
     extraDevDependencies: manifest.extraDevDependencies,
+    extraScripts: manifest.extraScripts,
     envVars: manifest.envVars,
     postInstall: manifest.postInstall,
   };

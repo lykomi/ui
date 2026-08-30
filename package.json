@@ -21,7 +21,7 @@
     "smoke:starter:browser": "node scripts/smoke-starter.mjs --browser",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "pnpm --filter @iloveagents/foundry-agent build && pnpm --filter @iloveagents/foundry-web-primitives build && pnpm --filter @iloveagents/foundry-web-ui build && pnpm --filter @iloveagents/foundry-web-shell build && pnpm --filter @iloveagents/foundry-web-voice build && pnpm --filter create-foundry-ui-app build",
+    "build": "pnpm --filter @iloveagents/foundry-agent build && pnpm --filter @iloveagents/foundry-web-primitives build && pnpm --filter @iloveagents/foundry-web-ui build && pnpm --filter @iloveagents/foundry-web-graph build && pnpm --filter @iloveagents/foundry-web-shell build && pnpm --filter @iloveagents/foundry-web-voice build && pnpm --filter create-foundry-ui-app build",
     "changeset": "changeset",
     "changeset:status": "changeset status",
     "changeset:version": "changeset version && node scripts/sync-template-versions.mjs",

@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "@iloveagents/foundry-web-ui/styles.css";
+/* Graph node palette. Optional — without it the graph falls back to the
+ * host's --chart-* tokens — but these give eight well-separated hues instead
+ * of five. */
+@import "@iloveagents/foundry-web-graph/styles.css";
+
+/* Tailwind v4 needs explicit @source paths to scan package output
+ * for utility classes. Without these, the Foundry UI components render
+ * without spacing, borders, or theme tokens. */
+@source "../node_modules/@iloveagents/foundry-web-primitives/dist";
+@source "../node_modules/@iloveagents/foundry-web-ui/dist";
+@source "../node_modules/@iloveagents/foundry-web-shell/dist";
+@source "../node_modules/@iloveagents/foundry-web-graph/dist";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings:
+    "rlig" 1,
+    "calt" 1;
+}

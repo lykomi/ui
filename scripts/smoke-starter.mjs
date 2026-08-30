@@ -43,6 +43,7 @@ const packages = [
   "packages/agent",
   "packages/web-primitives",
   "packages/web-ui",
+  "packages/web-graph",
   "packages/web-shell",
   "packages/web-voice",
 ];
