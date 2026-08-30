@@ -11,6 +11,7 @@ wrong in exactly the direction that hides the bug.
 from __future__ import annotations
 
 import os
+from uuid import uuid4
 
 import neo4j
 import pytest
@@ -90,18 +91,34 @@ class TestReadOnlyIsEnforcedByTheServer:
         # READ session directly would pin NEO4J's behaviour and not ours —
         # `run_read` could be changed to WRITE_ACCESS and such a test would
         # stay green while the documented boundary was gone.
+        #
+        # The sentinel is unique per run and removed in a `finally` through an
+        # independent WRITE session, because the failure mode this test exists
+        # for is the one where the CREATE actually commits. Without that, a
+        # single regression leaves a node behind, and the count below then
+        # fails on every future run against that database even after read mode
+        # is fixed — a test that poisons the thing it is testing. This is not
+        # hypothetical: it happened once while verifying this test can fail.
         monkeypatch.setattr(graph_db, "looks_like_write", lambda _cypher: False)
-        with pytest.raises(neo4j.exceptions.ClientError) as excinfo:
-            await graph_db.run_read(
-                "CREATE (n:__TestOnly__ {marker: 'should never exist'}) RETURN n"
-            )
-        assert "AccessMode" in excinfo.value.code
+        sentinel = uuid4().hex
+        try:
+            with pytest.raises(neo4j.exceptions.ClientError) as excinfo:
+                await graph_db.run_read(
+                    "CREATE (n:__TestOnly__ {marker: $marker}) RETURN n",
+                    {"marker": sentinel},
+                )
+            assert "AccessMode" in excinfo.value.code
 
-    async def test_nothing_was_written(self):
-        rows, _ = await graph_db.run_read(
-            "MATCH (n:__TestOnly__) RETURN count(n) AS n"
-        )
-        assert rows[0]["n"] == 0
+            # The exception is not the whole guarantee — what matters is that
+            # nothing was written. A boundary could fail in a way that raises
+            # something else, or raises after committing.
+            rows, _ = await graph_db.run_read(
+                "MATCH (n:__TestOnly__ {marker: $marker}) RETURN count(n) AS n",
+                {"marker": sentinel},
+            )
+            assert rows[0]["n"] == 0, "the write was not refused — a node was created"
+        finally:
+            await _remove_sentinel(sentinel)
 
     async def test_run_read_refuses_before_it_reaches_the_server(self):
         with pytest.raises(graph_db.WriteNotAllowed):
@@ -159,9 +176,16 @@ class TestPayloadsComeBackRenderable:
         payload = records_to_graph_payload(
             list(rel_rows) + list(node_rows), max_nodes=50, max_edges=50
         )
+        # Compared against the node the second query returned, not against
+        # "has any properties at all": a labelled node with an empty property
+        # map is a perfectly ordinary graph, and asserting truthiness there
+        # would reject a valid database even though the rule works.
+        expected = node_rows[0]["n"]
         kept = next(n for n in payload["nodes"] if n["id"] == endpoint_id)
-        assert kept["labels"], "the endpoint stub survived and the real node was dropped"
-        assert kept["properties"]
+        assert kept["labels"] == list(expected.labels), (
+            "the endpoint stub survived and the real node was dropped"
+        )
+        assert set(kept["properties"]) == {str(key) for key in dict(expected)}
 
     async def test_the_schema_is_itself_a_renderable_graph(self):
         # The schema comes back as a `foundry.graph` payload — labels as nodes,
@@ -264,8 +288,32 @@ class TestTheVectorToolSpendsItsBudgetAcrossHits:
         self, monkeypatch: pytest.MonkeyPatch
     ):
         hit_ids, neighbours = await self._replayable(monkeypatch)
-        # Two neighbour slots for several hits: a prefix gives both to the first.
-        monkeypatch.setenv("NEO4J_MAX_NODES", str(len(hit_ids) + 2))
+
+        # Provenance, as in the edge test: which bucket first offered each
+        # neighbour. A shared neighbour belongs to two hits, so crediting it to
+        # both would let a prefix that kept only the first bucket's nodes score
+        # as "spread" and pass on the broken code.
+        first_owner: dict[str, str] = {}
+        per_bucket: dict[str, list[str]] = {}
+        for record in neighbours:
+            node_id = record["m"].element_id
+            if node_id in hit_ids:
+                continue
+            first_owner.setdefault(node_id, record["hit"])
+            if first_owner[node_id] == record["hit"]:
+                bucket = per_bucket.setdefault(record["hit"], [])
+                if node_id not in bucket:
+                    bucket.append(node_id)
+
+        # Budget = exactly the busiest bucket's own neighbours, so a prefix
+        # spends all of it there and reaches no second bucket, whatever the
+        # graph looks like. Asserted rather than assumed.
+        spare = len(per_bucket.get(hit_ids[0], []))
+        assert spare >= 2, "the busiest bucket must be able to absorb the whole budget"
+        assert sum(1 for ids in per_bucket.values() if ids) >= 2, (
+            "at least two hits need neighbours of their own for a distribution to exist"
+        )
+        monkeypatch.setenv("NEO4J_MAX_NODES", str(len(hit_ids) + spare))
         monkeypatch.setenv("NEO4J_MAX_EDGES", "600")
 
         payload = await unwrap(graph_vector_search)("anything", limit=len(hit_ids))
@@ -273,13 +321,10 @@ class TestTheVectorToolSpendsItsBudgetAcrossHits:
         kept = {node["id"] for node in payload["nodes"]}
         assert set(hit_ids) <= kept, "a hit was capped away; the hits seed the budget"
 
-        owners = {
-            record["hit"]
-            for record in neighbours
-            if record["m"].element_id in kept and record["m"].element_id not in hit_ids
-        }
+        owners = {first_owner[node_id] for node_id in kept if node_id in first_owner}
         assert len(owners) > 1, (
-            "every retained neighbour belongs to one hit — the node budget is a prefix again"
+            "every retained neighbour came from one hit's bucket — the node budget is "
+            "a prefix again"
         )
 
     async def test_the_edge_budget_reaches_more_than_the_first_hit(
@@ -331,3 +376,20 @@ class TestTheVectorToolSpendsItsBudgetAcrossHits:
 async def _fixed_embedding(_text: str) -> list[float]:
     """The one fake here: embedding needs a model, everything else a database."""
     return [0.0, 0.0, 0.0]
+
+
+async def _remove_sentinel(marker: str) -> None:
+    """Delete the read-only test's sentinel through a WRITE session.
+
+    Independent of `run_read` on purpose: if that regressed to write access the
+    node exists, and the cleanup has to work in exactly that case.
+    """
+    driver = graph_db.get_driver()
+    async with driver.session(
+        database=graph_db.database(), default_access_mode=neo4j.WRITE_ACCESS
+    ) as session:
+        result = await session.run(
+            "MATCH (n:__TestOnly__ {marker: $marker}) DETACH DELETE n",
+            {"marker": marker},
+        )
+        await result.consume()

@@ -200,7 +200,17 @@ for (const marker of ["foundry.graph", "graph_show"]) {
 // from the scaffold's own `makeGraphToolUI` bindings. `graph_read_cypher` is
 // deliberately not in this list: the package carries it in a JSDoc example, and
 // a comment that survives bundling would make the check vacuous.
-for (const toolName of ["graph_schema", "graph_expand_node"]) {
+// All five bindings, not a sample: removing the vector-search or write card
+// leaves the other names present and the smoke green, while a configured
+// deployment's vector/write results become generic cards that never reach
+// the panel. Each of these appears nowhere in the package's dist, so in this
+// bundle they can only have come from the scaffold's own bindings.
+for (const toolName of [
+  "graph_schema",
+  "graph_expand_node",
+  "graph_vector_search",
+  "graph_write_cypher",
+]) {
   if (!js.includes(toolName)) {
     throw new Error(
       `"${toolName}" is absent from the bundle — its makeGraphToolUI card is not registered, ` +
