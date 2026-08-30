@@ -285,20 +285,46 @@ class TestTheVectorToolSpendsItsBudgetAcrossHits:
     async def test_the_edge_budget_reaches_more_than_the_first_hit(
         self, monkeypatch: pytest.MonkeyPatch
     ):
-        hit_ids, _ = await self._replayable(monkeypatch)
+        hit_ids, neighbours = await self._replayable(monkeypatch)
+
+        # Which bucket each edge is FIRST offered from — the order both a
+        # prefix and the round-robin walk it in. Provenance, not endpoints: an
+        # edge between two hits touches two seeds whichever rule kept it, so
+        # counting endpoints would score a prefix as "spread" and pass on the
+        # broken code.
+        first_owner: dict[str, str] = {}
+        per_bucket: dict[str, list[str]] = {}
+        for record in neighbours:
+            edge_id = record["r"].element_id
+            first_owner.setdefault(edge_id, record["hit"])
+            bucket = per_bucket.setdefault(record["hit"], [])
+            if edge_id not in bucket:
+                bucket.append(edge_id)
+
+        # The budget is exactly the busiest bucket's size, so a prefix spends
+        # all of it inside that one bucket and reaches no other. Asserting the
+        # premise rather than assuming the demo graph's shape: with a smaller
+        # first bucket a prefix would spill into the second and pass.
+        budget = len(per_bucket[hit_ids[0]])
+        assert budget >= 2, "the busiest bucket must be able to absorb the whole budget"
+        assert sum(1 for ids in per_bucket.values() if ids) >= 2, (
+            "at least two hits need drawable edges for a distribution to exist"
+        )
+
         # Keep every node, so only the EDGE budget is doing the choosing.
         monkeypatch.setenv("NEO4J_MAX_NODES", "600")
-        monkeypatch.setenv("NEO4J_MAX_EDGES", str(len(hit_ids)))
+        monkeypatch.setenv("NEO4J_MAX_EDGES", str(budget))
 
         payload = await unwrap(graph_vector_search)("anything", limit=len(hit_ids))
         assert_is_graph_payload(payload)
-        seeds = set(hit_ids)
-        hits_with_an_edge = {
-            end for edge in payload["edges"] for end in (edge["source"], edge["target"])
-        } & seeds
-        assert len(hits_with_an_edge) > 1, (
-            "every retained edge touches one hit — the edge budget is a prefix again, "
-            "and the late hits are drawn as unconnected dots"
+        owners = {
+            first_owner[edge["id"]]
+            for edge in payload["edges"]
+            if edge["id"] in first_owner
+        }
+        assert len(owners) > 1, (
+            "every retained edge came from one hit's bucket — the edge budget is a "
+            "prefix again, and the late hits are drawn as unconnected dots"
         )
 
 
