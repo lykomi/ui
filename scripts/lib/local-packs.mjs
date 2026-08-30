@@ -78,8 +78,15 @@ export function packWorkspace({ root, packDir, packages = WORKSPACE_PACKAGES, pn
  *
  * Both `pnpm.overrides` and the top-level `overrides` are written: the first is
  * what pnpm reads, the second keeps the file honest for anyone else looking at
- * it. Dependencies are rewritten too, so a package the app declares but the
- * overrides miss still cannot slip in from the registry.
+ * it. Every tarball goes into both, unconditionally — that is what makes the
+ * install airtight, and there is no case for a dependency rewrite to catch.
+ *
+ * The `dependencies` rewrite is a separate job: it stops the manifest LYING.
+ * Without it the generated app declares `"0.2.0"` while pnpm quietly installs
+ * a `file:` tarball, so anyone reading the app — or any tool that reads the
+ * manifest rather than the lockfile — is told the wrong thing. It is
+ * deliberately conditional: it retitles what the app already declares and does
+ * not add dependencies the preset never asked for.
  */
 export function applyLocalPacks(appDir, tarballs) {
   const manifestPath = join(appDir, "package.json");
