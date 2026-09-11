@@ -28,31 +28,46 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
-          if (id.includes("@assistant-ui")) return "vendor-assistant-ui";
-          if (id.includes("@ag-ui")) return "vendor-ag-ui";
-          if (id.includes("@azure/msal")) return "vendor-auth";
-          if (id.includes("@iloveagents/foundry-web-ui")) return "vendor-foundry-ui";
-          // Voice is optional at runtime and heavy at build: in the main
-          // chunk it sat within a few kB of the 500 kB gate, so any growth
-          // in a sibling package tripped the starter smoke.
-          if (id.includes("@iloveagents/foundry-web-voice")) return "vendor-foundry-voice";
-          if (id.includes("@iloveagents/foundry-web-shell")) return "vendor-foundry-shell";
-          if (id.includes("@iloveagents/foundry-agent")) return "vendor-foundry-agent";
+          // Match on the PACKAGE, not the path: pnpm's store directories
+          // embed peer names ("…foundry-web-ui@…_@ag-ui+client@…_@assistant-u…"),
+          // so a substring match on the full path filed foundry-web-ui under
+          // whichever peer name the rules met first, and "react" matched
+          // half the store. The last node_modules segment is the package.
+          const pkg = id.slice(id.lastIndexOf("node_modules/") + "node_modules/".length);
+          if (pkg.startsWith("@assistant-ui/")) return "vendor-assistant-ui";
+          if (pkg.startsWith("@ag-ui/")) return "vendor-ag-ui";
+          if (pkg.startsWith("@azure/msal")) return "vendor-auth";
+          if (pkg.startsWith("@iloveagents/foundry-web-ui/")) return "vendor-foundry-ui";
+          if (pkg.startsWith("@iloveagents/foundry-web-shell/")) return "vendor-foundry-shell";
+          if (pkg.startsWith("@iloveagents/foundry-agent/")) return "vendor-foundry-agent";
+          // Voice is optional at runtime and heavy at build; its own chunk
+          // keeps the main path light and the size gate honest.
+          if (pkg.startsWith("@iloveagents/foundry-web-voice/")) return "vendor-foundry-voice";
           // Before the react rule: recharts drags react-smooth + the d3
           // sub-packages along, and "react-smooth" would land in
           // vendor-react and push it past the chunk-size gate.
           if (
-            id.includes("recharts") ||
-            id.includes("victory-vendor") ||
-            id.includes("/d3-") ||
-            id.includes("react-smooth") ||
-            id.includes("decimal.js-light")
+            pkg.startsWith("recharts/") ||
+            pkg.startsWith("victory-vendor/") ||
+            pkg.startsWith("d3-") ||
+            pkg.startsWith("react-smooth/") ||
+            pkg.startsWith("decimal.js-light/")
           ) {
             return "vendor-charts";
           }
-          if (id.includes("react") || id.includes("scheduler")) return "vendor-react";
-          if (id.includes("lucide-react")) return "vendor-icons";
-          if (id.includes("react-markdown") || id.includes("remark-") || id.includes("micromark")) {
+          if (
+            pkg.startsWith("react/") ||
+            pkg.startsWith("react-dom/") ||
+            pkg.startsWith("scheduler/")
+          ) {
+            return "vendor-react";
+          }
+          if (pkg.startsWith("lucide-react/")) return "vendor-icons";
+          if (
+            pkg.startsWith("react-markdown/") ||
+            pkg.startsWith("remark-") ||
+            pkg.startsWith("micromark")
+          ) {
             return "vendor-markdown";
           }
         },

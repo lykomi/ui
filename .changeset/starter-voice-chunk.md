@@ -2,4 +2,4 @@
 "create-foundry-ui-app": patch
 ---
 
-The generated starter puts the voice package in its own chunk. In the main chunk it sat within a few kB of Vite's 500 kB warning, so any growth in a sibling package tripped the starter smoke.
+The generated starter's chunk rules match on the package name, not on the pnpm store path. Those paths embed peer names ("…foundry-web-ui@…\_@ag-ui+client@…"), so a substring match filed foundry-web-ui under whichever peer the rules met first and "react" matched half the store; the voice build's react chunk sat at the 500 kB gate and any growth in a sibling package tripped the starter smoke. The voice package also gets its own chunk.
