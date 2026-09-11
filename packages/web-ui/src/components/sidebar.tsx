@@ -113,6 +113,11 @@ const SIDEBAR_ITEM_GAP_CLASS = "gap-2";
 // ChatGPT / Linear / Notion "header sits on its children" pattern.
 // Symmetric ``py-2`` made the header float midway between sections
 // instead of belonging to the group below it.
+// Vertical rhythm: rows are tight (depth-0 ``py-1.5``, nested ``py-1``) and
+// sections keep their ``pt-4`` gap, so what separates is the group, not
+// every row; the header label sits a step brighter than the rows' muted
+// text so the section reads above its items (user's test: rows were
+// airy and headers lighter than their children).
 const SIDEBAR_GROUP_HEADER_PADDING = "pt-4 pb-0";
 // The header's own box: the hover surface spans the row exactly like an
 // item row's does — same radius, same transparent border (part of the box
@@ -752,7 +757,7 @@ function NavLeafItem({
           disabled={isDisabled}
           onClick={isDisabled ? undefined : onClick}
           className={cn(
-            "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-sm text-left",
+            "flex items-center gap-2 flex-1 min-w-0 py-1 text-sm text-left",
             bodyPl,
             "pr-3 transition-[padding] duration-150",
             NAV_ROW_ACTIONS_CLEARANCE,
@@ -811,7 +816,7 @@ function NavLeafItem({
       {...(isDisabled ? {} : dropTargetProps)}
       className={cn(
         "relative flex items-center gap-2 w-full",
-        "rounded-lg border border-transparent pr-3 py-1.5 text-sm text-left",
+        "rounded-lg border border-transparent pr-3 py-1 text-sm text-left",
         bodyPl,
         isDisabled
           ? "opacity-40 cursor-default"
@@ -1006,7 +1011,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0",
             bodyPl,
-            "pr-3 py-1.5 text-sm text-left transition-[padding] duration-150",
+            "pr-3 py-1 text-sm text-left transition-[padding] duration-150",
             hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
               ? "text-sidebar-foreground/45 cursor-default"
@@ -1183,7 +1188,7 @@ function CollapsibleNavItem({
             navigate(item.to);
           }}
           className={cn(
-            "flex items-center gap-2 flex-1 min-w-0 py-2 text-sm text-left",
+            "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-sm text-left",
             bodyClass,
             "pr-3 transition-[padding] duration-150",
             hasActions && NAV_ROW_ACTIONS_CLEARANCE,
@@ -1260,7 +1265,7 @@ function CollapsibleNavItem({
           "relative flex items-center gap-2 w-full opacity-40",
           bodyClass,
           // Transparent border for box-model parity — see the NavLink variant.
-          "rounded-lg border border-transparent pr-3 py-2 text-left text-sm text-sidebar-foreground/45",
+          "rounded-lg border border-transparent pr-3 py-1.5 text-left text-sm text-sidebar-foreground/45",
         )}
       >
         <NavTwisty
@@ -1293,7 +1298,7 @@ function CollapsibleNavItem({
           // positioned twisty resolves against the PADDING box, so a row
           // without the border puts its disclosure cell 1px left of its
           // siblings' and the column goes ragged.
-          "rounded-xl border border-transparent pr-3 py-2 text-sm text-left",
+          "rounded-xl border border-transparent pr-3 py-1.5 text-sm text-left",
           "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
           headingClass,
           isActive && cn(ACTIVE_NAV_ROW_CLASS, ACTIVE_NAV_TEXT_CLASS),
@@ -1661,7 +1666,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                           SIDEBAR_GROUP_HEADER_LABEL_CLASS,
                           isActive
                             ? "text-sidebar-selected-foreground"
-                            : "text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground",
+                            : "text-sidebar-foreground/75 group-hover/header:text-sidebar-foreground",
                         )}
                       >
                         {group.label}
@@ -1678,7 +1683,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                 >
                   <span
                     className={cn(
-                      "truncate text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground",
+                      "truncate text-sidebar-foreground/75 group-hover/header:text-sidebar-foreground",
                       SIDEBAR_GROUP_HEADER_LABEL_CLASS,
                     )}
                   >
@@ -1715,13 +1720,13 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                   aria-hidden="true"
                   className={cn(SIDEBAR_ITEM_ICON_CLASS, "flex items-center justify-center")}
                 >
-                  <ChevronLeft className="size-3.5 text-sidebar-foreground/65" />
+                  <ChevronLeft className="size-3.5 text-sidebar-foreground/75" />
                 </span>
                 <span
                   className={cn(
                     "truncate",
                     SIDEBAR_GROUP_HEADER_LABEL_CLASS,
-                    "text-sidebar-foreground/65 hover:text-sidebar-foreground",
+                    "text-sidebar-foreground/75 hover:text-sidebar-foreground",
                   )}
                 >
                   {group.label}
@@ -1753,7 +1758,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                       SIDEBAR_GROUP_HEADER_LABEL_CLASS,
                       isActive
                         ? "text-sidebar-selected-foreground"
-                        : "text-sidebar-foreground/65 hover:text-sidebar-foreground",
+                        : "text-sidebar-foreground/75 hover:text-sidebar-foreground",
                     )}
                   >
                     {group.label}
@@ -1770,7 +1775,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
               className={cn("flex items-center", SIDEBAR_GROUP_HEADER_BOX, SIDEBAR_ITEM_GAP_CLASS)}
             >
               <span aria-hidden="true" className={SIDEBAR_ITEM_ICON_CLASS} />
-              <span className={cn("text-sidebar-foreground/65", SIDEBAR_GROUP_HEADER_LABEL_CLASS)}>
+              <span className={cn("text-sidebar-foreground/75", SIDEBAR_GROUP_HEADER_LABEL_CLASS)}>
                 {group.label}
               </span>
             </div>
@@ -1819,7 +1824,7 @@ function CreateActionsMenu({ group }: { group: NavGroup }) {
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex size-6 items-center justify-center text-sidebar-foreground/65 transition-colors hover:text-sidebar-foreground"
+          className="inline-flex size-6 items-center justify-center text-sidebar-foreground/75 transition-colors hover:text-sidebar-foreground"
           aria-label={`Create in ${group.label}`}
         >
           <Plus className="size-4" />
