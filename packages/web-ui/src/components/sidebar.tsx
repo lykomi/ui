@@ -1126,11 +1126,10 @@ function CollapsibleNavItem({
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const rowInTree = inTree && !heading;
-  const bodyClass = rowInTree
-    ? getNavDepthOffsets(0).body
-    : heading || !underHeader
-      ? NAV_FLAT_BODY_CLASS
-      : getNavDepthOffsets(0).body;
+  // A heading keeps the row's ordinary position under the header label —
+  // the same x it had before the group focused — so focusing moves it
+  // neither up nor sideways; its children indent one step under it.
+  const bodyClass = rowInTree || underHeader ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS;
   const headingClass = heading && !isDisabled && "font-semibold text-sidebar-foreground";
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const rendersRow = Boolean(hasChildren || hasActions);
@@ -1246,10 +1245,7 @@ function CollapsibleNavItem({
         {inner(isActive, isAncestorActive)}
         {hasChildren && isExpanded && (
           <>
-            {/* A heading's children sit one step further left than a
-                branch's: the heading is flat, so its own column is free and
-                the hierarchy still reads. Same row metrics either way. */}
-            <SubNavItems items={item.children!} parentPath={item.to} depth={heading ? 0 : 1} />
+            <SubNavItems items={item.children!} parentPath={item.to} />
             {item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
           </>
         )}
