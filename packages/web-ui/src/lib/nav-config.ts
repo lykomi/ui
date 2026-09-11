@@ -95,20 +95,6 @@ export interface NavItem {
    * checked. Clear it once the children are known, empty or not.
    */
   childrenUnloaded?: boolean;
-  /**
-   * How the row is drawn inside its group.
-   *
-   * - unset: a tree row — a disclosure cell (chevron or leaf dot) and the
-   *   depth indent.
-   * - `"flat"`: chrome inside a tree — no disclosure cell, flush with the
-   *   sidebar's flat rows. A way back, a filter: navigation, not an entity.
-   * - `"heading"`: the row the rows beneath belong to — flat like the above
-   *   and emphasised like a section label, keeping its icon, badges,
-   *   actions and drop target. A group focused on one subject draws the
-   *   subject as a heading and its children as the tree beneath it, one
-   *   level up; without this the subject sits level with its own children.
-   */
-  presentation?: "flat" | "heading";
   /** Inline action buttons rendered next to the nav item (e.g., + document, + folder) */
   actions?: NavItemAction[];
   /** Optional drag-and-drop behavior (provided by feature modules) */
@@ -169,13 +155,21 @@ export interface NavGroup {
   /** Hide the group header while preserving group semantics. */
   hideLabel?: boolean;
   /**
-   * Where the header leads BACK to. The header keeps its label, typography
-   * and height; the collapse chevron's cell holds a back chevron and the
-   * label links here. A group focused on one subject keeps its header and
-   * makes it the way back, so nothing above the subject moves when the
-   * group focuses or unfocuses. Ignored while the label is hidden.
+   * The ``to`` of the item this group is focused on, if any.
+   *
+   * A focused group draws that item alone: the header keeps its label,
+   * typography and height and leads back to ``to`` (a back chevron in the
+   * collapse chevron's column, the label as the link); the item is drawn
+   * as a flat, emphasised heading with its children beneath it — one
+   * indent step left of a branch's children, at their usual row size —
+   * and its siblings are not drawn. Nothing above the item moves and no
+   * row resizes when the group focuses or unfocuses.
+   *
+   * Focus takes precedence over ``collapsible``. It needs a visible label
+   * and a ``to`` to lead back to; without either, or when no item carries
+   * that ``to``, the group draws as usual.
    */
-  backTo?: string;
+  focusOn?: string;
   /** Group description sent to the agent */
   description?: string;
   /** Group-level metadata (e.g., org settings, workspace config, custom instructions) */

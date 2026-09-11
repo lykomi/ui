@@ -32,6 +32,10 @@ export default defineConfig({
           if (id.includes("@ag-ui")) return "vendor-ag-ui";
           if (id.includes("@azure/msal")) return "vendor-auth";
           if (id.includes("@iloveagents/foundry-web-ui")) return "vendor-foundry-ui";
+          // Voice is optional at runtime and heavy at build: in the main
+          // chunk it sat within a few kB of the 500 kB gate, so any growth
+          // in a sibling package tripped the starter smoke.
+          if (id.includes("@iloveagents/foundry-web-voice")) return "vendor-foundry-voice";
           if (id.includes("@iloveagents/foundry-web-shell")) return "vendor-foundry-shell";
           if (id.includes("@iloveagents/foundry-agent")) return "vendor-foundry-agent";
           // Before the react rule: recharts drags react-smooth + the d3
