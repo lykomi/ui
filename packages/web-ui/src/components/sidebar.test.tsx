@@ -363,6 +363,159 @@ describe("Sidebar active state", () => {
     expect(twistyCell(container, "Flat item")?.children.length).toBe(1);
   });
 
+  it("focuses a group on one item: the header leads back, the item is a heading, siblings hide", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    // A group focused on one subject: its header becomes the way back and
+    // keeps its metrics; the subject is a flat heading; its children are the
+    // tree beneath, one step further left than under a branch, at the row
+    // size they have anywhere else; its siblings are not drawn. Focus wins
+    // over ``collapsible``.
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        to: "/overview",
+        collapsible: true,
+        description: "Back to every workspace",
+        focusOn: "/spaces/demo",
+        items: [
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            children: [
+              {
+                to: "/spaces/demo/documents",
+                label: "Documents",
+                icon: FolderOpen,
+                children: [{ to: "/spaces/demo/documents/a", label: "A file", icon: FolderOpen }],
+              },
+              { to: "/spaces/demo/notes", label: "Notes", icon: FolderOpen },
+            ],
+          },
+          { to: "/spaces/other", label: "Other Workspace", icon: FolderOpen },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo/documents"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // The header is the way back: a link to the group's page carrying the
+    // label in the header's own typography, a back chevron in the chevron's
+    // column, and no collapse toggle even though the group is collapsible.
+    const back =
+      desktopSidebar(container).querySelector<HTMLAnchorElement>("[data-nav-group-back]");
+    expect(back?.getAttribute("href")).toBe("/overview");
+    expect(back?.textContent).toContain("Workspaces");
+    expect(back?.querySelector("svg")).toBeTruthy();
+    expect(back?.querySelector("span:last-child")?.className).toMatch(/\buppercase\b/);
+    expect(desktopSidebar(container).querySelector("[data-nav-group-toggle]")).toBeNull();
+    // Siblings are not drawn.
+    expect(navRow(container, "Other Workspace")).toBeUndefined();
+    // The heading: flat under the chevron's column, emphasised like a
+    // section label, no chevron, always open.
+    expect(twisty(container, "Demo Workspace")).toBeUndefined();
+    expect(twistyCell(container, "Demo Workspace")?.children.length).toBe(0);
+    const headingBody = navRow(container, "Demo Workspace")?.querySelector<HTMLElement>(
+      "button:not([data-nav-twisty])",
+    );
+    expect(headingBody?.className).toMatch(/\bpl-3\b/);
+    expect(headingBody?.className).toMatch(/\bfont-semibold\b/);
+    // Its children are the tree, one step left of a branch's children: the
+    // depth-0 column, with a chevron on the branch and a dot on the leaf.
+    expect(navRow(container, "Documents")?.dataset.navDepth).toBe("0");
+    expect(navRow(container, "Notes")?.dataset.navDepth).toBe("0");
+    expect(twisty(container, "Documents")).toBeTruthy();
+    expect(twistyCell(container, "Notes")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
+    expect(columnOf(twistyCell(container, "Notes"))).toBe("3");
+  });
+
+  it("draws a group as usual when focusOn names no item, or there is no header to lead back from", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        to: "/overview",
+        focusOn: "/spaces/missing",
+        items: [
+          { to: "/spaces/demo", label: "Demo Workspace", icon: FolderOpen },
+          { to: "/spaces/other", label: "Other Workspace", icon: FolderOpen },
+        ],
+      },
+      {
+        label: "Pages",
+        hideLabel: true,
+        to: "/",
+        focusOn: "/activity",
+        items: [
+          { to: "/activity", label: "Activity", icon: MessageSquare },
+          { to: "/threads", label: "Threads", icon: MessageSquare },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(desktopSidebar(container).querySelector("[data-nav-group-back]")).toBeNull();
+    expect(navRow(container, "Other Workspace")).toBeTruthy();
+    expect(navRow(container, "Threads")).toBeTruthy();
+  });
+
+  it("indents rows under a visible header, and leaves header-less rows flush", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    // Under a header a row's icon sits under the header label, like a tree
+    // row's does, so the group reads as a group; in a header-less group
+    // there is nothing to indent under and the rows sit with the sidebar's
+    // other flat chrome.
+    useNavStore.getState().setConfig([
+      {
+        label: "Pages",
+        hideLabel: true,
+        items: [{ to: "/activity", label: "Activity", icon: MessageSquare }],
+      },
+      {
+        label: "Build",
+        items: [{ to: "/build/apps", label: "Apps", icon: MessageSquare }],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/activity"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(navRow(container, "Activity")?.className).toMatch(/\bpl-3\b/);
+    expect(navRow(container, "Apps")?.className).toMatch(/\bpl-8\b/);
+    // The header's hover box carries the same inset and outline as a row.
+    const header = desktopSidebar(container).querySelector<HTMLElement>("[data-nav-group-header]");
+    expect(header?.className).toMatch(/\bpl-3\b/);
+    expect(header?.className).toMatch(/\brounded-xl\b/);
+    expect(header?.className).toMatch(/\bborder-transparent\b/);
+  });
+
   it("marks branches with a chevron and leaves with a dot (Confluence page-tree)", async () => {
     const { Sidebar } = await import("./sidebar.tsx");
 
@@ -496,9 +649,9 @@ describe("Sidebar active state", () => {
     // One vertical line for every chevron in the sidebar. The header derives
     // its left padding from the same depth-0 rung the rows use, so retuning
     // the indent ladder can never desync the two columns unnoticed.
-    const header = desktopSidebar(container).querySelector<HTMLElement>(
-      "[data-nav-group-label] > div",
-    );
+    // The header's own box carries the inset now — the hover surface spans
+    // the row like an item row's — so that is where the column is read.
+    const header = desktopSidebar(container).querySelector<HTMLElement>("[data-nav-group-header]");
     expect(columnOf(header)).toBe("3");
     expect(columnOf(twistyCell(container, "Demo Workspace"))).toBe("3");
   });

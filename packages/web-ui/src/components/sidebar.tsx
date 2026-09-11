@@ -11,6 +11,7 @@ import {
   GripVertical,
   Plus,
   Upload,
+  ChevronLeft,
 } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -112,12 +113,19 @@ const SIDEBAR_ITEM_GAP_CLASS = "gap-2";
 // ChatGPT / Linear / Notion "header sits on its children" pattern.
 // Symmetric ``py-2`` made the header float midway between sections
 // instead of belonging to the group below it.
-const SIDEBAR_GROUP_HEADER_PADDING =
-  // ``border border-transparent`` for the same reason every item row
-  // carries one: the border is part of the box model that decides where
-  // the padding box starts. Without it the header chevron lands 1px left
-  // of every row's disclosure cell and the column is visibly ragged.
-  "border border-transparent pl-3 pr-3 pt-4 pb-0";
+// Vertical rhythm: rows are tight (depth-0 ``py-1.5``, nested ``py-1``) and
+// sections keep their ``pt-4`` gap, so what separates is the group, not
+// every row; the header label sits a step brighter than the rows' muted
+// text so the section reads above its items (user's test: rows were
+// airy and headers lighter than their children).
+const SIDEBAR_GROUP_HEADER_PADDING = "pt-4 pb-0";
+// The header's own box: the hover surface spans the row exactly like an
+// item row's does — same radius, same transparent border (part of the box
+// model that decides where the padding box starts: without it the chevron
+// lands 1px left of every row's disclosure cell) and the same horizontal
+// inset, so header and rows highlight on one outline (user's test: the
+// narrower inset box read as misaligned and cramped).
+const SIDEBAR_GROUP_HEADER_BOX = "rounded-xl border border-transparent pl-3 pr-3";
 // Typography for the group-header LABEL text (CHATS / WORKSPACES /
 // ADMIN / …). Stays at ``text-xs`` (12px) — same size as before —
 // but bumps weight from ``font-medium`` to ``font-semibold``. The
@@ -132,10 +140,13 @@ const SIDEBAR_GROUP_HEADER_LABEL_CLASS = "text-xs font-semibold uppercase tracki
 type NavStatusDot = NonNullable<NavItem["statusDot"]>;
 type NavStatusIcon = NonNullable<NavItem["statusIcon"]>;
 
-/** Body padding for a row that is NOT in a tree. Flat rows render no
- *  disclosure cell, so reserving its column just pushes them right of the
- *  sidebar's other flat chrome — which is what made Activity look indented
- *  under New Thread. */
+/** Body padding for a flat row with nothing to indent under: a row in a
+ *  group without a visible header (New Thread, Activity) sits with the
+ *  sidebar's other flat chrome, and a focused group's heading sits under
+ *  its header's chevron. Flat rows UNDER a visible header indent like
+ *  depth-0 tree rows instead, so their icon sits under the header label
+ *  and the group reads as a group (user's test: Build's rows sat level
+ *  with their header). */
 const NAV_FLAT_BODY_CLASS = "pl-3";
 
 function getNavDepthOffsets(depth: number) {
@@ -746,7 +757,7 @@ function NavLeafItem({
           disabled={isDisabled}
           onClick={isDisabled ? undefined : onClick}
           className={cn(
-            "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-sm text-left",
+            "flex items-center gap-2 flex-1 min-w-0 py-1 text-sm text-left",
             bodyPl,
             "pr-3 transition-[padding] duration-150",
             NAV_ROW_ACTIONS_CLEARANCE,
@@ -805,7 +816,7 @@ function NavLeafItem({
       {...(isDisabled ? {} : dropTargetProps)}
       className={cn(
         "relative flex items-center gap-2 w-full",
-        "rounded-lg border border-transparent pr-3 py-1.5 text-sm text-left",
+        "rounded-lg border border-transparent pr-3 py-1 text-sm text-left",
         bodyPl,
         isDisabled
           ? "opacity-40 cursor-default"
@@ -1000,7 +1011,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0",
             bodyPl,
-            "pr-3 py-1.5 text-sm text-left transition-[padding] duration-150",
+            "pr-3 py-1 text-sm text-left transition-[padding] duration-150",
             hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
               ? "text-sidebar-foreground/45 cursor-default"
@@ -1086,7 +1097,20 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   );
 }
 
-function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: boolean }) {
+function CollapsibleNavItem({
+  item,
+  inTree = true,
+  heading = false,
+  underHeader = false,
+}: {
+  item: NavItem;
+  inTree?: boolean;
+  /** The item a focused group is focused on — see ``NavGroup.focusOn``:
+   *  flat, emphasised, never collapsed, its children one step left. */
+  heading?: boolean;
+  /** Whether the group draws a header this row should indent under. */
+  underHeader?: boolean;
+}) {
   const navigate = useNavigate();
   const currentPath = useLocation().pathname;
   const setNavContext = useAppStore((s) => s.setNavContext);
@@ -1095,10 +1119,19 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
   const isActive = currentPath === item.to;
   const isAncestorActive = isInsideSubtree && !isActive;
   const [manualOverride, setManualOverride] = useState<boolean | null>(null);
-  const isExpanded = manualOverride ?? isInsideSubtree;
+  // A heading is never collapsed and carries no chevron: its children ARE
+  // the tree it stands for.
+  const isExpanded = heading ? true : (manualOverride ?? isInsideSubtree);
   const hasChildren = Boolean(item.children && item.children.length > 0);
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
+  const rowInTree = inTree && !heading;
+  const bodyClass = rowInTree
+    ? getNavDepthOffsets(0).body
+    : heading || !underHeader
+      ? NAV_FLAT_BODY_CLASS
+      : getNavDepthOffsets(0).body;
+  const headingClass = heading && !isDisabled && "font-semibold text-sidebar-foreground";
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const rendersRow = Boolean(hasChildren || hasActions);
   const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);
@@ -1128,11 +1161,11 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
         )}
       >
         <NavTwisty
-          hasChildren={hasChildren}
+          hasChildren={hasChildren && !heading}
           childrenUnloaded={item.childrenUnloaded}
-          inTree={inTree}
+          inTree={rowInTree}
           isExpanded={isExpanded}
-          onToggle={hasChildren ? () => setManualOverride(!isExpanded) : undefined}
+          onToggle={hasChildren && !heading ? () => setManualOverride(!isExpanded) : undefined}
           label={item.label}
           isActive={(selected || ancestor) && !isDisabled}
           depth={0}
@@ -1155,8 +1188,8 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
             navigate(item.to);
           }}
           className={cn(
-            "flex items-center gap-2 flex-1 min-w-0 py-2 text-sm text-left",
-            inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
+            "flex items-center gap-2 flex-1 min-w-0 py-1.5 text-sm text-left",
+            bodyClass,
             "pr-3 transition-[padding] duration-150",
             hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
@@ -1166,6 +1199,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
                 : ancestor
                   ? "text-sidebar-foreground font-medium"
                   : "text-sidebar-foreground/85",
+            headingClass,
           )}
           disabled={isDisabled}
         >
@@ -1212,7 +1246,10 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
         {inner(isActive, isAncestorActive)}
         {hasChildren && isExpanded && (
           <>
-            <SubNavItems items={item.children!} parentPath={item.to} />
+            {/* A heading's children sit one step further left than a
+                branch's: the heading is flat, so its own column is free and
+                the hierarchy still reads. Same row metrics either way. */}
+            <SubNavItems items={item.children!} parentPath={item.to} depth={heading ? 0 : 1} />
             {item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
           </>
         )}
@@ -1226,15 +1263,15 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
         data-nav-depth={0}
         className={cn(
           "relative flex items-center gap-2 w-full opacity-40",
-          inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
+          bodyClass,
           // Transparent border for box-model parity — see the NavLink variant.
-          "rounded-lg border border-transparent pr-3 py-2 text-left text-sm text-sidebar-foreground/45",
+          "rounded-lg border border-transparent pr-3 py-1.5 text-left text-sm text-sidebar-foreground/45",
         )}
       >
         <NavTwisty
           hasChildren={false}
           childrenUnloaded={item.childrenUnloaded}
-          inTree={inTree}
+          inTree={rowInTree}
           label={item.label}
           depth={0}
         />
@@ -1255,14 +1292,15 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
       className={({ isActive }) =>
         cn(
           "relative flex items-center gap-2 w-full",
-          inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
+          bodyClass,
           // The transparent border is NOT decoration: it is what makes this
           // row's box model match every other variant. An absolutely
           // positioned twisty resolves against the PADDING box, so a row
           // without the border puts its disclosure cell 1px left of its
           // siblings' and the column goes ragged.
-          "rounded-xl border border-transparent pr-3 py-2 text-sm text-left",
+          "rounded-xl border border-transparent pr-3 py-1.5 text-sm text-left",
           "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
+          headingClass,
           isActive && cn(ACTIVE_NAV_ROW_CLASS, ACTIVE_NAV_TEXT_CLASS),
           isDragOver &&
             !isFileDragOver &&
@@ -1278,7 +1316,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
           <NavTwisty
             hasChildren={false}
             childrenUnloaded={item.childrenUnloaded}
-            inTree={inTree}
+            inTree={rowInTree}
             label={item.label}
             isActive={isActive}
             depth={0}
@@ -1532,7 +1570,27 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy
   // groups stay uncollapsable so behaviour is unchanged.
-  const isCollapsible = !group.hideLabel && Boolean(group.collapsible);
+  // Focus — see ``NavGroup.focusOn``: the group draws one item as a heading
+  // under a header that leads back. Needs a visible label to lead back
+  // from and a ``to`` to lead back to; otherwise it draws as usual.
+  const focusedItem =
+    group.focusOn !== undefined && !group.hideLabel && group.to
+      ? group.items.find((item) => item.to === group.focusOn)
+      : undefined;
+  const focused = focusedItem !== undefined;
+  // The new shape fades in over the old one's place: keyed on the focus,
+  // and only after a CHANGE in either direction — not on first paint
+  // (user's test: the hard swap felt abrupt). The previous key is read
+  // during render and written after it, so a focus that returns to its
+  // initial value still counts as a change.
+  const focusKey = focused ? focusedItem.to : "";
+  const previousFocusKey = useRef(focusKey);
+  const animateRows = previousFocusKey.current !== focusKey;
+  useEffect(() => {
+    previousFocusKey.current = focusKey;
+  });
+  // Focus takes precedence over collapsing: a focused header is the way back.
+  const isCollapsible = !group.hideLabel && Boolean(group.collapsible) && !focused;
   const persistedCollapsed = useGroupCollapsed(group.label, group.defaultCollapsed);
   const collapsed = isCollapsible && persistedCollapsed;
   // Bubble: show the first child statusDot on the collapsed header so
@@ -1567,8 +1625,10 @@ function NavGroupSection({ group }: { group: NavGroup }) {
             // OVERLAPS the gap rather than pushing the label right
             // (negative-margin + extra padding cancel out).
             <div
+              data-nav-group-header
               className={cn(
-                "group/header flex items-center justify-between rounded-lg transition-colors hover:bg-sidebar-accent/70",
+                "group/header flex items-center justify-between transition-colors hover:bg-sidebar-accent/70",
+                SIDEBAR_GROUP_HEADER_BOX,
                 SIDEBAR_ITEM_GAP_CLASS,
               )}
             >
@@ -1611,7 +1671,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                           SIDEBAR_GROUP_HEADER_LABEL_CLASS,
                           isActive
                             ? "text-sidebar-selected-foreground"
-                            : "text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground",
+                            : "text-sidebar-foreground/75 group-hover/header:text-sidebar-foreground",
                         )}
                       >
                         {group.label}
@@ -1628,7 +1688,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                 >
                   <span
                     className={cn(
-                      "truncate text-sidebar-foreground/65 group-hover/header:text-sidebar-foreground",
+                      "truncate text-sidebar-foreground/75 group-hover/header:text-sidebar-foreground",
                       SIDEBAR_GROUP_HEADER_LABEL_CLASS,
                     )}
                   >
@@ -1641,14 +1701,56 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                 <CreateActionsMenu group={group} />
               )}
             </div>
+          ) : focused ? (
+            // The focused header is the way back: the collapse chevron's
+            // cell holds a back chevron, the label links to the group's
+            // page, and the metrics are the collapsible header's — so the
+            // header stays put, in the same type, when the group focuses.
+            <div
+              data-nav-group-header
+              className={cn(
+                "flex items-center justify-between py-1.5 transition-colors hover:bg-sidebar-accent/70",
+                SIDEBAR_GROUP_HEADER_BOX,
+                SIDEBAR_ITEM_GAP_CLASS,
+              )}
+            >
+              <NavLink
+                to={group.to!}
+                end
+                data-nav-group-back
+                title={group.description}
+                className={cn("flex min-w-0 flex-1 items-center", SIDEBAR_ITEM_GAP_CLASS)}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(SIDEBAR_ITEM_ICON_CLASS, "flex items-center justify-center")}
+                >
+                  <ChevronLeft className="size-3.5 text-sidebar-foreground/75" />
+                </span>
+                <span
+                  className={cn(
+                    "truncate",
+                    SIDEBAR_GROUP_HEADER_LABEL_CLASS,
+                    "text-sidebar-foreground/75 hover:text-sidebar-foreground",
+                  )}
+                >
+                  {group.label}
+                </span>
+              </NavLink>
+              {group.createActions && group.createActions.length > 0 && (
+                <CreateActionsMenu group={group} />
+              )}
+            </div>
           ) : group.to ? (
             // Non-collapsible header: no chevron, but we still emit an
             // invisible spacer of ``SIDEBAR_ITEM_ICON_CLASS`` width + the
             // shared gap so the group label lands in the same column as
             // collapsible headers and item labels.
             <div
+              data-nav-group-header
               className={cn(
-                "flex items-center justify-between rounded-lg py-1.5 transition-colors hover:bg-sidebar-accent/70",
+                "flex items-center justify-between py-1.5 transition-colors hover:bg-sidebar-accent/70",
+                SIDEBAR_GROUP_HEADER_BOX,
                 SIDEBAR_ITEM_GAP_CLASS,
               )}
             >
@@ -1661,7 +1763,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                       SIDEBAR_GROUP_HEADER_LABEL_CLASS,
                       isActive
                         ? "text-sidebar-selected-foreground"
-                        : "text-sidebar-foreground/65 hover:text-sidebar-foreground",
+                        : "text-sidebar-foreground/75 hover:text-sidebar-foreground",
                     )}
                   >
                     {group.label}
@@ -1673,27 +1775,41 @@ function NavGroupSection({ group }: { group: NavGroup }) {
               )}
             </div>
           ) : (
-            <div className={cn("flex items-center", SIDEBAR_ITEM_GAP_CLASS)}>
+            <div
+              data-nav-group-header
+              className={cn("flex items-center", SIDEBAR_GROUP_HEADER_BOX, SIDEBAR_ITEM_GAP_CLASS)}
+            >
               <span aria-hidden="true" className={SIDEBAR_ITEM_ICON_CLASS} />
-              <span className={cn("text-sidebar-foreground/65", SIDEBAR_GROUP_HEADER_LABEL_CLASS)}>
+              <span className={cn("text-sidebar-foreground/75", SIDEBAR_GROUP_HEADER_LABEL_CLASS)}>
                 {group.label}
               </span>
             </div>
           )}
         </div>
       )}
-      {!collapsed &&
-        group.items.map((item) => (
-          <CollapsibleNavItem
-            key={item.to + item.label}
-            item={item}
-            // A leaf dot distinguishes "nothing under this" from a sibling
-            // that branches. Decided per GROUP: Workspaces has branches, so
-            // its leaves are marked; Chats has none, so a dot on every row
-            // would mark a distinction that does not exist.
-            inTree={groupHasBranches}
-          />
-        ))}
+      {!collapsed && (
+        <div
+          key={focusKey}
+          className={cn(
+            animateRows &&
+              "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200",
+          )}
+        >
+          {(focused ? [focusedItem] : group.items).map((item) => (
+            <CollapsibleNavItem
+              key={item.to + item.label}
+              item={item}
+              // A leaf dot distinguishes "nothing under this" from a sibling
+              // that branches. Decided per GROUP: Workspaces has branches, so
+              // its leaves are marked; Chats has none, so a dot on every row
+              // would mark a distinction that does not exist.
+              inTree={groupHasBranches}
+              heading={focused}
+              underHeader={!group.hideLabel}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1713,7 +1829,7 @@ function CreateActionsMenu({ group }: { group: NavGroup }) {
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex size-6 items-center justify-center text-sidebar-foreground/65 transition-colors hover:text-sidebar-foreground"
+          className="inline-flex size-6 items-center justify-center text-sidebar-foreground/75 transition-colors hover:text-sidebar-foreground"
           aria-label={`Create in ${group.label}`}
         >
           <Plus className="size-4" />

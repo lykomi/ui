@@ -154,6 +154,25 @@ export interface NavGroup {
   to?: string;
   /** Hide the group header while preserving group semantics. */
   hideLabel?: boolean;
+  /**
+   * The ``to`` of the item this group is focused on, if any.
+   *
+   * A focused group draws that item alone: the header keeps its label,
+   * typography and height and leads back to ``to`` (a back chevron in the
+   * collapse chevron's column, the label as the link); the item is drawn
+   * as a flat, emphasised heading with its children beneath it — one
+   * indent step left of a branch's children, at their usual row size —
+   * and its siblings are not drawn. Nothing above the item moves and no
+   * row resizes when the group focuses or unfocuses.
+   *
+   * Focus takes precedence over ``collapsible``. It needs a visible label
+   * and a ``to`` to lead back to; without either, or when no item carries
+   * that ``to``, the group draws as usual. Only the group's own items can
+   * be focused, not their descendants. The value is the caller's: the
+   * back link navigates to ``to`` and nothing more, so the caller derives
+   * ``focusOn`` from the route (or its own state) and clears it there.
+   */
+  focusOn?: string;
   /** Group description sent to the agent */
   description?: string;
   /** Group-level metadata (e.g., org settings, workspace config, custom instructions) */

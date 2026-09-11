@@ -135,19 +135,20 @@ describe("neo4j preset", () => {
   });
 
   it("keeps the vendor-graph chunk rule above the react rule", () => {
-    // "react-force-graph-2d" and "react-kapsule" both contain "react", so a
-    // rule ordered after `id.includes("react")` drops the whole force engine
-    // into vendor-react and onto the critical path.
+    // "react-force-graph-2d" and "react-kapsule" both start with "react", so
+    // a rule ordered after the react rule drops the whole force engine into
+    // vendor-react and onto the critical path.
     // Compare CODE positions, not any occurrence of the text — the comment
-    // above the rule explains the trap and mentions `id.includes("react")`,
-    // which a naive indexOf would match first.
+    // above the rule explains the trap, and a naive indexOf would match it.
     const vite = readFileSync(join(neo4jRoot, "vite.config.ts"), "utf-8");
     const code = vite
       .split("\n")
       .filter((line) => !line.trim().startsWith("//") && !line.trim().startsWith("*"))
       .join("\n");
-    const graphRule = code.indexOf('id.includes("force-graph")');
-    const reactRule = code.indexOf('id.includes("react") || id.includes("scheduler")');
+    // The rules match on the package name (the last node_modules segment),
+    // not on the pnpm store path, which embeds peer names.
+    const graphRule = code.indexOf('pkg.includes("force-graph")');
+    const reactRule = code.indexOf('pkg.startsWith("react/")');
     expect(graphRule, "vendor-graph rule missing").toBeGreaterThan(-1);
     expect(reactRule, "vendor-react rule missing").toBeGreaterThan(-1);
     expect(graphRule).toBeLessThan(reactRule);
