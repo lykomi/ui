@@ -34,6 +34,26 @@ export default defineConfig({
           // whichever peer name the rules met first, and "react" matched
           // half the store. The last node_modules segment is the package.
           const pkg = id.slice(id.lastIndexOf("node_modules/") + "node_modules/".length);
+          // The force engine and its d3 stack, in one chunk of their own.
+          // ORDER MATTERS: "react-force-graph-2d" and "react-kapsule" would
+          // otherwise be caught by a react rule and load on first paint.
+          // And note what is NOT here: `@iloveagents/foundry-web-graph` is
+          // deliberately left unassigned. It lazy-imports its canvas module,
+          // and naming the package in a manualChunk puts the importer and the
+          // imported module in the SAME chunk — which collapses the boundary
+          // and drags ~180 kB of engine into the initial load.
+          if (
+            pkg.includes("force-graph") ||
+            pkg.startsWith("react-kapsule/") ||
+            pkg.startsWith("d3-") ||
+            pkg.startsWith("accessor-fn/") ||
+            pkg.startsWith("float-tooltip/") ||
+            pkg.startsWith("canvas-color-tracker/") ||
+            pkg.startsWith("bezier-js/") ||
+            pkg.startsWith("@tweenjs/")
+          ) {
+            return "vendor-graph-engine";
+          }
           if (pkg.startsWith("@assistant-ui/")) return "vendor-assistant-ui";
           if (pkg.startsWith("@ag-ui/")) return "vendor-ag-ui";
           if (pkg.startsWith("@azure/msal")) return "vendor-auth";
