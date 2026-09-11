@@ -167,7 +167,10 @@ export interface NavGroup {
    *
    * Focus takes precedence over ``collapsible``. It needs a visible label
    * and a ``to`` to lead back to; without either, or when no item carries
-   * that ``to``, the group draws as usual.
+   * that ``to``, the group draws as usual. Only the group's own items can
+   * be focused, not their descendants. The value is the caller's: the
+   * back link navigates to ``to`` and nothing more, so the caller derives
+   * ``focusOn`` from the route (or its own state) and clears it there.
    */
   focusOn?: string;
   /** Group description sent to the agent */

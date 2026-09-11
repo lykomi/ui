@@ -1578,12 +1578,17 @@ function NavGroupSection({ group }: { group: NavGroup }) {
       ? group.items.find((item) => item.to === group.focusOn)
       : undefined;
   const focused = focusedItem !== undefined;
-  // The transition between the two shapes is a short fade-and-settle of
-  // the rows, keyed on the focus, and only after a CHANGE — not on first
-  // paint (user's test: the hard swap felt abrupt).
+  // The new shape fades in over the old one's place: keyed on the focus,
+  // and only after a CHANGE in either direction — not on first paint
+  // (user's test: the hard swap felt abrupt). The previous key is read
+  // during render and written after it, so a focus that returns to its
+  // initial value still counts as a change.
   const focusKey = focused ? focusedItem.to : "";
-  const initialFocusKey = useRef(focusKey);
-  const animateRows = initialFocusKey.current !== focusKey;
+  const previousFocusKey = useRef(focusKey);
+  const animateRows = previousFocusKey.current !== focusKey;
+  useEffect(() => {
+    previousFocusKey.current = focusKey;
+  });
   // Focus takes precedence over collapsing: a focused header is the way back.
   const isCollapsible = !group.hideLabel && Boolean(group.collapsible) && !focused;
   const persistedCollapsed = useGroupCollapsed(group.label, group.defaultCollapsed);

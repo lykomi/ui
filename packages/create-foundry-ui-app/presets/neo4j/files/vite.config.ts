@@ -28,41 +28,46 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
-          // The force engine and its d3 stack, in one chunk of their own.
-          //
-          // ORDER MATTERS: "react-force-graph-2d" and "react-kapsule" both
-          // contain "react", so without this rule sitting above the
-          // `id.includes("react")` one below, the whole engine lands in
-          // vendor-react and loads on first paint.
-          //
-          // And note what is NOT here: `@iloveagents/foundry-web-graph` is
-          // deliberately left unassigned. It lazy-imports its canvas module,
-          // and naming the package in a manualChunk puts the importer and the
-          // imported module in the SAME chunk — which collapses the boundary
-          // and drags ~180 kB of engine into the initial load. Left alone,
-          // Rollup keeps the split and the engine arrives only when the first
-          // graph renders.
+          // Match on the PACKAGE, not the path: pnpm's store directories
+          // embed peer names ("…foundry-web-ui@…_@ag-ui+client@…_@assistant-u…"),
+          // so a substring match on the full path filed foundry-web-ui under
+          // whichever peer name the rules met first, and "react" matched
+          // half the store. The last node_modules segment is the package.
+          const pkg = id.slice(id.lastIndexOf("node_modules/") + "node_modules/".length);
+          if (pkg.startsWith("@assistant-ui/")) return "vendor-assistant-ui";
+          if (pkg.startsWith("@ag-ui/")) return "vendor-ag-ui";
+          if (pkg.startsWith("@azure/msal")) return "vendor-auth";
+          if (pkg.startsWith("@iloveagents/foundry-web-ui/")) return "vendor-foundry-ui";
+          if (pkg.startsWith("@iloveagents/foundry-web-shell/")) return "vendor-foundry-shell";
+          if (pkg.startsWith("@iloveagents/foundry-agent/")) return "vendor-foundry-agent";
+          // Voice is optional at runtime and heavy at build; its own chunk
+          // keeps the main path light and the size gate honest.
+          if (pkg.startsWith("@iloveagents/foundry-web-voice/")) return "vendor-foundry-voice";
+          // Before the react rule: recharts drags react-smooth + the d3
+          // sub-packages along, and "react-smooth" would land in
+          // vendor-react and push it past the chunk-size gate.
           if (
-            id.includes("force-graph") ||
-            id.includes("react-kapsule") ||
-            id.includes("/d3-") ||
-            id.includes("accessor-fn") ||
-            id.includes("float-tooltip") ||
-            id.includes("canvas-color-tracker") ||
-            id.includes("bezier-js") ||
-            id.includes("@tweenjs")
+            pkg.startsWith("recharts/") ||
+            pkg.startsWith("victory-vendor/") ||
+            pkg.startsWith("d3-") ||
+            pkg.startsWith("react-smooth/") ||
+            pkg.startsWith("decimal.js-light/")
           ) {
-            return "vendor-graph-engine";
+            return "vendor-charts";
           }
-          if (id.includes("@assistant-ui")) return "vendor-assistant-ui";
-          if (id.includes("@ag-ui")) return "vendor-ag-ui";
-          if (id.includes("@azure/msal")) return "vendor-auth";
-          if (id.includes("@iloveagents/foundry-web-ui")) return "vendor-foundry-ui";
-          if (id.includes("@iloveagents/foundry-web-shell")) return "vendor-foundry-shell";
-          if (id.includes("@iloveagents/foundry-agent")) return "vendor-foundry-agent";
-          if (id.includes("react") || id.includes("scheduler")) return "vendor-react";
-          if (id.includes("lucide-react")) return "vendor-icons";
-          if (id.includes("react-markdown") || id.includes("remark-") || id.includes("micromark")) {
+          if (
+            pkg.startsWith("react/") ||
+            pkg.startsWith("react-dom/") ||
+            pkg.startsWith("scheduler/")
+          ) {
+            return "vendor-react";
+          }
+          if (pkg.startsWith("lucide-react/")) return "vendor-icons";
+          if (
+            pkg.startsWith("react-markdown/") ||
+            pkg.startsWith("remark-") ||
+            pkg.startsWith("micromark")
+          ) {
             return "vendor-markdown";
           }
         },
