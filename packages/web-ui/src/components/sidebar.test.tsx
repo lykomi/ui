@@ -420,24 +420,22 @@ describe("Sidebar active state", () => {
     expect(desktopSidebar(container).querySelector("[data-nav-group-toggle]")).toBeNull();
     // Siblings are not drawn.
     expect(navRow(container, "Other Workspace")).toBeUndefined();
-    // The heading: emphasised like a section label, no chevron, always
-    // open, and at the position a row has under the header label — the
-    // same x it had before the group focused, so focusing moves it neither
-    // up nor sideways.
+    // The heading: flat under the chevron's column, emphasised like a
+    // section label, no chevron, always open.
     expect(twisty(container, "Demo Workspace")).toBeUndefined();
     expect(twistyCell(container, "Demo Workspace")?.children.length).toBe(0);
     const headingBody = navRow(container, "Demo Workspace")?.querySelector<HTMLElement>(
       "button:not([data-nav-twisty])",
     );
-    expect(headingBody?.className).toMatch(/\bpl-8\b/);
+    expect(headingBody?.className).toMatch(/\bpl-3\b/);
     expect(headingBody?.className).toMatch(/\bfont-semibold\b/);
-    // Its children are the tree one step under it, with a chevron on the
-    // branch and a dot on the leaf.
-    expect(navRow(container, "Documents")?.dataset.navDepth).toBe("1");
-    expect(navRow(container, "Notes")?.dataset.navDepth).toBe("1");
+    // Its children are the tree, one step left of a branch's children: the
+    // depth-0 column, with a chevron on the branch and a dot on the leaf.
+    expect(navRow(container, "Documents")?.dataset.navDepth).toBe("0");
+    expect(navRow(container, "Notes")?.dataset.navDepth).toBe("0");
     expect(twisty(container, "Documents")).toBeTruthy();
     expect(twistyCell(container, "Notes")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
-    expect(columnOf(twistyCell(container, "Notes"))).toBe("5");
+    expect(columnOf(twistyCell(container, "Notes"))).toBe("3");
   });
 
   it("draws a group as usual when focusOn names no item, or there is no header to lead back from", async () => {
