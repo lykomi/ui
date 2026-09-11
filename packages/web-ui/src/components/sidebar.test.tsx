@@ -363,6 +363,81 @@ describe("Sidebar active state", () => {
     expect(twistyCell(container, "Flat item")?.children.length).toBe(1);
   });
 
+  it("draws a header that leads back, a flat row, and a heading with its children beneath", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    // A group focused on one subject: its header becomes the way back and
+    // keeps its metrics; the subject is a flat heading; its children are
+    // the tree beneath, one step further left than under a branch, at the
+    // row size they have anywhere else. So focusing the group moves
+    // nothing above the subject and resizes nothing below it.
+    useNavStore.getState().setConfig([
+      {
+        label: "Workspaces",
+        collapsible: false,
+        backTo: "/overview",
+        description: "Back to every workspace",
+        items: [
+          { to: "/spaces/filter", label: "Filter", icon: MessageSquare, presentation: "flat" },
+          {
+            to: "/spaces/demo",
+            label: "Demo Workspace",
+            icon: FolderOpen,
+            presentation: "heading",
+            children: [
+              {
+                to: "/spaces/demo/documents",
+                label: "Documents",
+                icon: FolderOpen,
+                children: [{ to: "/spaces/demo/documents/a", label: "A file", icon: FolderOpen }],
+              },
+              { to: "/spaces/demo/notes", label: "Notes", icon: FolderOpen },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/spaces/demo/documents"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    // The header is the way back: a link to ``backTo`` carrying the label,
+    // in the header's own typography, with a back chevron in the chevron's
+    // column.
+    const back =
+      desktopSidebar(container).querySelector<HTMLAnchorElement>("[data-nav-group-back]");
+    expect(back?.getAttribute("href")).toBe("/overview");
+    expect(back?.textContent).toContain("Workspaces");
+    expect(back?.querySelector("svg")).toBeTruthy();
+    expect(back?.querySelector("span:last-child")?.className).toMatch(/\buppercase\b/);
+    // The flat row: flush with the sidebar's flat rows, no dot, no chevron.
+    expect(twistyCell(container, "Filter")?.children.length).toBe(0);
+    expect(navRow(container, "Filter")?.className).toMatch(/\bpl-3\b/);
+    expect(navRow(container, "Filter")?.className).not.toMatch(/\bfont-semibold\b/);
+    // The heading: flat, emphasised like a section label, no chevron, always open.
+    expect(twisty(container, "Demo Workspace")).toBeUndefined();
+    expect(twistyCell(container, "Demo Workspace")?.children.length).toBe(0);
+    const headingBody = navRow(container, "Demo Workspace")?.querySelector<HTMLElement>(
+      "button:not([data-nav-twisty])",
+    );
+    expect(headingBody?.className).toMatch(/\bpl-3\b/);
+    expect(headingBody?.className).toMatch(/\bfont-semibold\b/);
+    // Its children are the tree, one step left of a branch's children:
+    // the depth-0 column, with a chevron on the branch and a dot on the leaf.
+    expect(navRow(container, "Documents")?.dataset.navDepth).toBe("0");
+    expect(navRow(container, "Notes")?.dataset.navDepth).toBe("0");
+    expect(twisty(container, "Documents")).toBeTruthy();
+    expect(twistyCell(container, "Notes")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
+    expect(columnOf(twistyCell(container, "Notes"))).toBe("3");
+  });
+
   it("marks branches with a chevron and leaves with a dot (Confluence page-tree)", async () => {
     const { Sidebar } = await import("./sidebar.tsx");
 

@@ -95,6 +95,20 @@ export interface NavItem {
    * checked. Clear it once the children are known, empty or not.
    */
   childrenUnloaded?: boolean;
+  /**
+   * How the row is drawn inside its group.
+   *
+   * - unset: a tree row — a disclosure cell (chevron or leaf dot) and the
+   *   depth indent.
+   * - `"flat"`: chrome inside a tree — no disclosure cell, flush with the
+   *   sidebar's flat rows. A way back, a filter: navigation, not an entity.
+   * - `"heading"`: the row the rows beneath belong to — flat like the above
+   *   and emphasised like a section label, keeping its icon, badges,
+   *   actions and drop target. A group focused on one subject draws the
+   *   subject as a heading and its children as the tree beneath it, one
+   *   level up; without this the subject sits level with its own children.
+   */
+  presentation?: "flat" | "heading";
   /** Inline action buttons rendered next to the nav item (e.g., + document, + folder) */
   actions?: NavItemAction[];
   /** Optional drag-and-drop behavior (provided by feature modules) */
@@ -154,6 +168,14 @@ export interface NavGroup {
   to?: string;
   /** Hide the group header while preserving group semantics. */
   hideLabel?: boolean;
+  /**
+   * Where the header leads BACK to. The header keeps its label, typography
+   * and height; the collapse chevron's cell holds a back chevron and the
+   * label links here. A group focused on one subject keeps its header and
+   * makes it the way back, so nothing above the subject moves when the
+   * group focuses or unfocuses. Ignored while the label is hidden.
+   */
+  backTo?: string;
   /** Group description sent to the agent */
   description?: string;
   /** Group-level metadata (e.g., org settings, workspace config, custom instructions) */

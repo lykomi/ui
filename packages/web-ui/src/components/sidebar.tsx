@@ -11,6 +11,7 @@ import {
   GripVertical,
   Plus,
   Upload,
+  ChevronLeft,
 } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -701,7 +702,11 @@ function NavLeafItem({
   onClick: () => void;
   depth?: number;
 }) {
-  const bodyPl = getNavDepthOffsets(depth).body;
+  // Chrome inside a tree, and the heading the tree belongs to, draw flat
+  // whatever the group does — see ``NavItem.presentation``.
+  const flat = item.presentation !== undefined;
+  const heading = item.presentation === "heading";
+  const bodyPl = flat ? NAV_FLAT_BODY_CLASS : getNavDepthOffsets(depth).body;
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
@@ -740,6 +745,7 @@ function NavLeafItem({
           label={item.label}
           isActive={isActive && !isDisabled}
           depth={depth}
+          inTree={!flat}
         />
         <button
           type="button"
@@ -755,6 +761,7 @@ function NavLeafItem({
               : isActive
                 ? ACTIVE_NAV_TEXT_CLASS
                 : "text-sidebar-foreground/80",
+            heading && "font-semibold text-sidebar-foreground",
           )}
         >
           <item.icon
@@ -810,6 +817,7 @@ function NavLeafItem({
         isDisabled
           ? "opacity-40 cursor-default"
           : "text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/70",
+        heading && !isDisabled && "font-semibold text-sidebar-foreground",
         !isDisabled && isActive && ACTIVE_NAV_ROW_CLASS,
         isDragOver &&
           !isFileDragOver &&
@@ -827,6 +835,7 @@ function NavLeafItem({
         label={item.label}
         isActive={isActive && !isDisabled}
         depth={depth}
+        inTree={!flat}
       />
       <item.icon
         className={cn(
@@ -1095,10 +1104,16 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
   const isActive = currentPath === item.to;
   const isAncestorActive = isInsideSubtree && !isActive;
   const [manualOverride, setManualOverride] = useState<boolean | null>(null);
-  const isExpanded = manualOverride ?? isInsideSubtree;
   const hasChildren = Boolean(item.children && item.children.length > 0);
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
+  // Chrome inside a tree, and the heading the tree belongs to, draw flat
+  // whatever the group does — see ``NavItem.presentation``. A heading is
+  // never collapsed and carries no chevron: its children ARE the tree it
+  // stands for, drawn beneath it at their usual depth.
+  const rowInTree = inTree && item.presentation === undefined;
+  const heading = item.presentation === "heading";
+  const isExpanded = heading ? true : (manualOverride ?? isInsideSubtree);
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const rendersRow = Boolean(hasChildren || hasActions);
   const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);
@@ -1128,11 +1143,11 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
         )}
       >
         <NavTwisty
-          hasChildren={hasChildren}
+          hasChildren={hasChildren && !heading}
           childrenUnloaded={item.childrenUnloaded}
-          inTree={inTree}
+          inTree={rowInTree}
           isExpanded={isExpanded}
-          onToggle={hasChildren ? () => setManualOverride(!isExpanded) : undefined}
+          onToggle={hasChildren && !heading ? () => setManualOverride(!isExpanded) : undefined}
           label={item.label}
           isActive={(selected || ancestor) && !isDisabled}
           depth={0}
@@ -1156,7 +1171,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
           }}
           className={cn(
             "flex items-center gap-2 flex-1 min-w-0 py-2 text-sm text-left",
-            inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
+            rowInTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
             "pr-3 transition-[padding] duration-150",
             hasActions && NAV_ROW_ACTIONS_CLEARANCE,
             isDisabled
@@ -1166,6 +1181,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
                 : ancestor
                   ? "text-sidebar-foreground font-medium"
                   : "text-sidebar-foreground/85",
+            heading && "font-semibold text-sidebar-foreground",
           )}
           disabled={isDisabled}
         >
@@ -1212,7 +1228,10 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
         {inner(isActive, isAncestorActive)}
         {hasChildren && isExpanded && (
           <>
-            <SubNavItems items={item.children!} parentPath={item.to} />
+            {/* A heading's children sit one step further left than a
+                branch's: the heading is flat, so its own column is free and
+                the hierarchy still reads. Same row metrics either way. */}
+            <SubNavItems items={item.children!} parentPath={item.to} depth={heading ? 0 : 1} />
             {item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
           </>
         )}
@@ -1226,7 +1245,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
         data-nav-depth={0}
         className={cn(
           "relative flex items-center gap-2 w-full opacity-40",
-          inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
+          rowInTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
           // Transparent border for box-model parity — see the NavLink variant.
           "rounded-lg border border-transparent pr-3 py-2 text-left text-sm text-sidebar-foreground/45",
         )}
@@ -1234,7 +1253,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
         <NavTwisty
           hasChildren={false}
           childrenUnloaded={item.childrenUnloaded}
-          inTree={inTree}
+          inTree={rowInTree}
           label={item.label}
           depth={0}
         />
@@ -1255,7 +1274,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
       className={({ isActive }) =>
         cn(
           "relative flex items-center gap-2 w-full",
-          inTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
+          rowInTree ? getNavDepthOffsets(0).body : NAV_FLAT_BODY_CLASS,
           // The transparent border is NOT decoration: it is what makes this
           // row's box model match every other variant. An absolutely
           // positioned twisty resolves against the PADDING box, so a row
@@ -1263,6 +1282,10 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
           // siblings' and the column goes ragged.
           "rounded-xl border border-transparent pr-3 py-2 text-sm text-left",
           "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
+          // Chrome reads as navigation, not content: quieter than the rows it
+          // sits among, so a way back does not compete with the heading.
+          item.presentation === "flat" && "text-sidebar-foreground/65",
+          heading && "font-semibold text-sidebar-foreground",
           isActive && cn(ACTIVE_NAV_ROW_CLASS, ACTIVE_NAV_TEXT_CLASS),
           isDragOver &&
             !isFileDragOver &&
@@ -1278,7 +1301,7 @@ function CollapsibleNavItem({ item, inTree = true }: { item: NavItem; inTree?: b
           <NavTwisty
             hasChildren={false}
             childrenUnloaded={item.childrenUnloaded}
-            inTree={inTree}
+            inTree={rowInTree}
             label={item.label}
             isActive={isActive}
             depth={0}
@@ -1637,6 +1660,44 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                   <NavStatusDot statusDot={bubbledStatusDot} />
                 </button>
               )}
+              {group.createActions && group.createActions.length > 0 && (
+                <CreateActionsMenu group={group} />
+              )}
+            </div>
+          ) : group.backTo ? (
+            // The header as the way back: the collapse chevron's cell holds a
+            // back chevron, the label links, and the metrics are the
+            // collapsible header's — so a group that focuses on one subject
+            // keeps a header of the same height above it, and nothing jumps.
+            <div
+              className={cn(
+                "flex items-center justify-between rounded-lg py-1.5 transition-colors hover:bg-sidebar-accent/70",
+                SIDEBAR_ITEM_GAP_CLASS,
+              )}
+            >
+              <NavLink
+                to={group.backTo}
+                end
+                data-nav-group-back
+                title={group.description}
+                className={cn("flex min-w-0 flex-1 items-center", SIDEBAR_ITEM_GAP_CLASS)}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(SIDEBAR_ITEM_ICON_CLASS, "flex items-center justify-center")}
+                >
+                  <ChevronLeft className="size-3.5 text-sidebar-foreground/65" />
+                </span>
+                <span
+                  className={cn(
+                    "truncate",
+                    SIDEBAR_GROUP_HEADER_LABEL_CLASS,
+                    "text-sidebar-foreground/65 hover:text-sidebar-foreground",
+                  )}
+                >
+                  {group.label}
+                </span>
+              </NavLink>
               {group.createActions && group.createActions.length > 0 && (
                 <CreateActionsMenu group={group} />
               )}
