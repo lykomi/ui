@@ -1,4 +1,4 @@
-import { type FC, useState, useRef, useCallback, useEffect } from "react";
+import { type FC, type ReactNode, useState, useRef, useCallback, useEffect } from "react";
 import {
   ThreadPrimitive,
   ComposerPrimitive,
@@ -370,6 +370,13 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 export interface ChatContentProps {
+  /** Compact two-row composer with an auto-growing input. */
+  compactComposer?: boolean;
+  hiddenPageLabels?: string[];
+  /** Hide the already-visible navigation page badge, without removing context. */
+  hideCurrentPageBadge?: boolean;
+  /** Optional empty conversation presentation; leaves the composer and runtime unchanged. */
+  emptyState?: ReactNode;
   /**
    * Starter prompts shown when the thread is empty. Defaults to
    * `DEFAULT_STARTER_SUGGESTIONS`. Pass an empty array to hide the
@@ -406,6 +413,10 @@ export const DEFAULT_COMPOSER_PLACEHOLDER = "Ask anything";
  * Renders inside a ThreadPrimitive.Root context.
  */
 export function ChatContent({
+  compactComposer = false,
+  hiddenPageLabels = [],
+  hideCurrentPageBadge = false,
+  emptyState,
   starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
   showPinButton = true,
   placeholder = DEFAULT_COMPOSER_PLACEHOLDER,
@@ -468,25 +479,27 @@ export function ChatContent({
             aria-hidden={ThreadSurface ? true : undefined}
           >
             <ThreadPrimitive.Empty>
-              <div
-                className={cn("flex min-h-full flex-col", "items-center justify-center", "px-4")}
-              >
-                <Bot className="size-16 mb-6 text-primary/70" />
-                <h1 className="text-[2rem] font-normal text-foreground text-center mb-6">
-                  How can I help you today?
-                </h1>
-                {starterSuggestions.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                    {starterSuggestions.map((prompt) => (
-                      <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
-                        <Button variant="outline" className="text-sm">
-                          {prompt}
-                        </Button>
-                      </ThreadPrimitive.Suggestion>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {emptyState ?? (
+                <div
+                  className={cn("flex min-h-full flex-col", "items-center justify-center", "px-4")}
+                >
+                  <Bot className="size-16 mb-6 text-primary/70" />
+                  <h1 className="text-[2rem] font-normal text-foreground text-center mb-6">
+                    How can I help you today?
+                  </h1>
+                  {starterSuggestions.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                      {starterSuggestions.map((prompt) => (
+                        <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
+                          <Button variant="outline" className="text-sm">
+                            {prompt}
+                          </Button>
+                        </ThreadPrimitive.Suggestion>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </ThreadPrimitive.Empty>
 
             <ThreadPrimitive.If empty={false}>
@@ -525,7 +538,7 @@ export function ChatContent({
         <div className="shrink-0 bg-background">
           <ChatComposerBannerSlot />
           <ThreadPrimitive.If running={false}>
-            <div className="border-t border-border" />
+            <div data-chat-composer-divider className="border-t border-border" />
           </ThreadPrimitive.If>
           <ThreadPrimitive.If running>
             <LoadingBar />
@@ -533,6 +546,7 @@ export function ChatContent({
 
           <div className="mx-auto max-w-3xl px-4 py-4">
             <ComposerPrimitive.Root
+              style={compactComposer ? { borderRadius: 16 } : undefined}
               className={cn(
                 // Query container for the controls inside, so they size
                 // against the composer rather than the viewport. This one
@@ -547,7 +561,10 @@ export function ChatContent({
               )}
             >
               <ComposerSubmitBridge />
-              <ComposerContextBadges />
+              <ComposerContextBadges
+                hideCurrentPage={hideCurrentPageBadge}
+                hiddenPageLabels={hiddenPageLabels}
+              />
               <ComposerPrimitive.Attachments components={composerAttachmentComponents} />
               {/* One row when there is room, two when there is not — and the
                   wrap does it, not a breakpoint.
@@ -561,8 +578,18 @@ export function ChatContent({
                   Past the container's `md`, it goes nowrap and everything
                   sits on one line. `order-*` is what lets the `+` lead the
                   single row but head the control row when stacked. */}
-              <div className="flex flex-wrap items-center gap-2 @md:flex-nowrap">
-                <div className="order-2 flex shrink-0 items-center gap-1 @md:order-1">
+              <div
+                className={cn(
+                  "flex items-center gap-2",
+                  compactComposer ? "flex-wrap" : "flex-wrap @md:flex-nowrap",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center gap-1",
+                    compactComposer ? "order-2" : "order-2 @md:order-1",
+                  )}
+                >
                   <ComposerAddMenu showPin={showPinButton} />
                   {/* Renders only once something is pinned — the affordance
                       to pin now lives in the menu. */}
@@ -574,16 +601,23 @@ export function ChatContent({
                   placeholder={placeholder}
                   rows={1}
                   className={cn(
-                    "order-1 w-full bg-transparent",
+                    "bg-transparent",
+                    compactComposer
+                      ? "order-1 w-full"
+                      : "order-1 w-full @md:order-2 @md:w-auto @md:flex-1",
                     "py-2 text-base",
                     "text-foreground outline-none",
                     "placeholder:text-muted-foreground",
                     "resize-none max-h-32",
-                    "@md:order-2 @md:w-auto @md:flex-1",
                   )}
                 />
 
-                <div className="order-3 ml-auto flex shrink-0 items-center gap-2 @md:ml-0">
+                <div
+                  className={cn(
+                    "order-3 ml-auto flex shrink-0 items-center gap-2",
+                    !compactComposer && "@md:ml-0",
+                  )}
+                >
                   <ComposerActionButton />
                 </div>
               </div>

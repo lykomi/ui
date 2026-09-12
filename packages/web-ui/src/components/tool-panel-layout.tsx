@@ -9,9 +9,11 @@ import { ToolPanel } from "./tool-panel.tsx";
  */
 interface ToolPanelLayoutProps {
   children: React.ReactNode;
+  /** Keep tools inside the working area, leaving sibling chat accessible. */
+  contained?: boolean;
 }
 
-export function ToolPanelLayout({ children }: ToolPanelLayoutProps) {
+export function ToolPanelLayout({ children, contained = false }: ToolPanelLayoutProps) {
   const isOpen = useToolPanelStore((state) => state.isOpen);
   const panelWidth = useToolPanelStore((state) => state.panelWidth);
   const useOverlay = useToolPanelStore((state) => state.useOverlay);
@@ -21,16 +23,16 @@ export function ToolPanelLayout({ children }: ToolPanelLayoutProps) {
       <div
         className={cn(
           "h-full flex flex-col transition-all duration-300 ease-in-out",
-          useOverlay && isOpen && "hidden",
+          (contained || useOverlay) && isOpen && "hidden",
         )}
         style={{
-          width: isOpen && !useOverlay ? `calc(100% - ${panelWidth}px)` : "100%",
+          width: isOpen && !useOverlay && !contained ? `calc(100% - ${panelWidth}px)` : "100%",
         }}
       >
         {children}
       </div>
 
-      <ToolPanel />
+      <ToolPanel contained={contained} />
     </div>
   );
 }

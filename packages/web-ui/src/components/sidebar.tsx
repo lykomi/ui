@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  type ReactNode,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { NavLink, useLocation, useNavigate } from "react-router";
 import {
   Ellipsis,
@@ -1852,9 +1861,29 @@ function CreateActionsMenu({ group }: { group: NavGroup }) {
   );
 }
 
-function SidebarContent({ collapsed }: { collapsed: boolean }) {
+interface SidebarViewProps {
+  /** Display-only navigation override; the navigation registry remains intact. */
+  groups?: NavGroup[];
+  onNewConversation?: () => void;
+  hideFooterActions?: boolean;
+  hideNewConversation?: boolean;
+  /** Place the primary action beneath a scope heading instead of above navigation. */
+  newConversationAfterGroup?: string;
+  newConversationLabel?: string;
+}
+
+function SidebarContent({
+  collapsed,
+  groups,
+  onNewConversation,
+  hideFooterActions,
+  hideNewConversation,
+  newConversationAfterGroup,
+  newConversationLabel = "New Thread",
+}: SidebarViewProps & { collapsed: boolean }) {
   const toggle = useSidebarStore((s) => s.toggle);
-  const handleNewConversation = useNewConversation();
+  const defaultNewConversation = useNewConversation();
+  const handleNewConversation = onNewConversation ?? defaultNewConversation;
   const rawNavConfig = useNavStore((s) => s.config);
   const navLoading = useNavStore((s) => s.navLoading);
   // Sort by `priority` descending so feature hooks can declare slot
@@ -1864,11 +1893,11 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
   // the legacy append-where-you-arrive behaviour.
   const navConfig = useMemo(
     () =>
-      [...rawNavConfig]
+      [...(groups ?? rawNavConfig)]
         .map((g, i) => ({ g, i, p: g.priority ?? 0 }))
         .sort((a, b) => b.p - a.p || a.i - b.i)
         .map(({ g }) => g),
-    [rawNavConfig],
+    [rawNavConfig, groups],
   );
   // Show skeleton rows during the cold nav fetch — but only until the
   // integrator's primary dynamic group ("Workspaces") has been published.
@@ -1891,9 +1920,15 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         <TooltipIconButton tooltip="Expand sidebar" side="right" onClick={toggle}>
           <PanelLeftOpen className="size-5" />
         </TooltipIconButton>
-        <TooltipIconButton tooltip="New Thread" side="right" onClick={handleNewConversation}>
-          <SquarePen className="size-4 text-sidebar-icon" />
-        </TooltipIconButton>
+        {!hideNewConversation && (
+          <TooltipIconButton
+            tooltip={newConversationLabel}
+            side="right"
+            onClick={handleNewConversation}
+          >
+            <SquarePen className="size-4 text-sidebar-icon" />
+          </TooltipIconButton>
+        )}
         <div className="mt-4 flex w-full flex-col items-stretch gap-1">
           {/* `w-full` on this inner column makes children resolve to the
               rail width even though the outer rail uses `items-center`
@@ -1959,10 +1994,27 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
     );
   }
 
+  const newConversationAction = (
+    <div className="px-1 mb-0.5">
+      <button
+        type="button"
+        onClick={handleNewConversation}
+        className={cn(
+          "flex items-center gap-2 w-full",
+          "rounded-xl px-3 py-2 text-sm text-left",
+          "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
+        )}
+      >
+        <SquarePen className="size-4 shrink-0 text-sidebar-icon" />
+        {newConversationLabel}
+      </button>
+    </div>
+  );
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-3">
+      <div data-navigation-header className="flex items-center justify-between px-3 py-3">
         <NavLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <AppBrand
             iconClassName="text-primary"
@@ -1974,21 +2026,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         </TooltipIconButton>
       </div>
 
-      {/* New Thread */}
-      <div className="px-1 mb-0.5">
-        <button
-          type="button"
-          onClick={handleNewConversation}
-          className={cn(
-            "flex items-center gap-2 w-full",
-            "rounded-xl px-3 py-2 text-sm text-left",
-            "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
-          )}
-        >
-          <SquarePen className="size-4 shrink-0 text-sidebar-icon" />
-          New Thread
-        </button>
-      </div>
+      {!hideNewConversation && !newConversationAfterGroup && newConversationAction}
 
       {/* ThreadIndicator removed — the active conversation's row in
           the Recents group is now the source of truth for "you're in a
@@ -2001,7 +2039,12 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         onDropCapture={preventNativeFileDrop}
       >
         {navConfig.map((group) => (
-          <NavGroupSection key={group.label} group={group} />
+          <Fragment key={group.label}>
+            <NavGroupSection group={group} />
+            {!hideNewConversation &&
+              group.label === newConversationAfterGroup &&
+              newConversationAction}
+          </Fragment>
         ))}
         {showNavSkeleton && (
           <div className="space-y-1 px-1 pt-2" aria-hidden="true">
@@ -2013,7 +2056,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
       </nav>
 
       {/* Footer actions — registered by feature modules */}
-      <SidebarFooterActions />
+      {!hideFooterActions && <SidebarFooterActions />}
     </div>
   );
 }
@@ -2050,7 +2093,7 @@ function SidebarFooterActions() {
 }
 
 /** Mobile drawer overlay */
-function MobileDrawer() {
+function MobileDrawer({ footer, ...view }: SidebarViewProps & { footer?: ReactNode }) {
   const isMobileOpen = useSidebarStore((s) => s.isMobileOpen);
   const closeMobile = useSidebarStore((s) => s.closeMobile);
   const isToolPanelOpen = useToolPanelStore((s) => s.isOpen);
@@ -2105,14 +2148,22 @@ function MobileDrawer() {
         role="complementary"
         aria-label="Navigation sidebar"
       >
-        <SidebarContent collapsed={false} />
+        <SidebarContent collapsed={false} {...view} />
+        {footer}
       </aside>
     </>
   );
 }
 
 /** Desktop inline sidebar (expanded or collapsed rail) */
-function DesktopSidebar() {
+function DesktopSidebar({
+  footer,
+  collapsedFooter,
+  ...view
+}: SidebarViewProps & {
+  footer?: ReactNode;
+  collapsedFooter?: ReactNode;
+}) {
   const isOpen = useSidebarStore((s) => s.isOpen);
   const width = useSidebarStore((s) => s.width);
 
@@ -2130,17 +2181,22 @@ function DesktopSidebar() {
       role="complementary"
       aria-label="Navigation sidebar"
     >
-      <SidebarContent collapsed={!isOpen} />
+      <SidebarContent collapsed={!isOpen} {...view} />
+      {isOpen ? footer : collapsedFooter}
       {isOpen && <SidebarResizeHandle />}
     </aside>
   );
 }
 
-export function Sidebar() {
+export function Sidebar({
+  footer,
+  collapsedFooter,
+  ...view
+}: SidebarViewProps & { footer?: ReactNode; collapsedFooter?: ReactNode } = {}) {
   return (
     <>
-      <MobileDrawer />
-      <DesktopSidebar />
+      <MobileDrawer footer={footer} {...view} />
+      <DesktopSidebar footer={footer} collapsedFooter={collapsedFooter} {...view} />
     </>
   );
 }

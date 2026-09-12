@@ -47,7 +47,7 @@ function PanelContentRenderer({ content }: { content: ToolPanelContent }) {
   );
 }
 
-export function ToolPanel() {
+export function ToolPanel({ contained = false }: { contained?: boolean }) {
   const isOpen = useToolPanelStore((state) => state.isOpen);
   const content = useToolPanelStore((state) => state.content);
   const closePanel = useToolPanelStore((state) => state.closePanel);
@@ -156,21 +156,23 @@ export function ToolPanel() {
     <div
       data-tool-panel
       className={cn(
-        "fixed top-0 right-0 z-40",
-        "h-dvh",
-        "bg-background border-l border-border shadow-2xl",
+        contained ? "absolute inset-0 z-10 h-full" : "fixed top-0 right-0 z-40 h-dvh",
+        "bg-background border-l border-border",
+        !contained && "shadow-2xl",
         "transition-transform duration-300 ease-in-out",
         "flex flex-col",
         isOpen ? "translate-x-0" : "translate-x-full",
       )}
-      style={{ width: panelWidth }}
+      style={{ width: contained ? "100%" : panelWidth }}
+      inert={!isOpen}
+      aria-hidden={!isOpen}
     >
       {/* Drag-to-resize the split (side-by-side mode only). Mirrors the
           navigation sidebar's handle: listeners live in an effect, the
           drag ends on pointerup OR pointercancel, and cleanup always
           restores userSelect. Keyboard: arrows nudge, Shift jumps,
           Home/End go to the extremes. */}
-      {isOpen && !useOverlay && !isFullscreen ? (
+      {!contained && isOpen && !useOverlay && !isFullscreen ? (
         <div
           role="separator"
           aria-orientation="vertical"
@@ -262,23 +264,25 @@ export function ToolPanel() {
                 <Copy className="size-4 text-muted-foreground" />
               )}
             </button>
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className={cn(
-                "flex items-center justify-center",
-                "size-8 rounded-md flex-shrink-0",
-                "hover:bg-muted transition-colors",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-              )}
-              aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-            >
-              {isFullscreen ? (
-                <Minimize2 className="size-4 text-muted-foreground" />
-              ) : (
-                <Maximize2 className="size-4 text-muted-foreground" />
-              )}
-            </button>
+            {!contained && (
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className={cn(
+                  "flex items-center justify-center",
+                  "size-8 rounded-md flex-shrink-0",
+                  "hover:bg-muted transition-colors",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                )}
+                aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="size-4 text-muted-foreground" />
+                ) : (
+                  <Maximize2 className="size-4 text-muted-foreground" />
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={closePanel}

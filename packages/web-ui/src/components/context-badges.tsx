@@ -105,9 +105,19 @@ const SentBadge: FC<{ item: ContextItem }> = ({ item }) => {
 };
 
 /** Renders ephemeral context badges in the composer (persistent items shown in ContextPins). */
-export const ComposerContextBadges: FC = () => {
+export const ComposerContextBadges: FC<{
+  hideCurrentPage?: boolean;
+  hiddenPageLabels?: string[];
+}> = ({ hideCurrentPage = false, hiddenPageLabels = [] }) => {
   const items = useAppStore((s) => s.contextItems);
-  const ephemeral = items.filter((i) => i.persistence === "ephemeral");
+  const ephemeral = items.filter(
+    (i) =>
+      i.persistence === "ephemeral" &&
+      !(
+        hideCurrentPage &&
+        (i.payload.kind === "page" || (i.type === "note" && hiddenPageLabels.includes(i.label)))
+      ),
+  );
 
   if (ephemeral.length === 0) return null;
 

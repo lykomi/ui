@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
 import {
   Sidebar,
@@ -23,6 +23,7 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 import { X } from "lucide-react";
 import type { ChatModule } from "./types.ts";
 import { usePagePanelWidth, MIN_PAGE_PANEL_WIDTH } from "./use-page-panel-width.ts";
+import { isWorkbenchPreviewEnabled, WorkbenchPreview } from "./workbench-preview.tsx";
 
 interface ShellLayoutProps {
   modules: ChatModule[];
@@ -61,6 +62,14 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
 
   const themeMode = useThemeStore((s) => s.mode);
   const { pathname } = useLocation();
+  const [preview] = useState(isWorkbenchPreviewEnabled);
+  const isChatRoute =
+    pathname === "/" ||
+    modules.some((m) => {
+      const pattern = m.chatConversation?.pathPattern;
+      if (!pattern) return false;
+      return new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, "")).test(pathname);
+    });
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const showPagePanel = useChatBubbleStore((s) => s.showPagePanel);
 
@@ -118,11 +127,32 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
       <ThemeScope className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
         <ThemeDocumentMetadata />
         {layoutExtras}
+        {import.meta.env.DEV && (!preview || isChatRoute) && (
+          <div className="flex shrink-0 items-center justify-end gap-3 border-b border-border px-4 py-1 text-xs">
+            <span className="text-muted-foreground">
+              {preview ? "Workspace layout preview enabled" : "Try the new content and chat layout"}
+            </span>
+            <button
+              type="button"
+              className="rounded px-2 py-1 font-medium text-primary hover:bg-muted focus-visible:outline-2"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("ux", preview ? "classic" : "workbench");
+                window.location.assign(url.href);
+              }}
+            >
+              {preview ? "Restore classic" : "Try preview UI"}
+            </button>
+          </div>
+        )}
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <Sidebar />
+        {preview && !isChatRoute ? (
+          <WorkbenchPreview page={page} />
+        ) : (
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <Sidebar newConversationLabel={preview ? "New chat" : undefined} />
 
-          {/*
+            {/*
             ONE tree, ONE slot for ``page`` — never two branches.
 
             Expanding the chat used to swap between two different JSX
@@ -138,85 +168,86 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
             ``false`` in fixed JSX slots, so the page's fiber position is
             stable and its state survives every layout change.
           */}
-          <ToolPanelLayout>
-            <div
-              className={cn(
-                "flex min-h-0 flex-1 overflow-hidden",
-                isExpanded ? "h-full min-w-0" : "flex-col",
-              )}
-            >
-              {isExpanded && (
-                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                  <ChatHeader />
-                  <ChatContent />
-                </div>
-              )}
-
-              {isExpanded && showPagePanel && (
-                <div
-                  role="separator"
-                  aria-orientation="vertical"
-                  aria-label="Resize content panel"
-                  aria-valuemin={MIN_PAGE_PANEL_WIDTH}
-                  aria-valuemax={pagePanelMaxWidth}
-                  aria-valuenow={Math.round(pagePanelWidth)}
-                  tabIndex={0}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    startPagePanelDrag(event.pointerId);
-                  }}
-                  onKeyDown={(event) => {
-                    const step = event.shiftKey ? 80 : 24;
-                    if (event.key === "ArrowLeft") nudgePagePanelWidth(step);
-                    else if (event.key === "ArrowRight") nudgePagePanelWidth(-step);
-                    else if (event.key === "Home") setPagePanelWidth(pagePanelMaxWidth);
-                    else if (event.key === "End") setPagePanelWidth(MIN_PAGE_PANEL_WIDTH);
-                    else return;
-                    event.preventDefault();
-                  }}
-                  className={cn(
-                    "hidden w-1.5 shrink-0 cursor-col-resize touch-none min-[780px]:block",
-                    "bg-transparent hover:bg-primary/30 focus-visible:bg-primary",
-                    "focus:outline-none",
-                  )}
-                />
-              )}
-
-              {!isExpanded && <ChatHeader />}
-
-              {/* The page column: ALWAYS this slot, ALWAYS this wrapper. */}
+            <ToolPanelLayout>
               <div
                 className={cn(
-                  isExpanded
-                    ? cn(
-                        "h-full shrink-0 border-l border-border bg-background",
-                        // 780px === SIDE_BY_SIDE_BREAKPOINT_PX, which a
-                        // test pins to MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH.
-                        // The literal cannot be interpolated — Tailwind only
-                        // sees static class strings — so the two are tied by
-                        // that test rather than by the compiler.
-                        // 780px = MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH, the
-                        // narrowest viewport where both columns fit. This was
-                        // `xl` (1280px), which hid the document on every
-                        // window between the two — expanding the chat beside
-                        // an open editor made the editor disappear.
-                        "min-[780px]:flex min-[780px]:flex-col",
-                        // Genuinely too narrow (or panel off): chat owns the
-                        // width and the page stays mounted, just hidden.
-                        showPagePanel ? "hidden" : "hidden min-[780px]:hidden",
-                      )
-                    : "flex min-h-0 flex-1 flex-col overflow-hidden",
+                  "flex min-h-0 flex-1 overflow-hidden",
+                  isExpanded ? "h-full min-w-0" : "flex-col",
                 )}
-                style={isExpanded && showPagePanel ? { width: pagePanelWidth } : undefined}
               >
-                {isExpanded && showPagePanel && <PagePanelActions />}
-                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">{page}</div>
-              </div>
-            </div>
-          </ToolPanelLayout>
-        </div>
+                {isExpanded && (
+                  <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                    <ChatHeader />
+                    <ChatContent />
+                  </div>
+                )}
 
-        <ChatBubble />
+                {isExpanded && showPagePanel && (
+                  <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Resize content panel"
+                    aria-valuemin={MIN_PAGE_PANEL_WIDTH}
+                    aria-valuemax={pagePanelMaxWidth}
+                    aria-valuenow={Math.round(pagePanelWidth)}
+                    tabIndex={0}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      startPagePanelDrag(event.pointerId);
+                    }}
+                    onKeyDown={(event) => {
+                      const step = event.shiftKey ? 80 : 24;
+                      if (event.key === "ArrowLeft") nudgePagePanelWidth(step);
+                      else if (event.key === "ArrowRight") nudgePagePanelWidth(-step);
+                      else if (event.key === "Home") setPagePanelWidth(pagePanelMaxWidth);
+                      else if (event.key === "End") setPagePanelWidth(MIN_PAGE_PANEL_WIDTH);
+                      else return;
+                      event.preventDefault();
+                    }}
+                    className={cn(
+                      "hidden w-1.5 shrink-0 cursor-col-resize touch-none min-[780px]:block",
+                      "bg-transparent hover:bg-primary/30 focus-visible:bg-primary",
+                      "focus:outline-none",
+                    )}
+                  />
+                )}
+
+                {!isExpanded && <ChatHeader />}
+
+                {/* The page column: ALWAYS this slot, ALWAYS this wrapper. */}
+                <div
+                  className={cn(
+                    isExpanded
+                      ? cn(
+                          "h-full shrink-0 border-l border-border bg-background",
+                          // 780px === SIDE_BY_SIDE_BREAKPOINT_PX, which a
+                          // test pins to MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH.
+                          // The literal cannot be interpolated — Tailwind only
+                          // sees static class strings — so the two are tied by
+                          // that test rather than by the compiler.
+                          // 780px = MIN_PAGE_PANEL_WIDTH + MIN_CHAT_WIDTH, the
+                          // narrowest viewport where both columns fit. This was
+                          // `xl` (1280px), which hid the document on every
+                          // window between the two — expanding the chat beside
+                          // an open editor made the editor disappear.
+                          "min-[780px]:flex min-[780px]:flex-col",
+                          // Genuinely too narrow (or panel off): chat owns the
+                          // width and the page stays mounted, just hidden.
+                          showPagePanel ? "hidden" : "hidden min-[780px]:hidden",
+                        )
+                      : "flex min-h-0 flex-1 flex-col overflow-hidden",
+                  )}
+                  style={isExpanded && showPagePanel ? { width: pagePanelWidth } : undefined}
+                >
+                  {isExpanded && showPagePanel && <PagePanelActions />}
+                  <div className="flex-1 flex flex-col min-h-0 overflow-hidden">{page}</div>
+                </div>
+              </div>
+            </ToolPanelLayout>
+          </div>
+        )}
+
+        {(!preview || isChatRoute) && <ChatBubble />}
         <GlobalSelectionPopover />
       </ThemeScope>
     </ThemeRuntimeProvider>
