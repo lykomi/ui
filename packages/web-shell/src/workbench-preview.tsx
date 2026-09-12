@@ -62,7 +62,9 @@ export function WorkbenchPreview({
   useEffect(() => {
     setContentCollapsed(chatOnly);
     if (chatOnly) setCollapsed(false);
-  }, [chatOnly]);
+    // Navigation is an explicit request to see content, including selecting
+    // the same address again. Collapsing remains local until the next entry.
+  }, [chatOnly, location.key]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const emptyChat = useAuiState(
     (s) => s.thread.messages.length === 0 && !s.thread.isRunning && !s.thread.isLoading,
@@ -433,7 +435,7 @@ export function WorkbenchPreview({
         [data-workspace-navigation] [data-nav-group-label="Spaces"] > :first-child {
           padding-top: 8px;
         }
-        [data-workspace-navigation] [data-nav-group-label="Spaces"] > div:last-child > [data-nav-depth="0"] {
+        [data-workspace-navigation] [data-nav-group-label="Spaces"] [data-nav-depth="0"] > button {
           font-size: 15px;
           font-weight: 600;
           letter-spacing: -0.015em;
@@ -443,7 +445,12 @@ export function WorkbenchPreview({
           padding-top: 10px;
         }
         [data-workspace-navigation] [data-nav-group-label="Content"] {
-          margin-top: 12px;
+          margin-top: 6px;
+        }
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] > div {
+          margin-left: 14px;
+          border-left: 1px solid color-mix(in srgb, var(--sidebar-foreground) 12%, transparent);
+          padding-left: 4px;
         }
 
       `}</style>
@@ -705,6 +712,7 @@ export function WorkbenchPreview({
                   group.items.map((item) => item.label),
                 )}
                 hideCurrentPageBadge
+                showPinButton={false}
                 starterSuggestions={[]}
                 emptyState={
                   showHistory ? (

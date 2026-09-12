@@ -1,4 +1,4 @@
-import { MemoryRouter } from "react-router";
+import { Link, MemoryRouter } from "react-router";
 import { Folder } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
 import { type ReactNode, useEffect } from "react";
@@ -88,6 +88,24 @@ afterEach(() => {
 });
 
 describe("layout preview", () => {
+  it("reopens content after navigation, including a repeat selection of the same address", () => {
+    render(
+      <>
+        <Link to="/document">Open document</Link>
+        <WorkbenchPreview page={<Editor />} />
+      </>,
+    );
+    const editor = screen.getByLabelText("Unsaved field");
+    for (let i = 0; i < 2; i++) {
+      fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
+      expect(screen.getByLabelText("Working content").hasAttribute("inert")).toBe(true);
+      fireEvent.click(screen.getByRole("link", { name: "Open document" }));
+      expect(screen.getByLabelText("Working content").hasAttribute("inert")).toBe(false);
+      expect(screen.getByLabelText("Unsaved field")).toBe(editor);
+    }
+    expect(state.unmount).not.toHaveBeenCalled();
+  });
+
   it("expands chat into content space without losing the editor or preferred width", () => {
     render(<WorkbenchPreview page={<Editor />} />);
     const editor = screen.getByLabelText("Unsaved field") as HTMLInputElement;
