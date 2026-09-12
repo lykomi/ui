@@ -17,7 +17,7 @@ import {
   SquarePen,
   PanelLeft,
   PanelLeftOpen,
-  PanelRightClose,
+  PanelRight,
   PanelRightOpen,
   MessageSquare,
   Menu,
@@ -246,11 +246,30 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
         }
         .workbench-preview [data-navigation-header] button svg,
         .workbench-preview [data-chat-header] button svg,
+        .workbench-preview [data-content-collapse] svg,
         .workbench-preview [data-chat-rail] button svg {
           width: 18px;
           height: 18px;
           stroke-width: 2;
           flex-shrink: 0;
+        }
+        .workbench-preview [data-content-collapse] {
+          position: absolute;
+          top: calc((var(--workbench-header-height) - 36px) / 2);
+          right: 8px;
+          width: 36px;
+          height: 36px;
+          padding: 8px;
+          z-index: 20;
+        }
+        .workbench-preview [data-working-content] [data-preview-entity-header] > [data-entity-header-row] {
+          padding-right: 52px;
+        }
+        .workbench-preview [data-working-content]:not(:has([data-entity-header-row])):not([data-item-panel-open]) {
+          padding-top: var(--workbench-header-height);
+        }
+        @media print {
+          .workbench-preview [data-content-collapse] { display: none; }
         }
         /* Preview-only hierarchy: workspace title first, quiet section labels,
            and one consistent rhythm for conversation and content rows. */
@@ -368,7 +387,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
                     aria-label="New chat"
                     onClick={startChat}
                   >
-                    <SquarePen size={18} style={{ color: "var(--primary)" }} />
+                    <SquarePen size={18} />
                   </TooltipIconButton>
                   <TooltipIconButton
                     tooltip="Chat history"
@@ -379,16 +398,6 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
                   >
                     <History size={18} />
                   </TooltipIconButton>
-                  {!contentCollapsed && (
-                    <TooltipIconButton
-                      tooltip="Collapse content · expand chat"
-                      className={buttonClass}
-                      aria-label="Collapse content"
-                      onClick={() => setContentCollapsed(true)}
-                    >
-                      <PanelRightClose size={18} />
-                    </TooltipIconButton>
-                  )}
                   <TooltipIconButton
                     tooltip="Collapse chat"
                     className={buttonClass}
@@ -526,7 +535,8 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
           <section
             aria-label="Working content"
             data-working-content
-            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            data-item-panel-open={panelOpen || undefined}
+            className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
             style={{
               display: contentCollapsed ? "none" : "flex",
               minWidth: collapsed ? 320 : 440,
@@ -534,8 +544,23 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
               isolation: "isolate",
             }}
           >
+            <TooltipIconButton
+              data-content-collapse
+              tooltip="Collapse content"
+              className={buttonClass}
+              aria-label="Collapse content"
+              onClick={() => {
+                setCollapsed(false);
+                setContentCollapsed(true);
+              }}
+            >
+              <PanelRight size={18} />
+            </TooltipIconButton>
             {panelOpen && (
-              <div className="shrink-0 border-b border-border px-3 py-2">
+              <div
+                className="flex shrink-0 items-center border-b border-border pl-3 pr-14"
+                style={{ minHeight: 60 }}
+              >
                 <button className={buttonClass} onClick={closePanel}>
                   ← Back to content
                 </button>

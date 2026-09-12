@@ -92,7 +92,12 @@ describe("layout preview", () => {
     const editor = screen.getByLabelText("Unsaved field") as HTMLInputElement;
     fireEvent.change(editor, { target: { value: "Unsaved content" } });
     const initial = screen.getByLabelText("Assistant conversation").style.width;
-    fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
+    const collapseContent = screen.getByRole("button", { name: "Collapse content" });
+    expect(screen.getByLabelText("Working content").contains(collapseContent)).toBe(true);
+    expect(screen.getByLabelText("Assistant conversation").contains(collapseContent)).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
+    fireEvent.click(collapseContent);
+    expect(screen.queryByRole("button", { name: "Expand chat" })).toBeNull();
     expect(screen.getByLabelText("Working content").style.display).toBe("none");
     expect(screen.queryByRole("separator", { name: "Resize chat" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Expand content" }));
