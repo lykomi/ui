@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { NavGroup, NavItem } from "@iloveagents/foundry-web-ui";
 
 /** History is a view of existing navigation targets, never a second chat runtime. */
@@ -9,11 +9,17 @@ export function ConversationHistory({
   workspaceId,
   onClose,
   showBack = true,
+  welcome = false,
+  compact = false,
+  onViewAll,
 }: {
   groups: NavGroup[];
   workspaceId: unknown;
   onClose: () => void;
   showBack?: boolean;
+  welcome?: boolean;
+  compact?: boolean;
+  onViewAll?: () => void;
 }) {
   const [all, setAll] = useState(false);
   const [search, setSearch] = useState("");
@@ -34,6 +40,14 @@ export function ConversationHistory({
     .filter((item) => item.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
   return (
     <section aria-label="Chat history" className="flex min-h-0 flex-1 flex-col px-4 pb-4">
+      {welcome && (
+        <div className="pb-6 pt-8">
+          <h1 className="text-xl font-semibold">How can I help?</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Start something new or continue a recent chat.
+          </p>
+        </div>
+      )}
       {showBack && (
         <button
           onClick={onClose}
@@ -42,7 +56,23 @@ export function ConversationHistory({
           <ArrowLeft size={14} /> Back to chat
         </button>
       )}
-      <h2 className="mb-3 mt-2 text-base font-semibold">Recent chats</h2>
+      <div className="mb-3 mt-2 flex items-center justify-between">
+        <h2
+          className={
+            compact ? "text-xs font-medium text-muted-foreground" : "text-base font-semibold"
+          }
+        >
+          Recent chats
+        </h2>
+        {compact && (
+          <button
+            onClick={onViewAll}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            View all
+          </button>
+        )}
+      </div>
       {Boolean(workspaceId) && (
         <select
           aria-label="Chat scope"
@@ -50,19 +80,21 @@ export function ConversationHistory({
           onChange={(event) => setAll(event.target.value === "all")}
           className="mb-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
         >
-          <option value="workspace">This workspace</option>
-          <option value="all">All workspaces</option>
+          <option value="workspace">This space</option>
+          <option value="all">All spaces</option>
         </select>
       )}
-      <input
-        aria-label="Search chats"
-        placeholder="Search chats"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        className="mb-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
-      />
+      {!compact && (
+        <input
+          aria-label="Search chats"
+          placeholder="Search chats"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="mb-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+        />
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {items.map((item) =>
+        {(compact ? items.slice(0, 3) : items).map((item) =>
           item.disabled ? (
             <p key={item.to} className="py-3 text-sm text-muted-foreground">
               {item.label}
@@ -74,7 +106,6 @@ export function ConversationHistory({
               onClick={onClose}
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
             >
-              <MessageSquare size={15} className="shrink-0 text-muted-foreground" />
               <span className="truncate">{item.label}</span>
             </Link>
           ),

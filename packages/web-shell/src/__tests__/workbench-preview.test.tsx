@@ -122,7 +122,7 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Assistant conversation").style.width).toBe(`${initial}px`);
   });
 
-  it("shows history alongside the composer for an empty chat", () => {
+  it("shows recent chats beside the composer in an empty side panel", () => {
     state.empty = true;
     render(<WorkbenchPreview page={<Editor />} />);
     expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
@@ -134,7 +134,7 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
   });
 
-  it("keeps history and composer visible after New chat resets and remounts the runtime", () => {
+  it("keeps history and the composer after reset", () => {
     state.empty = true;
     const view = render(<WorkbenchPreview page={<Editor />} />);
     fireEvent.click(screen.getAllByRole("button", { name: "New chat" })[0]);
@@ -169,14 +169,20 @@ describe("layout preview", () => {
     const activity = { label: "Activity", items: [] };
     state.groups = [activity, workspace, recent];
     const { rerender } = render(<WorkbenchPreview page={<Editor />} />);
-    expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([workspace]);
+    expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
+      expect.objectContaining({ label: "Spaces", items: [{ ...root, children: undefined }] }),
+      expect.objectContaining({ label: "Recent chats" }),
+      expect.objectContaining({ label: "Content", items: [child] }),
+    ]);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);
     expect(root.children).toEqual([child]);
     expect(state.groups).toEqual([activity, workspace, recent]);
     expect(state.sidebar.mock.lastCall?.[0].onNewConversation).toBeTypeOf("function");
     state.groups = [activity, { ...workspace, meta: { type: "spaces-workspaces" } }];
     rerender(<WorkbenchPreview page={<Editor />} />);
-    expect(state.sidebar.mock.lastCall?.[0].groups).toBeUndefined();
+    expect(state.sidebar.mock.lastCall?.[0].groups).toHaveLength(3);
+    expect(state.sidebar.mock.lastCall?.[0].collapsedGroupsOnly).toBe(true);
+    expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(false);
     expect(state.sidebar.mock.lastCall?.[0].hideFooterActions).toBe(false);
   });
 

@@ -128,6 +128,8 @@ export interface CollapsedRailContext {
 
 export interface NavGroup {
   label: string;
+  /** Icon for a group entry point in a compact navigation rail. */
+  icon?: LucideIcon;
   items: NavItem[];
   /**
    * Render order weight. Higher = higher in the sidebar. Default 0.

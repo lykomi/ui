@@ -1871,6 +1871,8 @@ interface SidebarViewProps {
   onNewConversation?: () => void;
   hideFooterActions?: boolean;
   hideNewConversation?: boolean;
+  /** Compact rail shows group entry points instead of every child item. */
+  collapsedGroupsOnly?: boolean;
   /** Place the primary action beneath a scope heading instead of above navigation. */
   newConversationAfterGroup?: string;
   newConversationLabel?: string;
@@ -1882,6 +1884,7 @@ function SidebarContent({
   onNewConversation,
   hideFooterActions,
   hideNewConversation,
+  collapsedGroupsOnly,
   newConversationAfterGroup,
   newConversationLabel = "New Thread",
 }: SidebarViewProps & { collapsed: boolean }) {
@@ -1907,7 +1910,9 @@ function SidebarContent({
   // integrator's primary dynamic group ("Workspaces") has been published.
   // Once it exists, real rows render even if a later phase (status dots) is
   // still resolving, so the skeleton never flashes over a populated tree.
-  const hasWorkspacesGroup = navConfig.some((group) => group.label === "Workspaces");
+  const hasWorkspacesGroup = navConfig.some(
+    (group) => group.label === "Workspaces" || group.meta?.type === "spaces-workspaces",
+  );
   const showNavSkeleton = navLoading && !hasWorkspacesGroup;
   const currentPage = useLocation().pathname;
   const navContext = useAppStore((s) => s.navContext);
@@ -1924,7 +1929,7 @@ function SidebarContent({
         <TooltipIconButton tooltip="Expand sidebar" side="right" onClick={toggle}>
           <PanelLeftOpen className="size-5" />
         </TooltipIconButton>
-        {!hideNewConversation && (
+        {!hideNewConversation && !collapsedGroupsOnly && (
           <TooltipIconButton
             tooltip={newConversationLabel}
             side="right"
@@ -1943,56 +1948,89 @@ function SidebarContent({
               (not array-index). Without this an empty group at idx 0
               would push a `border-t` onto whatever group renders first,
               giving the rail a stray divider above the very first icon. */}
-          {navConfig
-            .map((group, groupIndex) => {
-              // Modules with a non-flat collapsed rail (e.g. Spaces'
-              // "header + active workspace") supply `collapsedRail`; the
-              // shell stays module-agnostic.
-              const items = group.collapsedRail
-                ? group
-                    .collapsedRail({
-                      currentPage,
-                      navContextMeta: navContext.meta ?? {},
-                    })
-                    .map((it) => ({
-                      to: it.to,
-                      label: it.label,
-                      icon: it.icon,
-                      isActive: it.isActive,
-                    }))
-                : group.items.map((it) => ({
-                    to: it.to,
-                    label: it.label,
-                    icon: it.icon,
-                    isActive: currentPage === it.to,
-                  }));
-              return { group, groupIndex, items };
-            })
-            .filter(({ items }) => items.length > 0)
-            .map(({ group, groupIndex, items }, visibleIndex) => (
-              // Each non-first VISIBLE group gets a thin top border —
-              // visually separates groups (e.g. user Workspaces vs
-              // Admin) in the collapsed rail without changing the
-              // CollapsedRailItem shape. The wrapper itself is a centred
-              // column so icons stay aligned with the rail.
-              <div
-                key={`${group.label || ""}-${groupIndex}`}
-                className={cn(
-                  "flex flex-col items-center gap-1",
-                  visibleIndex > 0 && "mt-2 pt-2 border-t border-sidebar-border/40",
-                )}
-              >
-                {items.map(({ to, label, icon, isActive }) => (
-                  <CollapsedNavShortcut
-                    key={to}
-                    to={to}
-                    label={label}
-                    icon={icon}
-                    isActive={isActive}
-                  />
+          {collapsedGroupsOnly
+            ? navConfig
+                .filter((group) => !group.meta?.hideInCollapsedRail)
+                .map((group) => {
+                  const Icon =
+                    group.icon ??
+                    group.collapsedRail?.({ currentPage, navContextMeta: navContext.meta ?? {} })[0]
+                      ?.icon ??
+                    group.items[0]?.icon ??
+                    Layers;
+                  return group.to ? (
+                    <CollapsedNavShortcut
+                      key={group.label}
+                      to={group.to}
+                      label={group.label}
+                      icon={Icon}
+                      isActive={currentPage === group.to}
+                    />
+                  ) : (
+                    <TooltipIconButton
+                      key={group.label}
+                      tooltip={group.label}
+                      side="right"
+                      aria-label={`Open ${group.label}`}
+                      onClick={() => {
+                        toggleGroupCollapsed(group.label, true);
+                        toggle();
+                      }}
+                    >
+                      <Icon className="size-4" />
+                    </TooltipIconButton>
+                  );
+                })
+            : navConfig
+                .map((group, groupIndex) => {
+                  // Modules with a non-flat collapsed rail (e.g. Spaces'
+                  // "header + active workspace") supply `collapsedRail`; the
+                  // shell stays module-agnostic.
+                  const items = group.collapsedRail
+                    ? group
+                        .collapsedRail({
+                          currentPage,
+                          navContextMeta: navContext.meta ?? {},
+                        })
+                        .map((it) => ({
+                          to: it.to,
+                          label: it.label,
+                          icon: it.icon,
+                          isActive: it.isActive,
+                        }))
+                    : group.items.map((it) => ({
+                        to: it.to,
+                        label: it.label,
+                        icon: it.icon,
+                        isActive: currentPage === it.to,
+                      }));
+                  return { group, groupIndex, items };
+                })
+                .filter(({ items }) => items.length > 0)
+                .map(({ group, groupIndex, items }, visibleIndex) => (
+                  // Each non-first VISIBLE group gets a thin top border —
+                  // visually separates groups (e.g. user Workspaces vs
+                  // Admin) in the collapsed rail without changing the
+                  // CollapsedRailItem shape. The wrapper itself is a centred
+                  // column so icons stay aligned with the rail.
+                  <div
+                    key={`${group.label || ""}-${groupIndex}`}
+                    className={cn(
+                      "flex flex-col items-center gap-1",
+                      visibleIndex > 0 && "mt-2 pt-2 border-t border-sidebar-border/40",
+                    )}
+                  >
+                    {items.map(({ to, label, icon, isActive }) => (
+                      <CollapsedNavShortcut
+                        key={to}
+                        to={to}
+                        label={label}
+                        icon={icon}
+                        isActive={isActive}
+                      />
+                    ))}
+                  </div>
                 ))}
-              </div>
-            ))}
         </div>
       </div>
     );
@@ -2174,6 +2212,7 @@ function DesktopSidebar({
   return (
     <aside
       data-sidebar-surface="desktop"
+      data-sidebar-collapsed={!isOpen || undefined}
       className={cn(
         "group/sidebar relative hidden md:flex flex-col shrink-0",
         "h-full",

@@ -127,7 +127,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
       <ThemeScope className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
         <ThemeDocumentMetadata />
         {layoutExtras}
-        {import.meta.env.DEV && (!preview || isChatRoute) && (
+        {import.meta.env.DEV && !preview && (
           <div className="flex shrink-0 items-center justify-end gap-3 border-b border-border px-4 py-1 text-xs">
             <span className="text-muted-foreground">
               {preview ? "Workspace layout preview enabled" : "Try the new content and chat layout"}
@@ -146,8 +146,8 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
           </div>
         )}
 
-        {preview && !isChatRoute ? (
-          <WorkbenchPreview page={page} />
+        {preview ? (
+          <WorkbenchPreview page={isChatRoute ? null : page} chatOnly={isChatRoute} />
         ) : (
           <div className="flex min-h-0 flex-1 overflow-hidden">
             <Sidebar newConversationLabel={preview ? "New chat" : undefined} />
@@ -247,7 +247,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
           </div>
         )}
 
-        {(!preview || isChatRoute) && <ChatBubble />}
+        {!preview && <ChatBubble />}
         <GlobalSelectionPopover />
       </ThemeScope>
     </ThemeRuntimeProvider>

@@ -16,12 +16,13 @@ import {
 import {
   SquarePen,
   PanelLeft,
-  PanelLeftOpen,
   PanelRight,
-  PanelRightOpen,
+  FileText,
   MessageSquare,
   Menu,
   History,
+  Settings,
+  Layers,
 } from "lucide-react";
 
 import { useChatWidth } from "./preview/use-chat-width.ts";
@@ -42,11 +43,21 @@ export function isWorkbenchPreviewEnabled() {
   }
 }
 
-export function WorkbenchPreview({ page }: { page: ReactNode }) {
+export function WorkbenchPreview({
+  page,
+  chatOnly = false,
+}: {
+  page: ReactNode;
+  chatOnly?: boolean;
+}) {
   const chatWidth = useChatWidth();
   const resizeDrag = useRef<{ x: number; width: number } | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [contentCollapsed, setContentCollapsed] = useState(false);
+  useEffect(() => {
+    setContentCollapsed(chatOnly);
+    if (chatOnly) setCollapsed(false);
+  }, [chatOnly]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const emptyChat = useAuiState(
     (s) => s.thread.messages.length === 0 && !s.thread.isRunning && !s.thread.isLoading,
@@ -56,7 +67,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
     if (wasEmptyChat.current && !emptyChat) setHistoryOpen(false);
     wasEmptyChat.current = emptyChat;
   }, [emptyChat]);
-  const showHistory = historyOpen || emptyChat;
+  const showHistory = historyOpen || (!chatOnly && emptyChat);
   const returnToChat = () => {
     setHistoryOpen(false);
   };
@@ -72,6 +83,63 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
     if (!workspace) return undefined;
     return [workspace];
   }, [navGroups]);
+  const navigationGroups = useMemo(() => {
+    const recent = navGroups
+      .filter((group) => ["recent-chats", "pinned-chats"].includes(String(group.meta?.type)))
+      .map((group) => ({
+        ...group,
+        label: group.meta?.type === "pinned-chats" ? "Pinned chats" : "Recent chats",
+        priority: 900,
+        items: group.items.filter((item) => item.meta?.type !== "show-all-chats").slice(0, 5),
+        meta: { ...group.meta, hideInCollapsedRail: true },
+      }));
+    if (workspaceGroups) {
+      const space = workspaceGroups[0];
+      const root = space.items.find((item) => item.to === space.focusOn) ?? space.items[0];
+      return [
+        {
+          ...space,
+          label: "Spaces",
+          icon: Layers,
+          priority: 1000,
+          items: root ? [{ ...root, children: undefined }] : space.items,
+        },
+        ...recent,
+        {
+          label: "Content",
+          hideLabel: true,
+          priority: 800,
+          items: root?.children ?? [],
+          meta: { hideInCollapsedRail: true },
+        },
+      ];
+    }
+    return [
+      {
+        label: "Chats",
+        to: "/",
+        collapsible: true,
+        priority: 1000,
+        icon: MessageSquare,
+        items: recent.flatMap((group) => group.items),
+      },
+      ...navGroups
+        .filter((group) => !["recent-chats", "pinned-chats"].includes(String(group.meta?.type)))
+        .map((group) =>
+          group.meta?.type === "spaces-workspaces"
+            ? { ...group, label: "Spaces", icon: Layers }
+            : group.label === "Admin"
+              ? { ...group, icon: Settings }
+              : group.label === "Activity"
+                ? { ...group, priority: 1100 }
+                : group,
+        ),
+    ];
+  }, [workspaceGroups, navGroups]);
+  const staticNavigationGroups = useMemo(
+    () => navigationGroups.map((group) => ({ ...group, collapsible: false })),
+    [navigationGroups],
+  );
   const panelOpen = useToolPanelStore((s) => s.isOpen);
   useEffect(() => {
     if (panelOpen) setContentCollapsed(false);
@@ -174,6 +242,20 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
         }
 
         .workbench-preview [data-chat-composer-divider] { display: none; }
+        .workbench-preview [data-global-chat] section[aria-label="Chat history"] {
+          width: 100%; max-width: 48rem; margin-left: auto; margin-right: auto;
+          box-sizing: border-box;
+        }
+        .workbench-preview [data-global-chat] form { border-radius: 16px; }
+        .workbench-preview [data-sidebar-collapsed] button,
+        .workbench-preview [data-sidebar-collapsed] a {
+          width: 36px; height: 36px; min-width: 36px; padding: 8px;
+          display: inline-flex; align-items: center; justify-content: center;
+          align-self: center; border-radius: 8px;
+        }
+        .workbench-preview [data-sidebar-collapsed] svg {
+          width: 18px; height: 18px; stroke-width: 2;
+        }
         .workbench-preview {
           --workbench-header-height: 60px;
           --sidebar: color-mix(in srgb, var(--background) 98.5%, var(--foreground) 1.5%);
@@ -273,33 +355,76 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
         }
         /* Preview-only hierarchy: workspace title first, quiet section labels,
            and one consistent rhythm for conversation and content rows. */
-        [data-workspace-navigation] [data-nav-group-header] .truncate {
-          text-transform: none;
+        .workbench-preview [data-nav-group-header] {
+          min-height: 32px;
+          gap: 0;
+          background: transparent;
+          font-size: 14px;
+          font-weight: 400;
           letter-spacing: normal;
-          font-size: 12px;
-          font-weight: 500;
-          color: var(--muted-foreground);
+          text-transform: none;
+          color: color-mix(in srgb, var(--foreground) 42%, var(--sidebar));
         }
-        [data-workspace-navigation] [data-nav-group-label="Workspaces"] > :first-child {
+        .workbench-preview [data-nav-group-header] span:not([data-nav-status-dot]) {
+          font-size: inherit;
+          font-weight: inherit;
+          letter-spacing: inherit;
+          text-transform: none;
+          color: inherit;
+        }
+        .workbench-preview [data-nav-group-header] > span[aria-hidden="true"] {
+          display: none;
+        }
+        .workbench-preview [data-nav-group-label] > div:has(> [data-nav-group-header]) {
+          padding-top: 18px;
+          padding-bottom: 2px;
+        }
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth] {
+          min-height: 36px;
+          padding-top: 6px;
+          padding-bottom: 6px;
+          gap: 10px;
+          border-radius: 8px;
+        }
+        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth="0"] {
+          padding-left: 12px;
+        }
+        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth="0"] > [data-nav-twisty-cell] {
+          display: none;
+        }
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth] {
+          padding-top: 0;
+          padding-bottom: 0;
+        }
+        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] {
+          padding-left: 0;
+        }
+        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] > button:not([data-nav-twisty]) {
+          padding-left: 12px;
+          min-height: 36px;
+          gap: 10px;
+        }
+        [data-workspace-navigation] [data-nav-group-label="Spaces"] > :first-child {
           padding-top: 8px;
         }
-        [data-workspace-navigation] [data-nav-group-label="Workspaces"] > div:last-child > [data-nav-depth="0"] {
+        [data-workspace-navigation] [data-nav-group-label="Spaces"] > div:last-child > [data-nav-depth="0"] {
           font-size: 15px;
           font-weight: 600;
           letter-spacing: -0.015em;
           line-height: 22px;
         }
-        [data-workspace-navigation] [data-nav-group-label="Recent conversations"] > :first-child {
+        [data-workspace-navigation] [data-nav-group-label="Recent chats"] > :first-child {
           padding-top: 10px;
         }
-        [data-workspace-navigation] [data-nav-group-label="Contents"] {
+        [data-workspace-navigation] [data-nav-group-label="Content"] {
           margin-top: 12px;
         }
 
       `}</style>
       <SelectionBridge>
         <Sidebar
-          groups={workspaceGroups}
+          groups={staticNavigationGroups}
+          collapsedGroupsOnly
           hideNewConversation={!!workspaceGroups}
           newConversationLabel="New chat"
           hideFooterActions={!!workspaceGroups}
@@ -345,11 +470,18 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
         <div ref={chatWidth.containerRef} className="flex min-h-0 min-w-0 flex-1 overflow-x-auto">
           <section
             id="preview-assistant"
+            data-global-chat={chatOnly || undefined}
             data-chat-collapsed={collapsed ? "true" : undefined}
             aria-label="Assistant conversation"
             className="relative flex min-h-0 shrink-0 flex-col"
             style={{
-              width: collapsed ? 44 : contentCollapsed ? "calc(100% - 44px)" : chatWidth.width,
+              width: chatOnly
+                ? "100%"
+                : collapsed
+                  ? 44
+                  : contentCollapsed
+                    ? "calc(100% - 44px)"
+                    : chatWidth.width,
               background: "var(--background)",
             }}
           >
@@ -374,7 +506,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
                   aria-label="Expand chat"
                   onClick={() => setCollapsed(false)}
                 >
-                  <PanelLeftOpen size={18} />
+                  <MessageSquare size={18} />
                 </TooltipIconButton>
               ) : (
                 <>
@@ -400,6 +532,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
                   </TooltipIconButton>
                   <TooltipIconButton
                     tooltip="Collapse chat"
+                    style={chatOnly ? { display: "none" } : undefined}
                     className={buttonClass}
                     aria-label="Collapse chat"
                     onClick={() => {
@@ -497,8 +630,16 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
               style={{ display: collapsed || (showHistory && !emptyChat) ? "none" : "flex" }}
             >
               <ChatContent
+                centerComposer={chatOnly && emptyChat && !historyOpen}
+                composerIntro={
+                  chatOnly && emptyChat && !historyOpen ? (
+                    <h1 className="mb-6 text-center text-[28px] font-normal tracking-tight">
+                      What should we work on?
+                    </h1>
+                  ) : undefined
+                }
                 placeholder="Do anything"
-                compactComposer
+                compactComposer={!chatOnly}
                 hiddenPageLabels={workspaceGroups?.flatMap((group) =>
                   group.items.map((item) => item.label),
                 )}
@@ -512,6 +653,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
                         workspaceId={workspaceGroups?.[0]?.meta?.exclusiveRootId}
                         onClose={returnToChat}
                         showBack={false}
+                        welcome={chatOnly && !historyOpen}
                       />
                     </div>
                   ) : (
@@ -538,7 +680,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
             data-item-panel-open={panelOpen || undefined}
             className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
             style={{
-              display: contentCollapsed ? "none" : "flex",
+              display: chatOnly || contentCollapsed ? "none" : "flex",
               minWidth: collapsed ? 320 : 440,
               transform: "translateZ(0)",
               isolation: "isolate",
@@ -570,7 +712,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{page}</div>
             </ToolPanelLayout>
           </section>
-          {contentCollapsed && (
+          {contentCollapsed && !chatOnly && (
             <aside
               aria-label="Collapsed content"
               className="flex w-11 shrink-0 flex-col items-center"
@@ -584,7 +726,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
                     aria-label="Expand content"
                     onClick={() => setContentCollapsed(false)}
                   >
-                    <PanelRightOpen size={18} />
+                    <FileText size={18} />
                   </TooltipIconButton>
                 </div>
               </div>

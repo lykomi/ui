@@ -268,7 +268,10 @@ const ScrollToBottomButton: FC = () => {
   );
 };
 
-const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
+const DropZone: FC<{ children: React.ReactNode; centered?: boolean }> = ({
+  children,
+  centered,
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dropError, setDropError] = useState<string | null>(null);
   const dropErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -335,7 +338,10 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div
-      className="relative flex flex-col flex-1 overflow-hidden"
+      className={cn(
+        "relative flex flex-col flex-1",
+        centered ? "justify-center overflow-y-auto" : "overflow-hidden",
+      )}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -370,6 +376,9 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 export interface ChatContentProps {
+  centerComposer?: boolean;
+  composerIntro?: ReactNode;
+  composerFooter?: ReactNode;
   /** Compact two-row composer with an auto-growing input. */
   compactComposer?: boolean;
   hiddenPageLabels?: string[];
@@ -413,6 +422,9 @@ export const DEFAULT_COMPOSER_PLACEHOLDER = "Ask anything";
  * Renders inside a ThreadPrimitive.Root context.
  */
 export function ChatContent({
+  centerComposer = false,
+  composerIntro,
+  composerFooter,
   compactComposer = false,
   hiddenPageLabels = [],
   hideCurrentPageBadge = false,
@@ -457,8 +469,11 @@ export function ChatContent({
           </div>
         </div>
       )}
-      <DropZone>
-        <div className="relative flex-1 overflow-hidden">
+      <DropZone centered={centerComposer}>
+        <div
+          className="relative flex-1 overflow-hidden"
+          style={centerComposer ? { display: "none" } : undefined}
+        >
           {/* A module can take the conversation's place — a live voice call
               replaces the transcript rather than scrolling it past. The
               thread is not unmounted, only hidden, so its scroll position
@@ -545,6 +560,7 @@ export function ChatContent({
           </ThreadPrimitive.If>
 
           <div className="mx-auto max-w-3xl px-4 py-4">
+            {composerIntro}
             <ComposerPrimitive.Root
               style={compactComposer ? { borderRadius: 16 } : undefined}
               className={cn(
@@ -622,6 +638,7 @@ export function ChatContent({
                 </div>
               </div>
             </ComposerPrimitive.Root>
+            {composerFooter}
           </div>
         </div>
       </DropZone>
