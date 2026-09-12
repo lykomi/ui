@@ -2,6 +2,7 @@ import { useAuiState } from "@assistant-ui/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChatContent,
+  TooltipIconButton,
   ThemeToggle,
   UserMenu,
   useSidebarStore,
@@ -28,23 +29,6 @@ import { ConversationHistory } from "./preview/conversation-history.tsx";
 import { SelectionBridge } from "./preview/selection-bridge.tsx";
 
 const STORAGE_KEY = "foundry.workbench-preview";
-const COMPOSER_KEY = "foundry.workbench-preview.composer";
-function composerChosen() {
-  try {
-    return sessionStorage.getItem(COMPOSER_KEY) === "on";
-  } catch {
-    return false;
-  }
-}
-function rememberComposer(chosen: boolean) {
-  try {
-    if (chosen) sessionStorage.setItem(COMPOSER_KEY, "on");
-    else sessionStorage.removeItem(COMPOSER_KEY);
-  } catch {
-    /* Storage may be disabled. */
-  }
-}
-
 /** Tab-local and development-only. Production always uses the standard shell. */
 export function isWorkbenchPreviewEnabled() {
   if (!import.meta.env.DEV) return false;
@@ -64,23 +48,19 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [contentCollapsed, setContentCollapsed] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [composing, setComposing] = useState(composerChosen);
   const emptyChat = useAuiState(
-    (s) =>
-      s.thread.messages.length === 0 &&
-      !s.thread.isRunning &&
-      !s.thread.isLoading &&
-      !s.composer.text.trim(),
+    (s) => s.thread.messages.length === 0 && !s.thread.isRunning && !s.thread.isLoading,
   );
-  const showHistory = historyOpen || (emptyChat && !composing);
+  const wasEmptyChat = useRef(emptyChat);
+  useEffect(() => {
+    if (wasEmptyChat.current && !emptyChat) setHistoryOpen(false);
+    wasEmptyChat.current = emptyChat;
+  }, [emptyChat]);
+  const showHistory = historyOpen || emptyChat;
   const returnToChat = () => {
-    rememberComposer(true);
     setHistoryOpen(false);
-    setComposing(true);
   };
   const openHistory = () => {
-    rememberComposer(false);
-    setComposing(false);
     setHistoryOpen(true);
   };
   const toggleNavigation = useSidebarStore((s) => s.toggleMobile);
@@ -101,8 +81,6 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
   const newConversation = useNewConversation({ navigateToChat: false, preserveNavigation: true });
 
   const startChat = () => {
-    rememberComposer(true);
-    setComposing(true);
     setHistoryOpen(false);
     newConversation();
   };
@@ -122,6 +100,41 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
       data-workspace-navigation={workspaceGroups ? "true" : undefined}
     >
       <style>{`
+        .workbench-preview [data-panel-resize] {
+          width: 12px;
+          right: 0 !important;
+          z-index: 40;
+          touch-action: none;
+          background: transparent;
+          outline: none;
+        }
+        .workbench-preview [data-panel-resize] > div { display: none; }
+        .workbench-preview [data-panel-resize]::after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 3px;
+          width: 6px;
+          height: 56px;
+          transform: translateY(-50%);
+          border-radius: 999px;
+          background: var(--border);
+          box-shadow: 0 1px 2px #00000014;
+          opacity: 0;
+          transition: opacity 120ms ease;
+        }
+        .workbench-preview [data-panel-resize]:hover::after,
+        .workbench-preview [data-panel-resize]:focus-visible::after,
+        .workbench-preview [data-panel-resize]:active::after { opacity: 1; }
+        .workbench-preview select:not([multiple]):not([size]),
+        .workbench-preview select[size="1"]:not([multiple]) {
+          appearance: none;
+          padding-right: 36px;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364758b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 12px center;
+          background-size: 16px 16px;
+        }
         .preview-account-compact button > span { display: none; }
         .workbench-preview #preview-assistant textarea::placeholder {
           font-size: 14px;
@@ -326,103 +339,105 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
               className={`relative flex shrink-0 items-center ${collapsed ? "justify-center" : "gap-1 px-2"}`}
             >
               {!collapsed && (
-                <button
+                <TooltipIconButton
+                  tooltip="Open navigation"
                   className={`${buttonClass} preview-mobile-navigation`}
                   aria-label="Open navigation"
                   onClick={toggleNavigation}
                 >
                   <Menu size={18} />
-                </button>
+                </TooltipIconButton>
               )}
               {collapsed ? (
-                <button
+                <TooltipIconButton
+                  tooltip="Expand chat"
                   className={buttonClass}
                   aria-label="Expand chat"
-                  title="Expand chat"
                   onClick={() => setCollapsed(false)}
                 >
                   <PanelLeftOpen size={18} />
-                </button>
+                </TooltipIconButton>
               ) : (
                 <>
                   <div className="min-w-0 flex-1 px-2 py-2">
                     <div className="text-sm font-semibold">Chat</div>
                   </div>
-                  <button
-                    className={`${buttonClass} flex items-center gap-1.5 text-xs`}
+                  <TooltipIconButton
+                    tooltip="New chat"
+                    className={buttonClass}
+                    aria-label="New chat"
+                    onClick={startChat}
+                  >
+                    <SquarePen size={18} style={{ color: "var(--primary)" }} />
+                  </TooltipIconButton>
+                  <TooltipIconButton
+                    tooltip="Chat history"
+                    className={buttonClass}
                     aria-label="Chat history"
                     aria-expanded={showHistory}
                     onClick={() => (showHistory ? returnToChat() : openHistory())}
                   >
-                    <History size={18} /> History
-                  </button>
-                  <button
-                    className={buttonClass}
-                    title="New chat"
-                    aria-label="New chat"
-                    onClick={startChat}
-                  >
-                    <SquarePen size={18} />
-                  </button>
+                    <History size={18} />
+                  </TooltipIconButton>
                   {!contentCollapsed && (
-                    <button
+                    <TooltipIconButton
+                      tooltip="Collapse content · expand chat"
                       className={buttonClass}
                       aria-label="Collapse content"
-                      title="Collapse content · expand chat"
                       onClick={() => setContentCollapsed(true)}
                     >
                       <PanelRightClose size={18} />
-                    </button>
+                    </TooltipIconButton>
                   )}
-                  <button
+                  <TooltipIconButton
+                    tooltip="Collapse chat"
                     className={buttonClass}
                     aria-label="Collapse chat"
-                    title="Collapse chat"
                     onClick={() => {
                       setContentCollapsed(false);
                       setCollapsed(true);
                     }}
                   >
                     <PanelLeft size={18} />
-                  </button>
+                  </TooltipIconButton>
                 </>
               )}
             </div>
             {collapsed && (
               <div data-chat-rail className="flex flex-col items-center gap-1">
-                <button
+                <TooltipIconButton
+                  tooltip="Open navigation"
                   className={`${buttonClass} preview-mobile-navigation`}
                   aria-label="Open navigation"
-                  title="Open navigation"
                   onClick={toggleNavigation}
                 >
                   <Menu size={18} />
-                </button>
-                <button
+                </TooltipIconButton>
+                <TooltipIconButton
+                  tooltip="Chat history"
                   className={buttonClass}
                   aria-label="Chat history"
-                  title="Chat history"
                   onClick={() => {
                     setCollapsed(false);
                     openHistory();
                   }}
                 >
                   <History size={18} />
-                </button>
+                </TooltipIconButton>
               </div>
             )}
-            {!collapsed && showHistory && (
+            {!collapsed && showHistory && !emptyChat && (
               <ConversationHistory
                 groups={navGroups}
                 workspaceId={workspaceGroups?.[0]?.meta?.exclusiveRootId}
                 onClose={returnToChat}
-                onNewChat={startChat}
-                showBack={!emptyChat || composing}
+                showBack={!emptyChat}
               />
             )}
             {!collapsed && !contentCollapsed && (
               <div
                 role="separator"
+                data-panel-resize
                 aria-label="Resize chat"
                 aria-orientation="vertical"
                 aria-valuemin={chatWidth.min}
@@ -457,7 +472,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
                 }}
                 onDoubleClick={() => chatWidth.setWidth(null)}
                 onKeyDown={(event) => {
-                  const step = event.shiftKey ? 40 : 10;
+                  const step = event.shiftKey ? 40 : 16;
                   if (event.key === "ArrowLeft") chatWidth.setWidth(chatWidth.width - step);
                   else if (event.key === "ArrowRight") chatWidth.setWidth(chatWidth.width + step);
                   else if (event.key === "Home") chatWidth.setWidth(chatWidth.min);
@@ -470,7 +485,7 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
             {/* Keep the same runtime/composer mounted when the rail collapses. */}
             <div
               className="min-h-0 flex-1 flex-col"
-              style={{ display: collapsed || showHistory ? "none" : "flex" }}
+              style={{ display: collapsed || (showHistory && !emptyChat) ? "none" : "flex" }}
             >
               <ChatContent
                 placeholder="Do anything"
@@ -481,17 +496,28 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
                 hideCurrentPageBadge
                 starterSuggestions={[]}
                 emptyState={
-                  <div className="flex min-h-full flex-col items-center justify-center gap-2 px-6 text-center">
-                    <MessageSquare
-                      size={22}
-                      strokeWidth={1.5}
-                      className="mb-1 text-muted-foreground"
-                    />
-                    <h1 className="text-base font-medium text-foreground">New chat</h1>
-                    <p className="max-w-56 text-sm leading-relaxed text-muted-foreground">
-                      Ask a question or select something to discuss.
-                    </p>
-                  </div>
+                  showHistory ? (
+                    <div className="flex h-full min-h-0 flex-col">
+                      <ConversationHistory
+                        groups={navGroups}
+                        workspaceId={workspaceGroups?.[0]?.meta?.exclusiveRootId}
+                        onClose={returnToChat}
+                        showBack={false}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex min-h-full flex-col items-center justify-center gap-2 px-6 text-center">
+                      <MessageSquare
+                        size={22}
+                        strokeWidth={1.5}
+                        className="mb-1 text-muted-foreground"
+                      />
+                      <h1 className="text-base font-medium text-foreground">New chat</h1>
+                      <p className="max-w-56 text-sm leading-relaxed text-muted-foreground">
+                        Ask a question or select something to discuss.
+                      </p>
+                    </div>
+                  )
                 }
               />
             </div>
@@ -527,14 +553,14 @@ export function WorkbenchPreview({ page }: { page: ReactNode }) {
             >
               <div className="flex h-full w-full flex-col items-center" data-chat-rail>
                 <div className="flex items-center justify-center" style={{ height: 60 }}>
-                  <button
+                  <TooltipIconButton
+                    tooltip="Expand content"
                     className={buttonClass}
                     aria-label="Expand content"
-                    title="Expand content"
                     onClick={() => setContentCollapsed(false)}
                   >
                     <PanelRightOpen size={18} />
-                  </button>
+                  </TooltipIconButton>
                 </div>
               </div>
             </aside>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, MessageSquare, SquarePen } from "lucide-react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 import type { NavGroup, NavItem } from "@iloveagents/foundry-web-ui";
 
 /** History is a view of existing navigation targets, never a second chat runtime. */
@@ -8,13 +8,11 @@ export function ConversationHistory({
   groups,
   workspaceId,
   onClose,
-  onNewChat,
   showBack = true,
 }: {
   groups: NavGroup[];
   workspaceId: unknown;
   onClose: () => void;
-  onNewChat?: () => void;
   showBack?: boolean;
 }) {
   const [all, setAll] = useState(false);
@@ -74,7 +72,7 @@ export function ConversationHistory({
               key={item.to}
               to={item.to}
               onClick={onClose}
-              className="flex items-center gap-2 rounded-lg px-2 py-3 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
             >
               <MessageSquare size={15} className="shrink-0 text-muted-foreground" />
               <span className="truncate">{item.label}</span>
@@ -87,14 +85,6 @@ export function ConversationHistory({
           </p>
         )}
       </div>
-      {onNewChat && (
-        <button
-          onClick={onNewChat}
-          className="mt-4 inline-flex shrink-0 self-start items-center justify-center gap-2 rounded-lg border border-primary px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          <SquarePen size={16} /> New chat
-        </button>
-      )}
     </section>
   );
 }

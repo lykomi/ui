@@ -26,6 +26,7 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   useSidebarStore,
   RAIL_WIDTH,
+  SIDEBAR_WIDTH,
   SIDEBAR_MIN_WIDTH,
   SIDEBAR_MAX_WIDTH,
 } from "../lib/sidebar-store.ts";
@@ -1394,6 +1395,9 @@ function SidebarResizeHandle() {
 
   return (
     <div
+      data-panel-resize
+      title="Drag to resize navigation. Double-click to reset."
+      onDoubleClick={() => setWidth(SIDEBAR_WIDTH)}
       className="absolute inset-y-0 right-0 z-20 hidden w-3 cursor-col-resize md:block"
       onPointerDown={(event) => {
         event.preventDefault();
@@ -1408,11 +1412,11 @@ function SidebarResizeHandle() {
       onKeyDown={(event) => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();
-          setWidth(width - 16);
+          setWidth(width - (event.shiftKey ? 40 : 16));
         }
         if (event.key === "ArrowRight") {
           event.preventDefault();
-          setWidth(width + 16);
+          setWidth(width + (event.shiftKey ? 40 : 16));
         }
         if (event.key === "Home") {
           event.preventDefault();

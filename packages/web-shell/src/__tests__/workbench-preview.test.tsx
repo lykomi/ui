@@ -26,11 +26,26 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   useAppStore: (select: (s: unknown) => unknown) =>
     select({ currentPage: "/document", navContext: { label: "Document" } }),
   useSidebarStore: (select: (s: unknown) => unknown) => select({ toggleMobile: vi.fn() }),
+  TooltipIconButton: ({
+    tooltip,
+    children,
+    ...props
+  }: import("react").ComponentProps<"button"> & { tooltip: string }) => (
+    <button {...props} title={tooltip}>
+      {children}
+    </button>
+  ),
   ThemeToggle: () => null,
   UserMenu: () => null,
   useNavStore: (select: (s: unknown) => unknown) => select({ config: state.groups }),
   useNewConversation: () => vi.fn(),
-  ChatContent: () => <textarea aria-label="Chat draft" />,
+  ChatContent: ({ emptyState }: { emptyState: ReactNode }) => (
+    <>
+      {" "}
+      {state.empty && emptyState}
+      <textarea aria-label="Chat draft" />
+    </>
+  ),
   ToolPanelLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
   useToolPanelStore: (select: (s: unknown) => unknown) =>
     select({ isOpen: false, closePanel: vi.fn() }),
@@ -102,24 +117,25 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Assistant conversation").style.width).toBe(`${initial}px`);
   });
 
-  it("shows history for an empty chat until New chat is chosen", () => {
+  it("shows history alongside the composer for an empty chat", () => {
     state.empty = true;
     render(<WorkbenchPreview page={<Editor />} />);
     expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
-    expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("none");
+    expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
+    expect(screen.getAllByRole("button", { name: "New chat" })).toHaveLength(1);
     const buttons = screen.getAllByRole("button", { name: "New chat" });
     fireEvent.click(buttons[buttons.length - 1]);
-    expect(screen.queryByRole("heading", { name: "Recent chats" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
   });
 
-  it("keeps the composer open after the New chat icon resets the runtime", () => {
+  it("keeps history and composer visible after New chat resets and remounts the runtime", () => {
     state.empty = true;
     const view = render(<WorkbenchPreview page={<Editor />} />);
     fireEvent.click(screen.getAllByRole("button", { name: "New chat" })[0]);
     view.unmount();
     render(<WorkbenchPreview page={<Editor />} />);
-    expect(screen.queryByRole("heading", { name: "Recent chats" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
     fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
     expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
