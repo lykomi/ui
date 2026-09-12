@@ -73,7 +73,7 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
       <style>{`
       [data-connected-navigation="true"] + [data-workbench-surface]::after { display: none; }
       .workbench-preview [data-sidebar-surface="desktop"] nav { padding-right: 16px; }
-      [data-connected-navigation="true"] [data-sidebar-surface="desktop"] { border-right-color: transparent; }
+      .workbench-preview [data-sidebar-surface="desktop"] { border-right-color: transparent; }
       [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"] {
         background: var(--background);
         border-color: transparent; border-top-right-radius: 0; border-bottom-right-radius: 0;
