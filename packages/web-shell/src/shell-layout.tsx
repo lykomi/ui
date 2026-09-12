@@ -127,25 +127,6 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
       <ThemeScope className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
         <ThemeDocumentMetadata />
         {layoutExtras}
-        {import.meta.env.DEV && !preview && (
-          <div className="flex shrink-0 items-center justify-end gap-3 border-b border-border px-4 py-1 text-xs">
-            <span className="text-muted-foreground">
-              {preview ? "Workspace layout preview enabled" : "Try the new content and chat layout"}
-            </span>
-            <button
-              type="button"
-              className="rounded px-2 py-1 font-medium text-primary hover:bg-muted focus-visible:outline-2"
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("ux", preview ? "classic" : "workbench");
-                window.location.assign(url.href);
-              }}
-            >
-              {preview ? "Restore classic" : "Try preview UI"}
-            </button>
-          </div>
-        )}
-
         {preview ? (
           <WorkbenchPreview page={isChatRoute ? null : page} chatOnly={isChatRoute} />
         ) : (

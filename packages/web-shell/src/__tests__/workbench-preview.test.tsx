@@ -1,7 +1,8 @@
+import { MemoryRouter } from "react-router";
 import { Folder } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
 import { type ReactNode, useEffect } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render as renderUI, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
@@ -98,7 +99,7 @@ describe("layout preview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
     fireEvent.click(collapseContent);
     expect(screen.queryByRole("button", { name: "Expand chat" })).toBeNull();
-    expect(screen.getByLabelText("Working content").style.display).toBe("none");
+    expect(screen.getByLabelText("Working content").hasAttribute("inert")).toBe(true);
     expect(screen.queryByRole("separator", { name: "Resize chat" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Expand content" }));
     expect(screen.getByLabelText("Unsaved field")).toBe(editor);
@@ -171,7 +172,6 @@ describe("layout preview", () => {
     const { rerender } = render(<WorkbenchPreview page={<Editor />} />);
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
       expect.objectContaining({ label: "Spaces", items: [{ ...root, children: undefined }] }),
-      expect.objectContaining({ label: "Recent chats" }),
       expect.objectContaining({ label: "Content", items: [child] }),
     ]);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);
@@ -224,3 +224,7 @@ describe("layout preview", () => {
     expect(state.unmount).not.toHaveBeenCalled();
   });
 });
+
+function render(ui: ReactNode) {
+  return renderUI(ui, { wrapper: MemoryRouter });
+}

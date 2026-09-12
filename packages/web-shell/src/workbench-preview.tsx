@@ -1,3 +1,4 @@
+import { Link, useLocation } from "react-router";
 import { useAuiState } from "@assistant-ui/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -50,6 +51,10 @@ export function WorkbenchPreview({
   page: ReactNode;
   chatOnly?: boolean;
 }) {
+  const location = useLocation();
+  const notice = location.state?.previewChatNotice as
+    { previousPath: string; previousLabel: string; currentLabel: string } | undefined;
+  const [dismissedNotice, setDismissedNotice] = useState<string | null>(null);
   const chatWidth = useChatWidth();
   const resizeDrag = useRef<{ x: number; width: number } | null>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -104,7 +109,6 @@ export function WorkbenchPreview({
           priority: 1000,
           items: root ? [{ ...root, children: undefined }] : space.items,
         },
-        ...recent,
         {
           label: "Content",
           hideLabel: true,
@@ -114,14 +118,25 @@ export function WorkbenchPreview({
         },
       ];
     }
+    const pinnedChats = recent.flatMap((group) => group.items).filter((item) => item.meta?.pinned);
     return [
+      ...(pinnedChats.length
+        ? [
+            {
+              label: "Pinned",
+              priority: 1050,
+              items: pinnedChats,
+              meta: { hideInCollapsedRail: true },
+            },
+          ]
+        : []),
       {
         label: "Chats",
         to: "/",
         collapsible: true,
         priority: 1000,
         icon: MessageSquare,
-        items: recent.flatMap((group) => group.items),
+        items: recent.flatMap((group) => group.items).filter((item) => !item.meta?.pinned),
       },
       ...navGroups
         .filter((group) => !["recent-chats", "pinned-chats"].includes(String(group.meta?.type)))
@@ -247,6 +262,17 @@ export function WorkbenchPreview({
           box-sizing: border-box;
         }
         .workbench-preview [data-global-chat] form { border-radius: 16px; }
+        /* One motion treatment for navigation and both working panes. */
+        .workbench-preview [data-sidebar-surface],
+        .workbench-preview [data-panel-motion] {
+          transition: width 200ms ease-in-out, min-width 200ms ease-in-out;
+        }
+        .workbench-preview [data-content-collapsed] > * { visibility: hidden; }
+        .workbench-preview [data-resizing] [data-panel-motion] { transition: none; }
+        @media (prefers-reduced-motion: reduce) {
+          .workbench-preview [data-sidebar-surface],
+          .workbench-preview [data-panel-motion] { transition: none; }
+        }
         .workbench-preview [data-sidebar-collapsed] button,
         .workbench-preview [data-sidebar-collapsed] a {
           width: 36px; height: 36px; min-width: 36px; padding: 8px;
@@ -434,17 +460,6 @@ export function WorkbenchPreview({
               className="shrink-0 border-t border-sidebar-border bg-sidebar px-2 py-2"
               aria-label="Account and appearance"
             >
-              <button
-                className="mb-1 w-full rounded px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-sidebar-accent focus-visible:outline-2"
-                title="Reload in classic layout; save edits first"
-                onClick={() => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("ux", "classic");
-                  window.location.assign(url.href);
-                }}
-              >
-                UI preview · Restore classic
-              </button>
               <div className="flex min-w-0 items-center justify-between gap-1">
                 <UserMenu />
                 <ThemeToggle />
@@ -467,9 +482,13 @@ export function WorkbenchPreview({
         data-workbench-surface
         aria-label="Workspace working area"
       >
-        <div ref={chatWidth.containerRef} className="flex min-h-0 min-w-0 flex-1 overflow-x-auto">
+        <div
+          ref={chatWidth.containerRef}
+          className="relative flex min-h-0 min-w-0 flex-1 overflow-x-auto"
+        >
           <section
             id="preview-assistant"
+            data-panel-motion
             data-global-chat={chatOnly || undefined}
             data-chat-collapsed={collapsed ? "true" : undefined}
             aria-label="Assistant conversation"
@@ -511,7 +530,7 @@ export function WorkbenchPreview({
               ) : (
                 <>
                   <div className="min-w-0 flex-1 px-2 py-2">
-                    <div className="text-sm font-semibold">Chat</div>
+                    {!chatOnly && !showHistory && <div className="text-sm font-semibold">Chat</div>}
                   </div>
                   <TooltipIconButton
                     tooltip="New chat"
@@ -592,6 +611,9 @@ export function WorkbenchPreview({
                 onPointerDown={(event) => {
                   if (event.button !== 0) return;
                   event.preventDefault();
+                  event.currentTarget
+                    .closest("[data-workbench-surface]")
+                    ?.setAttribute("data-resizing", "");
                   resizeDrag.current = { x: event.clientX, width: chatWidth.width };
                   event.currentTarget.setPointerCapture(event.pointerId);
                 }}
@@ -603,14 +625,23 @@ export function WorkbenchPreview({
                 }}
                 onPointerUp={(event) => {
                   resizeDrag.current = null;
+                  event.currentTarget
+                    .closest("[data-workbench-surface]")
+                    ?.removeAttribute("data-resizing");
                   if (event.currentTarget.hasPointerCapture(event.pointerId))
                     event.currentTarget.releasePointerCapture(event.pointerId);
                 }}
-                onPointerCancel={() => {
+                onPointerCancel={(event) => {
                   resizeDrag.current = null;
+                  event.currentTarget
+                    .closest("[data-workbench-surface]")
+                    ?.removeAttribute("data-resizing");
                 }}
-                onLostPointerCapture={() => {
+                onLostPointerCapture={(event) => {
                   resizeDrag.current = null;
+                  event.currentTarget
+                    .closest("[data-workbench-surface]")
+                    ?.removeAttribute("data-resizing");
                 }}
                 onDoubleClick={() => chatWidth.setWidth(null)}
                 onKeyDown={(event) => {
@@ -627,12 +658,42 @@ export function WorkbenchPreview({
             {/* Keep the same runtime/composer mounted when the rail collapses. */}
             <div
               className="min-h-0 flex-1 flex-col"
-              style={{ display: collapsed || (showHistory && !emptyChat) ? "none" : "flex" }}
+              style={{
+                display: collapsed || (showHistory && !emptyChat) ? "none" : "flex",
+                paddingBottom:
+                  chatOnly && emptyChat && !historyOpen ? "clamp(32px, 10vh, 96px)" : undefined,
+              }}
             >
               <ChatContent
                 centerComposer={chatOnly && emptyChat && !historyOpen}
                 composerIntro={
-                  chatOnly && emptyChat && !historyOpen ? (
+                  notice && dismissedNotice !== location.key && !showHistory ? (
+                    <aside
+                      className="mb-3 flex items-start gap-2 text-xs text-muted-foreground"
+                      aria-label="Chat context"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p>
+                          Current document:{" "}
+                          <span className="font-medium">{notice.currentLabel}</span>
+                        </p>
+                        <p className="mt-1">
+                          Previously discussing {notice.previousLabel}.{" "}
+                          <Link to={notice.previousPath} className="underline underline-offset-2">
+                            Open document
+                          </Link>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label="Dismiss context notice"
+                        onClick={() => setDismissedNotice(location.key)}
+                        className="px-1"
+                      >
+                        ×
+                      </button>
+                    </aside>
+                  ) : chatOnly && emptyChat && !historyOpen ? (
                     <h1 className="mb-6 text-center text-[28px] font-normal tracking-tight">
                       What should we work on?
                     </h1>
@@ -677,11 +738,14 @@ export function WorkbenchPreview({
           <section
             aria-label="Working content"
             data-working-content
+            data-panel-motion
+            data-content-collapsed={contentCollapsed || undefined}
+            inert={contentCollapsed}
             data-item-panel-open={panelOpen || undefined}
             className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
             style={{
-              display: chatOnly || contentCollapsed ? "none" : "flex",
-              minWidth: collapsed ? 320 : 440,
+              display: chatOnly ? "none" : "flex",
+              minWidth: contentCollapsed ? 44 : collapsed ? 320 : 440,
               transform: "translateZ(0)",
               isolation: "isolate",
             }}
@@ -715,7 +779,7 @@ export function WorkbenchPreview({
           {contentCollapsed && !chatOnly && (
             <aside
               aria-label="Collapsed content"
-              className="flex w-11 shrink-0 flex-col items-center"
+              className="absolute inset-y-0 right-0 flex w-11 shrink-0 flex-col items-center"
               style={{ width: 44 }}
             >
               <div className="flex h-full w-full flex-col items-center" data-chat-rail>
