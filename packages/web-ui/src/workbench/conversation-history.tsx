@@ -4,7 +4,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@iloveagents/foundry-web-ui";
+} from "../index.ts";
 import { Button, Input } from "@iloveagents/foundry-web-primitives";
 import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -17,7 +17,7 @@ import {
   ChevronDown,
   Check,
 } from "lucide-react";
-import type { NavGroup, NavItem } from "@iloveagents/foundry-web-ui";
+import type { NavGroup, NavItem } from "../index.ts";
 
 /** History is a view of existing navigation targets, never a second chat runtime. */
 export function ConversationHistory({

@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   unmount: vi.fn(),
   groups: [] as NavGroup[],
   empty: false,
+  panelOpen: false,
   sidebar: vi.fn(),
 }));
 vi.mock("@assistant-ui/react", () => ({
@@ -57,13 +58,14 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ),
   ToolPanelLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
   useToolPanelStore: (select: (s: unknown) => unknown) =>
-    select({ isOpen: false, closePanel: vi.fn() }),
+    select({ isOpen: state.panelOpen, closePanel: vi.fn() }),
   useChatBubbleStore: Object.assign(
     (select: (s: unknown) => unknown) => select({ isOpen: false, isExpanded: false }),
     { getState: () => ({ close: vi.fn() }) },
   ),
 }));
-import { isWorkbenchPreviewEnabled, WorkbenchPreview } from "../preview/workbench.tsx";
+import { WorkbenchPreview } from "@iloveagents/foundry-web-ui/workbench";
+import { isWorkbenchPreviewEnabled } from "../runtime-config.ts";
 
 function Editor() {
   useEffect(() => () => state.unmount(), []);
@@ -75,6 +77,7 @@ beforeEach(() => {
   state.sidebar.mockClear();
   state.groups = [];
   state.empty = false;
+  state.panelOpen = false;
   sessionStorage.clear();
   localStorage.clear();
   window.history.replaceState({}, "", "/");
@@ -97,6 +100,13 @@ afterEach(() => {
 });
 
 describe("layout preview", () => {
+  it("reveals a tool result on a chat-only route", () => {
+    state.panelOpen = true;
+    render(<WorkbenchPreview chatOnly page={<div>Tool result</div>} />);
+    expect(screen.getByLabelText("Working content").style.display).toBe("flex");
+    expect(screen.getByLabelText("Working content").hasAttribute("inert")).toBe(false);
+  });
+
   it("shows one full-width pane in narrow containers, preserving drafts and reopening content on navigation", () => {
     const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1000);
     render(

@@ -26,7 +26,9 @@ import { usePagePanelWidth, MIN_PAGE_PANEL_WIDTH } from "./use-page-panel-width.
 import { isWorkbenchPreviewEnabled } from "./runtime-config.ts";
 const WorkbenchPreview = import.meta.env.DEV
   ? lazy(() =>
-      import("./preview/workbench.tsx").then((module) => ({ default: module.WorkbenchPreview })),
+      import("@iloveagents/foundry-web-ui/workbench").then((module) => ({
+        default: module.WorkbenchPreview,
+      })),
     )
   : null;
 

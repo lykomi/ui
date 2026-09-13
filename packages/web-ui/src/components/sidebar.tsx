@@ -525,7 +525,7 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
         "relative mx-2 rounded-md overflow-hidden",
         isDragOver
           ? cn(
-              "-mt-7 h-7 flex items-center justify-center gap-1",
+              "h-7 flex items-center justify-center gap-1",
               isFileDragOver
                 ? "bg-primary/10 border border-dashed border-primary"
                 : "bg-primary/10 border border-dashed border-primary/30",

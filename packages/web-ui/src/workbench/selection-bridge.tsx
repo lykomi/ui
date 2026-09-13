@@ -48,6 +48,7 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
     const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     const mutation = typeof MutationObserver === "undefined" ? null : new MutationObserver(measure);
     resize?.observe(node);
+    if (node.nextElementSibling) resize?.observe(node.nextElementSibling);
     if (node.parentElement) resize?.observe(node.parentElement);
     mutation?.observe(node, {
       subtree: true,

@@ -1545,3 +1545,58 @@ it("opens evidence beside focus and Escape closes evidence before leaving focus"
   expect(document.querySelector('[aria-label="Citation source"]')).toBeNull();
   expect(document.querySelector('[role="dialog"] a')).toBe(original);
 });
+
+it("routes tool results into focus and leaves the underlying panel open on Escape", async () => {
+  const { MemoryRouter } = await import("react-router");
+  const { ToolPanel } = await import("../components/tool-panel.tsx");
+  const { useToolPanelStore } = await import("../lib/tool-panel-store.ts");
+  const { TooltipProvider } = await import("../ui/tooltip.tsx");
+  function Source() {
+    const frame = useDataTableFrame()!;
+    return <button onClick={() => frame.setFocused(true)}>Focus graph</button>;
+  }
+  useToolPanelStore
+    .getState()
+    .openPanel({ type: "text", title: "Graph", content: "Underlying graph" });
+  container = document.createElement("div");
+  document.body.append(container);
+  root = createRoot(container);
+  act(() =>
+    root!.render(
+      <MemoryRouter>
+        <TooltipProvider>
+          <ToolPanel />
+          <DataTableFrame>
+            <Source />
+          </DataTableFrame>
+        </TooltipProvider>
+      </MemoryRouter>,
+    ),
+  );
+  act(() =>
+    [...container!.querySelectorAll("button")]
+      .find((button) => button.textContent === "Focus graph")!
+      .click(),
+  );
+  act(() =>
+    useToolPanelStore
+      .getState()
+      .openPanel({ type: "text", title: "Tool result", content: "Focused tool output" }),
+  );
+  expect(document.querySelector('[aria-label="Citation source"]')?.textContent).toContain(
+    "Focused tool output",
+  );
+  const escape = () =>
+    act(() =>
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      ),
+    );
+  escape();
+  expect(document.querySelector('[aria-label="Citation source"]')).toBeNull();
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  escape();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(useToolPanelStore.getState().isOpen).toBe(true);
+  act(() => useToolPanelStore.getState().closePanel());
+});

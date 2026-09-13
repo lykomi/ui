@@ -142,7 +142,12 @@ export function ToolPanel({ contained = false }: { contained?: boolean }) {
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (
+        e.key === "Escape" &&
+        isOpen &&
+        !e.defaultPrevented &&
+        !(e.target instanceof Element && e.target.closest('[role="dialog"]'))
+      ) {
         closePanel();
       }
     };
