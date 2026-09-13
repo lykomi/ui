@@ -13,7 +13,6 @@ import {
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   deepEqual,
-  safeStringify,
   primaryLabel,
   type GraphEdge,
   type GraphNode,
@@ -331,11 +330,10 @@ export function GraphView({
         target: endpointId(selection.edge.target) ?? "",
       }
     : null;
-  const edgeSignature = safeStringify(edgeValue);
-  const notifiedEdge = useRef(edgeSignature);
+  const notifiedEdge = useRef(edgeValue);
   useEffect(() => {
-    if (notifiedEdge.current === edgeSignature) return;
-    notifiedEdge.current = edgeSignature;
+    if (deepEqual(notifiedEdge.current, edgeValue)) return;
+    notifiedEdge.current = edgeValue;
     onEdgeSelectionChange?.(edgeValue);
   });
   const notifiedSelection = useRef(selectionValue);

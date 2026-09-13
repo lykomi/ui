@@ -6,7 +6,9 @@ export function FocusPaneResize({
   side,
   width,
   onResize,
+  breakpoint = "md",
 }: {
+  breakpoint?: "md" | "xl";
   label: string;
   side: "left" | "right";
   width?: number;
@@ -54,7 +56,7 @@ export function FocusPaneResize({
       aria-valuenow={width}
       aria-valuetext={width ? `${width} pixels` : "Automatic width"}
       title="Drag to resize. Double-click to reset."
-      className={`absolute inset-y-0 z-30 hidden w-2 cursor-col-resize touch-none hover:bg-border/60 focus-visible:bg-border focus-visible:outline-none md:block ${side === "right" ? "right-0" : "left-0"}`}
+      className={`absolute inset-y-0 z-30 hidden w-2 cursor-col-resize touch-none hover:bg-border/60 focus-visible:bg-border focus-visible:outline-none ${breakpoint === "xl" ? "xl:block" : "md:block"} ${side === "right" ? "right-0" : "left-0"}`}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
         event.preventDefault();

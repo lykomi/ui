@@ -1,6 +1,6 @@
 import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
 
@@ -186,4 +186,29 @@ describe("GraphViewHandle", () => {
     expect(handle.current!.select("n2")).toBe(false);
     expect(handle.current!.select("n1")).toBe(true);
   });
+});
+
+it("publishes selected edge property changes without bigint/string collisions", () => {
+  const changed = vi.fn();
+  const render = (value: bigint | string) =>
+    act(() =>
+      root.render(
+        <GraphView
+          data={{ ...payload, edges: [{ ...payload.edges[0]!, properties: { value } }] }}
+          onEdgeSelectionChange={changed}
+          handleRef={handle}
+        />,
+      ),
+    );
+  render(10n);
+  const edge = [...container.querySelectorAll("button")].find(
+    (button) => button.textContent === "DIRECTED",
+  )!;
+  act(() => edge.click());
+  expect(changed).toHaveBeenLastCalledWith(expect.objectContaining({ properties: { value: 10n } }));
+  changed.mockClear();
+  render("10");
+  expect(changed).toHaveBeenLastCalledWith(
+    expect.objectContaining({ properties: { value: "10" } }),
+  );
 });
