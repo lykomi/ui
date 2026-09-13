@@ -16,6 +16,8 @@ export interface PdfHighlightRef {
 export interface ToolPanelContent {
   /** Stable result identity, preserved across updates and retained-window restoration. */
   sourceId?: string;
+  /** Explicit retention preference when a window host opens this source. */
+  keepOpen?: boolean;
   title: string;
   content: string;
   type: "markdown" | "text" | "page" | "pdf" | "graph";
