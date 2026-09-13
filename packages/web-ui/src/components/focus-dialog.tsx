@@ -42,7 +42,7 @@ export function FocusDialog({
     if (!focused) return;
     const openSource = (event: Event) => {
       const request = event as CustomEvent<ToolPanelContent>;
-      if (request.defaultPrevented || !request.detail?.content) return;
+      if (request.defaultPrevented || typeof request.detail?.content !== "string") return;
       const dialogs = Array.from(document.querySelectorAll('[role="dialog"]'));
       if (host?.closest('[role="dialog"]') !== dialogs[dialogs.length - 1]) return;
       request.preventDefault();

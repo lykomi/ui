@@ -2,7 +2,7 @@
   "name": "@iloveagents/foundry-web-ui",
   "version": "0.26.0",
   "license": "MIT",
-  "description": "React agent UI core for Foundry UI \u2014 chat, composer, AG-UI adapter for assistant-ui, tool cards, panels, sidebar, theme runtime, and UI stores.",
+  "description": "React agent UI core for Foundry UI — chat, composer, AG-UI adapter for assistant-ui, tool cards, panels, sidebar, theme runtime, and UI stores.",
   "keywords": [
     "react",
     "ag-ui",

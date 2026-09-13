@@ -1579,6 +1579,12 @@ it("routes tool results into focus and leaves the underlying panel open on Escap
       .click(),
   );
   act(() =>
+    useToolPanelStore.getState().openPanel({ type: "text", title: "Empty result", content: "" }),
+  );
+  expect(document.querySelector('[aria-label="Citation source"]')?.textContent).toContain(
+    "Empty result",
+  );
+  act(() =>
     useToolPanelStore
       .getState()
       .openPanel({ type: "text", title: "Tool result", content: "Focused tool output" }),
