@@ -75,7 +75,10 @@ it("refreshes the announced range when a sibling source mounts", async () => {
   const dialog = document.createElement("div");
   dialog.setAttribute("role", "dialog");
   const pane = document.createElement("aside");
-  dialog.append(pane);
+  const layout = document.createElement("div");
+  layout.style.display = "contents";
+  layout.append(pane);
+  dialog.append(layout);
   document.body.append(dialog);
   dialog.getBoundingClientRect = () => ({ width: 1280 }) as DOMRect;
   pane.getBoundingClientRect = () => ({ width: 384 }) as DOMRect;
@@ -88,7 +91,7 @@ it("refreshes the announced range when a sibling source mounts", async () => {
     expect(handle.getAttribute("aria-valuemax")).toBe("960");
     const source = document.createElement("aside");
     source.getBoundingClientRect = () => ({ width: 512 }) as DOMRect;
-    await act(async () => dialog.append(source));
+    await act(async () => layout.append(source));
     expect(handle.getAttribute("aria-valuemax")).toBe("448");
     await act(async () => source.remove());
     expect(handle.getAttribute("aria-valuemax")).toBe("960");

@@ -248,6 +248,8 @@ export function GraphCanvas({
   reducedMotion = false,
 }: GraphCanvasProps) {
   const engineRef = useRef<ForceGraphMethods<EngineNode, EngineLink> | undefined>(undefined);
+  const hiddenLabelsRef = useRef(state.hiddenLabels);
+  hiddenLabelsRef.current = state.hiddenLabels;
   const insetRightRef = useRef(insetRight);
   insetRightRef.current = insetRight;
 
@@ -264,7 +266,11 @@ export function GraphCanvas({
     const engine = engineRef.current;
     if (!engine) return;
     const inset = insetRightRef.current;
-    engine.zoomToFit(durationMs, FIT_PADDING + inset / 2);
+    engine.zoomToFit(
+      durationMs,
+      FIT_PADDING + inset / 2,
+      (node) => !hiddenLabelsRef.current.has(primaryLabel(node)),
+    );
     if (inset <= 0) return;
     const zoom = engine.zoom() || 1;
     const centre = engine.centerAt();

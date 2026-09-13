@@ -20,7 +20,7 @@ export function FocusPaneResize({
   const getMaximum = (element: HTMLElement) => {
     const pane = element.parentElement!;
     const dialog = pane.closest('[role="dialog"]');
-    const other = [...(dialog?.querySelectorAll(":scope > aside") ?? [])]
+    const other = [...(pane.parentElement?.querySelectorAll(":scope > aside") ?? [])]
       .filter((n) => n !== pane && !["absolute", "fixed"].includes(getComputedStyle(n).position))
       .reduce((sum, n) => sum + n.getBoundingClientRect().width, 0);
     return Math.max(240, (dialog?.getBoundingClientRect().width ?? 1200) - other - 320);
@@ -40,18 +40,19 @@ export function FocusPaneResize({
     };
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
     const dialog = element.closest('[role="dialog"]');
+    const layout = element.parentElement?.parentElement;
     const observePanes = () => {
       observer?.disconnect();
       if (dialog) {
         observer?.observe(dialog);
-        dialog.querySelectorAll(":scope > aside").forEach((pane) => observer?.observe(pane));
+        layout?.querySelectorAll(":scope > aside").forEach((pane) => observer?.observe(pane));
       }
       update();
     };
     observePanes();
     const mutations =
       typeof MutationObserver === "undefined" ? null : new MutationObserver(observePanes);
-    if (dialog) mutations?.observe(dialog, { childList: true });
+    if (layout) mutations?.observe(layout, { childList: true });
     return () => {
       observer?.disconnect();
       mutations?.disconnect();

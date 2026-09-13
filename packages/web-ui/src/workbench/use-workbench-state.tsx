@@ -134,6 +134,7 @@ export function useWorkbenchState(chatRoute: boolean) {
 
   useEffect(() => {
     if (requestedChat) {
+      setHistoryOpen(false);
       setCollapsed(false);
       setCompactPane("chat");
       useChatBubbleStore.getState().close();

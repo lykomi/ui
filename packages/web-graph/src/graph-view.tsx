@@ -262,6 +262,17 @@ export function GraphView({
   }, [model.nodes]);
 
   const { selection, selectNode } = state;
+  useEffect(() => {
+    if (!selection.node || variant !== "full") return;
+    const id = selection.node.id;
+    let cancelled = false;
+    afterDrawer(() => {
+      if (!cancelled) canvasRef.current?.reveal(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selection.node?.id, variant]);
 
   /**
    * The graph as DRAWN: the capped model, minus anything the legend hides.
