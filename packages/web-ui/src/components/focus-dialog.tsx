@@ -36,6 +36,8 @@ export function FocusDialog({
   const releaseSource = () => {
     if (
       previousPanel.current &&
+      useToolPanelStore.getState().isWindowHosted &&
+      useToolPanelStore.getState().isOpen &&
       useToolPanelStore.getState().content?.sourceId === ownedSource.current
     )
       useToolPanelStore.setState(previousPanel.current);

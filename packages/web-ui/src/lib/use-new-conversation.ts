@@ -47,7 +47,7 @@ export function useNewConversation(options?: {
     // doesn't re-hydrate the prior chat's messages — the exact bug this
     // wiring fixes for the popover (``navigateToChat: false``) path,
     // where there is no ``/`` navigation to clear sticky for us.
-    useChatLifecycleStore.getState().onNewConversation?.();
+    useChatLifecycleStore.getState().startNewConversation();
     resetThread();
     aui.threads().switchToNewThread();
     if (options?.navigateToChat ?? true) {
