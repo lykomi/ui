@@ -46,3 +46,16 @@ describe("setPanelWidth", () => {
     expect(useToolPanelStore.getState().panelWidth).toBe(1000);
   });
 });
+
+it("gives distinct results stable identities across updates and restoration", () => {
+  const store = useToolPanelStore.getState;
+  const result = { type: "text" as const, title: "Result", content: "First" };
+  store().openPanel(result);
+  const first = store().content!.sourceId;
+  store().setContent({ ...result, content: "Updated" });
+  expect(store().content!.sourceId).toBe(first);
+  store().openPanel(result);
+  expect(store().content!.sourceId).not.toBe(first);
+  store().openPanel({ ...result, sourceId: first });
+  expect(store().content!.sourceId).toBe(first);
+});

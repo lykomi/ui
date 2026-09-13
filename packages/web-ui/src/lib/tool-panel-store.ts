@@ -14,6 +14,8 @@ export interface PdfHighlightRef {
 }
 
 export interface ToolPanelContent {
+  /** Stable result identity, preserved across updates and retained-window restoration. */
+  sourceId?: string;
   title: string;
   content: string;
   type: "markdown" | "text" | "page" | "pdf" | "graph";
@@ -126,6 +128,7 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
   renderers: [],
 
   openPanel: (content) => {
+    content = { ...content, sourceId: content.sourceId ?? `tool:${crypto.randomUUID()}` };
     const request =
       typeof window === "undefined"
         ? null
@@ -146,6 +149,7 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
     }),
   closePanel: () => set({ isOpen: false, isFullscreen: false }),
   setContent: (content) => {
+    content = { ...content, sourceId: content.sourceId ?? get().content?.sourceId };
     set({ content });
     if (get().isWindowHosted && typeof window !== "undefined")
       window.dispatchEvent(new CustomEvent("preview:update-source", { detail: content }));
