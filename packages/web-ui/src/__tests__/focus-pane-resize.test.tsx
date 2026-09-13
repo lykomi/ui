@@ -35,3 +35,31 @@ it.each(["left", "right"] as const)(
     }
   },
 );
+
+it("excludes nested inspectors and bounds an automatic source width", async () => {
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  const chat = document.createElement("aside");
+  const main = document.createElement("main");
+  const inspector = document.createElement("aside");
+  main.append(inspector);
+  const source = document.createElement("aside");
+  dialog.append(chat, main, source);
+  document.body.append(dialog);
+  dialog.getBoundingClientRect = () => ({ width: 1280 }) as DOMRect;
+  chat.getBoundingClientRect = () => ({ width: 640 }) as DOMRect;
+  inspector.getBoundingClientRect = () => ({ width: 320 }) as DOMRect;
+  source.getBoundingClientRect = () => ({ width: 512 }) as DOMRect;
+  const resize = vi.fn();
+  const root = createRoot(source);
+  try {
+    await act(async () =>
+      root.render(<FocusPaneResize label="source" side="left" onResize={resize} />),
+    );
+    expect(source.querySelector('[role="separator"]')?.getAttribute("aria-valuemax")).toBe("320");
+    expect(resize).toHaveBeenLastCalledWith(320);
+  } finally {
+    await act(async () => root.unmount());
+    dialog.remove();
+  }
+});

@@ -1,3 +1,4 @@
+import { createUiId } from "./create-ui-id.ts";
 import { collectFocusContext } from "./focus-context.ts";
 /**
  * App Store — unified shared state for the AG-UI multi-page application.
@@ -374,7 +375,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       contextItems: [
         ...contextItems,
-        { ...item, label, id: crypto.randomUUID(), createdAt: Date.now() },
+        { ...item, label, id: createUiId(), createdAt: Date.now() },
       ],
     });
   },
@@ -400,7 +401,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = { ...item, key, label };
     if (current && sameContextValue(current, next)) return;
     set({
-      contextItems: [...withoutKey, { ...next, id: crypto.randomUUID(), createdAt: Date.now() }],
+      contextItems: [...withoutKey, { ...next, id: createUiId(), createdAt: Date.now() }],
     });
   },
 

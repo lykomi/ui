@@ -13,6 +13,9 @@ export function graphViewSummary(
     hiddenLabels: view.hiddenLabels,
     hiddenNodeCount: (payload?.nodes.length ?? view.nodes.length) - view.nodes.length,
     selectedNodeHidden: view.selection ? !view.selectionDrawn : false,
+    selectedEdgeHidden: view.selectedEdge
+      ? !view.edges.some((edge) => edge.id === view.selectedEdge?.id)
+      : false,
     search: view.query || null,
   };
 }

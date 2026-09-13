@@ -2,6 +2,7 @@ import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
+import { graphViewSummary } from "../graph-view-summary.ts";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
 
 /**
@@ -211,4 +212,15 @@ it("publishes selected edge property changes without bigint/string collisions", 
   expect(changed).toHaveBeenLastCalledWith(
     expect.objectContaining({ properties: { value: "10" } }),
   );
+});
+
+it("reports a selected relationship hidden by a label filter", () => {
+  const edge = [...container.querySelectorAll("button")].find(
+    (button) => button.textContent === "DIRECTED",
+  )!;
+  act(() => edge.click());
+  expect(graphViewSummary(handle.current!.getViewState(), payload).selectedEdgeHidden).toBe(false);
+  hideLabel("Movie");
+  expect(handle.current!.getViewState().selectedEdge?.id).toBe("e1");
+  expect(graphViewSummary(handle.current!.getViewState(), payload).selectedEdgeHidden).toBe(true);
 });

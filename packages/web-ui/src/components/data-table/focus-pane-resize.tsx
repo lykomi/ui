@@ -20,7 +20,7 @@ export function FocusPaneResize({
   const getMaximum = (element: HTMLElement) => {
     const pane = element.parentElement!;
     const dialog = pane.closest('[role="dialog"]');
-    const other = [...(dialog?.querySelectorAll("aside") ?? [])]
+    const other = [...(dialog?.querySelectorAll(":scope > aside") ?? [])]
       .filter((n) => n !== pane)
       .reduce((sum, n) => sum + n.getBoundingClientRect().width, 0);
     return Math.max(240, (dialog?.getBoundingClientRect().width ?? 1200) - other - 320);
@@ -28,17 +28,26 @@ export function FocusPaneResize({
   useEffect(() => {
     const element = elementRef.current;
     if (!element) return;
-    const update = () => setMaximum(getMaximum(element));
+    const update = () => {
+      const maximum = getMaximum(element);
+      setMaximum(maximum);
+      // Automatic percentage widths obey the same content reserve as a drag.
+      if (
+        getComputedStyle(element).display !== "none" &&
+        element.parentElement!.getBoundingClientRect().width > maximum
+      )
+        onResize(maximum);
+    };
     update();
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(update);
     const dialog = element.closest('[role="dialog"]');
     if (dialog) {
       observer.observe(dialog);
-      dialog.querySelectorAll("aside").forEach((pane) => observer.observe(pane));
+      dialog.querySelectorAll(":scope > aside").forEach((pane) => observer.observe(pane));
     }
     return () => observer.disconnect();
-  }, []);
+  }, [onResize]);
   const adjust = (element: HTMLElement, next: number) => {
     const maximum = getMaximum(element);
     setMaximum(maximum);
