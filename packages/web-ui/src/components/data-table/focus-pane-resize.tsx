@@ -29,7 +29,7 @@ export function FocusPaneResize({
       aria-label={`Resize ${label}`}
       tabIndex={0}
       aria-valuemin={240}
-      aria-valuenow={width ?? 384}
+      aria-valuenow={width}
       aria-valuetext={width ? `${width} pixels` : "Automatic width"}
       title="Drag to resize. Double-click to reset."
       className={`absolute inset-y-0 z-30 hidden w-2 cursor-col-resize touch-none hover:bg-border/60 focus-visible:bg-border focus-visible:outline-none md:block ${side === "right" ? "right-0" : "left-0"}`}

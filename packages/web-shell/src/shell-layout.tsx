@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, lazy, Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
 import {
   Sidebar,
@@ -23,7 +23,12 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 import { X } from "lucide-react";
 import type { ChatModule } from "./types.ts";
 import { usePagePanelWidth, MIN_PAGE_PANEL_WIDTH } from "./use-page-panel-width.ts";
-import { isWorkbenchPreviewEnabled, WorkbenchPreview } from "./workbench-preview.tsx";
+import { isWorkbenchPreviewEnabled } from "./runtime-config.ts";
+const WorkbenchPreview = import.meta.env.DEV
+  ? lazy(() =>
+      import("./preview/workbench.tsx").then((module) => ({ default: module.WorkbenchPreview })),
+    )
+  : null;
 
 interface ShellLayoutProps {
   modules: ChatModule[];
@@ -128,7 +133,11 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
         <ThemeDocumentMetadata />
         {layoutExtras}
         {preview ? (
-          <WorkbenchPreview page={isChatRoute ? null : page} chatOnly={isChatRoute} />
+          <Suspense fallback={null}>
+            {WorkbenchPreview && (
+              <WorkbenchPreview page={isChatRoute ? null : page} chatOnly={isChatRoute} />
+            )}
+          </Suspense>
         ) : (
           <div className="flex min-h-0 flex-1 overflow-hidden">
             <Sidebar newConversationLabel={preview ? "New chat" : undefined} />

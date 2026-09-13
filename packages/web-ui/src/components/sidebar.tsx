@@ -522,15 +522,15 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
         await dnd.onDrop(draggedData);
       }}
       className={cn(
-        "mx-2 rounded-md transition-all overflow-hidden",
+        "relative mx-2 rounded-md overflow-hidden",
         isDragOver
           ? cn(
-              "h-7 flex items-center justify-center gap-1",
+              "-mt-7 h-7 flex items-center justify-center gap-1",
               isFileDragOver
                 ? "bg-primary/10 border border-dashed border-primary"
                 : "bg-primary/10 border border-dashed border-primary/30",
             )
-          : "h-1",
+          : "-mt-1 h-1",
       )}
     >
       {isDragOver && (
@@ -736,6 +736,7 @@ function NavLeafItem({
         ref={activeRowRef}
         data-active-nav-row={isActive ? "true" : undefined}
         data-nav-depth={depth}
+        style={{ "--nav-depth": depth } as React.CSSProperties}
         {...(isDisabled ? {} : dropTargetProps)}
         {...(isDisabled ? {} : draggableProps)}
         className={cn(
@@ -819,6 +820,7 @@ function NavLeafItem({
       ref={activeButtonRef}
       data-active-nav-row={isActive ? "true" : undefined}
       data-nav-depth={depth}
+      style={{ "--nav-depth": depth } as React.CSSProperties}
       type="button"
       disabled={isDisabled}
       onClick={isDisabled ? undefined : onClick}
@@ -965,8 +967,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const isInsideSubtree = isInSubtree(currentPath, item);
   const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
-  const [manualOverride, setManualOverride] = useState<boolean | null>(null);
-  const isExpanded = manualOverride ?? isInsideSubtree;
+  const [isExpanded, setExpanded] = useTreeExpanded(item.to, isInsideSubtree);
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const bodyPl = getNavDepthOffsets(depth).body;
 
@@ -980,6 +981,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         ref={activeRowRef}
         data-active-nav-row={isActive ? "true" : undefined}
         data-nav-depth={depth}
+        style={{ "--nav-depth": depth } as React.CSSProperties}
         {...(isDisabled ? {} : draggableProps)}
         className={cn(
           "group relative flex items-center w-full",
@@ -1002,7 +1004,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         <NavTwisty
           hasChildren
           isExpanded={isExpanded}
-          onToggle={() => setManualOverride(!isExpanded)}
+          onToggle={() => setExpanded(!isExpanded)}
           label={item.label}
           isActive={(isActive || isAncestorActive) && !isDisabled}
           depth={depth}
@@ -1012,7 +1014,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           disabled={isDisabled}
           onClick={() => {
             if (isDisabled) return;
-            setManualOverride(true);
+            setExpanded(true);
             setNavContext({
               ...navContext,
               label: item.label,
@@ -1136,10 +1138,10 @@ function CollapsibleNavItem({
   const isInsideSubtree = isInSubtree(currentPath, item);
   const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
-  const [manualOverride, setManualOverride] = useState<boolean | null>(null);
+  const [treeExpanded, setExpanded] = useTreeExpanded(item.to, isInsideSubtree);
   // A heading is never collapsed and carries no chevron: its children ARE
   // the tree it stands for.
-  const isExpanded = heading ? true : (manualOverride ?? isInsideSubtree);
+  const isExpanded = heading ? true : treeExpanded;
   const hasChildren = Boolean(!item.childrenHidden && item.children && item.children.length > 0);
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
@@ -1183,7 +1185,7 @@ function CollapsibleNavItem({
           childrenUnloaded={item.childrenUnloaded}
           inTree={rowInTree}
           isExpanded={isExpanded}
-          onToggle={hasChildren && !heading ? () => setManualOverride(!isExpanded) : undefined}
+          onToggle={hasChildren && !heading ? () => setExpanded(!isExpanded) : undefined}
           label={item.label}
           isActive={(selected || ancestor) && !isDisabled}
           depth={0}
@@ -1202,7 +1204,7 @@ function CollapsibleNavItem({
                   .filter(Boolean)
                   .join("\n") || null,
             });
-            if (hasChildren) setManualOverride(true);
+            if (hasChildren) setExpanded(true);
             navigate(item.to);
           }}
           className={cn(
@@ -1548,6 +1550,18 @@ function useGroupCollapsed(label: string, defaultCollapsed: boolean | undefined)
   // ``__proto__``, ``constructor``) is not treated as a persisted
   // entry. ``map`` is parsed JSON so its prototype is ``Object``'s.
   return Object.prototype.hasOwnProperty.call(map, label) ? map[label] : Boolean(defaultCollapsed);
+}
+
+/** Keep opened branches stable while routes and asynchronously loaded children change. */
+function useTreeExpanded(to: string, inside: boolean): [boolean, (expanded: boolean) => void] {
+  const key = `tree:${to}`;
+  const collapsed = useGroupCollapsed(key, !inside);
+  useEffect(() => {
+    if (inside && !Object.prototype.hasOwnProperty.call(readCollapseMap(), key)) {
+      writeCollapseMap({ ...readCollapseMap(), [key]: false });
+    }
+  }, [inside, key]);
+  return [!collapsed, (expanded) => writeCollapseMap({ ...readCollapseMap(), [key]: !expanded })];
 }
 
 function toggleGroupCollapsed(label: string, current: boolean): void {
@@ -1958,7 +1972,10 @@ function SidebarContent({
               giving the rail a stray divider above the very first icon. */}
           {collapsedGroupsOnly
             ? navConfig
-                .filter((group) => !group.meta?.hideInCollapsedRail)
+                .filter(
+                  (group) =>
+                    !group.meta?.hideInCollapsedRail && (group.to || group.items.length > 0),
+                )
                 .map((group) => {
                   const Icon =
                     group.icon ??

@@ -650,6 +650,7 @@ export function GraphCanvas({
       // balls. Capping keeps a small graph looking like a small graph.
       maxZoom={MAX_ZOOM}
       nodeRelSize={4}
+      nodeVal={(node) => (styleMap.styleForNode(node as EngineNode).radius / 4) ** 2}
       nodeVisibility={(node) => !isHidden(node)}
       // Hiding a label has to hide its relationships too. `nodeVisibility`
       // alone leaves the links drawn, so filtering a type out of the legend
@@ -668,7 +669,7 @@ export function GraphCanvas({
       // as a line without competing with the nodes.
       linkColor={() => theme.mutedForeground}
       linkWidth={1.1}
-      linkDirectionalArrowLength={5}
+      linkDirectionalArrowLength={4}
       linkDirectionalArrowRelPos={1}
       linkDirectionalArrowColor={() => theme.mutedForeground}
       d3VelocityDecay={0.32}

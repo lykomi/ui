@@ -484,7 +484,7 @@ export function ChatContent({
       <DropZone centered={centerComposer}>
         <div
           className="relative flex-1 overflow-hidden"
-          style={centerComposer ? { display: "none" } : undefined}
+          style={centerComposer && !ThreadSurface ? { display: "none" } : undefined}
         >
           {/* A module can take the conversation's place — a live voice call
               replaces the transcript rather than scrolling it past. The
@@ -622,7 +622,7 @@ export function ChatContent({
                   <ComposerAddMenu showPin={showPinButton} />
                   {/* Renders only once something is pinned — the affordance
                       to pin now lives in the menu. */}
-                  <ContextPins />
+                  <ContextPins allowPageToggle={showPinButton} />
                 </div>
 
                 <ComposerInput

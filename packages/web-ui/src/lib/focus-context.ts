@@ -18,6 +18,8 @@ export function collectFocusContext() {
     if (value.length < raw.length) truncated = true;
     return value;
   };
+  if (table && table.querySelectorAll('thead th:not([aria-hidden="true"])').length > 12)
+    truncated = true;
   const headers = table
     ? Array.from(table.querySelectorAll('thead th:not([aria-hidden="true"])'))
         .slice(0, 12)
@@ -30,6 +32,7 @@ export function collectFocusContext() {
       truncated = true;
       break;
     }
+    if (row.querySelectorAll('td:not([aria-hidden="true"])').length > 12) truncated = true;
     rows.push(
       Array.from(row.querySelectorAll('td:not([aria-hidden="true"])')).slice(0, 12).map(text),
     );
@@ -38,6 +41,11 @@ export function collectFocusContext() {
   const source = frame
     .closest('[role="dialog"]')
     ?.querySelector<HTMLElement>("[data-focus-source-title]");
+  const documentText = (
+    frame.querySelector("[data-document-prose]")?.textContent ||
+    frame.textContent ||
+    ""
+  ).trim();
   return {
     title: frame.dataset.focusTitle || frame.getAttribute("aria-label") || "Focused content",
     kind: table ? "table" : "document",
@@ -45,13 +53,8 @@ export function collectFocusContext() {
     blockId: block?.dataset.blockId || null,
     ...(isDocument
       ? {
-          content: (
-            frame.querySelector("[data-document-prose]")?.textContent ||
-            frame.textContent ||
-            ""
-          )
-            .trim()
-            .slice(0, 8000),
+          content: documentText.slice(0, 8000),
+          truncated: documentText.length > 8000,
         }
       : {}),
     ...(table ? { table: { headers, rows, renderedRowCount: allRows.length, truncated } } : {}),

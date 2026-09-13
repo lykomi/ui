@@ -27,3 +27,17 @@ export function runtimeConfig(key: string): string {
   const fromEnv = (import.meta.env as Record<string, string | undefined>)[key];
   return fromWindow ?? fromEnv ?? "";
 }
+
+const WORKBENCH_STORAGE_KEY = "foundry.workbench-preview";
+/** Tab-local and development-only. Production always uses the standard shell. */
+export function isWorkbenchPreviewEnabled() {
+  if (!import.meta.env.DEV) return false;
+  try {
+    const choice = new URLSearchParams(window.location.search).get("ux");
+    if (choice === "workbench") sessionStorage.setItem(WORKBENCH_STORAGE_KEY, "on");
+    if (choice === "classic") sessionStorage.removeItem(WORKBENCH_STORAGE_KEY);
+    return sessionStorage.getItem(WORKBENCH_STORAGE_KEY) === "on";
+  } catch {
+    return false;
+  }
+}

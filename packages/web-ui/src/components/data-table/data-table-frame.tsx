@@ -53,6 +53,7 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
       typeof document === "undefined" ? null : document.createElement("div"),
     );
     const returnFocus = useRef<HTMLElement | null>(null);
+    const dialogRef = useRef<HTMLDivElement | null>(null);
     const sourceTrigger = useRef<HTMLElement | null>(null);
     const closeSource = () => {
       setSource(null);
@@ -119,6 +120,12 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
           <div ref={focused ? undefined : attach} className="contents" />
           <Dialog open={focused} onOpenChange={value.setFocused}>
             <DialogContent
+              ref={dialogRef}
+              tabIndex={-1}
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                dialogRef.current?.focus();
+              }}
               showCloseButton={false}
               aria-describedby={undefined}
               onEscapeKeyDown={(event) => {

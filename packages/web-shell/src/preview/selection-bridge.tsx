@@ -45,11 +45,11 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
         );
       });
     };
-    const resize = new ResizeObserver(measure);
-    const mutation = new MutationObserver(measure);
-    resize.observe(node);
-    if (node.parentElement) resize.observe(node.parentElement);
-    mutation.observe(node, {
+    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    const mutation = typeof MutationObserver === "undefined" ? null : new MutationObserver(measure);
+    resize?.observe(node);
+    if (node.parentElement) resize?.observe(node.parentElement);
+    mutation?.observe(node, {
       subtree: true,
       childList: true,
       attributes: true,
@@ -59,8 +59,8 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
     measure();
     return () => {
       cancelAnimationFrame(frame);
-      resize.disconnect();
-      mutation.disconnect();
+      resize?.disconnect();
+      mutation?.disconnect();
       node.removeEventListener("scroll", measure, true);
     };
   }, []);

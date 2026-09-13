@@ -21,6 +21,7 @@ const CONTEXT_ICONS: Record<ContextItemType, LucideIcon> = {
 };
 
 interface ContextPinsProps {
+  allowPageToggle?: boolean;
   /** Show the pin button to add current page */
   showPinButton?: boolean;
   /** Compact mode for small containers (mini chat bubble header) */
@@ -111,6 +112,7 @@ export function usePagePin() {
 }
 
 export const ContextPins: FC<ContextPinsProps> = ({
+  allowPageToggle = true,
   showPinButton = false,
   compact = false,
   flyoutDirection = "up",
@@ -157,15 +159,21 @@ export const ContextPins: FC<ContextPinsProps> = ({
       onMouseLeave={handleMouseLeave}
     >
       <TooltipIconButton
-        tooltip={isCurrentPagePinned ? "Unpin this page" : "Pin this page"}
+        tooltip={
+          allowPageToggle
+            ? isCurrentPagePinned
+              ? "Unpin this page"
+              : "Pin this page"
+            : "Manage pinned context"
+        }
         size="icon"
         className={cn(
           "shrink-0 relative",
           compact ? "size-7" : "size-8",
           isCurrentPagePinned ? "text-foreground" : "text-muted-foreground",
         )}
-        aria-pressed={isCurrentPagePinned}
-        onClick={handleTogglePin}
+        aria-pressed={allowPageToggle ? isCurrentPagePinned : undefined}
+        onClick={allowPageToggle ? handleTogglePin : () => setFlyoutOpen((open) => !open)}
       >
         <PinStateIcon pinned={isCurrentPagePinned} className={compact ? "size-3.5" : "size-4"} />
         {pinned.length > 0 && (

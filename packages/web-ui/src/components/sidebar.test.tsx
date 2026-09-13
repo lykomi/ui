@@ -136,6 +136,25 @@ describe("Sidebar active state", () => {
     }
   });
 
+  it("retains expanded folders when refreshed navigation remounts a renamed row", async () => {
+    const child = { to: "/folder-child", label: "Child", icon: FolderOpen };
+    await renderWithItems([
+      { to: "/folder-parent", label: "Parent", icon: FolderOpen, children: [child] },
+    ]);
+    await act(async () => twisty(container, "Parent")!.click());
+    expect(navRow(container, "Child")).toBeTruthy();
+    await renderWithItems([
+      {
+        to: "/folder-parent",
+        label: "Renamed parent",
+        icon: FolderOpen,
+        children: [child, { to: "/new-folder", label: "New folder", icon: FolderOpen }],
+      },
+    ]);
+    expect(navRow(container, "New folder")).toBeTruthy();
+    expect(twisty(container, "Renamed parent")?.getAttribute("aria-expanded")).toBe("true");
+  });
+
   /**
    * A tree row shows a chevron when it branches and a dot when it is a leaf.
    * That is two markers for a question with THREE answers, the third being

@@ -29,6 +29,7 @@ export function useChatWidth() {
       if (node.clientWidth > 0) setAvailable(node.clientWidth);
     };
     measure();
+    if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();

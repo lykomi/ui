@@ -14,7 +14,7 @@ interface ToolPanelLayoutProps {
 }
 
 export function ToolPanelLayout({ children, contained = false }: ToolPanelLayoutProps) {
-  const isOpen = useToolPanelStore((state) => state.isOpen);
+  const isOpen = useToolPanelStore((state) => state.isOpen && !state.isWindowHosted);
   const panelWidth = useToolPanelStore((state) => state.panelWidth);
   const useOverlay = useToolPanelStore((state) => state.useOverlay);
 

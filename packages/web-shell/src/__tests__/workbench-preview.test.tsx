@@ -63,7 +63,7 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
     { getState: () => ({ close: vi.fn() }) },
   ),
 }));
-import { isWorkbenchPreviewEnabled, WorkbenchPreview } from "../workbench-preview.tsx";
+import { isWorkbenchPreviewEnabled, WorkbenchPreview } from "../preview/workbench.tsx";
 
 function Editor() {
   useEffect(() => () => state.unmount(), []);

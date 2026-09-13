@@ -93,6 +93,7 @@ const shouldUseOverlay = (): boolean => {
 
 interface ToolPanelState {
   isOpen: boolean;
+  isWindowHosted: boolean;
   content: ToolPanelContent | null;
 
   // Layout state
@@ -117,13 +118,21 @@ interface ToolPanelState {
 
 export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
   isOpen: false,
+  isWindowHosted: false,
   content: null,
   panelWidth: getPanelWidth(),
   useOverlay: shouldUseOverlay(),
   isFullscreen: false,
   renderers: [],
 
-  openPanel: (content) => set({ isOpen: true, content }),
+  openPanel: (content) => {
+    const request =
+      typeof window === "undefined"
+        ? null
+        : new CustomEvent("preview:open-source", { detail: content, cancelable: true });
+    if (request) window.dispatchEvent(request);
+    set({ isOpen: true, content, isWindowHosted: request?.defaultPrevented ?? false });
+  },
   registerRenderer: (entry) =>
     set((state) => {
       if (entry.id === undefined) return { renderers: [...state.renderers, entry] };
@@ -136,7 +145,11 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
       return { renderers };
     }),
   closePanel: () => set({ isOpen: false, isFullscreen: false }),
-  setContent: (content) => set({ content }),
+  setContent: (content) => {
+    set({ content });
+    if (get().isWindowHosted && typeof window !== "undefined")
+      window.dispatchEvent(new CustomEvent("preview:update-source", { detail: content }));
+  },
   setPanelWidth: (width) => {
     if (typeof window === "undefined") return;
     if (get().isFullscreen) return;

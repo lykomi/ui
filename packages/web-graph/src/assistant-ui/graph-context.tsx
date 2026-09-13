@@ -2,7 +2,13 @@ import { useCallback } from "react";
 import { Pin, PinOff } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useAppStore } from "@iloveagents/foundry-web-ui";
-import { jsonSafe, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
+import {
+  jsonSafe,
+  primaryLabel,
+  resolveCaption,
+  type GraphNode,
+  type GraphEdge,
+} from "../model.ts";
 
 /**
  * The context key the graph's selection occupies.
@@ -147,5 +153,33 @@ export function GraphContextPinButton({
       {pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
       {pinned ? "Pinned" : "Pin"}
     </button>
+  );
+}
+
+/** Include a selected relationship's direction, endpoints and properties in chat. */
+export function syncGraphEdgeContext(edge: GraphEdge | null, sourcePage: string): void {
+  useAppStore.getState().setContextItem(
+    "graph.edge-selection",
+    edge
+      ? {
+          key: "graph.edge-selection",
+          type: "ref",
+          label: edge.type ?? "Relationship",
+          payload: {
+            kind: "ref",
+            refType: "graph-relationship",
+            refId: edge.id,
+            preview: `${edge.source} → ${edge.type ?? "Relationship"} → ${edge.target}`,
+            meta: jsonSafe({
+              source: edge.source,
+              target: edge.target,
+              type: edge.type,
+              properties: edge.properties ?? {},
+            }),
+          },
+          sourcePage,
+          persistence: "ephemeral",
+        }
+      : null,
   );
 }

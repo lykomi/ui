@@ -35,10 +35,11 @@ it("starts in the current workspace with entity sublines and allows all conversa
       />
     </MemoryRouter>,
   );
-  expect((screen.getByLabelText("History filter") as HTMLSelectElement).value).toBe("workspace");
+  expect(screen.getByLabelText("History filter").textContent).toBe("Last used in this workspace");
   expect(screen.getByText("Last at First task")).toBeTruthy();
   expect(screen.queryByText(other.label)).toBeNull();
-  fireEvent.change(screen.getByLabelText("History filter"), { target: { value: "all" } });
+  fireEvent.keyDown(screen.getByLabelText("History filter"), { key: "ArrowDown" });
+  fireEvent.click(screen.getByRole("menuitemradio", { name: "All conversations" }));
   expect(screen.getByText("Last in Project")).toBeTruthy();
   expect(
     screen
@@ -70,15 +71,16 @@ it("resets the filter on workspace changes and does not invent an entity label",
       <ConversationHistory workspaceId="w1" groups={groups} onClose={() => {}} />
     </MemoryRouter>,
   );
-  expect((screen.getByLabelText("History filter") as HTMLSelectElement).value).toBe("workspace");
+  expect(screen.getByLabelText("History filter").textContent).toBe("Last used in this workspace");
   expect(screen.getByText("Last in this workspace")).toBeTruthy();
-  fireEvent.change(screen.getByLabelText("History filter"), { target: { value: "all" } });
+  fireEvent.keyDown(screen.getByLabelText("History filter"), { key: "ArrowDown" });
+  fireEvent.click(screen.getByRole("menuitemradio", { name: "All conversations" }));
   view.rerender(
     <MemoryRouter>
       <ConversationHistory workspaceId="w2" groups={[]} onClose={() => {}} />
     </MemoryRouter>,
   );
-  expect((screen.getByLabelText("History filter") as HTMLSelectElement).value).toBe("workspace");
+  expect(screen.getByLabelText("History filter").textContent).toBe("Last used in this workspace");
 });
 
 it("separates pinned chats from recents without duplicating entries", () => {

@@ -30,21 +30,25 @@ export function ChatContext() {
     const events = ["focusin", "pointerup", "input", "selectionchange"];
     for (const event of events) document.addEventListener(event, refresh);
     const handles = "[data-focused], [data-context-ref-type='entity-field']";
-    const observer = new MutationObserver((records) => {
-      if (
-        records.some(
-          (record) =>
-            record.type === "attributes" ||
-            (record.target instanceof Element && record.target.closest(handles)) ||
-            [...record.addedNodes, ...record.removedNodes].some(
-              (node) =>
-                node instanceof Element && (node.matches(handles) || node.querySelector(handles)),
-            ),
-        )
-      )
-        refresh();
-    });
-    observer.observe(document.body, {
+    const observer =
+      typeof MutationObserver === "undefined"
+        ? null
+        : new MutationObserver((records) => {
+            if (
+              records.some(
+                (record) =>
+                  record.type === "attributes" ||
+                  (record.target instanceof Element && record.target.closest(handles)) ||
+                  [...record.addedNodes, ...record.removedNodes].some(
+                    (node) =>
+                      node instanceof Element &&
+                      (node.matches(handles) || node.querySelector(handles)),
+                  ),
+              )
+            )
+              refresh();
+          });
+    observer?.observe(document.body, {
       subtree: true,
       childList: true,
       attributes: true,
@@ -61,7 +65,7 @@ export function ChatContext() {
     return () => {
       cancelAnimationFrame(frame);
       unsubscribe();
-      observer.disconnect();
+      observer?.disconnect();
       for (const event of events) document.removeEventListener(event, refresh);
     };
   }, []);

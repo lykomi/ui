@@ -5,9 +5,18 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@iloveagents/foundry-web-ui";
+import { Button, Input } from "@iloveagents/foundry-web-primitives";
 import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, MessageSquare, MoreHorizontal, Pin, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  MessageSquare,
+  MoreHorizontal,
+  Pin,
+  Loader2,
+  ChevronDown,
+  Check,
+} from "lucide-react";
 import type { NavGroup, NavItem } from "@iloveagents/foundry-web-ui";
 
 /** History is a view of existing navigation targets, never a second chat runtime. */
@@ -97,23 +106,49 @@ export function ConversationHistory({
         )}
       </div>
       {Boolean(workspaceId) && (
-        <select
-          aria-label="History filter"
-          value={all ? "all" : "workspace"}
-          onChange={(event) => setAll(event.target.value === "all")}
-          className="mb-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
-        >
-          <option value="all">All conversations</option>
-          <option value="workspace">Last used in this workspace</option>
-        </select>
+        <div className="mb-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                aria-label="History filter"
+                className="w-full justify-between font-normal shadow-none"
+              >
+                <span className="truncate">
+                  {all ? "All conversations" : "Last used in this workspace"}
+                </span>
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="w-[var(--radix-dropdown-menu-trigger-width)]"
+            >
+              {[
+                { value: false, label: "Last used in this workspace" },
+                { value: true, label: "All conversations" },
+              ].map((option) => (
+                <DropdownMenuItem
+                  key={option.label}
+                  role="menuitemradio"
+                  aria-checked={all === option.value}
+                  onSelect={() => setAll(option.value)}
+                >
+                  <span className="flex-1">{option.label}</span>
+                  {all === option.value && <Check className="size-4" aria-hidden="true" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       )}
       {!compact && (
-        <input
+        <Input
           aria-label="Search chats"
           placeholder="Search chats"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="mb-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="mb-3"
         />
       )}
       {loadError && (
@@ -152,7 +187,9 @@ export function ConversationHistory({
                           event.preventDefault();
                           return;
                         }
-                        if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+                        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+                          return;
+                        {
                           const resume = new CustomEvent("preview:resume-chat", {
                             cancelable: true,
                             detail: {
