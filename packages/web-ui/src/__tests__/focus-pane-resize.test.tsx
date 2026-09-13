@@ -58,6 +58,13 @@ it("excludes nested inspectors and bounds an automatic source width", async () =
     );
     expect(source.querySelector('[role="separator"]')?.getAttribute("aria-valuemax")).toBe("320");
     expect(resize).toHaveBeenLastCalledWith(320);
+    // A responsive overlay does not consume horizontal layout space.
+    chat.style.position = "absolute";
+    const handle = source.querySelector('[role="separator"]')!;
+    await act(async () =>
+      handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })),
+    );
+    expect(resize).toHaveBeenLastCalledWith(544);
   } finally {
     await act(async () => root.unmount());
     dialog.remove();

@@ -21,7 +21,7 @@ export function FocusPaneResize({
     const pane = element.parentElement!;
     const dialog = pane.closest('[role="dialog"]');
     const other = [...(dialog?.querySelectorAll(":scope > aside") ?? [])]
-      .filter((n) => n !== pane)
+      .filter((n) => n !== pane && !["absolute", "fixed"].includes(getComputedStyle(n).position))
       .reduce((sum, n) => sum + n.getBoundingClientRect().width, 0);
     return Math.max(240, (dialog?.getBoundingClientRect().width ?? 1200) - other - 320);
   };
