@@ -162,7 +162,8 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
       renderers[index] = entry;
       return { renderers };
     }),
-  closePanel: () => set({ isOpen: false, isFullscreen: false }),
+  closePanel: () =>
+    set({ isOpen: false, isFullscreen: false, isWindowHosted: false, hostedOwnerContent: null }),
   setContent: (content) => {
     content = { ...content, sourceId: content.sourceId ?? get().content?.sourceId };
     set({ content });

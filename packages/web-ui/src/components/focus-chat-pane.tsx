@@ -21,7 +21,7 @@ export function FocusChatPane({
 }) {
   return (
     <aside
-      aria-label="Table chat"
+      aria-label="Focused content chat"
       style={{ "--focus-chat-width": `${chatWidth ?? 384}px` } as CSSProperties}
       className={cn(
         "relative flex min-h-0 shrink-0 flex-col border-r border-border bg-background",

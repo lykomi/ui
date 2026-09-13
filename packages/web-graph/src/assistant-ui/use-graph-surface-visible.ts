@@ -9,6 +9,7 @@ export function useGraphSurfaceVisible(focused?: boolean) {
     if (!element) return;
     const update = () => setVisible(!element.closest('[inert], [hidden], [aria-hidden="true"]'));
     update();
+    if (typeof MutationObserver === "undefined") return;
     const observer = new MutationObserver(update);
     for (let ancestor: HTMLElement | null = element; ancestor; ancestor = ancestor.parentElement)
       observer.observe(ancestor, {
