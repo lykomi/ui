@@ -17,6 +17,7 @@ export function FocusPaneResize({
   const start = useRef<{ x: number; width: number; original?: number } | null>(null);
   const elementRef = useRef<HTMLDivElement>(null);
   const [maximum, setMaximum] = useState(880);
+  const [renderedWidth, setRenderedWidth] = useState(240);
   const getMaximum = (element: HTMLElement) => {
     const pane = element.parentElement!;
     const dialog = pane.closest('[role="dialog"]');
@@ -31,6 +32,7 @@ export function FocusPaneResize({
     const update = () => {
       const maximum = getMaximum(element);
       setMaximum(maximum);
+      setRenderedWidth(Math.round(element.parentElement!.getBoundingClientRect().width));
       // Automatic percentage widths obey the same content reserve as a drag.
       if (
         getComputedStyle(element).display !== "none" &&
@@ -72,8 +74,8 @@ export function FocusPaneResize({
       tabIndex={0}
       aria-valuemin={240}
       aria-valuemax={maximum}
-      aria-valuenow={width}
-      aria-valuetext={width ? `${width} pixels` : "Automatic width"}
+      aria-valuenow={width ?? renderedWidth}
+      aria-valuetext={width ? `${width} pixels` : `${renderedWidth} pixels (automatic)`}
       title="Drag to resize. Double-click to reset."
       className={`absolute inset-y-0 z-30 hidden w-2 cursor-col-resize touch-none hover:bg-border/60 focus-visible:bg-border focus-visible:outline-none ${breakpoint === "xl" ? "xl:block" : "md:block"} ${side === "right" ? "right-0" : "left-0"}`}
       onPointerDown={(event) => {

@@ -1,4 +1,4 @@
-import { type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import { Button } from "@iloveagents/foundry-web-primitives";
 import { X } from "lucide-react";
 import { FocusPaneResize } from "./data-table/focus-pane-resize.tsx";
@@ -15,6 +15,10 @@ export function FocusSourcePane({
   setSourceWidth: (v?: number) => void;
   closeSource: () => void;
 }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
   return (
     <aside
       aria-label="Citation source"
@@ -39,6 +43,7 @@ export function FocusSourcePane({
           {source.title}
         </span>
         <Button
+          ref={closeRef}
           variant="ghost"
           size="icon"
           aria-label="Close citation"

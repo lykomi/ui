@@ -123,7 +123,7 @@ export function FocusDialog({
       <div
         className={cn(
           "min-h-0 min-w-0 flex-1 flex-col",
-          chatOpen || source ? "hidden md:flex" : "flex",
+          source ? "hidden xl:flex" : chatOpen ? "hidden md:flex" : "flex",
         )}
       >
         <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">

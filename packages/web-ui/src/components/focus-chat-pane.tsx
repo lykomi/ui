@@ -26,7 +26,7 @@ export function FocusChatPane({
       className={cn(
         "relative flex min-h-0 shrink-0 flex-col border-r border-border bg-background",
         chatOpen ? "w-full md:w-[var(--focus-chat-width)]" : "w-11",
-        source && "hidden md:flex",
+        source && "hidden xl:flex",
       )}
     >
       <div

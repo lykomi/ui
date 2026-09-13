@@ -1,3 +1,4 @@
+import { ChatContext } from "./chat-context.tsx";
 import { ComposerInput } from "./composer-input.tsx";
 import { useRef, useState } from "react";
 import {
@@ -360,6 +361,7 @@ export function ChatBubble() {
               <div className="shrink-0 border-t border-border">
                 <ChatComposerBannerSlot />
                 <div className="px-3 py-3">
+                  <ChatContext />
                   <ComposerPrimitive.Root
                     className={cn(
                       // Query container for the controls inside: the bubble is

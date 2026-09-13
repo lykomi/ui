@@ -85,10 +85,12 @@ it("refreshes the announced range when a sibling source mounts", async () => {
   const root = createRoot(pane);
   try {
     await act(async () =>
-      root.render(<FocusPaneResize label="chat" side="right" width={384} onResize={() => {}} />),
+      root.render(<FocusPaneResize label="chat" side="right" onResize={() => {}} />),
     );
     const handle = pane.querySelector('[role="separator"]')!;
     expect(handle.getAttribute("aria-valuemax")).toBe("960");
+    expect(handle.getAttribute("aria-valuenow")).toBe("384");
+    expect(handle.getAttribute("aria-valuetext")).toBe("384 pixels (automatic)");
     const source = document.createElement("aside");
     source.getBoundingClientRect = () => ({ width: 512 }) as DOMRect;
     await act(async () => layout.append(source));
