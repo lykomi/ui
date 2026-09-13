@@ -1,3 +1,4 @@
+import { PinStateIcon } from "./pin-state-icon.tsx";
 /**
  * The composer's leading "+" — one affordance for everything you can add to
  * a turn.
@@ -15,7 +16,7 @@
 
 import type { FC } from "react";
 import { ComposerPrimitive } from "@assistant-ui/react";
-import { Paperclip, Pin, PinOff, Plus } from "lucide-react";
+import { Paperclip, Plus } from "lucide-react";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 import {
   DropdownMenu,
@@ -74,7 +75,7 @@ export const ComposerAddMenu: FC<ComposerAddMenuProps> = ({ compact = false, sho
               toggle();
             }}
           >
-            {isPinned ? <PinOff className={icon} /> : <Pin className={icon} />}
+            <PinStateIcon pinned={isPinned} className={icon} />
             {isPinned ? "Unpin this page" : "Pin this page"}
           </DropdownMenuItem>
         )}

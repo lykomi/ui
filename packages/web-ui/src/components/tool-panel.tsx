@@ -1,5 +1,6 @@
+import { PinStateIcon } from "./pin-state-icon.tsx";
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
-import { X, Maximize2, Minimize2, Copy, Check, Pin, PinOff, FolderOpen } from "lucide-react";
+import { X, Maximize2, Minimize2, Copy, Check, FolderOpen } from "lucide-react";
 import { useNavigate } from "react-router";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -220,16 +221,13 @@ export function ToolPanel({ contained = false }: { contained?: boolean }) {
                     "size-8 rounded-md shrink-0",
                     "hover:bg-muted transition-colors",
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                    isEntityPinned && "text-primary",
+                    isEntityPinned ? "text-foreground" : "text-muted-foreground",
                   )}
+                  aria-pressed={isEntityPinned}
                   aria-label={isEntityPinned ? "Unpin document" : "Pin document"}
                   title={isEntityPinned ? "Unpin document" : "Pin document"}
                 >
-                  {isEntityPinned ? (
-                    <PinOff className="size-4" />
-                  ) : (
-                    <Pin className="size-4 text-muted-foreground" />
-                  )}
+                  <PinStateIcon pinned={isEntityPinned} />
                 </button>
                 <button
                   type="button"

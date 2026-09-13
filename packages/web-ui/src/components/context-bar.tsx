@@ -1,3 +1,4 @@
+import { PinStateIcon } from "./pin-state-icon.tsx";
 /**
  * Context Pins — pin button with count badge and hover flyout.
  *
@@ -7,16 +8,7 @@
 
 import { type FC, useState, useRef, useEffect, createElement } from "react";
 import { useNavigate } from "react-router";
-import {
-  X,
-  Pin,
-  PinOff,
-  TextSelect,
-  FileText,
-  Link2,
-  StickyNote,
-  type LucideIcon,
-} from "lucide-react";
+import { X, TextSelect, FileText, Link2, StickyNote, type LucideIcon } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { useAppStore, type ContextItem, type ContextItemType } from "../lib/app-store.ts";
@@ -170,15 +162,12 @@ export const ContextPins: FC<ContextPinsProps> = ({
         className={cn(
           "shrink-0 relative",
           compact ? "size-7" : "size-8",
-          isCurrentPagePinned && "text-primary",
+          isCurrentPagePinned ? "text-foreground" : "text-muted-foreground",
         )}
+        aria-pressed={isCurrentPagePinned}
         onClick={handleTogglePin}
       >
-        {isCurrentPagePinned ? (
-          <PinOff className={compact ? "size-3.5" : "size-4"} />
-        ) : (
-          <Pin className={compact ? "size-3.5" : "size-4"} />
-        )}
+        <PinStateIcon pinned={isCurrentPagePinned} className={compact ? "size-3.5" : "size-4"} />
         {pinned.length > 0 && (
           <span
             className={cn(

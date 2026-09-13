@@ -1,3 +1,4 @@
+import { FocusPaneResize } from "./focus-pane-resize.tsx";
 import { PanelContentRenderer } from "../tool-panel.tsx";
 import type { ToolPanelContent } from "../../lib/tool-panel-store.ts";
 import { Button } from "@iloveagents/foundry-web-primitives";
@@ -16,6 +17,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type HTMLAttributes,
   type ReactNode,
 } from "react";
@@ -43,6 +45,8 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
   ) {
     const [focused, setFocused] = useState(defaultFocused);
     const [chatOpen, setChatOpen] = useState(false);
+    const [chatWidth, setChatWidth] = useState<number>();
+    const [sourceWidth, setSourceWidth] = useState<number>();
     const [source, setSource] = useState<ToolPanelContent | null>(null);
     const hasChat = useAuiState((state) => Boolean(state.optional.thread));
     const [host] = useState(() =>
@@ -132,9 +136,10 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
               {hasChat && (
                 <aside
                   aria-label="Table chat"
+                  style={{ "--focus-chat-width": `${chatWidth ?? 384}px` } as CSSProperties}
                   className={cn(
-                    "flex min-h-0 shrink-0 flex-col border-r border-border bg-background",
-                    chatOpen ? "w-full md:w-96" : "w-11",
+                    "relative flex min-h-0 shrink-0 flex-col border-r border-border bg-background",
+                    chatOpen ? "w-full md:w-[var(--focus-chat-width)]" : "w-11",
                     source && "hidden md:flex",
                   )}
                 >
@@ -179,6 +184,14 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
                     )}
                   </div>
                   {chatOpen && (
+                    <FocusPaneResize
+                      label="chat"
+                      side="right"
+                      width={chatWidth}
+                      onResize={setChatWidth}
+                    />
+                  )}
+                  {chatOpen && (
                     <ChatContent
                       compactComposer
                       showPinButton={false}
@@ -217,10 +230,21 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
               {source && (
                 <aside
                   aria-label="Citation source"
+                  style={
+                    {
+                      "--focus-source-width": sourceWidth ? `${sourceWidth}px` : "40%",
+                    } as CSSProperties
+                  }
                   data-focus-source-entity={source.entityId}
                   data-focus-source-title={source.title}
-                  className="absolute inset-0 z-20 flex min-h-0 flex-col border-l border-border bg-background md:static md:w-[40%] md:min-w-80 md:shrink-0"
+                  className="absolute inset-0 z-20 flex min-h-0 flex-col border-l border-border bg-background md:relative md:inset-auto md:w-[var(--focus-source-width)] md:min-w-60 md:shrink-0"
                 >
+                  <FocusPaneResize
+                    label="source"
+                    side="left"
+                    width={sourceWidth}
+                    onResize={setSourceWidth}
+                  />
                   <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
                     <span
                       className="min-w-0 flex-1 truncate text-sm font-medium"

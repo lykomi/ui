@@ -18,6 +18,7 @@ import {
 import { DATA_TABLE_MIN_WIDTH, type DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { usePinnedOffsets } from "./use-pinned-offsets.ts";
+import { DataTableOverflow } from "./data-table-overflow.tsx";
 import { useElementWidth } from "./use-element-width.ts";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
@@ -327,6 +328,9 @@ export function DataTable<T>({
           setScrolledX((current) => (current === next ? current : next));
         }}
         data-list-scroller=""
+        role="region"
+        aria-label={`${ariaLabel ?? "Table"} scroll area`}
+        tabIndex={0}
         style={bounded ? { maxHeight } : undefined}
         className={cn(
           filling ? "min-h-0 flex-1 overflow-auto" : bounded ? "overflow-auto" : "overflow-x-auto",
@@ -530,6 +534,7 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
+      <DataTableOverflow scroller={scrollerRef} />
     </div>
   );
 }

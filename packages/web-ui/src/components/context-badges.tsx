@@ -1,3 +1,4 @@
+import { PinStateIcon } from "./pin-state-icon.tsx";
 /**
  * Context badge components for the composer and sent messages.
  *
@@ -9,7 +10,7 @@
  */
 
 import { type FC, createElement } from "react";
-import { Pin, TextSelect, X, FileText, Link2, StickyNote, type LucideIcon } from "lucide-react";
+import { TextSelect, X, FileText, Link2, StickyNote, type LucideIcon } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip.tsx";
 import { useAppStore, type ContextItem, type ContextItemType } from "../lib/app-store.ts";
@@ -58,7 +59,7 @@ const ComposerBadge: FC<{ item: ContextItem }> = ({ item }) => {
               className="p-0.5 rounded hover:bg-primary/10 shrink-0"
               aria-label="Pin context"
             >
-              <Pin className="size-3 text-muted-foreground" />
+              <PinStateIcon pinned={false} className="size-3" />
             </button>
           )}
           <button

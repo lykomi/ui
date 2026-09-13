@@ -77,14 +77,23 @@ const UserMessage: FC = () => {
       <div className="flex flex-col items-end gap-1">
         <MessagePrimitive.Attachments components={userAttachmentComponents} />
         <SentContextBadges messageId={messageId} />
-        <div className={cn("max-w-[80%]", "bg-muted rounded-2xl", "px-4 py-3", "text-foreground")}>
+        <div
+          className={cn(
+            "max-w-[80%]",
+            "bg-muted rounded-2xl",
+            "px-4 py-3",
+            "text-sm leading-relaxed text-foreground",
+          )}
+        >
           <MessagePrimitive.Content />
         </div>
-        <div className="flex h-8 items-center justify-end gap-2 pr-2">
+        <div className="flex h-6 items-center justify-end gap-2 pr-2">
           <MessageTimestamp />
           <BranchPicker />
           <div className="flex h-8 w-10 items-center justify-end">
-            <UserActionBar />
+            <ThreadPrimitive.If running={false}>
+              <UserActionBar />
+            </ThreadPrimitive.If>
           </div>
         </div>
       </div>
@@ -106,6 +115,7 @@ const UserActionBar: FC = () => (
 );
 
 const AssistantMessage: FC = () => {
+  const running = useAuiState((s) => s.message.status?.type === "running");
   // Until the message has parts there is nothing to copy, retry or branch.
   // `AssistantActionBar` already hides its BUTTONS while running, but the
   // row reserving their height did not — so an empty assistant message put
@@ -118,12 +128,12 @@ const AssistantMessage: FC = () => {
   return (
     <MessagePrimitive.Root className="w-full mb-2 group">
       <div className="mx-auto max-w-3xl px-4">
-        <div className="text-foreground leading-relaxed flex flex-col gap-4">
+        <div className="text-sm text-foreground leading-relaxed flex flex-col gap-3">
           <ChatMessageParts />
         </div>
         <MessageError />
 
-        {hasParts && (
+        {hasParts && !running && (
           <div className="flex items-center gap-2 mt-1">
             <div className="flex h-8 w-[4.25rem] items-center">
               <AssistantActionBar />
@@ -180,7 +190,7 @@ const EditComposer: FC = () => (
             autoFocus
             className={cn(
               "w-full bg-transparent",
-              "text-base text-foreground",
+              "text-base sm:text-sm text-foreground",
               "outline-none resize-none",
               "placeholder:text-muted-foreground",
             )}
@@ -624,7 +634,7 @@ export function ChatContent({
                     compactComposer
                       ? "order-1 w-full"
                       : "order-1 w-full @md:order-2 @md:w-auto @md:flex-1",
-                    "py-2 text-base",
+                    "py-2 text-base sm:text-sm leading-relaxed",
                     "text-foreground outline-none",
                     "placeholder:text-muted-foreground",
                     "resize-none max-h-32",

@@ -10,7 +10,8 @@ import { cn } from "@iloveagents/foundry-web-primitives";
  */
 export const MessageTimestamp: FC<{ className?: string }> = ({ className }) => {
   const createdAt = useAuiState((s) => s.message.createdAt);
-  if (!createdAt) return null;
+  const running = useAuiState((s) => s.thread.isRunning);
+  if (!createdAt || running) return null;
   const d = createdAt instanceof Date ? createdAt : new Date(createdAt);
   if (Number.isNaN(d.getTime())) return null;
   return (
@@ -18,7 +19,7 @@ export const MessageTimestamp: FC<{ className?: string }> = ({ className }) => {
       title={d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
       className={cn(
         "text-xs text-muted-foreground/70 tabular-nums select-none",
-        "opacity-0 transition-opacity group-hover:opacity-100",
+        "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
         className,
       )}
     >
