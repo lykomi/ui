@@ -8,7 +8,7 @@ export function PinStateIcon({ pinned, className }: { pinned: boolean; className
       aria-hidden="true"
       className={cn(
         "size-4",
-        pinned ? "text-foreground fill-muted-foreground/40" : "text-muted-foreground",
+        pinned ? "text-primary fill-primary/25" : "text-muted-foreground",
         className,
       )}
     />

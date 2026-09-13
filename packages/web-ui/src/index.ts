@@ -1,3 +1,4 @@
+export { PinToggle } from "./components/pin-toggle.tsx";
 // --- Components ---
 export { Sidebar } from "./components/sidebar.tsx";
 export { ToolPanel } from "./components/tool-panel.tsx";
