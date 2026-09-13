@@ -38,15 +38,24 @@ export function FocusPaneResize({
       )
         onResize(maximum);
     };
-    update();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(update);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
     const dialog = element.closest('[role="dialog"]');
-    if (dialog) {
-      observer.observe(dialog);
-      dialog.querySelectorAll(":scope > aside").forEach((pane) => observer.observe(pane));
-    }
-    return () => observer.disconnect();
+    const observePanes = () => {
+      observer?.disconnect();
+      if (dialog) {
+        observer?.observe(dialog);
+        dialog.querySelectorAll(":scope > aside").forEach((pane) => observer?.observe(pane));
+      }
+      update();
+    };
+    observePanes();
+    const mutations =
+      typeof MutationObserver === "undefined" ? null : new MutationObserver(observePanes);
+    if (dialog) mutations?.observe(dialog, { childList: true });
+    return () => {
+      observer?.disconnect();
+      mutations?.disconnect();
+    };
   }, [onResize]);
   const adjust = (element: HTMLElement, next: number) => {
     const maximum = getMaximum(element);

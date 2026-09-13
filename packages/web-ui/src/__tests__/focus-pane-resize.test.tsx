@@ -70,3 +70,30 @@ it("excludes nested inspectors and bounds an automatic source width", async () =
     dialog.remove();
   }
 });
+
+it("refreshes the announced range when a sibling source mounts", async () => {
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  const pane = document.createElement("aside");
+  dialog.append(pane);
+  document.body.append(dialog);
+  dialog.getBoundingClientRect = () => ({ width: 1280 }) as DOMRect;
+  pane.getBoundingClientRect = () => ({ width: 384 }) as DOMRect;
+  const root = createRoot(pane);
+  try {
+    await act(async () =>
+      root.render(<FocusPaneResize label="chat" side="right" width={384} onResize={() => {}} />),
+    );
+    const handle = pane.querySelector('[role="separator"]')!;
+    expect(handle.getAttribute("aria-valuemax")).toBe("960");
+    const source = document.createElement("aside");
+    source.getBoundingClientRect = () => ({ width: 512 }) as DOMRect;
+    await act(async () => dialog.append(source));
+    expect(handle.getAttribute("aria-valuemax")).toBe("448");
+    await act(async () => source.remove());
+    expect(handle.getAttribute("aria-valuemax")).toBe("960");
+  } finally {
+    await act(async () => root.unmount());
+    dialog.remove();
+  }
+});
