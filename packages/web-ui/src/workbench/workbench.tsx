@@ -59,11 +59,13 @@ export function WorkbenchPreview({
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         data-workbench-surface
+        role="region"
         aria-label="Workspace working area"
       >
         {chatWidth.compact && (
           <div
             className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1"
+            role="group"
             aria-label="Workspace panes"
           >
             <Button

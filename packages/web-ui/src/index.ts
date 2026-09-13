@@ -297,3 +297,5 @@ export { AuthProvider } from "./lib/auth-provider.tsx";
 // `cn` is sourced from @iloveagents/foundry-web-primitives (the leaf primitives package).
 // Re-exporting here would create two canonical sources for the same
 // utility — banned per the "no shims" pre-1.0 rule (#90).
+
+export { createUiId } from "./lib/create-ui-id.ts";

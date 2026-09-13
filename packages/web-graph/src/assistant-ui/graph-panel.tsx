@@ -1,3 +1,4 @@
+import { graphViewSummary } from "../graph-view-summary.ts";
 import { useGraphSurfaceVisible } from "./use-graph-surface-visible.ts";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
@@ -131,19 +132,20 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
     const surface = surfaceRef.current?.closest("[data-focused]");
     if (!surface) return;
     const collect = (event: Event) => {
-      const view = handleRef.current?.getViewState();
+      const workspace = graphWorkspaceStore.getState();
+      const view = workspace.handle?.getViewState();
       if (!view) return;
       (event as CustomEvent).detail.context = {
         kind: "graph",
-        title: content.title,
-        nodeCount: view.nodes.length,
-        edgeCount: view.edges.length,
-        search: view.query,
-        hiddenLabels: view.hiddenLabels,
+        title: workspace.title,
+        ...graphViewSummary(view, workspace.payload),
         selectedNode: view.selection
           ? {
               id: view.selection.id,
-              label: resolveCaption(view.selection, captionKeyFor(view.selection)),
+              label: resolveCaption(
+                view.selection,
+                workspace.payload?.legend?.[primaryLabel(view.selection)]?.captionKey,
+              ),
             }
           : null,
         selectedRelationship: view.selectedEdge
@@ -154,7 +156,6 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
               type: view.selectedEdge.type,
             }
           : null,
-        truncated: view.lossy,
         inspectTool: "graph_get_view",
       };
     };

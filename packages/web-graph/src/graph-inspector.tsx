@@ -89,6 +89,7 @@ export interface GraphInspectorProps {
   actions?: ReactNode;
   className?: string;
   width?: number;
+  maxWidth?: number;
   onWidthChange?: (width: number) => void;
 }
 
@@ -117,8 +118,12 @@ export function GraphInspector({
   actions,
   className,
   width = GRAPH_INSPECTOR_WIDTH,
+  maxWidth = 640,
   onWidthChange,
 }: GraphInspectorProps) {
+  const minimumWidth = Math.min(240, maxWidth);
+  const clampWidth = (value: number) => Math.max(minimumWidth, Math.min(maxWidth, value));
+  width = clampWidth(width);
   const drag = useRef<{ x: number; width: number } | null>(null);
   const { node, edge } = selection;
   const open = Boolean(node || edge);
@@ -171,8 +176,8 @@ export function GraphInspector({
             role="separator"
             aria-label="Resize graph details"
             aria-orientation="vertical"
-            aria-valuemin={240}
-            aria-valuemax={640}
+            aria-valuemin={minimumWidth}
+            aria-valuemax={maxWidth}
             aria-valuenow={width}
             tabIndex={0}
             className="absolute -left-1 top-0 z-30 h-full w-2 cursor-col-resize touch-none hover:bg-muted-foreground/20 focus-visible:bg-muted-foreground/20 focus-visible:outline-none"
@@ -184,9 +189,7 @@ export function GraphInspector({
             }}
             onPointerMove={(event) => {
               if (drag.current)
-                onWidthChange(
-                  Math.max(240, Math.min(640, drag.current.width + drag.current.x - event.clientX)),
-                );
+                onWidthChange(clampWidth(drag.current.width + drag.current.x - event.clientX));
             }}
             onPointerUp={() => {
               drag.current = null;
@@ -198,16 +201,14 @@ export function GraphInspector({
             onLostPointerCapture={() => {
               drag.current = null;
             }}
-            onDoubleClick={() => onWidthChange(GRAPH_INSPECTOR_WIDTH)}
+            onDoubleClick={() => onWidthChange(clampWidth(GRAPH_INSPECTOR_WIDTH))}
             onKeyDown={(event) => {
               if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
                 event.preventDefault();
-                onWidthChange(
-                  Math.max(240, Math.min(640, width + (event.key === "ArrowLeft" ? 32 : -32))),
-                );
+                onWidthChange(clampWidth(width + (event.key === "ArrowLeft" ? 32 : -32)));
               } else if (event.key === "Home" || event.key === "End") {
                 event.preventDefault();
-                onWidthChange(event.key === "Home" ? 240 : 640);
+                onWidthChange(event.key === "Home" ? minimumWidth : maxWidth);
               }
             }}
           />

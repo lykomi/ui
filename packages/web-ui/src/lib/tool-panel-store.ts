@@ -1,3 +1,4 @@
+import { createUiId } from "./create-ui-id.ts";
 /**
  * Tool Panel State Management
  *
@@ -133,7 +134,7 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
   renderers: [],
 
   openPanel: (content) => {
-    content = { ...content, sourceId: content.sourceId ?? `tool:${crypto.randomUUID()}` };
+    content = { ...content, sourceId: content.sourceId ?? `tool:${createUiId()}` };
     const request =
       typeof window === "undefined"
         ? null

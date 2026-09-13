@@ -43,7 +43,7 @@ export function FocusSourcePane({
           <X size={18} />
         </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="relative min-h-0 flex-1 overflow-auto">
         <PanelContentRenderer content={source} />
       </div>
     </aside>

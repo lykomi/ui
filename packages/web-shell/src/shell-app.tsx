@@ -1,3 +1,4 @@
+import { createUiId } from "@iloveagents/foundry-web-ui";
 import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { AGUIRuntimeProvider } from "@iloveagents/foundry-web-ui";
@@ -308,12 +309,12 @@ function RuntimeBody({
   // Mint a new one only when the user actually starts a new thread:
   // ``sticky`` transitions from a value back to ``null`` (the module
   // clears it on the ``/`` "New Thread" landing).
-  const freshIdRef = useRef<string>(_genUuid());
+  const freshIdRef = useRef<string>(createUiId());
   const prevStickyRef = useRef<string | null>(sticky);
   if (sticky === null && prevStickyRef.current !== null) {
     // User just navigated back to "/" (New Thread). The previous chat
     // is being abandoned; mint a fresh UUID for the next session.
-    freshIdRef.current = _genUuid();
+    freshIdRef.current = createUiId();
   }
   prevStickyRef.current = sticky;
 
@@ -381,24 +382,6 @@ function RuntimeBody({
 
 function ToolUIGroup({ children }: { children: ReactNode }) {
   return <>{children}</>;
-}
-
-/**
- * RFC 4122 v4 UUID. Use ``crypto.randomUUID`` when available; fall
- * back to a math-random shim for the rare environments without it
- * (older Safari on non-HTTPS dev hosts). The shim is fine for our
- * use — these UUIDs identify a conversation row in our backend; they
- * don't need cryptographic strength.
- */
-function _genUuid(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
 }
 
 interface ComposedWrappersProps {

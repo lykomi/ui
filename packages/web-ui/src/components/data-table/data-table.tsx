@@ -324,7 +324,7 @@ export function DataTable<T>({
       <div
         ref={scrollerRef}
         onScroll={(event) => {
-          const next = event.currentTarget.scrollLeft > 0;
+          const next = Math.abs(event.currentTarget.scrollLeft) > 0;
           setScrolledX((current) => (current === next ? current : next));
         }}
         data-list-scroller=""

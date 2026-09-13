@@ -50,11 +50,11 @@ export function ConversationHistory({
     groups
       .filter((g) => g.meta?.type === "recent-chats" || g.meta?.type === "pinned-chats")
       .flatMap((g) => g.items);
-  const items = (
+  const scopedItems =
     all || !workspaceId
       ? allItems
-      : ((scoped?.meta?.workspaceConversations as NavItem[] | undefined) ?? scoped?.items ?? [])
-  )
+      : ((scoped?.meta?.workspaceConversations as NavItem[] | undefined) ?? scoped?.items ?? []);
+  const items = [...new Map(scopedItems.map((item) => [item.to, item])).values()]
     .filter((item) => item.meta?.type !== "show-all-chats")
     .filter((item) => item.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
     .sort((a, b) => Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned)));

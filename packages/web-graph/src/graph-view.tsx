@@ -613,6 +613,7 @@ export function GraphView({
           {showsInspector && (
             <GraphInspector
               width={inspectorWidth}
+              maxWidth={size.width > 0 ? Math.min(640, size.width * 0.85) : 640}
               onWidthChange={setInspectorWidth}
               selection={selection}
               colorForLabel={styleMap.colorForLabel}
