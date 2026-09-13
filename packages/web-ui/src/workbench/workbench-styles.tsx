@@ -255,8 +255,9 @@ export function WorkbenchStyles() {
           min-height: 36px;
           gap: 10px;
         }
-        [data-workspace-navigation] [data-nav-group-label="Spaces"] > :first-child {
-          padding-top: 8px;
+        [data-workspace-navigation] [data-nav-group-label="Spaces"] > :first-child,
+        .workbench-preview [data-sidebar-surface] nav > [data-nav-group-label]:first-child > div:has(> [data-nav-group-header]) {
+          padding-top: 0;
         }
         [data-workspace-navigation] [data-nav-group-label="Spaces"] [data-nav-depth="0"] > button {
           font-size: 15px;
@@ -268,10 +269,7 @@ export function WorkbenchStyles() {
           padding-top: 10px;
         }
         [data-workspace-navigation] [data-nav-group-label="Content"] {
-          margin-top: 6px;
-        }
-        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] > div {
-          margin-left: 12px;
+          margin-top: 0;
         }
 
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] button[data-nav-depth],

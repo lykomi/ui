@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** Resize a focus-view side pane without remounting its chat or source. */
 export function FocusPaneResize({
@@ -13,22 +13,44 @@ export function FocusPaneResize({
   onResize: (width?: number) => void;
 }) {
   const start = useRef<{ x: number; width: number; original?: number } | null>(null);
-  const adjust = (element: HTMLElement, next: number) => {
+  const elementRef = useRef<HTMLDivElement>(null);
+  const [maximum, setMaximum] = useState(880);
+  const getMaximum = (element: HTMLElement) => {
     const pane = element.parentElement!;
     const dialog = pane.closest('[role="dialog"]');
     const other = [...(dialog?.querySelectorAll("aside") ?? [])]
       .filter((n) => n !== pane)
       .reduce((sum, n) => sum + n.getBoundingClientRect().width, 0);
-    const maximum = Math.max(240, (dialog?.getBoundingClientRect().width ?? 1200) - other - 320);
+    return Math.max(240, (dialog?.getBoundingClientRect().width ?? 1200) - other - 320);
+  };
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!element) return;
+    const update = () => setMaximum(getMaximum(element));
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(update);
+    const dialog = element.closest('[role="dialog"]');
+    if (dialog) {
+      observer.observe(dialog);
+      dialog.querySelectorAll("aside").forEach((pane) => observer.observe(pane));
+    }
+    return () => observer.disconnect();
+  }, []);
+  const adjust = (element: HTMLElement, next: number) => {
+    const maximum = getMaximum(element);
+    setMaximum(maximum);
     onResize(Math.round(Math.max(240, Math.min(maximum, next))));
   };
   return (
     <div
+      ref={elementRef}
       role="separator"
       aria-orientation="vertical"
       aria-label={`Resize ${label}`}
       tabIndex={0}
       aria-valuemin={240}
+      aria-valuemax={maximum}
       aria-valuenow={width}
       aria-valuetext={width ? `${width} pixels` : "Automatic width"}
       title="Drag to resize. Double-click to reset."

@@ -205,9 +205,9 @@ export function GraphInspector({
                 onWidthChange(
                   Math.max(240, Math.min(640, width + (event.key === "ArrowLeft" ? 32 : -32))),
                 );
-              } else if (event.key === "Home") {
+              } else if (event.key === "Home" || event.key === "End") {
                 event.preventDefault();
-                onWidthChange(GRAPH_INSPECTOR_WIDTH);
+                onWidthChange(event.key === "Home" ? 240 : 640);
               }
             }}
           />

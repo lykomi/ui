@@ -59,3 +59,21 @@ it("gives distinct results stable identities across updates and restoration", ()
   store().openPanel({ ...result, sourceId: first });
   expect(store().content!.sourceId).toBe(first);
 });
+
+it("keeps the owning renderer when a focused host accepts another result", () => {
+  const store = useToolPanelStore.getState;
+  store().openPanel({ type: "graph", title: "Owner graph", content: "{}" });
+  const owner = store().content;
+  const accept = (event: Event) => event.preventDefault();
+  window.addEventListener("preview:open-source", accept);
+  try {
+    store().openPanel({ type: "text", title: "Source", content: "New result" });
+    expect(store().hostedOwnerContent).toBe(owner);
+    expect(store().content?.title).toBe("Source");
+    store().setContent({ type: "text", title: "Source", content: "Updated" });
+    expect(store().hostedOwnerContent).toBe(owner);
+  } finally {
+    window.removeEventListener("preview:open-source", accept);
+    store().closePanel();
+  }
+});

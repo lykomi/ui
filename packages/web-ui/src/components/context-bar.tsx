@@ -157,6 +157,10 @@ export const ContextPins: FC<ContextPinsProps> = ({
       ref={containerRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocus={handleMouseEnter}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFlyoutOpen(false);
+      }}
     >
       <TooltipIconButton
         tooltip={
@@ -173,6 +177,7 @@ export const ContextPins: FC<ContextPinsProps> = ({
           isCurrentPagePinned ? "text-foreground" : "text-muted-foreground",
         )}
         aria-pressed={allowPageToggle ? isCurrentPagePinned : undefined}
+        aria-expanded={!allowPageToggle ? flyoutOpen : undefined}
         onClick={allowPageToggle ? handleTogglePin : () => setFlyoutOpen((open) => !open)}
       >
         <PinStateIcon pinned={isCurrentPagePinned} className={compact ? "size-3.5" : "size-4"} />

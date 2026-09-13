@@ -131,6 +131,8 @@ export interface CollapsedRailContext {
 
 export interface NavGroup {
   label: string;
+  /** Keep tree indicators for known leaves even when no current item branches. */
+  tree?: boolean;
   /** Icon for a group entry point in a compact navigation rail. */
   icon?: LucideIcon;
   items: NavItem[];

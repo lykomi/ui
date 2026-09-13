@@ -35,9 +35,10 @@ function useWorkbenchNavigation() {
         },
         {
           label: "Content",
+          tree: true,
           hideLabel: true,
           priority: 800,
-          items: root?.children ?? [],
+          items: root?.childrenHidden ? [] : (root?.children ?? []),
           meta: { hideInCollapsedRail: true },
         },
       ];

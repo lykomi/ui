@@ -50,7 +50,9 @@ export function PanelContentRenderer({ content }: { content: ToolPanelContent })
 
 export function ToolPanel({ contained = false }: { contained?: boolean }) {
   const isOpen = useToolPanelStore((state) => state.isOpen && !state.isWindowHosted);
-  const content = useToolPanelStore((state) => state.content);
+  const content = useToolPanelStore((state) =>
+    state.isWindowHosted ? state.hostedOwnerContent : state.content,
+  );
   const closePanel = useToolPanelStore((state) => state.closePanel);
   const panelWidth = useToolPanelStore((state) => state.panelWidth);
   const setPanelWidth = useToolPanelStore((state) => state.setPanelWidth);

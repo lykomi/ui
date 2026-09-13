@@ -3,7 +3,7 @@ import { useAuiState } from "@assistant-ui/react";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 import { X } from "lucide-react";
 import { DialogContent, DialogTitle } from "../ui/dialog.tsx";
-import type { ToolPanelContent } from "../lib/tool-panel-store.ts";
+import { useToolPanelStore, type ToolPanelContent } from "../lib/tool-panel-store.ts";
 import { FocusChatPane } from "./focus-chat-pane.tsx";
 import { FocusSourcePane } from "./focus-source-pane.tsx";
 export function FocusDialog({
@@ -28,12 +28,28 @@ export function FocusDialog({
   const hasChat = useAuiState((state) => Boolean(state.optional.thread));
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const sourceTrigger = useRef<HTMLElement | null>(null);
+  const ownedSource = useRef<string | undefined>(undefined);
+  const previousPanel = useRef<Pick<
+    ReturnType<typeof useToolPanelStore.getState>,
+    "content" | "isOpen" | "isWindowHosted" | "hostedOwnerContent"
+  > | null>(null);
+  const releaseSource = () => {
+    if (
+      previousPanel.current &&
+      useToolPanelStore.getState().content?.sourceId === ownedSource.current
+    )
+      useToolPanelStore.setState(previousPanel.current);
+    previousPanel.current = null;
+    ownedSource.current = undefined;
+  };
   const closeSource = () => {
+    releaseSource();
     setSource(null);
     requestAnimationFrame(() => sourceTrigger.current?.focus());
   };
   useEffect(() => {
     if (!focused) {
+      releaseSource();
       setChatOpen(false);
       setSource(null);
     }
@@ -43,17 +59,32 @@ export function FocusDialog({
     const openSource = (event: Event) => {
       const request = event as CustomEvent<ToolPanelContent>;
       if (request.defaultPrevented || typeof request.detail?.content !== "string") return;
-      const dialogs = Array.from(document.querySelectorAll('[role="dialog"]'));
+      const dialogs = Array.from(
+        document.querySelectorAll('[role="dialog"]:not([aria-modal="false"])'),
+      );
       if (host?.closest('[role="dialog"]') !== dialogs[dialogs.length - 1]) return;
       request.preventDefault();
+      if (event.type === "preview:open-source") {
+        const { content, isOpen, isWindowHosted, hostedOwnerContent } =
+          useToolPanelStore.getState();
+        previousPanel.current ??= { content, isOpen, isWindowHosted, hostedOwnerContent };
+        ownedSource.current = request.detail.sourceId;
+      }
       const active = document.activeElement;
       if (active instanceof HTMLElement && !active.closest('[aria-label="Citation source"]'))
         sourceTrigger.current = active;
       setSource(request.detail);
     };
+    const updateSource = (event: Event) => {
+      const content = (event as CustomEvent<ToolPanelContent>).detail;
+      if (ownedSource.current && content.sourceId === ownedSource.current) setSource(content);
+    };
+    window.addEventListener("preview:update-source", updateSource);
     window.addEventListener("focus:open-source", openSource);
     window.addEventListener("preview:open-source", openSource, true);
     return () => {
+      releaseSource();
+      window.removeEventListener("preview:update-source", updateSource);
       window.removeEventListener("focus:open-source", openSource);
       window.removeEventListener("preview:open-source", openSource, true);
     };

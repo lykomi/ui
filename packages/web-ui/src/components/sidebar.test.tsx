@@ -400,6 +400,35 @@ describe("Sidebar active state", () => {
     expect(twistyCell(container, "A chat")?.children.length).toBe(0);
   });
 
+  it("keeps leaf indicators in an explicitly declared tree without branches", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Content",
+        tree: true,
+        items: [
+          { to: "/activity", label: "Activity", icon: MessageSquare },
+          { to: "/threads/1", label: "A chat", icon: MessageSquare },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/activity"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(twistyCell(container, "Activity")).toBeTruthy();
+    expect(twistyCell(container, "Activity")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
+    expect(twistyCell(container, "A chat")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
+  });
+
   it("keeps leaf dots in a group that does branch", async () => {
     const { Sidebar } = await import("./sidebar.tsx");
 

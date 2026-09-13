@@ -96,6 +96,8 @@ const shouldUseOverlay = (): boolean => {
 interface ToolPanelState {
   isOpen: boolean;
   isWindowHosted: boolean;
+  /** Keep the renderer that owns a focused host mounted while it displays another result. */
+  hostedOwnerContent: ToolPanelContent | null;
   content: ToolPanelContent | null;
 
   // Layout state
@@ -121,6 +123,7 @@ interface ToolPanelState {
 export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
   isOpen: false,
   isWindowHosted: false,
+  hostedOwnerContent: null,
   content: null,
   panelWidth: getPanelWidth(),
   useOverlay: shouldUseOverlay(),
@@ -134,7 +137,17 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
         ? null
         : new CustomEvent("preview:open-source", { detail: content, cancelable: true });
     if (request) window.dispatchEvent(request);
-    set({ isOpen: true, content, isWindowHosted: request?.defaultPrevented ?? false });
+    const hosted = request?.defaultPrevented ?? false;
+    set({
+      isOpen: true,
+      content,
+      isWindowHosted: hosted,
+      hostedOwnerContent: hosted
+        ? get().isWindowHosted
+          ? get().hostedOwnerContent
+          : get().content
+        : null,
+    });
   },
   registerRenderer: (entry) =>
     set((state) => {

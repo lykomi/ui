@@ -154,6 +154,15 @@ const GLOBAL_TOOLS: ClientToolEntry[] = [
     },
     execute: async (argsJson) => {
       const { fields } = JSON.parse(argsJson || "{}");
+      if (typeof window !== "undefined") {
+        const detail: { fields: Record<string, unknown>; result?: unknown } = { fields };
+        const request = new CustomEvent("ui:update-content", { detail, cancelable: true });
+        window.dispatchEvent(request);
+        if (request.defaultPrevented)
+          return JSON.stringify(
+            detail.result ?? { status: "error", error: "The form did not acknowledge the update." },
+          );
+      }
       const store = useAppStore.getState();
       for (const [key, value] of Object.entries(fields)) {
         store.updateContentField(key, value);

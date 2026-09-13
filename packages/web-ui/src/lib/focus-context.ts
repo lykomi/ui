@@ -41,11 +41,9 @@ export function collectFocusContext() {
   const source = frame
     .closest('[role="dialog"]')
     ?.querySelector<HTMLElement>("[data-focus-source-title]");
-  const documentText = (
-    frame.querySelector("[data-document-prose]")?.textContent ||
-    frame.textContent ||
-    ""
-  ).trim();
+  const documentText = isDocument
+    ? (frame.querySelector("[data-document-prose]")?.textContent || frame.textContent || "").trim()
+    : "";
   return {
     title: frame.dataset.focusTitle || frame.getAttribute("aria-label") || "Focused content",
     kind: table ? "table" : "document",

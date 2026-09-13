@@ -609,7 +609,7 @@ function NavTwisty({
           <span
             data-nav-leaf-dot
             className={cn(
-              "size-1 rounded-full",
+              "block size-1 shrink-0 rounded-full",
               isActive ? "bg-primary/70" : "bg-sidebar-foreground/30",
             )}
           />
@@ -1838,7 +1838,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
               // that branches. Decided per GROUP: Workspaces has branches, so
               // its leaves are marked; Chats has none, so a dot on every row
               // would mark a distinction that does not exist.
-              inTree={groupHasBranches}
+              inTree={group.tree ?? groupHasBranches}
               heading={focused}
               underHeader={!group.hideLabel}
             />
@@ -1974,7 +1974,10 @@ function SidebarContent({
             ? navConfig
                 .filter(
                   (group) =>
-                    !group.meta?.hideInCollapsedRail && (group.to || group.items.length > 0),
+                    !group.meta?.hideInCollapsedRail &&
+                    (group.to || group.items.length > 0) &&
+                    group.collapsedRail?.({ currentPage, navContextMeta: navContext.meta ?? {} })
+                      .length !== 0,
                 )
                 .map((group) => {
                   const Icon =

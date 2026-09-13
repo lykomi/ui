@@ -1,3 +1,4 @@
+import { useGraphSurfaceVisible } from "./use-graph-surface-visible.ts";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
 import { hasOwn, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
@@ -8,7 +9,6 @@ import {
   useDataTableFrame,
   submitComposerText,
   useAppStore,
-  useToolPanelStore,
 } from "@iloveagents/foundry-web-ui";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
 import {
@@ -41,7 +41,7 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
   // Memoised on the panel's own content, so an unrelated re-render does not
   // hand `GraphView` a new payload object and re-run the workspace effect.
   const payload = useMemo(() => graphPanelPayload(content), [content]);
-  const isOpen = useToolPanelStore((state) => state.isOpen);
+  const { ref: surfaceRef, visible: isOpen } = useGraphSurfaceVisible(frame?.focused);
   const currentPage = useAppStore((state) => state.currentPage);
 
   /**
@@ -156,7 +156,7 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
   // makes the canvas exactly the size of what the user can see, which is also
   // what the ResizeObserver needs to re-fit on drag-resize and fullscreen.
   return (
-    <div className="relative min-h-0 flex-1">
+    <div ref={surfaceRef} className="relative min-h-0 flex-1">
       <GraphView
         data={payload}
         onFullscreen={() => frame?.setFocused(!frame.focused)}
