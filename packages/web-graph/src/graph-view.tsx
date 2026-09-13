@@ -373,8 +373,9 @@ export function GraphView({
     );
   }, [state.matchedIds, visibleModel.nodes]);
   const inspectorInset = showsInspector ? Math.min(inspectorWidth, size.width * 0.85) : 0;
+  const selectionDrawn = visibleModel.nodes.some((node) => node.id === selection.node?.id);
   useEffect(() => {
-    if (!selection.node || variant !== "full") return;
+    if (!selection.node || !selectionDrawn || variant !== "full") return;
     const id = selection.node.id;
     let cancelled = false;
     afterDrawer(() => {
@@ -383,7 +384,7 @@ export function GraphView({
     return () => {
       cancelled = true;
     };
-  }, [selection.node?.id, variant, inspectorInset]);
+  }, [selection.node?.id, selectionDrawn, variant, inspectorInset]);
 
   const notifiedQuery = useRef(state.query);
   useEffect(() => {
