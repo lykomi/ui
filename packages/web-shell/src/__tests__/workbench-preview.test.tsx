@@ -40,10 +40,18 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   UserMenu: () => null,
   useNavStore: (select: (s: unknown) => unknown) => select({ config: state.groups }),
   useNewConversation: () => vi.fn(),
-  ChatContent: ({ emptyState }: { emptyState: ReactNode }) => (
+  ChatContent: ({
+    emptyState,
+    composerIntro,
+    centerComposer,
+  }: {
+    emptyState: ReactNode;
+    composerIntro: ReactNode;
+    centerComposer: boolean;
+  }) => (
     <>
       {" "}
-      {state.empty && emptyState}
+      {state.empty && (centerComposer ? composerIntro : emptyState)}
       <textarea aria-label="Chat draft" />
     </>
   ),
@@ -146,6 +154,7 @@ describe("layout preview", () => {
     for (let i = 0; i < 2; i++) {
       fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
       expect(screen.getByLabelText("Working content").hasAttribute("inert")).toBe(true);
+      expect(screen.getByLabelText("Working content").style.display).toBe("none");
       fireEvent.click(screen.getByRole("link", { name: "Open document" }));
       expect(screen.getByLabelText("Working content").hasAttribute("inert")).toBe(false);
       expect(screen.getByLabelText("Unsaved field")).toBe(editor);
@@ -188,28 +197,48 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Assistant conversation").style.width).toBe(`${initial}px`);
   });
 
-  it("shows recent chats beside the composer in an empty side panel", () => {
+  it("shows the current context instead of history in an empty side panel", () => {
     state.empty = true;
     render(<WorkbenchPreview page={<Editor />} />);
-    expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
     expect(screen.getAllByRole("button", { name: "New chat" })).toHaveLength(1);
     const buttons = screen.getAllByRole("button", { name: "New chat" });
     fireEvent.click(buttons[buttons.length - 1]);
-    expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
   });
 
-  it("keeps history and the composer after reset", () => {
+  it("keeps a fresh composer after reset and opens history explicitly", () => {
     state.empty = true;
     const view = render(<WorkbenchPreview page={<Editor />} />);
     fireEvent.click(screen.getAllByRole("button", { name: "New chat" })[0]);
     view.unmount();
     render(<WorkbenchPreview page={<Editor />} />);
-    expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
-    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
-    expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
+    expect(screen.getByRole("heading", { name: "Conversation history" })).toBeTruthy();
+    expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("none");
+    fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
+    expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
+  });
+
+  it("keeps the visible history shortcut when content is collapsed", () => {
+    state.empty = true;
+    render(<WorkbenchPreview page={<Editor />} />);
+    const draft = screen.getByLabelText("Chat draft") as HTMLTextAreaElement;
+    fireEvent.change(draft, { target: { value: "Draft question" } });
+    fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
+    expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
+    expect(screen.getByRole("region", { name: "Chat history" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
+    expect(screen.getByLabelText("Chat draft")).toBe(draft);
+    expect(draft.value).toBe("Draft question");
   });
 
   it("filters only the sidebar presentation in a workspace and restores global navigation outside it", () => {
@@ -243,11 +272,16 @@ describe("layout preview", () => {
     expect(root.children).toEqual([child]);
     expect(state.groups).toEqual([activity, workspace, recent]);
     expect(state.sidebar.mock.lastCall?.[0].onNewConversation).toBeTypeOf("function");
-    state.groups = [activity, { ...workspace, meta: { type: "spaces-workspaces" } }];
+    state.groups = [
+      activity,
+      { ...workspace, meta: { type: "spaces-workspaces" } },
+      recent,
+      { label: "Pinned", items: [], meta: { type: "pinned-chats" } },
+    ];
     rerender(<WorkbenchPreview page={<Editor />} />);
-    expect(state.sidebar.mock.lastCall?.[0].groups).toHaveLength(3);
+    expect(state.sidebar.mock.lastCall?.[0].groups).toHaveLength(2);
     expect(state.sidebar.mock.lastCall?.[0].collapsedGroupsOnly).toBe(true);
-    expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(false);
+    expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);
     expect(state.sidebar.mock.lastCall?.[0].hideFooterActions).toBe(false);
   });
 

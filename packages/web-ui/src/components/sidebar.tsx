@@ -903,7 +903,8 @@ function SubNavItems({
   return (
     <div>
       {items.map((child) => {
-        const hasNestedChildren = child.children && child.children.length > 0;
+        const hasNestedChildren =
+          !child.childrenHidden && child.children && child.children.length > 0;
 
         // Folders with children render as collapsible nested items
         if (hasNestedChildren) {
@@ -915,7 +916,7 @@ function SubNavItems({
         // parent path (e.g., folders) are never highlighted on the parent page.
         const isActive = allShareParent
           ? isOnParent && activeLabel === child.label
-          : child.to !== parentPath && currentPath === child.to;
+          : child.to !== parentPath && isSelectedNavItem(currentPath, child);
         return (
           <NavLeafItem
             key={child.to + child.label}
@@ -949,6 +950,12 @@ function isInSubtree(currentPage: string, item: NavItem): boolean {
   return item.children?.some((c) => isInSubtree(currentPage, c)) ?? false;
 }
 
+/** A list owns the sidebar selection of descendants it deliberately does not draw.
+ * The route lookup still resolves the actual descendant for chat and page actions. */
+function isSelectedNavItem(currentPage: string, item: NavItem): boolean {
+  return currentPage === item.to || Boolean(item.childrenHidden && isInSubtree(currentPage, item));
+}
+
 /** Nested folder with collapsible children (used inside SubNavItems). */
 function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const navigate = useNavigate();
@@ -956,7 +963,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
   const isInsideSubtree = isInSubtree(currentPath, item);
-  const isActive = currentPath === item.to;
+  const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
   const [manualOverride, setManualOverride] = useState<boolean | null>(null);
   const isExpanded = manualOverride ?? isInsideSubtree;
@@ -1071,13 +1078,14 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
       {isExpanded && item.children && (
         <div>
           {item.children.map((child) => {
-            const hasNestedChildren = child.children && child.children.length > 0;
+            const hasNestedChildren =
+              !child.childrenHidden && child.children && child.children.length > 0;
             if (hasNestedChildren) {
               return (
                 <NestedFolderItem key={child.to + child.label} item={child} depth={depth + 1} />
               );
             }
-            const isChildActive = currentPath === child.to;
+            const isChildActive = isSelectedNavItem(currentPath, child);
             return (
               <NavLeafItem
                 key={child.to + child.label}
@@ -1126,13 +1134,13 @@ function CollapsibleNavItem({
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
   const isInsideSubtree = isInSubtree(currentPath, item);
-  const isActive = currentPath === item.to;
+  const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
   const [manualOverride, setManualOverride] = useState<boolean | null>(null);
   // A heading is never collapsed and carries no chevron: its children ARE
   // the tree it stands for.
   const isExpanded = heading ? true : (manualOverride ?? isInsideSubtree);
-  const hasChildren = Boolean(item.children && item.children.length > 0);
+  const hasChildren = Boolean(!item.childrenHidden && item.children && item.children.length > 0);
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const rowInTree = inTree && !heading;
@@ -1294,12 +1302,12 @@ function CollapsibleNavItem({
   return (
     <NavLink
       ref={activeLinkRef}
-      data-active-nav-row={currentPath === item.to ? "true" : undefined}
+      data-active-nav-row={isActive ? "true" : undefined}
       data-nav-depth={0}
       to={item.to}
       {...draggableProps}
       {...dropTargetProps}
-      className={({ isActive }) =>
+      className={() =>
         cn(
           "relative flex items-center gap-2 w-full",
           bodyClass,
@@ -1321,7 +1329,7 @@ function CollapsibleNavItem({
         )
       }
     >
-      {({ isActive }) => (
+      {() => (
         <>
           <NavTwisty
             hasChildren={false}
@@ -1578,7 +1586,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   // renders either way, so flat rows keep the same label column as tree
   // rows and the sidebar stays on one grid.
   const groupHasBranches = group.items.some((item) =>
-    Boolean(item.children && item.children.length > 0),
+    Boolean(!item.childrenHidden && item.children && item.children.length > 0),
   );
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy

@@ -33,6 +33,7 @@ import { userAttachmentComponents, composerAttachmentComponents } from "./chat-a
 import { SentContextBadges, ComposerContextBadges } from "./context-badges.tsx";
 import { ComposerAddMenu } from "./composer-add-menu.tsx";
 import { ContextPins } from "./context-bar.tsx";
+import { ChatContext } from "./chat-context.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import {
   ChatComposerActionsSlot,
@@ -552,6 +553,7 @@ export function ChatContent({
         </div>
 
         <div className="shrink-0 bg-background">
+          {composerIntro && <div className="mx-auto max-w-3xl px-4 pt-4">{composerIntro}</div>}
           <ChatComposerBannerSlot />
           <ThreadPrimitive.If running={false}>
             <div data-chat-composer-divider className="border-t border-border" />
@@ -561,7 +563,7 @@ export function ChatContent({
           </ThreadPrimitive.If>
 
           <div className="mx-auto max-w-3xl px-4 py-4">
-            {composerIntro}
+            <ChatContext />
             <ComposerPrimitive.Root
               style={compactComposer ? { borderRadius: 16 } : undefined}
               className={cn(

@@ -5,8 +5,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@iloveagents/foundry-web-ui";
-import { Fragment, useState } from "react";
-import { Link, useLocation } from "react-router";
+import { Fragment, useEffect, useState } from "react";
+import { Link } from "react-router";
 import { ArrowLeft, MessageSquare, MoreHorizontal, Pin, Loader2 } from "lucide-react";
 import type { NavGroup, NavItem } from "@iloveagents/foundry-web-ui";
 
@@ -30,20 +30,8 @@ export function ConversationHistory({
 }) {
   const [loadingTo, setLoadingTo] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const { pathname } = useLocation();
-  const findCurrent = (items: NavItem[]): NavItem | undefined => {
-    for (const item of items) {
-      if (item.to === pathname) return item;
-      const child = item.children && findCurrent(item.children);
-      if (child) return child;
-    }
-  };
-  const selected = findCurrent(groups.flatMap((group) => group.items));
-  const overview = groups.some(
-    (group) => group.meta?.type === "spaces-workspaces" && group.focusOn === pathname,
-  );
-
-  const [all, setAll] = useState(false);
+  const [all, setAll] = useState(!workspaceId);
+  useEffect(() => setAll(!workspaceId), [workspaceId]);
   const [search, setSearch] = useState("");
   const scoped = groups.find(
     (g) => g.meta?.type === "recent-chats" && g.meta?.workspaceId === workspaceId,
@@ -73,7 +61,7 @@ export function ConversationHistory({
     <section
       data-conversation-history
       aria-label="Chat history"
-      className="flex min-h-0 flex-1 flex-col px-4 pb-4"
+      className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-4"
     >
       {welcome && (
         <div className="pb-6 pt-8">
@@ -97,7 +85,7 @@ export function ConversationHistory({
             compact ? "text-xs font-medium text-muted-foreground" : "text-base font-semibold"
           }
         >
-          {pinnedItems.length ? "Chats" : "Recent chats"}
+          Conversation history
         </h2>
         {compact && (
           <button
@@ -110,13 +98,13 @@ export function ConversationHistory({
       </div>
       {Boolean(workspaceId) && (
         <select
-          aria-label="Chat scope"
+          aria-label="History filter"
           value={all ? "all" : "workspace"}
           onChange={(event) => setAll(event.target.value === "all")}
           className="mb-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
         >
-          <option value="workspace">This space</option>
-          <option value="all">All spaces</option>
+          <option value="all">All conversations</option>
+          <option value="workspace">Last used in this workspace</option>
         </select>
       )}
       {!compact && (
@@ -159,40 +147,16 @@ export function ConversationHistory({
                   <div key={item.to} className="group flex items-center rounded-lg hover:bg-muted">
                     <Link
                       to={item.to}
-                      state={
-                        workspaceId
-                          ? {
-                              previewChatOrigin: {
-                                path: pathname,
-                                workspaceId,
-                                overview,
-                                label: selected?.label,
-                              },
-                            }
-                          : undefined
-                      }
                       onClick={(event) => {
                         if (loadingTo) {
                           event.preventDefault();
                           return;
                         }
-                        if (
-                          workspaceId &&
-                          !event.ctrlKey &&
-                          !event.metaKey &&
-                          !event.shiftKey &&
-                          !event.altKey
-                        ) {
+                        if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
                           const resume = new CustomEvent("preview:resume-chat", {
                             cancelable: true,
                             detail: {
                               to: item.to,
-                              origin: {
-                                path: pathname,
-                                workspaceId,
-                                overview,
-                                label: selected?.label,
-                              },
                               complete: (error?: string) => {
                                 setLoadingTo(null);
                                 if (error) setLoadError(error);
@@ -200,13 +164,14 @@ export function ConversationHistory({
                               },
                             },
                           });
+                          setLoadingTo(item.to);
+                          setLoadError(null);
                           if (!window.dispatchEvent(resume)) {
                             event.preventDefault();
-                            setLoadError(null);
-                            setLoadingTo(item.to);
                             return;
                           }
                         }
+                        setLoadingTo(null);
                         onClose();
                       }}
                       data-conversation-row
@@ -226,12 +191,21 @@ export function ConversationHistory({
                         <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate">{item.label}</span>
-                        {all && typeof item.meta?.previewSpaceName === "string" && (
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {item.meta.previewSpaceName}
-                          </span>
-                        )}
+                        <span className="block truncate">{item.label}</span>{" "}
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {!all &&
+                          typeof item.meta?.previewEntityName === "string" &&
+                          item.meta.previewEntityName
+                            ? `Last at ${item.meta.previewEntityName}`
+                            : !all
+                              ? "Last in this workspace"
+                              : typeof item.meta?.previewSpaceName === "string" &&
+                                  item.meta.previewSpaceName
+                                ? `Last in ${item.meta.previewSpaceName}`
+                                : item.meta?.previewContextUnavailable
+                                  ? "Location unavailable"
+                                  : "Last outside a workspace"}
+                        </span>
                       </span>
                     </Link>
                     {Boolean(item.actions?.length) && (
@@ -240,7 +214,7 @@ export function ConversationHistory({
                           <button
                             type="button"
                             aria-label={`Actions for ${item.label}`}
-                            className="mr-1 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 hover:bg-background"
+                            className="mr-1 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100 hover:bg-background"
                           >
                             <MoreHorizontal className="size-4" />
                           </button>

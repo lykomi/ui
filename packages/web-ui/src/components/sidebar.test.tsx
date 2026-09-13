@@ -156,6 +156,42 @@ describe("Sidebar active state", () => {
     });
   };
 
+  it.each([false, true])(
+    "keeps a hidden list selected without rendering its records (nested=%s)",
+    async (nested) => {
+      const list = {
+        to: "/spaces/tasks",
+        label: "Tasks",
+        icon: FolderOpen,
+        childrenHidden: true,
+        children: Array.from({ length: 1000 }, (_, i) => ({
+          to: i === 0 ? "/spaces/demo" : `/spaces/task-${i}`,
+          label: `Task ${i}`,
+          icon: MessageSquare,
+        })),
+      };
+      await renderWithItems(
+        nested ? [{ to: "/spaces", label: "Space", icon: FolderOpen, children: [list] }] : [list],
+      );
+      for (const surface of container.querySelectorAll("[data-sidebar-surface]")) {
+        const selected = surface.querySelector('[data-active-nav-row="true"]');
+        expect(selected?.textContent).toBe("Tasks");
+        expect(surface.textContent).not.toContain("Task 0");
+        expect(surface.textContent).not.toContain("Task 999");
+      }
+      expect(twisty(container, "Tasks")).toBeUndefined();
+      // A status refresh must preserve selection, and clicking the selected
+      // owner must still open the list, rather than the current record.
+      await act(async () => useNavStore.getState().setConfig([...useNavStore.getState().config]));
+      expect(navRow(container, "Tasks")?.dataset.activeNavRow).toBe("true");
+      const row = navRow(container, "Tasks")!;
+      const link = row.matches("a,button") ? row : row.querySelector<HTMLElement>("a,button")!;
+      await act(async () => link.click());
+      expect(navRow(container, "Tasks")?.dataset.activeNavRow).toBe("true");
+      expect(navRow(container, "Task 0")).toBeUndefined();
+    },
+  );
+
   it("closes the mobile drawer on navigation, including repeat selection of the current address", async () => {
     window.innerWidth = 390;
     await renderWithItems([{ to: "/spaces/demo/document", label: "Document", icon: FolderOpen }]);

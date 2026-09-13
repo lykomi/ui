@@ -79,6 +79,9 @@ export interface NavItem {
   contextInstructions?: string;
   /** Sub-navigation items (rendered indented under parent) */
   children?: NavItem[];
+  /** Keep descendant routes in the context model, but represent them by this
+   * row in the sidebar (for example, records opened from a list). */
+  childrenHidden?: boolean;
   /**
    * The row's children have not been fetched yet, so `children` being empty
    * says nothing about whether it has any.

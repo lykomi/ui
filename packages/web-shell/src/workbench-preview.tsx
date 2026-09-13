@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router";
+import { useLocation } from "react-router";
 import { useAuiState } from "@assistant-ui/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@iloveagents/foundry-web-primitives";
@@ -14,6 +14,7 @@ import {
   useToolPanelStore,
   useNewConversation,
   useNavStore,
+  useAppStore,
 } from "@iloveagents/foundry-web-ui";
 import {
   SquarePen,
@@ -53,9 +54,7 @@ export function WorkbenchPreview({
   chatOnly?: boolean;
 }) {
   const location = useLocation();
-  const notice = location.state?.previewChatNotice as
-    { previousPath: string; previousLabel: string; currentLabel: string } | undefined;
-  const [dismissedNotice, setDismissedNotice] = useState<string | null>(null);
+  const pageLabel = useAppStore((s) => s.navContext.label);
   const chatWidth = useChatWidth();
   const resizeDrag = useRef<{ x: number; width: number } | null>(null);
   const [desktopCollapsed, setCollapsed] = useState(false);
@@ -80,13 +79,25 @@ export function WorkbenchPreview({
     if (wasEmptyChat.current && !emptyChat) setHistoryOpen(false);
     wasEmptyChat.current = emptyChat;
   }, [emptyChat]);
-  const showHistory = historyOpen || (!chatOnly && emptyChat);
+  const showHistory = historyOpen;
+  const spaciousChat = chatOnly || contentCollapsed;
   const returnToChat = () => {
     setHistoryOpen(false);
   };
   const openHistory = () => {
     setHistoryOpen(true);
   };
+  const historyShortcut = (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={openHistory}
+      className="mt-2 w-fit gap-2 [@media(pointer:coarse)]:min-h-11"
+    >
+      <History className="size-4" aria-hidden />
+      Conversation history
+    </Button>
+  );
   const toggleNavigation = useSidebarStore((s) => s.toggleMobile);
   const navGroups = useNavStore((s) => s.config);
   const workspaceGroups = useMemo(() => {
@@ -97,15 +108,6 @@ export function WorkbenchPreview({
     return [workspace];
   }, [navGroups]);
   const navigationGroups = useMemo(() => {
-    const recent = navGroups
-      .filter((group) => ["recent-chats", "pinned-chats"].includes(String(group.meta?.type)))
-      .map((group) => ({
-        ...group,
-        label: group.meta?.type === "pinned-chats" ? "Pinned chats" : "Recent chats",
-        priority: 900,
-        items: group.items.filter((item) => item.meta?.type !== "show-all-chats").slice(0, 5),
-        meta: { ...group.meta, hideInCollapsedRail: true },
-      }));
     if (workspaceGroups) {
       const space = workspaceGroups[0];
       const root = space.items.find((item) => item.to === space.focusOn) ?? space.items[0];
@@ -126,26 +128,7 @@ export function WorkbenchPreview({
         },
       ];
     }
-    const pinnedChats = recent.flatMap((group) => group.items).filter((item) => item.meta?.pinned);
     return [
-      ...(pinnedChats.length
-        ? [
-            {
-              label: "Pinned",
-              priority: 1050,
-              items: pinnedChats,
-              meta: { hideInCollapsedRail: true },
-            },
-          ]
-        : []),
-      {
-        label: "Chats",
-        to: "/",
-        collapsible: true,
-        priority: 1000,
-        icon: MessageSquare,
-        items: recent.flatMap((group) => group.items).filter((item) => !item.meta?.pinned),
-      },
       ...navGroups
         .filter((group) => !["recent-chats", "pinned-chats"].includes(String(group.meta?.type)))
         .map((group) =>
@@ -280,7 +263,6 @@ export function WorkbenchPreview({
         .workbench-preview [data-panel-motion] {
           transition: width 200ms ease-in-out, min-width 200ms ease-in-out;
         }
-        .workbench-preview [data-content-collapsed] > * { visibility: hidden; }
         .workbench-preview [data-resizing] [data-panel-motion] { transition: none; }
         @media (prefers-reduced-motion: reduce) {
           .workbench-preview [data-sidebar-surface],
@@ -483,10 +465,10 @@ export function WorkbenchPreview({
         <Sidebar
           groups={staticNavigationGroups}
           collapsedGroupsOnly
-          hideNewConversation={!!workspaceGroups}
+          hideNewConversation
           newConversationLabel="New chat"
           hideFooterActions={!!workspaceGroups}
-          onNewConversation={workspaceGroups ? newConversation : undefined}
+          onNewConversation={startChat}
           footer={
             <footer
               className="shrink-0 border-t border-sidebar-border bg-sidebar px-2 py-2"
@@ -556,7 +538,7 @@ export function WorkbenchPreview({
           <section
             id="preview-assistant"
             data-panel-motion
-            data-global-chat={chatOnly || undefined}
+            data-global-chat={spaciousChat || undefined}
             data-chat-collapsed={collapsed ? "true" : undefined}
             inert={chatWidth.compact && !chatOnly && compactPane !== "chat"}
             aria-label="Assistant conversation"
@@ -600,7 +582,9 @@ export function WorkbenchPreview({
               ) : (
                 <>
                   <div className="min-w-0 flex-1 px-2 py-2">
-                    {!chatOnly && !showHistory && <div className="text-sm font-semibold">Chat</div>}
+                    <div className="text-sm font-semibold">
+                      {showHistory ? "Conversations" : "Chat"}
+                    </div>
                   </div>
                   <TooltipIconButton
                     tooltip="New chat"
@@ -657,12 +641,12 @@ export function WorkbenchPreview({
                 </TooltipIconButton>
               </div>
             )}
-            {!collapsed && showHistory && !emptyChat && (
+            {!collapsed && showHistory && (
               <ConversationHistory
                 groups={navGroups}
                 workspaceId={workspaceGroups?.[0]?.meta?.exclusiveRootId}
                 onClose={returnToChat}
-                showBack={!emptyChat}
+                showBack
               />
             )}
             {!chatWidth.compact && !collapsed && !contentCollapsed && (
@@ -729,48 +713,29 @@ export function WorkbenchPreview({
             <div
               className="min-h-0 flex-1 flex-col"
               style={{
-                display: collapsed || (showHistory && !emptyChat) ? "none" : "flex",
+                display: collapsed || showHistory ? "none" : "flex",
                 paddingBottom:
-                  chatOnly && emptyChat && !historyOpen ? "clamp(32px, 10vh, 96px)" : undefined,
+                  spaciousChat && emptyChat && !historyOpen ? "clamp(32px, 10vh, 96px)" : undefined,
               }}
             >
               <ChatContent
-                centerComposer={chatOnly && emptyChat && !historyOpen}
+                centerComposer={spaciousChat && emptyChat && !historyOpen}
                 composerIntro={
-                  notice && dismissedNotice !== location.key && !showHistory ? (
-                    <aside
-                      className="mb-3 flex items-start gap-2 text-xs text-muted-foreground"
-                      aria-label="Chat context"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p>
-                          Current document:{" "}
-                          <span className="font-medium">{notice.currentLabel}</span>
-                        </p>
-                        <p className="mt-1">
-                          Previously discussing {notice.previousLabel}.{" "}
-                          <Link to={notice.previousPath} className="underline underline-offset-2">
-                            Open document
-                          </Link>
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        aria-label="Dismiss context notice"
-                        onClick={() => setDismissedNotice(location.key)}
-                        className="px-1"
-                      >
-                        ×
-                      </button>
-                    </aside>
-                  ) : chatOnly && emptyChat && !historyOpen ? (
-                    <h1 className="mb-6 text-center text-[28px] font-normal tracking-tight">
-                      What should we work on?
-                    </h1>
+                  spaciousChat && emptyChat ? (
+                    <div className="mb-6 text-center">
+                      <h1 className="text-2xl font-semibold tracking-tight">
+                        What would you like to get done?
+                      </h1>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Find information, create or edit content, and run actions across your
+                        spaces.
+                      </p>
+                      {historyShortcut}
+                    </div>
                   ) : undefined
                 }
-                placeholder="Do anything"
-                compactComposer={!chatOnly}
+                placeholder={chatOnly ? "Ask anything" : "Ask about this page…"}
+                compactComposer={!spaciousChat}
                 hiddenPageLabels={workspaceGroups?.flatMap((group) =>
                   group.items.map((item) => item.label),
                 )}
@@ -778,29 +743,27 @@ export function WorkbenchPreview({
                 showPinButton={false}
                 starterSuggestions={[]}
                 emptyState={
-                  showHistory ? (
-                    <div className="flex h-full min-h-0 flex-col">
-                      <ConversationHistory
-                        groups={navGroups}
-                        workspaceId={workspaceGroups?.[0]?.meta?.exclusiveRootId}
-                        onClose={returnToChat}
-                        showBack={false}
-                        welcome={chatOnly && !historyOpen}
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex min-h-full flex-col items-center justify-center gap-2 px-6 text-center">
-                      <MessageSquare
-                        size={22}
-                        strokeWidth={1.5}
-                        className="mb-1 text-muted-foreground"
-                      />
-                      <h1 className="text-base font-medium text-foreground">New chat</h1>
-                      <p className="max-w-56 text-sm leading-relaxed text-muted-foreground">
-                        Ask a question or select something to discuss.
-                      </p>
-                    </div>
-                  )
+                  <div className="flex min-h-full flex-col justify-center gap-3 px-6 py-8">
+                    <h1 className="text-lg font-semibold tracking-tight">
+                      What would you like to get done?
+                    </h1>
+                    <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+                      {pageLabel && !pageLabel.startsWith("/") ? (
+                        <>
+                          Work with <span className="font-medium text-foreground">{pageLabel}</span>{" "}
+                          or across your spaces: find information, create or edit content, and run
+                          actions.
+                        </>
+                      ) : (
+                        "Find information, create or edit content, and run actions across your spaces."
+                      )}
+                    </p>
+                    <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+                      Your conversation continues as you browse. Select text or a field to work more
+                      specifically.
+                    </p>
+                    {historyShortcut}
+                  </div>
                 }
               />
             </div>
@@ -816,7 +779,7 @@ export function WorkbenchPreview({
             data-item-panel-open={panelOpen || undefined}
             className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
             style={{
-              display: chatOnly || (chatWidth.compact && contentHidden) ? "none" : "flex",
+              display: contentHidden ? "none" : "flex",
               minWidth: chatWidth.compact ? 0 : contentCollapsed ? 44 : collapsed ? 320 : 440,
               transform: "translateZ(0)",
               isolation: "isolate",
@@ -828,6 +791,7 @@ export function WorkbenchPreview({
                 tooltip="Collapse content"
                 className={buttonClass}
                 aria-label="Collapse content"
+                style={contentHidden ? { display: "none" } : undefined}
                 onClick={() => {
                   setCollapsed(false);
                   setContentCollapsed(true);
@@ -836,24 +800,29 @@ export function WorkbenchPreview({
                 <PanelRight size={18} />
               </TooltipIconButton>
             )}
-            {panelOpen && (
-              <div
-                className="flex shrink-0 items-center border-b border-border pl-3 pr-14"
-                style={{ minHeight: 60 }}
-              >
-                <button className={buttonClass} onClick={closePanel}>
-                  ← Back to content
-                </button>
-              </div>
-            )}
-            <ToolPanelLayout contained>
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{page}</div>
-            </ToolPanelLayout>
+            <div
+              className="min-h-0 flex-1 flex-col overflow-hidden"
+              style={{ display: contentHidden ? "none" : "flex" }}
+            >
+              {panelOpen && (
+                <div
+                  className="flex shrink-0 items-center border-b border-border pl-3 pr-14"
+                  style={{ minHeight: 60 }}
+                >
+                  <button className={buttonClass} onClick={closePanel}>
+                    ← Back to content
+                  </button>
+                </div>
+              )}
+              <ToolPanelLayout contained>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{page}</div>
+              </ToolPanelLayout>
+            </div>
           </section>
           {contentCollapsed && !chatOnly && !chatWidth.compact && (
             <aside
               aria-label="Collapsed content"
-              className="absolute inset-y-0 right-0 flex w-11 shrink-0 flex-col items-center"
+              className="flex w-11 shrink-0 flex-col items-center"
               style={{ width: 44 }}
             >
               <div className="flex h-full w-full flex-col items-center" data-chat-rail>
