@@ -7,16 +7,31 @@ export function useGraphSurfaceVisible(focused?: boolean) {
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
-    const update = () => setVisible(!element.closest('[inert], [hidden], [aria-hidden="true"]'));
+    const update = () => {
+      const dialog = element.closest('[role="dialog"]');
+      const sourceGraph = dialog?.querySelector("[data-focus-source-title] [data-graph-surface]");
+      setVisible(
+        !element.closest('[inert], [hidden], [aria-hidden="true"]') &&
+          element.getClientRects().length > 0 &&
+          (!sourceGraph || sourceGraph === element),
+      );
+    };
     update();
-    if (typeof MutationObserver === "undefined") return;
+    window.addEventListener("resize", update);
+    if (typeof MutationObserver === "undefined")
+      return () => window.removeEventListener("resize", update);
     const observer = new MutationObserver(update);
     for (let ancestor: HTMLElement | null = element; ancestor; ancestor = ancestor.parentElement)
       observer.observe(ancestor, {
         attributes: true,
-        attributeFilter: ["inert", "hidden", "aria-hidden"],
+        attributeFilter: ["inert", "hidden", "aria-hidden", "class", "style"],
       });
-    return () => observer.disconnect();
+    const dialog = element.closest('[role="dialog"]');
+    if (dialog) observer.observe(dialog, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
   }, [focused]);
   return { ref, visible };
 }

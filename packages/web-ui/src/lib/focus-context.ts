@@ -6,6 +6,12 @@ export function collectFocusContext() {
     .reverse()
     .find((node) => !node.closest('[hidden], [inert], [aria-hidden="true"]'));
   if (!frame) return null;
+  // Specialized surfaces (for example canvas graphs) can report their drawn view.
+  const request = new CustomEvent<{ context?: Record<string, unknown> }>("focus:collect-context", {
+    detail: {},
+  });
+  frame.dispatchEvent(request);
+  if (request.detail.context) return request.detail.context;
   const isDocument = frame.dataset.focusKind === "document";
   const block = isDocument ? null : frame.querySelector<HTMLElement>("[data-block-id]");
   const table = isDocument ? null : frame.querySelector("table");

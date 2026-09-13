@@ -178,7 +178,7 @@ export const ContextPins: FC<ContextPinsProps> = ({
         )}
         aria-pressed={allowPageToggle ? isCurrentPagePinned : undefined}
         aria-expanded={!allowPageToggle ? flyoutOpen : undefined}
-        onClick={allowPageToggle ? handleTogglePin : () => setFlyoutOpen((open) => !open)}
+        onClick={allowPageToggle ? handleTogglePin : () => setFlyoutOpen(true)}
       >
         <PinStateIcon pinned={isCurrentPagePinned} className={compact ? "size-3.5" : "size-4"} />
         {pinned.length > 0 && (

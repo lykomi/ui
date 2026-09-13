@@ -27,6 +27,7 @@ import {
 export default function GraphPanel({ content }: { content: GraphPanelContentLike }) {
   return (
     <DataTableFrame
+      data-focus-kind="graph"
       aria-label={content.title}
       className="absolute inset-0 flex min-h-0 flex-col p-3"
       focusClassName="p-3 sm:p-3"
@@ -108,7 +109,13 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
       `graph:${content.title}`,
       view.selection ? captionKeyFor(view.selection) : undefined,
     );
-    return () => graphWorkspaceStore.getState().disconnect(handle);
+    return () => {
+      if (graphWorkspaceStore.getState().handle === handle) {
+        syncGraphSelectionContext(null, "");
+        syncGraphEdgeContext(null, "");
+      }
+      graphWorkspaceStore.getState().disconnect(handle);
+    };
     // `currentPage` is a dependency for the same reason `isOpen` is, and it is
     // easy to miss because the panel does not move: `setCurrentPage` clears
     // every keyed and ephemeral context item on navigation, on the reasonable
@@ -120,27 +127,40 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
     // the same job it already does for reopening a closed panel.
   }, [content.title, payload, isOpen, currentPage]);
 
-  /**
-   * The selected node leaves the conversation when the graph does — and not
-   * before.
-   *
-   * This used to ride in the cleanup above, which made it fire on every
-   * payload change: an in-place merge, the thing this panel is built around,
-   * dropped the user's selected node out of the chat context even though it
-   * was still on screen and still selected. Visibility is its own lifetime.
-   */
   useEffect(() => {
-    if (isOpen) return;
-    syncGraphSelectionContext(null, "");
-    syncGraphEdgeContext(null, "");
-  }, [isOpen]);
-  useEffect(
-    () => () => {
-      syncGraphSelectionContext(null, "");
-      syncGraphEdgeContext(null, "");
-    },
-    [],
-  );
+    const surface = surfaceRef.current?.closest("[data-focused]");
+    if (!surface) return;
+    const collect = (event: Event) => {
+      const view = handleRef.current?.getViewState();
+      if (!view) return;
+      (event as CustomEvent).detail.context = {
+        kind: "graph",
+        title: content.title,
+        nodeCount: view.nodes.length,
+        edgeCount: view.edges.length,
+        search: view.query,
+        hiddenLabels: view.hiddenLabels,
+        selectedNode: view.selection
+          ? {
+              id: view.selection.id,
+              label: resolveCaption(view.selection, captionKeyFor(view.selection)),
+            }
+          : null,
+        selectedRelationship: view.selectedEdge
+          ? {
+              id: view.selectedEdge.id,
+              source: view.selectedEdge.source,
+              target: view.selectedEdge.target,
+              type: view.selectedEdge.type,
+            }
+          : null,
+        truncated: view.lossy,
+        inspectTool: "graph_get_view",
+      };
+    };
+    surface.addEventListener("focus:collect-context", collect);
+    return () => surface.removeEventListener("focus:collect-context", collect);
+  }, [frame?.focused, content.title, captionKeyFor, surfaceRef]);
 
   if (!payload) {
     return <GraphEmptyState message="This panel does not contain a readable graph." />;
@@ -156,7 +176,7 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
   // makes the canvas exactly the size of what the user can see, which is also
   // what the ResizeObserver needs to re-fit on drag-resize and fullscreen.
   return (
-    <div ref={surfaceRef} className="relative min-h-0 flex-1">
+    <div ref={surfaceRef} data-graph-surface className="relative min-h-0 flex-1">
       <GraphView
         data={payload}
         onFullscreen={() => frame?.setFocused(!frame.focused)}
