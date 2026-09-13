@@ -15,7 +15,7 @@ import { markdownComponents } from "./markdown-text.tsx";
 import { SelectionPopover } from "./selection-popover.tsx";
 
 /** Renders panel content using the renderer registry, then built-in markdown/text. */
-function PanelContentRenderer({ content }: { content: ToolPanelContent }) {
+export function PanelContentRenderer({ content }: { content: ToolPanelContent }) {
   const renderers = useToolPanelStore((s) => s.renderers);
 
   // Check registered renderers first (e.g., PDF viewer, entity pages, demo pages)

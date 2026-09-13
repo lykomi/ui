@@ -70,7 +70,11 @@ export function ConversationHistory({
       ]
     : [{ label: "", items: visibleItems }];
   return (
-    <section aria-label="Chat history" className="flex min-h-0 flex-1 flex-col px-4 pb-4">
+    <section
+      data-conversation-history
+      aria-label="Chat history"
+      className="flex min-h-0 flex-1 flex-col px-4 pb-4"
+    >
       {welcome && (
         <div className="pb-6 pt-8">
           <h1 className="text-xl font-semibold">How can I help?</h1>
@@ -139,7 +143,10 @@ export function ConversationHistory({
               className="mb-4 last:mb-0"
             >
               {section.label && (
-                <h3 className="px-2 py-2 text-xs font-medium text-muted-foreground">
+                <h3
+                  data-conversation-section-label
+                  className="px-2 py-2 text-xs font-medium text-muted-foreground"
+                >
                   {section.label}
                 </h3>
               )}
@@ -202,6 +209,7 @@ export function ConversationHistory({
                         }
                         onClose();
                       }}
+                      data-conversation-row
                       className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
                     >
                       {loadingTo === item.to ? (

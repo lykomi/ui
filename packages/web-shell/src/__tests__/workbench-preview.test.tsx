@@ -2,7 +2,7 @@ import { Link, MemoryRouter } from "react-router";
 import { Folder } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
 import { type ReactNode, useEffect } from "react";
-import { cleanup, fireEvent, render as renderUI, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render as renderUI, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
@@ -85,9 +85,56 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe("layout preview", () => {
+  it("shows one full-width pane in narrow containers, preserving drafts and reopening content on navigation", () => {
+    const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1000);
+    render(
+      <>
+        <Link to="/document">Open document</Link>
+        <WorkbenchPreview page={<Editor />} />
+      </>,
+    );
+    const editor = screen.getByLabelText("Unsaved field") as HTMLInputElement;
+    const draft = screen.getByLabelText("Chat draft") as HTMLTextAreaElement;
+    const content = screen.getByLabelText("Working content");
+    const chat = screen.getByLabelText("Assistant conversation");
+    const desktopWidth = chat.style.width;
+    fireEvent.change(editor, { target: { value: "Unsaved edit" } });
+    fireEvent.change(draft, { target: { value: "Question in progress" } });
+
+    width.mockReturnValue(390);
+    act(() => state.resize(390));
+    expect(chat.style.display).toBe("none");
+    expect(chat.hasAttribute("inert")).toBe(true);
+    expect(content.style.minWidth).toBe("0px");
+    expect(screen.queryByRole("separator", { name: "Resize chat" })).toBeNull();
+    for (let i = 0; i < 2; i++) {
+      fireEvent.click(screen.getByRole("button", { name: "Chat" }));
+      expect(chat.style.width).toBe("100%");
+      expect(chat.hasAttribute("inert")).toBe(false);
+      expect(content.style.display).toBe("none");
+      expect(content.hasAttribute("inert")).toBe(true);
+      fireEvent.click(screen.getByRole("link", { name: "Open document" }));
+      expect(content.style.display).toBe("flex");
+      expect(content.hasAttribute("inert")).toBe(false);
+      expect(chat.style.display).toBe("none");
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Content" }));
+    expect(screen.getByLabelText("Unsaved field")).toBe(editor);
+    expect(screen.getByLabelText("Chat draft")).toBe(draft);
+    expect(editor.value).toBe("Unsaved edit");
+    expect(draft.value).toBe("Question in progress");
+    width.mockReturnValue(1000);
+    act(() => state.resize(1000));
+    expect(chat.style.width).toBe(desktopWidth);
+    expect(content.style.display).toBe("flex");
+    expect(state.unmount).not.toHaveBeenCalled();
+  });
+
   it("reopens content after navigation, including a repeat selection of the same address", () => {
     render(
       <>

@@ -45,5 +45,5 @@ export function useChatWidth() {
       /* Storage may be disabled. */
     }
   };
-  return { containerRef, width, setWidth, ...limits };
+  return { containerRef, width, setWidth, compact: available < MIN_WIDTH + CONTENT_MIN, ...limits };
 }

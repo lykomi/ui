@@ -2138,6 +2138,12 @@ function SidebarFooterActions() {
 function MobileDrawer({ footer, ...view }: SidebarViewProps & { footer?: ReactNode }) {
   const isMobileOpen = useSidebarStore((s) => s.isMobileOpen);
   const closeMobile = useSidebarStore((s) => s.closeMobile);
+  const locationKey = useLocation().key;
+  const previousLocationKey = useRef(locationKey);
+  useEffect(() => {
+    if (previousLocationKey.current !== locationKey) closeMobile();
+    previousLocationKey.current = locationKey;
+  }, [locationKey, closeMobile]);
   const isToolPanelOpen = useToolPanelStore((s) => s.isOpen);
   const width = useSidebarStore((s) => s.width);
   const drawerWidth = Math.min(

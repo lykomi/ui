@@ -1,3 +1,4 @@
+import { ComposerInput } from "./composer-input.tsx";
 import { useRef, useState } from "react";
 import {
   ThreadPrimitive,
@@ -380,7 +381,7 @@ export function ChatBubble() {
                         <ComposerAddMenu compact />
                         <ContextPins compact />
                       </div>
-                      <ComposerPrimitive.Input
+                      <ComposerInput
                         autoFocus
                         placeholder={DEFAULT_COMPOSER_PLACEHOLDER}
                         rows={1}

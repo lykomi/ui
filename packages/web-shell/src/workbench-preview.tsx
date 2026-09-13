@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { useAuiState } from "@assistant-ui/react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@iloveagents/foundry-web-primitives";
 import {
   ChatContent,
   TooltipIconButton,
@@ -57,10 +58,15 @@ export function WorkbenchPreview({
   const [dismissedNotice, setDismissedNotice] = useState<string | null>(null);
   const chatWidth = useChatWidth();
   const resizeDrag = useRef<{ x: number; width: number } | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [desktopCollapsed, setCollapsed] = useState(false);
+  const collapsed = !chatWidth.compact && desktopCollapsed;
+  const [compactPane, setCompactPane] = useState<"chat" | "content">(chatOnly ? "chat" : "content");
   const [contentCollapsed, setContentCollapsed] = useState(false);
+  const contentHidden =
+    chatOnly || (chatWidth.compact ? compactPane !== "content" : contentCollapsed);
   useEffect(() => {
     setContentCollapsed(chatOnly);
+    setCompactPane(chatOnly ? "chat" : "content");
     if (chatOnly) setCollapsed(false);
     // Navigation is an explicit request to see content, including selecting
     // the same address again. Collapsing remains local until the next entry.
@@ -159,7 +165,10 @@ export function WorkbenchPreview({
   );
   const panelOpen = useToolPanelStore((s) => s.isOpen);
   useEffect(() => {
-    if (panelOpen) setContentCollapsed(false);
+    if (panelOpen) {
+      setContentCollapsed(false);
+      setCompactPane("content");
+    }
   }, [panelOpen]);
   const closePanel = useToolPanelStore((s) => s.closePanel);
   const requestedChat = useChatBubbleStore((s) => s.isOpen || s.isExpanded);
@@ -167,12 +176,14 @@ export function WorkbenchPreview({
 
   const startChat = () => {
     setHistoryOpen(false);
+    setCompactPane("chat");
     newConversation();
   };
 
   useEffect(() => {
     if (requestedChat) {
       setCollapsed(false);
+      setCompactPane("chat");
       useChatBubbleStore.getState().close();
     }
   }, [requestedChat]);
@@ -366,14 +377,14 @@ export function WorkbenchPreview({
         .workbench-preview [data-content-collapse] {
           position: absolute;
           top: calc((var(--workbench-header-height) - 36px) / 2);
-          right: 8px;
+          right: var(--workbench-inline-padding, 16px);
           width: 36px;
           height: 36px;
           padding: 8px;
           z-index: 20;
         }
-        .workbench-preview [data-working-content] [data-preview-entity-header] > [data-entity-header-row] {
-          padding-right: 52px;
+        .workbench-preview [data-working-content]:has(> [data-content-collapse]) [data-preview-entity-header] > [data-entity-header-row] {
+          padding-right: var(--workbench-header-actions-inset, calc(var(--workbench-inline-padding, 16px) + 44px));
         }
         .workbench-preview [data-working-content]:not(:has([data-entity-header-row])):not([data-item-panel-open]) {
           padding-top: var(--workbench-header-height);
@@ -381,17 +392,24 @@ export function WorkbenchPreview({
         @media print {
           .workbench-preview [data-content-collapse] { display: none; }
         }
+        .workbench-preview [data-conversation-row] {
+          color: var(--sidebar-foreground);
+          font-size: 14px;
+          line-height: 20px;
+        }
         /* Preview-only hierarchy: workspace title first, quiet section labels,
            and one consistent rhythm for conversation and content rows. */
-        .workbench-preview [data-nav-group-header] {
+        .workbench-preview [data-nav-group-header],
+        .workbench-preview [data-conversation-section-label] {
           min-height: 32px;
           gap: 0;
           background: transparent;
-          font-size: 14px;
-          font-weight: 400;
+          font-size: 12px;
+          font-weight: 500;
+          line-height: 16px;
           letter-spacing: normal;
           text-transform: none;
-          color: color-mix(in srgb, var(--foreground) 42%, var(--sidebar));
+          color: var(--muted-foreground);
         }
         .workbench-preview [data-nav-group-header] span:not([data-nav-status-dot]) {
           font-size: inherit;
@@ -407,6 +425,7 @@ export function WorkbenchPreview({
           padding-top: 18px;
           padding-bottom: 2px;
         }
+        .workbench-preview [data-conversation-row],
         .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth] {
           min-height: 36px;
           padding-top: 6px;
@@ -453,6 +472,12 @@ export function WorkbenchPreview({
           padding-left: 4px;
         }
 
+        @media (pointer: coarse) {
+          .workbench-preview [data-conversation-row],
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth] {
+            min-height: 44px;
+          }
+        }
       `}</style>
       <SelectionBridge>
         <Sidebar
@@ -489,6 +514,41 @@ export function WorkbenchPreview({
         data-workbench-surface
         aria-label="Workspace working area"
       >
+        {chatWidth.compact && (
+          <div
+            className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1"
+            aria-label="Workspace panes"
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="preview-mobile-navigation size-11"
+              aria-label="Open navigation"
+              onClick={toggleNavigation}
+            >
+              <Menu className="size-4" />
+            </Button>
+            {(["content", "chat"] as const)
+              .filter((pane) => !chatOnly || pane === "chat")
+              .map((pane) => (
+                <Button
+                  key={pane}
+                  variant="ghost"
+                  className="h-11 gap-1.5 px-3 aria-pressed:bg-muted"
+                  aria-pressed={chatOnly || compactPane === pane}
+                  aria-controls={pane === "chat" ? "preview-assistant" : "preview-content"}
+                  onClick={() => setCompactPane(pane)}
+                >
+                  {pane === "chat" ? (
+                    <MessageSquare className="size-4" />
+                  ) : (
+                    <FileText className="size-4" />
+                  )}
+                  {pane === "chat" ? "Chat" : "Content"}
+                </Button>
+              ))}
+          </div>
+        )}
         <div
           ref={chatWidth.containerRef}
           className="relative flex min-h-0 min-w-0 flex-1 overflow-x-auto"
@@ -498,16 +558,19 @@ export function WorkbenchPreview({
             data-panel-motion
             data-global-chat={chatOnly || undefined}
             data-chat-collapsed={collapsed ? "true" : undefined}
+            inert={chatWidth.compact && !chatOnly && compactPane !== "chat"}
             aria-label="Assistant conversation"
             className="relative flex min-h-0 shrink-0 flex-col"
             style={{
-              width: chatOnly
-                ? "100%"
-                : collapsed
-                  ? 44
-                  : contentCollapsed
-                    ? "calc(100% - 44px)"
-                    : chatWidth.width,
+              display: chatWidth.compact && !chatOnly && compactPane !== "chat" ? "none" : "flex",
+              width:
+                chatWidth.compact || chatOnly
+                  ? "100%"
+                  : collapsed
+                    ? 44
+                    : contentCollapsed
+                      ? "calc(100% - 44px)"
+                      : chatWidth.width,
               background: "var(--background)",
             }}
           >
@@ -515,7 +578,7 @@ export function WorkbenchPreview({
               data-chat-header
               className={`relative flex shrink-0 items-center ${collapsed ? "justify-center" : "gap-1 px-2"}`}
             >
-              {!collapsed && (
+              {!collapsed && !chatWidth.compact && (
                 <TooltipIconButton
                   tooltip="Open navigation"
                   className={`${buttonClass} preview-mobile-navigation`}
@@ -558,7 +621,7 @@ export function WorkbenchPreview({
                   </TooltipIconButton>
                   <TooltipIconButton
                     tooltip="Collapse chat"
-                    style={chatOnly ? { display: "none" } : undefined}
+                    style={chatOnly || chatWidth.compact ? { display: "none" } : undefined}
                     className={buttonClass}
                     aria-label="Collapse chat"
                     onClick={() => {
@@ -602,7 +665,7 @@ export function WorkbenchPreview({
                 showBack={!emptyChat}
               />
             )}
-            {!collapsed && !contentCollapsed && (
+            {!chatWidth.compact && !collapsed && !contentCollapsed && (
               <div
                 role="separator"
                 data-panel-resize
@@ -744,32 +807,35 @@ export function WorkbenchPreview({
           </section>
           {/* This containing block keeps document and item drawers beside chat. */}
           <section
+            id="preview-content"
             aria-label="Working content"
             data-working-content
             data-panel-motion
-            data-content-collapsed={contentCollapsed || undefined}
-            inert={contentCollapsed}
+            data-content-collapsed={contentHidden || undefined}
+            inert={contentHidden}
             data-item-panel-open={panelOpen || undefined}
             className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
             style={{
-              display: chatOnly ? "none" : "flex",
-              minWidth: contentCollapsed ? 44 : collapsed ? 320 : 440,
+              display: chatOnly || (chatWidth.compact && contentHidden) ? "none" : "flex",
+              minWidth: chatWidth.compact ? 0 : contentCollapsed ? 44 : collapsed ? 320 : 440,
               transform: "translateZ(0)",
               isolation: "isolate",
             }}
           >
-            <TooltipIconButton
-              data-content-collapse
-              tooltip="Collapse content"
-              className={buttonClass}
-              aria-label="Collapse content"
-              onClick={() => {
-                setCollapsed(false);
-                setContentCollapsed(true);
-              }}
-            >
-              <PanelRight size={18} />
-            </TooltipIconButton>
+            {!chatWidth.compact && (
+              <TooltipIconButton
+                data-content-collapse
+                tooltip="Collapse content"
+                className={buttonClass}
+                aria-label="Collapse content"
+                onClick={() => {
+                  setCollapsed(false);
+                  setContentCollapsed(true);
+                }}
+              >
+                <PanelRight size={18} />
+              </TooltipIconButton>
+            )}
             {panelOpen && (
               <div
                 className="flex shrink-0 items-center border-b border-border pl-3 pr-14"
@@ -784,7 +850,7 @@ export function WorkbenchPreview({
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{page}</div>
             </ToolPanelLayout>
           </section>
-          {contentCollapsed && !chatOnly && (
+          {contentCollapsed && !chatOnly && !chatWidth.compact && (
             <aside
               aria-label="Collapsed content"
               className="absolute inset-y-0 right-0 flex w-11 shrink-0 flex-col items-center"

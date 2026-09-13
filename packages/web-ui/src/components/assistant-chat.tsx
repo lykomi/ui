@@ -1,3 +1,4 @@
+import { ComposerInput } from "./composer-input.tsx";
 import { type FC, type ReactNode, useState, useRef, useCallback, useEffect } from "react";
 import {
   ThreadPrimitive,
@@ -174,7 +175,7 @@ const EditComposer: FC = () => (
             "px-4 py-3",
           )}
         >
-          <ComposerPrimitive.Input
+          <ComposerInput
             autoFocus
             className={cn(
               "w-full bg-transparent",
@@ -612,7 +613,7 @@ export function ChatContent({
                   <ContextPins />
                 </div>
 
-                <ComposerPrimitive.Input
+                <ComposerInput
                   autoFocus
                   placeholder={placeholder}
                   rows={1}

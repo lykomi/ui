@@ -156,6 +156,21 @@ describe("Sidebar active state", () => {
     });
   };
 
+  it("closes the mobile drawer on navigation, including repeat selection of the current address", async () => {
+    window.innerWidth = 390;
+    await renderWithItems([{ to: "/spaces/demo/document", label: "Document", icon: FolderOpen }]);
+    const documentLink = container.querySelector<HTMLAnchorElement>(
+      '[data-sidebar-surface="mobile"] a[href="/spaces/demo/document"]',
+    );
+    expect(documentLink).toBeTruthy();
+    for (let i = 0; i < 2; i++) {
+      await act(async () => useSidebarStore.getState().toggleMobile());
+      expect(useSidebarStore.getState().isMobileOpen).toBe(true);
+      await act(async () => documentLink!.click());
+      expect(useSidebarStore.getState().isMobileOpen).toBe(false);
+    }
+  });
+
   it("marks the unvisited workspace as unknown, not as a leaf", async () => {
     // Chris's case: one workspace selected (tree fetched, so it branches),
     // the other never opened. `groupHasBranches` turns the whole group into a
