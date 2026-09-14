@@ -10,13 +10,14 @@ const state = vi.hoisted(() => ({
   unmount: vi.fn(),
   groups: [] as NavGroup[],
   empty: false,
+  running: false,
   panelOpen: false,
   sidebar: vi.fn(),
 }));
 vi.mock("@assistant-ui/react", () => ({
   useAuiState: (select: (s: unknown) => unknown) =>
     select({
-      thread: { messages: state.empty ? [] : [{}], isRunning: false, isLoading: false },
+      thread: { messages: state.empty ? [] : [{}], isRunning: state.running, isLoading: false },
       composer: { text: "" },
     }),
 }));
@@ -77,6 +78,7 @@ beforeEach(() => {
   state.sidebar.mockClear();
   state.groups = [];
   state.empty = false;
+  state.running = false;
   state.panelOpen = false;
   sessionStorage.clear();
   localStorage.clear();
@@ -346,3 +348,14 @@ describe("layout preview", () => {
 function render(ui: ReactNode) {
   return renderUI(ui, { wrapper: MemoryRouter });
 }
+
+it("shows ongoing work in the collapsed rail and clears it when the run ends", () => {
+  state.running = true;
+  const view = render(<WorkbenchPreview page={<Editor />} />);
+  fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
+  expect(screen.getByRole("button", { name: "AI is working — expand chat" })).toBeTruthy();
+  state.running = false;
+  view.rerender(<WorkbenchPreview page={<Editor />} />);
+  expect(screen.queryByRole("button", { name: "AI is working — expand chat" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Expand chat" })).toBeTruthy();
+});

@@ -8,7 +8,7 @@ import { WorkbenchStyles } from "./workbench-styles.tsx";
 import { type ReactNode } from "react";
 import { Button } from "@iloveagents/foundry-web-primitives";
 import { ChatContent, TooltipIconButton } from "../index.ts";
-import { FileText, MessageSquare, Menu } from "lucide-react";
+import { FileText, MessageSquare, Menu, LoaderCircle } from "lucide-react";
 import { ConversationHistory } from "./conversation-history.tsx";
 export function WorkbenchPreview({
   page,
@@ -23,6 +23,7 @@ export function WorkbenchPreview({
     pageLabel,
     chatWidth,
     collapsed,
+    running,
     setCollapsed,
     compactPane,
     setCompactPane,
@@ -86,10 +87,15 @@ export function WorkbenchPreview({
                   className="h-11 gap-1.5 px-3 aria-pressed:bg-muted"
                   aria-pressed={chatOnly || compactPane === pane}
                   aria-controls={pane === "chat" ? "preview-assistant" : "preview-content"}
+                  aria-label={pane === "chat" && running ? "Chat — AI is working" : undefined}
                   onClick={() => setCompactPane(pane)}
                 >
                   {pane === "chat" ? (
-                    <MessageSquare className="size-4" />
+                    running ? (
+                      <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none text-primary" />
+                    ) : (
+                      <MessageSquare className="size-4" />
+                    )
                   ) : (
                     <FileText className="size-4" />
                   )}
@@ -125,6 +131,7 @@ export function WorkbenchPreview({
           >
             <WorkbenchChatHeader
               collapsed={collapsed}
+              running={running}
               chatWidth={chatWidth}
               buttonClass={buttonClass}
               toggleNavigation={toggleNavigation}
