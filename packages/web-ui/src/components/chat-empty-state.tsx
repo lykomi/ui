@@ -6,10 +6,12 @@ export function ChatEmptyState({
   pageLabel,
   children,
   showHomeStarters = true,
+  homeStarterPriority = 0,
 }: {
   pageLabel?: string;
   children?: ReactNode;
   showHomeStarters?: boolean;
+  homeStarterPriority?: number;
 }) {
   return (
     <div className="flex min-h-full flex-col justify-center gap-3 px-6 py-8">
@@ -27,7 +29,7 @@ export function ChatEmptyState({
       <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
         Your conversation continues as you browse. Select text or a field to work more specifically.
       </p>
-      {showHomeStarters && <ChatHomeStartersSlot />}
+      {showHomeStarters && <ChatHomeStartersSlot priority={homeStarterPriority} />}
       {children}
     </div>
   );

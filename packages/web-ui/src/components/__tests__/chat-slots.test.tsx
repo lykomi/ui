@@ -81,6 +81,34 @@ describe("chat slots", () => {
     expect(container.querySelector('[data-testid="banner"]')).not.toBeNull();
   });
 
+  it("mounts home starters once in the highest-priority visible host", () => {
+    registerChatSlots({ homeStarters: () => <span data-testid="starter">Review</span> });
+    const Hosts = ({ focus }: { focus: boolean }) => (
+      <>
+        <div data-testid="primary-host">
+          <ChatHomeStartersSlot />
+        </div>
+        {focus && (
+          <div data-testid="focus-host">
+            <ChatHomeStartersSlot priority={20} />
+          </div>
+        )}
+      </>
+    );
+
+    act(() => root.render(<Hosts focus />));
+    expect(container.querySelectorAll('[data-testid="starter"]')).toHaveLength(1);
+    expect(
+      container.querySelector('[data-testid="focus-host"] [data-testid="starter"]'),
+    ).not.toBeNull();
+
+    act(() => root.render(<Hosts focus={false} />));
+    expect(container.querySelectorAll('[data-testid="starter"]')).toHaveLength(1);
+    expect(
+      container.querySelector('[data-testid="primary-host"] [data-testid="starter"]'),
+    ).not.toBeNull();
+  });
+
   it("renders nothing while unregistered", () => {
     renderSlots();
     expect(container.innerHTML).toBe("");

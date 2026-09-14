@@ -23,7 +23,7 @@ export function WelcomeIntro({
         Find information, create or edit content, and run actions across your spaces.
       </p>
       <div className="mx-auto mt-4 max-w-sm text-left">
-        <ChatHomeStartersSlot />
+        <ChatHomeStartersSlot priority={10} />
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         {historyShortcut}

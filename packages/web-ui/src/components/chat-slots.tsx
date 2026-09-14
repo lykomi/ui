@@ -43,7 +43,7 @@
  * something unrelated must not make Send disappear.
  */
 
-import type { ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { create } from "zustand";
 import { useAuiState } from "@assistant-ui/react";
 
@@ -72,6 +72,27 @@ export const useChatSlotsStore = create<ChatSlotsState>(() => ({
   threadSurface: null,
 }));
 
+const homeStarterHosts = new Map<symbol, { priority: number; order: number }>();
+let homeStarterHostOrder = 0;
+const useHomeStarterHostStore = create<{ active: symbol | null }>(() => ({ active: null }));
+
+function refreshActiveHomeStarterHost() {
+  let active: symbol | null = null;
+  let bestPriority = Number.NEGATIVE_INFINITY;
+  let bestOrder = Number.NEGATIVE_INFINITY;
+  for (const [id, host] of homeStarterHosts) {
+    if (
+      host.priority > bestPriority ||
+      (host.priority === bestPriority && host.order > bestOrder)
+    ) {
+      active = id;
+      bestPriority = host.priority;
+      bestOrder = host.order;
+    }
+  }
+  useHomeStarterHostStore.setState({ active });
+}
+
 /**
  * Register chat slot components. Later calls overwrite only the keys
  * they pass, so independent modules can each claim a different slot.
@@ -97,9 +118,19 @@ export function ChatComposerBannerSlot() {
   return Banner ? <Banner /> : null;
 }
 
-export function ChatHomeStartersSlot() {
+export function ChatHomeStartersSlot({ priority = 0 }: { priority?: number }) {
+  const [hostId] = useState(() => Symbol("chat-home-starters"));
+  const active = useHomeStarterHostStore((state) => state.active);
   const Starters = useChatSlotsStore((s) => s.homeStarters);
-  return Starters ? <Starters /> : null;
+  useEffect(() => {
+    homeStarterHosts.set(hostId, { priority, order: ++homeStarterHostOrder });
+    refreshActiveHomeStarterHost();
+    return () => {
+      homeStarterHosts.delete(hostId);
+      refreshActiveHomeStarterHost();
+    };
+  }, [hostId, priority]);
+  return active === hostId && Starters ? <Starters /> : null;
 }
 
 export function ChatContextDetailsSlot({ onDismiss }: { onDismiss: () => void }) {
