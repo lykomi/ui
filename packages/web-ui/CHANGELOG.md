@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.27.1
+
+### Patch Changes
+
+- 7a516c1: Use “Do anything” consistently as the default chat composer placeholder.
+  - @iloveagents/foundry-agent@0.27.1
+  - @iloveagents/foundry-web-primitives@0.27.1
+
 ## 0.27.0
 
 ### Minor Changes
