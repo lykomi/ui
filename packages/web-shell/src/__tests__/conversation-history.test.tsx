@@ -173,6 +173,38 @@ it("shows only the conversations action when an entity has no exact recent chat"
   expect(viewAll).toHaveBeenCalledOnce();
 });
 
+it("does not leak workspace recents when the current entity metadata is unavailable", () => {
+  render(
+    <MemoryRouter>
+      <ConversationHistory
+        compact
+        workspaceId="workspace"
+        groups={[
+          {
+            label: "Recent conversations",
+            items: [],
+            meta: {
+              type: "recent-chats",
+              workspaceId: "workspace",
+              workspaceConversations: [
+                {
+                  label: "Private task review",
+                  to: "/chat/task",
+                  icon: MessageSquare,
+                  meta: { previewEntityId: "task" },
+                },
+              ],
+            },
+          },
+        ]}
+        onClose={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByText("Private task review")).toBeNull();
+  expect(screen.getByRole("button", { name: "Conversation history" })).toBeTruthy();
+});
+
 it("separates pinned chats from recents without duplicating entries", () => {
   render(
     <MemoryRouter>

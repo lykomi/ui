@@ -61,8 +61,10 @@ export function ConversationHistory({
       ? allItems
       : ((scoped?.meta?.workspaceConversations as NavItem[] | undefined) ?? scoped?.items ?? []);
   const scopedItems =
-    compact && workspaceId && entityId && !rootContext
-      ? workspaceItems.filter((item) => item.meta?.previewEntityId === entityId)
+    compact && workspaceId && !rootContext
+      ? workspaceItems.filter(
+          (item) => Boolean(entityId) && item.meta?.previewEntityId === entityId,
+        )
       : workspaceItems;
   const items = [...new Map(scopedItems.map((item) => [item.to, item])).values()]
     .filter((item) => item.meta?.type !== "show-all-chats")
