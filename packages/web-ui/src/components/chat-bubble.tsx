@@ -32,6 +32,7 @@ import { DEFAULT_COMPOSER_PLACEHOLDER } from "./assistant-chat.tsx";
 import {
   ChatComposerActionsSlot,
   ChatComposerBannerSlot,
+  ChatHomeStartersSlot,
   ChatLauncherBadgeSlot,
   useChatThreadSurface,
   useComposerActionsOwnSend,
@@ -326,10 +327,11 @@ export function ChatBubble() {
                   aria-hidden={ThreadSurface ? true : undefined}
                 >
                   <ThreadPrimitive.Empty>
-                    <div className="flex h-full items-center justify-center p-4">
+                    <div className="flex min-h-full flex-col items-center justify-center gap-4 p-4">
                       <p className="text-sm text-muted-foreground text-center">
                         Ask the agent about this page
                       </p>
+                      <ChatHomeStartersSlot />
                     </div>
                   </ThreadPrimitive.Empty>
 

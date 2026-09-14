@@ -10,6 +10,8 @@
  * shell's chat components render the slots wherever they belong.
  *
  * Render points:
+ *   - ``homeStarters`` — contextual starters inside the empty chat home,
+ *     alongside its introduction. The module owns discovery and execution.
  *   - ``composerBanner`` — directly above the composer in BOTH the full
  *     chat (``ChatContent``) and the floating bubble panel. It renders
  *     inside a fixed (non-scrolling) footer, so it never scrolls away
@@ -41,11 +43,13 @@
  * something unrelated must not make Send disappear.
  */
 
-import type { ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { create } from "zustand";
 import { useAuiState } from "@assistant-ui/react";
 
 interface ChatSlotsState {
+  /** Contextual conversation starters. Only mounted on the empty chat home. */
+  homeStarters: ComponentType | null;
   composerBanner: ComponentType | null;
   /** Extra capabilities in the context flyout. Providers own section headings
    * and can dismiss the flyout before opening a dialog or starting an action. */
@@ -59,6 +63,7 @@ interface ChatSlotsState {
 }
 
 export const useChatSlotsStore = create<ChatSlotsState>(() => ({
+  homeStarters: null,
   composerBanner: null,
   contextDetails: null,
   launcherBadge: null,
@@ -66,6 +71,27 @@ export const useChatSlotsStore = create<ChatSlotsState>(() => ({
   composerActionsReplaceSend: false,
   threadSurface: null,
 }));
+
+const homeStarterHosts = new Map<symbol, { priority: number; order: number }>();
+let homeStarterHostOrder = 0;
+const useHomeStarterHostStore = create<{ active: symbol | null }>(() => ({ active: null }));
+
+function refreshActiveHomeStarterHost() {
+  let active: symbol | null = null;
+  let bestPriority = Number.NEGATIVE_INFINITY;
+  let bestOrder = Number.NEGATIVE_INFINITY;
+  for (const [id, host] of homeStarterHosts) {
+    if (
+      host.priority > bestPriority ||
+      (host.priority === bestPriority && host.order > bestOrder)
+    ) {
+      active = id;
+      bestPriority = host.priority;
+      bestOrder = host.order;
+    }
+  }
+  useHomeStarterHostStore.setState({ active });
+}
 
 /**
  * Register chat slot components. Later calls overwrite only the keys
@@ -75,6 +101,7 @@ export const useChatSlotsStore = create<ChatSlotsState>(() => ({
  */
 export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
   const next: Partial<ChatSlotsState> = {};
+  if (slots.homeStarters !== undefined) next.homeStarters = slots.homeStarters;
   if (slots.composerBanner !== undefined) next.composerBanner = slots.composerBanner;
   if (slots.contextDetails !== undefined) next.contextDetails = slots.contextDetails;
   if (slots.launcherBadge !== undefined) next.launcherBadge = slots.launcherBadge;
@@ -89,6 +116,21 @@ export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
 export function ChatComposerBannerSlot() {
   const Banner = useChatSlotsStore((s) => s.composerBanner);
   return Banner ? <Banner /> : null;
+}
+
+export function ChatHomeStartersSlot({ priority = 0 }: { priority?: number }) {
+  const [hostId] = useState(() => Symbol("chat-home-starters"));
+  const active = useHomeStarterHostStore((state) => state.active);
+  const Starters = useChatSlotsStore((s) => s.homeStarters);
+  useEffect(() => {
+    homeStarterHosts.set(hostId, { priority, order: ++homeStarterHostOrder });
+    refreshActiveHomeStarterHost();
+    return () => {
+      homeStarterHosts.delete(hostId);
+      refreshActiveHomeStarterHost();
+    };
+  }, [hostId, priority]);
+  return active === hostId && Starters ? <Starters /> : null;
 }
 
 export function ChatContextDetailsSlot({ onDismiss }: { onDismiss: () => void }) {

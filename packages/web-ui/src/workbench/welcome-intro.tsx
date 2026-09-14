@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   useNavStore,
 } from "../index.ts";
+import { ChatHomeStartersSlot } from "../components/chat-slots.tsx";
 import { Layers } from "lucide-react";
 export function WelcomeIntro({
   navGroups,
@@ -21,6 +22,9 @@ export function WelcomeIntro({
       <p className="mt-2 text-sm text-muted-foreground">
         Find information, create or edit content, and run actions across your spaces.
       </p>
+      <div className="mx-auto mt-4 max-w-sm text-left">
+        <ChatHomeStartersSlot priority={10} />
+      </div>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         {historyShortcut}
         {navGroups.some(

@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   ChatComposerActionsSlot,
   ChatComposerBannerSlot,
+  ChatHomeStartersSlot,
   ChatContextDetailsSlot,
   ChatLauncherBadgeSlot,
   registerChatSlots,
@@ -38,6 +39,7 @@ describe("chat slots", () => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     useChatSlotsStore.setState({
       composerBanner: null,
+      homeStarters: null,
       contextDetails: null,
       launcherBadge: null,
       composerActions: null,
@@ -59,12 +61,53 @@ describe("chat slots", () => {
       root.render(
         <>
           <ChatComposerBannerSlot />
+          <ChatHomeStartersSlot />
           <ChatContextDetailsSlot onDismiss={() => {}} />
           <ChatLauncherBadgeSlot />
           <ChatComposerActionsSlot />
         </>,
       ),
     );
+
+  it("registers and clears chat home starters independently of the composer", () => {
+    registerChatSlots({
+      homeStarters: () => <span>Review instructions</span>,
+      composerBanner: Banner,
+    });
+    renderSlots();
+    expect(container.textContent).toContain("Review instructions");
+    act(() => registerChatSlots({ homeStarters: null }));
+    expect(container.textContent).not.toContain("Review instructions");
+    expect(container.querySelector('[data-testid="banner"]')).not.toBeNull();
+  });
+
+  it("mounts home starters once in the highest-priority visible host", () => {
+    registerChatSlots({ homeStarters: () => <span data-testid="starter">Review</span> });
+    const Hosts = ({ focus }: { focus: boolean }) => (
+      <>
+        <div data-testid="primary-host">
+          <ChatHomeStartersSlot />
+        </div>
+        {focus && (
+          <div data-testid="focus-host">
+            <ChatHomeStartersSlot priority={20} />
+          </div>
+        )}
+      </>
+    );
+
+    act(() => root.render(<Hosts focus />));
+    expect(container.querySelectorAll('[data-testid="starter"]')).toHaveLength(1);
+    expect(
+      container.querySelector('[data-testid="focus-host"] [data-testid="starter"]'),
+    ).not.toBeNull();
+
+    act(() => root.render(<Hosts focus={false} />));
+    expect(container.querySelectorAll('[data-testid="starter"]')).toHaveLength(1);
+    expect(
+      container.querySelector('[data-testid="primary-host"] [data-testid="starter"]'),
+    ).not.toBeNull();
+  });
 
   it("renders nothing while unregistered", () => {
     renderSlots();

@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 import { PinStateIcon } from "./pin-state-icon.tsx";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 
-/** Pin state uses one upright glyph everywhere; the label describes the action. */
+/** Pinned glyphs are upright; unpinned glyphs tilt. Labels describe the action. */
 export function PinToggle({
   pinned,
   label,
@@ -21,9 +21,7 @@ export function PinToggle({
       {...props}
       className={cn(
         "shrink-0 shadow-none",
-        pinned
-          ? "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
-          : "text-muted-foreground",
+        pinned ? "text-primary hover:text-primary" : "text-muted-foreground",
         className,
       )}
     >

@@ -2,6 +2,7 @@ import { WorkbenchNavigation } from "./navigation.tsx";
 import { WorkbenchChatHeader } from "./chat-header.tsx";
 import { WorkbenchContentPane } from "./content-pane.tsx";
 import { ChatResizeHandle } from "./chat-resize-handle.tsx";
+import { ChatEmptyState } from "../components/chat-empty-state.tsx";
 import { WelcomeIntro } from "./welcome-intro.tsx";
 import { useWorkbenchState } from "./use-workbench-state.tsx";
 import { WorkbenchStyles } from "./workbench-styles.tsx";
@@ -175,27 +176,9 @@ export function WorkbenchPreview({
                 showPinButton={false}
                 starterSuggestions={[]}
                 emptyState={
-                  <div className="flex min-h-full flex-col justify-center gap-3 px-6 py-8">
-                    <h1 className="text-lg font-semibold tracking-tight">
-                      What would you like to get done?
-                    </h1>
-                    <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-                      {pageLabel && !pageLabel.startsWith("/") ? (
-                        <>
-                          Work with <span className="font-medium text-foreground">{pageLabel}</span>{" "}
-                          or across your spaces: find information, create or edit content, and run
-                          actions.
-                        </>
-                      ) : (
-                        "Find information, create or edit content, and run actions across your spaces."
-                      )}
-                    </p>
-                    <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-                      Your conversation continues as you browse. Select text or a field to work more
-                      specifically.
-                    </p>
+                  <ChatEmptyState pageLabel={pageLabel} showHomeStarters={!spaciousChat}>
                     {historyShortcut}
-                  </div>
+                  </ChatEmptyState>
                 }
               />
             </div>
