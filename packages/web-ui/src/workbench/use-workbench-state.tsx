@@ -108,7 +108,7 @@ export function useWorkbenchState(chatRoute: boolean) {
       variant="ghost"
       size="sm"
       onClick={openHistory}
-      className="h-8 w-fit gap-2 px-3 text-xs font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
+      className={`h-8 w-fit gap-2 px-3 text-xs font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11 ${spaciousChat ? "" : "-ml-3"}`}
     >
       <History className="size-3.5" aria-hidden />
       Conversation history

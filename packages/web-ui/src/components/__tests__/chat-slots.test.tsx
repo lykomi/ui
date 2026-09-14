@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   ChatComposerActionsSlot,
   ChatComposerBannerSlot,
+  ChatHomeStartersSlot,
   ChatContextDetailsSlot,
   ChatLauncherBadgeSlot,
   registerChatSlots,
@@ -38,6 +39,7 @@ describe("chat slots", () => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     useChatSlotsStore.setState({
       composerBanner: null,
+      homeStarters: null,
       contextDetails: null,
       launcherBadge: null,
       composerActions: null,
@@ -59,12 +61,25 @@ describe("chat slots", () => {
       root.render(
         <>
           <ChatComposerBannerSlot />
+          <ChatHomeStartersSlot />
           <ChatContextDetailsSlot onDismiss={() => {}} />
           <ChatLauncherBadgeSlot />
           <ChatComposerActionsSlot />
         </>,
       ),
     );
+
+  it("registers and clears chat home starters independently of the composer", () => {
+    registerChatSlots({
+      homeStarters: () => <span>Review instructions</span>,
+      composerBanner: Banner,
+    });
+    renderSlots();
+    expect(container.textContent).toContain("Review instructions");
+    act(() => registerChatSlots({ homeStarters: null }));
+    expect(container.textContent).not.toContain("Review instructions");
+    expect(container.querySelector('[data-testid="banner"]')).not.toBeNull();
+  });
 
   it("renders nothing while unregistered", () => {
     renderSlots();

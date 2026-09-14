@@ -38,6 +38,7 @@ import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import {
   ChatComposerActionsSlot,
   ChatComposerBannerSlot,
+  ChatHomeStartersSlot,
   useChatThreadSurface,
   useComposerActionsOwnSend,
 } from "./chat-slots.tsx";
@@ -514,6 +515,7 @@ export function ChatContent({
                   <h1 className="text-[2rem] font-normal text-foreground text-center mb-6">
                     How can I help you today?
                   </h1>
+                  <ChatHomeStartersSlot />
                   {starterSuggestions.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 max-w-lg">
                       {starterSuggestions.map((prompt) => (

@@ -10,6 +10,8 @@
  * shell's chat components render the slots wherever they belong.
  *
  * Render points:
+ *   - ``homeStarters`` — contextual starters inside the empty chat home,
+ *     alongside its introduction. The module owns discovery and execution.
  *   - ``composerBanner`` — directly above the composer in BOTH the full
  *     chat (``ChatContent``) and the floating bubble panel. It renders
  *     inside a fixed (non-scrolling) footer, so it never scrolls away
@@ -46,6 +48,8 @@ import { create } from "zustand";
 import { useAuiState } from "@assistant-ui/react";
 
 interface ChatSlotsState {
+  /** Contextual conversation starters. Only mounted on the empty chat home. */
+  homeStarters: ComponentType | null;
   composerBanner: ComponentType | null;
   /** Extra capabilities in the context flyout. Providers own section headings
    * and can dismiss the flyout before opening a dialog or starting an action. */
@@ -59,6 +63,7 @@ interface ChatSlotsState {
 }
 
 export const useChatSlotsStore = create<ChatSlotsState>(() => ({
+  homeStarters: null,
   composerBanner: null,
   contextDetails: null,
   launcherBadge: null,
@@ -75,6 +80,7 @@ export const useChatSlotsStore = create<ChatSlotsState>(() => ({
  */
 export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
   const next: Partial<ChatSlotsState> = {};
+  if (slots.homeStarters !== undefined) next.homeStarters = slots.homeStarters;
   if (slots.composerBanner !== undefined) next.composerBanner = slots.composerBanner;
   if (slots.contextDetails !== undefined) next.contextDetails = slots.contextDetails;
   if (slots.launcherBadge !== undefined) next.launcherBadge = slots.launcherBadge;
@@ -89,6 +95,11 @@ export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
 export function ChatComposerBannerSlot() {
   const Banner = useChatSlotsStore((s) => s.composerBanner);
   return Banner ? <Banner /> : null;
+}
+
+export function ChatHomeStartersSlot() {
+  const Starters = useChatSlotsStore((s) => s.homeStarters);
+  return Starters ? <Starters /> : null;
 }
 
 export function ChatContextDetailsSlot({ onDismiss }: { onDismiss: () => void }) {

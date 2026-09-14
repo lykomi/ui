@@ -2,6 +2,7 @@ import { WorkbenchNavigation } from "./navigation.tsx";
 import { WorkbenchChatHeader } from "./chat-header.tsx";
 import { WorkbenchContentPane } from "./content-pane.tsx";
 import { ChatResizeHandle } from "./chat-resize-handle.tsx";
+import { ChatHomeStartersSlot } from "../components/chat-slots.tsx";
 import { WelcomeIntro } from "./welcome-intro.tsx";
 import { useWorkbenchState } from "./use-workbench-state.tsx";
 import { WorkbenchStyles } from "./workbench-styles.tsx";
@@ -194,6 +195,7 @@ export function WorkbenchPreview({
                       Your conversation continues as you browse. Select text or a field to work more
                       specifically.
                     </p>
+                    <ChatHomeStartersSlot />
                     {historyShortcut}
                   </div>
                 }

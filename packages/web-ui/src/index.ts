@@ -22,6 +22,7 @@ export {
   registerChatSlots,
   useChatSlotsStore,
   ChatComposerBannerSlot,
+  ChatHomeStartersSlot,
   ChatLauncherBadgeSlot,
   ChatComposerActionsSlot,
   useComposerActionsOwnSend,
