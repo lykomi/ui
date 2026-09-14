@@ -83,6 +83,128 @@ it("resets the filter on workspace changes and does not invent an entity label",
   expect(screen.getByLabelText("History filter").textContent).toBe("Last used in this workspace");
 });
 
+it("shows workspace recents at a root and only exact entity recents elsewhere", () => {
+  const root = {
+    label: "Workspace planning",
+    to: "/chat/root",
+    icon: MessageSquare,
+    meta: { previewEntityId: "workspace", previewEntityName: "Workspace" },
+  };
+  const task = {
+    label: "Task review",
+    to: "/chat/task",
+    icon: MessageSquare,
+    meta: { previewEntityId: "task", previewEntityName: "Task" },
+  };
+  const groups = [
+    {
+      label: "Recent conversations",
+      items: [root, task],
+      meta: {
+        type: "recent-chats",
+        workspaceId: "workspace",
+        workspaceConversations: [root, task],
+      },
+    },
+  ];
+  const view = render(
+    <MemoryRouter>
+      <ConversationHistory
+        compact
+        rootContext
+        entityId="workspace"
+        workspaceId="workspace"
+        groups={groups}
+        onClose={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("Workspace planning")).toBeTruthy();
+  expect(screen.getByText("Task review")).toBeTruthy();
+
+  view.rerender(
+    <MemoryRouter>
+      <ConversationHistory
+        compact
+        entityId="task"
+        workspaceId="workspace"
+        groups={groups}
+        onClose={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByText("Workspace planning")).toBeNull();
+  expect(screen.getByText("Task review")).toBeTruthy();
+});
+
+it("shows only the conversations action when an entity has no exact recent chat", () => {
+  const viewAll = vi.fn();
+  render(
+    <MemoryRouter>
+      <ConversationHistory
+        compact
+        entityId="other-task"
+        workspaceId="workspace"
+        groups={[
+          {
+            label: "Recent conversations",
+            items: [],
+            meta: {
+              type: "recent-chats",
+              workspaceId: "workspace",
+              workspaceConversations: [
+                {
+                  label: "Task review",
+                  to: "/chat/task",
+                  icon: MessageSquare,
+                  meta: { previewEntityId: "task" },
+                },
+              ],
+            },
+          },
+        ]}
+        onClose={() => {}}
+        onViewAll={viewAll}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByText("No chats yet")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
+  expect(viewAll).toHaveBeenCalledOnce();
+});
+
+it("does not leak workspace recents when the current entity metadata is unavailable", () => {
+  render(
+    <MemoryRouter>
+      <ConversationHistory
+        compact
+        workspaceId="workspace"
+        groups={[
+          {
+            label: "Recent conversations",
+            items: [],
+            meta: {
+              type: "recent-chats",
+              workspaceId: "workspace",
+              workspaceConversations: [
+                {
+                  label: "Private task review",
+                  to: "/chat/task",
+                  icon: MessageSquare,
+                  meta: { previewEntityId: "task" },
+                },
+              ],
+            },
+          },
+        ]}
+        onClose={() => {}}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByText("Private task review")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Conversation history" })).toBeNull();
+});
+
 it("separates pinned chats from recents without duplicating entries", () => {
   render(
     <MemoryRouter>

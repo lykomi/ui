@@ -1,5 +1,5 @@
 import { Link, MemoryRouter } from "react-router";
-import { Folder } from "lucide-react";
+import { Folder, MessageSquare } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
 import { type ReactNode, useEffect } from "react";
 import { act, cleanup, fireEvent, render as renderUI, screen } from "@testing-library/react";
@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   empty: false,
   running: false,
   panelOpen: false,
+  navContext: { label: "Document", meta: {} as Record<string, unknown> },
   sidebar: vi.fn(),
 }));
 vi.mock("@assistant-ui/react", () => ({
@@ -27,7 +28,7 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
     return null;
   },
   useAppStore: (select: (s: unknown) => unknown) =>
-    select({ currentPage: "/document", navContext: { label: "Document" } }),
+    select({ currentPage: "/document", navContext: state.navContext }),
   useSidebarStore: (select: (s: unknown) => unknown) => select({ toggleMobile: vi.fn() }),
   TooltipIconButton: ({
     tooltip,
@@ -80,6 +81,7 @@ beforeEach(() => {
   state.empty = false;
   state.running = false;
   state.panelOpen = false;
+  state.navContext = { label: "Document", meta: {} };
   sessionStorage.clear();
   localStorage.clear();
   window.history.replaceState({}, "", "/");
@@ -221,6 +223,151 @@ describe("layout preview", () => {
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
+  });
+
+  it("shows workspace recents at a focused root that only exposes root metadata", () => {
+    state.empty = true;
+    state.navContext.meta = { spacesRootId: "w1" };
+    const recent = {
+      label: "Recent conversations",
+      items: [],
+      meta: {
+        type: "recent-chats",
+        workspaceId: "w1",
+        workspaceConversations: [
+          {
+            label: "Workspace review",
+            to: "/chat/review",
+            icon: MessageSquare,
+            meta: { previewEntityId: "task" },
+          },
+        ],
+      },
+    };
+    state.groups = [
+      {
+        label: "Workspaces",
+        items: [
+          {
+            label: "Workspace one",
+            to: "/",
+            icon: Folder,
+            meta: { spacesRootId: "w1" },
+          },
+        ],
+        meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
+      },
+      recent,
+    ];
+    render(<WorkbenchPreview page={<Editor />} />);
+    expect(screen.getByRole("link", { name: /Workspace review/ })).toBeTruthy();
+  });
+
+  it("uses the current route for contextual recents while nav context catches up", () => {
+    state.empty = true;
+    state.navContext.meta = { spacesEntityId: "w1", spacesRootId: "w1" };
+    state.groups = [
+      {
+        label: "Workspaces",
+        items: [
+          {
+            label: "Workspace one",
+            to: "/",
+            icon: Folder,
+            meta: { spacesRootId: "w1" },
+            children: [
+              {
+                label: "Task",
+                to: "/task",
+                icon: Folder,
+                meta: { spacesEntityId: "task", spacesRootId: "w1" },
+              },
+            ],
+          },
+        ],
+        meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
+      },
+      {
+        label: "Recent conversations",
+        items: [],
+        meta: {
+          type: "recent-chats",
+          workspaceId: "w1",
+          workspaceConversations: [
+            {
+              label: "Workspace review",
+              to: "/chat/workspace",
+              icon: MessageSquare,
+              meta: { previewEntityId: "w1" },
+            },
+            {
+              label: "Task review",
+              to: "/chat/task",
+              icon: MessageSquare,
+              meta: { previewEntityId: "task" },
+            },
+          ],
+        },
+      },
+    ];
+    render(
+      <>
+        <Link to="/task">Open task</Link>
+        <WorkbenchPreview page={<Editor />} />
+      </>,
+    );
+    expect(screen.getByRole("link", { name: /Workspace review/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("link", { name: "Open task" }));
+    expect(screen.queryByRole("link", { name: /Workspace review/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Task review/ })).toBeTruthy();
+  });
+
+  it("keeps entity recents when only the nav route has a trailing slash", () => {
+    state.empty = true;
+    state.groups = [
+      {
+        label: "Workspaces",
+        items: [
+          {
+            label: "Workspace one",
+            to: "/workspace",
+            icon: Folder,
+            meta: { spacesRootId: "w1" },
+            children: [
+              {
+                label: "Task",
+                to: "/workspace/task/",
+                icon: Folder,
+                meta: { spacesEntityId: "task", spacesRootId: "w1" },
+              },
+            ],
+          },
+        ],
+        meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
+      },
+      {
+        label: "Recent conversations",
+        items: [],
+        meta: {
+          type: "recent-chats",
+          workspaceId: "w1",
+          workspaceConversations: [
+            {
+              label: "Task review",
+              to: "/chat/task",
+              icon: MessageSquare,
+              meta: { previewEntityId: "task" },
+            },
+          ],
+        },
+      },
+    ];
+    renderUI(<WorkbenchPreview page={<Editor />} />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={["/workspace/task"]}>{children}</MemoryRouter>
+      ),
+    });
+    expect(screen.getByRole("link", { name: /Task review/ })).toBeTruthy();
   });
 
   it("keeps a fresh composer after reset and opens history explicitly", () => {

@@ -4,7 +4,7 @@ import { WorkbenchContentPane } from "./content-pane.tsx";
 import { ChatResizeHandle } from "./chat-resize-handle.tsx";
 import { ChatEmptyState } from "../components/chat-empty-state.tsx";
 import { WelcomeIntro } from "./welcome-intro.tsx";
-import { useWorkbenchState } from "./use-workbench-state.tsx";
+import { normalizeWorkbenchPath, useWorkbenchState } from "./use-workbench-state.tsx";
 import { WorkbenchStyles } from "./workbench-styles.tsx";
 import { type ReactNode } from "react";
 import { Button } from "@iloveagents/foundry-web-primitives";
@@ -20,8 +20,10 @@ export function WorkbenchPreview({
 }) {
   const {
     panelOpen,
+    currentPage,
     chatOnly,
     pageLabel,
+    entityId,
     chatWidth,
     collapsed,
     running,
@@ -45,6 +47,29 @@ export function WorkbenchPreview({
     closePanel,
     startChat,
   } = useWorkbenchState(chatRoute);
+  const workspaceId = workspaceGroups?.[0]?.meta?.exclusiveRootId;
+  const rootItem = workspaceGroups?.[0]
+    ? (workspaceGroups[0].items.find((item) => item.to === workspaceGroups[0].focusOn) ??
+      workspaceGroups[0].items[0])
+    : undefined;
+  const rootContext = Boolean(
+    workspaceId &&
+    rootItem &&
+    normalizeWorkbenchPath(rootItem.to) === normalizeWorkbenchPath(currentPage),
+  );
+  const conversationHome = (
+    <ConversationHistory
+      groups={navGroups}
+      workspaceId={workspaceId}
+      entityId={entityId}
+      rootContext={rootContext}
+      onClose={returnToChat}
+      onViewAll={openHistory}
+      showBack={false}
+      compact
+    />
+  );
+  const emptyChatFooter = workspaceId ? conversationHome : historyShortcut;
   const buttonClass =
     "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary";
   return (
@@ -147,7 +172,7 @@ export function WorkbenchPreview({
             {!collapsed && showHistory && (
               <ConversationHistory
                 groups={navGroups}
-                workspaceId={workspaceGroups?.[0]?.meta?.exclusiveRootId}
+                workspaceId={workspaceId}
                 onClose={returnToChat}
                 showBack
               />
@@ -168,7 +193,7 @@ export function WorkbenchPreview({
                 centerComposer={spaciousChat && emptyChat && !historyOpen}
                 composerIntro={
                   spaciousChat && emptyChat ? (
-                    <WelcomeIntro navGroups={navGroups} historyShortcut={historyShortcut} />
+                    <WelcomeIntro navGroups={navGroups} historyShortcut={emptyChatFooter} />
                   ) : undefined
                 }
                 compactComposer={!spaciousChat}
@@ -177,7 +202,7 @@ export function WorkbenchPreview({
                 starterSuggestions={[]}
                 emptyState={
                   <ChatEmptyState pageLabel={pageLabel} showHomeStarters={!spaciousChat}>
-                    {historyShortcut}
+                    {emptyChatFooter}
                   </ChatEmptyState>
                 }
               />

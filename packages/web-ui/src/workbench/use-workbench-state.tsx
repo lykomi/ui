@@ -12,6 +12,21 @@ import {
 } from "../index.ts";
 import { History, Settings, Layers } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
+import type { NavItem } from "../lib/nav-config.ts";
+
+export function normalizeWorkbenchPath(path: string) {
+  return path === "/" ? path : path.replace(/\/+$/, "");
+}
+
+function findExactWorkbenchItem(items: NavItem[], pathname: string): NavItem | undefined {
+  const target = normalizeWorkbenchPath(pathname);
+  for (const item of items) {
+    if (normalizeWorkbenchPath(item.to) === target) return item;
+    const nested = item.children && findExactWorkbenchItem(item.children, pathname);
+    if (nested) return nested;
+  }
+  return undefined;
+}
 function useWorkbenchNavigation() {
   const navGroups = useNavStore((s) => s.config);
   const workspaceGroups = useMemo(() => {
@@ -70,7 +85,16 @@ export function useWorkbenchState(chatRoute: boolean) {
   const panelOpen = useToolPanelStore((s) => s.isOpen && !s.isWindowHosted);
   const chatOnly = chatRoute && !panelOpen;
   const location = useLocation();
+  const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
+  const routeItem = useMemo(
+    () =>
+      navGroups
+        .map((group) => findExactWorkbenchItem(group.items, location.pathname))
+        .find((item) => item !== undefined),
+    [location.pathname, navGroups],
+  );
   const pageLabel = useAppStore((s) => s.navContext.label);
+  const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();
   const [desktopCollapsed, setCollapsed] = useState(false);
   const collapsed = !chatWidth.compact && desktopCollapsed;
@@ -115,7 +139,6 @@ export function useWorkbenchState(chatRoute: boolean) {
     </Button>
   );
   const toggleNavigation = useSidebarStore((s) => s.toggleMobile);
-  const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
   useEffect(() => {
     if (panelOpen) {
       setContentCollapsed(false);
@@ -146,8 +169,10 @@ export function useWorkbenchState(chatRoute: boolean) {
 
   return {
     panelOpen,
+    currentPage: location.pathname,
     chatOnly,
     pageLabel,
+    entityId,
     chatWidth,
     collapsed,
     running,

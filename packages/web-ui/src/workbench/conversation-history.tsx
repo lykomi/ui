@@ -16,6 +16,7 @@ import {
   Loader2,
   ChevronDown,
   Check,
+  History,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "../index.ts";
 
@@ -28,6 +29,8 @@ export function ConversationHistory({
   welcome = false,
   compact = false,
   onViewAll,
+  entityId,
+  rootContext = false,
 }: {
   groups: NavGroup[];
   workspaceId: unknown;
@@ -36,6 +39,9 @@ export function ConversationHistory({
   welcome?: boolean;
   compact?: boolean;
   onViewAll?: () => void;
+  /** Current content entity. Compact homes show only an exact match unless this is the workspace root. */
+  entityId?: unknown;
+  rootContext?: boolean;
 }) {
   const [loadingTo, setLoadingTo] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -50,10 +56,16 @@ export function ConversationHistory({
     groups
       .filter((g) => g.meta?.type === "recent-chats" || g.meta?.type === "pinned-chats")
       .flatMap((g) => g.items);
-  const scopedItems =
+  const workspaceItems =
     all || !workspaceId
       ? allItems
       : ((scoped?.meta?.workspaceConversations as NavItem[] | undefined) ?? scoped?.items ?? []);
+  const scopedItems =
+    compact && workspaceId && !rootContext
+      ? workspaceItems.filter(
+          (item) => Boolean(entityId) && item.meta?.previewEntityId === entityId,
+        )
+      : workspaceItems;
   const items = [...new Map(scopedItems.map((item) => [item.to, item])).values()]
     .filter((item) => item.meta?.type !== "show-all-chats")
     .filter((item) => item.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
@@ -69,8 +81,10 @@ export function ConversationHistory({
   return (
     <section
       data-conversation-history
-      aria-label="Chat history"
-      className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-4"
+      aria-label={compact ? "Recent conversations" : "Chat history"}
+      className={
+        compact ? "w-full" : "mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-4"
+      }
     >
       {welcome && (
         <div className="pb-6 pt-8">
@@ -88,24 +102,18 @@ export function ConversationHistory({
           <ArrowLeft size={14} /> Back to chat
         </button>
       )}
-      <div className="mb-3 mt-2 flex items-center justify-between">
-        <h2
-          className={
-            compact ? "text-xs font-medium text-muted-foreground" : "text-base font-semibold"
-          }
-        >
-          Conversation history
-        </h2>
-        {compact && (
-          <button
-            onClick={onViewAll}
-            className="text-xs text-muted-foreground hover:text-foreground"
+      {(!compact || items.length > 0) && (
+        <div className="mb-2 mt-2 flex items-center justify-between">
+          <h2
+            className={
+              compact ? "text-xs font-medium text-muted-foreground" : "text-base font-semibold"
+            }
           >
-            View all
-          </button>
-        )}
-      </div>
-      {Boolean(workspaceId) && (
+            {compact ? "Recent conversations" : "Conversation history"}
+          </h2>
+        </div>
+      )}
+      {Boolean(workspaceId) && !compact && (
         <div className="mb-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -279,12 +287,23 @@ export function ConversationHistory({
               )}
             </section>
           ))}
-        {items.length === 0 && (
+        {items.length === 0 && !compact && (
           <p className="py-3 text-sm text-muted-foreground">
             {search ? "No matching chats" : "No chats yet"}
           </p>
         )}
       </div>
+      {compact && onViewAll && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onViewAll}
+          className="mt-1 h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
+        >
+          <History className="size-4" aria-hidden />
+          Conversation history
+        </Button>
+      )}
     </section>
   );
 }
