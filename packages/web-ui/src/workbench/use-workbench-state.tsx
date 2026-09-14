@@ -12,10 +12,20 @@ import {
 } from "../index.ts";
 import { History, Settings, Layers } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
-import { findNavItem } from "../lib/nav-config.ts";
+import type { NavItem } from "../lib/nav-config.ts";
 
 export function normalizeWorkbenchPath(path: string) {
   return path === "/" ? path : path.replace(/\/+$/, "");
+}
+
+function findExactWorkbenchItem(items: NavItem[], pathname: string): NavItem | undefined {
+  const target = normalizeWorkbenchPath(pathname);
+  for (const item of items) {
+    if (normalizeWorkbenchPath(item.to) === target) return item;
+    const nested = item.children && findExactWorkbenchItem(item.children, pathname);
+    if (nested) return nested;
+  }
+  return undefined;
 }
 function useWorkbenchNavigation() {
   const navGroups = useNavStore((s) => s.config);
@@ -76,13 +86,13 @@ export function useWorkbenchState(chatRoute: boolean) {
   const chatOnly = chatRoute && !panelOpen;
   const location = useLocation();
   const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
-  const routeItem = useMemo(() => {
-    const match = findNavItem(navGroups, location.pathname);
-    return match &&
-      normalizeWorkbenchPath(match.item.to) === normalizeWorkbenchPath(location.pathname)
-      ? match.item
-      : undefined;
-  }, [location.pathname, navGroups]);
+  const routeItem = useMemo(
+    () =>
+      navGroups
+        .map((group) => findExactWorkbenchItem(group.items, location.pathname))
+        .find((item) => item !== undefined),
+    [location.pathname, navGroups],
+  );
   const pageLabel = useAppStore((s) => s.navContext.label);
   const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();

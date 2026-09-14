@@ -322,7 +322,7 @@ describe("layout preview", () => {
     expect(screen.getByRole("link", { name: /Task review/ })).toBeTruthy();
   });
 
-  it("keeps entity recents on a route with a trailing slash", () => {
+  it("keeps entity recents when only the nav route has a trailing slash", () => {
     state.empty = true;
     state.groups = [
       {
@@ -336,7 +336,7 @@ describe("layout preview", () => {
             children: [
               {
                 label: "Task",
-                to: "/workspace/task",
+                to: "/workspace/task/",
                 icon: Folder,
                 meta: { spacesEntityId: "task", spacesRootId: "w1" },
               },
@@ -364,7 +364,7 @@ describe("layout preview", () => {
     ];
     renderUI(<WorkbenchPreview page={<Editor />} />, {
       wrapper: ({ children }) => (
-        <MemoryRouter initialEntries={["/workspace/task/"]}>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={["/workspace/task"]}>{children}</MemoryRouter>
       ),
     });
     expect(screen.getByRole("link", { name: /Task review/ })).toBeTruthy();
