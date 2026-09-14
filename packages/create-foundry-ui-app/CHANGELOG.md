@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.6
+
+### Patch Changes
+
+- e425e12: Publish the starter templates with the current Foundry package versions.
+
 ## 0.8.5
 
 ### Patch Changes
