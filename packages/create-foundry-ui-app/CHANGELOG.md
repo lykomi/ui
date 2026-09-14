@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.2
+
+### Patch Changes
+
+- Publish the updated starter template and Neo4j preset with the coordinated runtime release.
+
 ## 0.8.1
 
 ### Patch Changes
