@@ -86,6 +86,7 @@ export function useWorkbenchState(chatRoute: boolean) {
     // the same address again. Collapsing remains local until the next entry.
   }, [chatOnly, location.key]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const running = useAuiState((s) => s.thread.isRunning);
   const emptyChat = useAuiState(
     (s) => s.thread.messages.length === 0 && !s.thread.isRunning && !s.thread.isLoading,
   );
@@ -149,6 +150,7 @@ export function useWorkbenchState(chatRoute: boolean) {
     pageLabel,
     chatWidth,
     collapsed,
+    running,
     setCollapsed,
     compactPane,
     setCompactPane,

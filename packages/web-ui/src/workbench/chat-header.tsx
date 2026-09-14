@@ -1,8 +1,9 @@
 import { TooltipIconButton } from "../index.ts";
-import { SquarePen, PanelLeft, MessageSquare, Menu, History } from "lucide-react";
+import { SquarePen, PanelLeft, MessageSquare, Menu, History, LoaderCircle } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
 export function WorkbenchChatHeader({
   collapsed,
+  running,
   chatWidth,
   buttonClass,
   toggleNavigation,
@@ -15,6 +16,7 @@ export function WorkbenchChatHeader({
   setContentCollapsed,
 }: {
   collapsed: boolean;
+  running: boolean;
   chatWidth: ReturnType<typeof useChatWidth>;
   buttonClass: string;
   toggleNavigation: () => void;
@@ -44,12 +46,19 @@ export function WorkbenchChatHeader({
         )}
         {collapsed ? (
           <TooltipIconButton
-            tooltip="Expand chat"
+            tooltip={running ? "AI is working — expand chat" : "Expand chat"}
             className={buttonClass}
-            aria-label="Expand chat"
+            aria-label={running ? "AI is working — expand chat" : "Expand chat"}
             onClick={() => setCollapsed(false)}
           >
-            <MessageSquare size={18} />
+            {running ? (
+              <LoaderCircle
+                size={18}
+                className="animate-spin motion-reduce:animate-none text-primary"
+              />
+            ) : (
+              <MessageSquare size={18} />
+            )}
           </TooltipIconButton>
         ) : (
           <>
