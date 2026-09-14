@@ -147,6 +147,7 @@ export function useWorkbenchState(chatRoute: boolean) {
 
   return {
     panelOpen,
+    currentPage: location.pathname,
     chatOnly,
     pageLabel,
     entityId,

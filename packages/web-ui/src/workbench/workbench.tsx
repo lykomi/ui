@@ -20,6 +20,7 @@ export function WorkbenchPreview({
 }) {
   const {
     panelOpen,
+    currentPage,
     chatOnly,
     pageLabel,
     entityId,
@@ -47,12 +48,21 @@ export function WorkbenchPreview({
     startChat,
   } = useWorkbenchState(chatRoute);
   const workspaceId = workspaceGroups?.[0]?.meta?.exclusiveRootId;
+  const rootItem = workspaceGroups?.[0]?.items.find(
+    (item) => item.meta?.spacesEntityId === workspaceId,
+  );
+  const rootContext = Boolean(
+    workspaceId &&
+    (entityId === workspaceId ||
+      rootItem?.to === currentPage ||
+      workspaceGroups?.[0]?.focusOn === currentPage),
+  );
   const conversationHome = (
     <ConversationHistory
       groups={navGroups}
       workspaceId={workspaceId}
       entityId={entityId}
-      rootContext={Boolean(workspaceId && entityId === workspaceId)}
+      rootContext={rootContext}
       onClose={returnToChat}
       onViewAll={openHistory}
       showBack={false}
