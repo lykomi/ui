@@ -77,7 +77,7 @@ export function FocusChatPane({
       )}
       {chatOpen && (
         <ChatContent
-          emptyState={<ChatEmptyState pageLabel={pageLabel} />}
+          emptyState={<ChatEmptyState pageLabel={pageLabel} showHomeStarters={false} />}
           compactComposer
           showPinButton={false}
           hideCurrentPageBadge

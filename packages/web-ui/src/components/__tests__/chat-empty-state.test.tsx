@@ -24,7 +24,7 @@ describe("ChatEmptyState", () => {
     container.remove();
   });
 
-  it("renders starters by default for compact and focused chat", () => {
+  it("renders starters by default for the primary compact chat", () => {
     const { container, root } = renderEmptyState();
 
     expect(container.querySelector('[data-testid="home-starters"]')).not.toBeNull();
