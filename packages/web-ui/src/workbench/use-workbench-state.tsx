@@ -31,7 +31,9 @@ function useWorkbenchNavigation() {
           label: "Spaces",
           icon: Layers,
           priority: 1000,
-          items: root ? [{ ...root, children: undefined }] : space.items,
+          items: root
+            ? [{ ...root, children: root.childrenHidden ? root.children : undefined }]
+            : space.items,
         },
         {
           label: "Content",

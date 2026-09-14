@@ -1980,6 +1980,14 @@ function SidebarContent({
                       .length !== 0,
                 )
                 .map((group) => {
+                  const rail = group.collapsedRail?.({
+                    currentPage,
+                    navContextMeta: navContext.meta ?? {},
+                  });
+                  const active =
+                    currentPage === group.to ||
+                    group.items.some((item) => isInSubtree(currentPage, item)) ||
+                    Boolean(rail?.some((item) => item.isActive));
                   const Icon =
                     group.icon ??
                     group.collapsedRail?.({ currentPage, navContextMeta: navContext.meta ?? {} })[0]
@@ -1992,7 +2000,7 @@ function SidebarContent({
                       to={group.to}
                       label={group.label}
                       icon={Icon}
-                      isActive={currentPage === group.to}
+                      isActive={active}
                     />
                   ) : (
                     <TooltipIconButton
@@ -2000,6 +2008,8 @@ function SidebarContent({
                       tooltip={group.label}
                       side="right"
                       aria-label={`Open ${group.label}`}
+                      aria-current={active ? "page" : undefined}
+                      className={active ? ACTIVE_NAV_ROW_CLASS : undefined}
                       onClick={() => {
                         toggleGroupCollapsed(group.label, true);
                         toggle();

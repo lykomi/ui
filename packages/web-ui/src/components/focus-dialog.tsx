@@ -81,10 +81,21 @@ export function FocusDialog({
       const content = (event as CustomEvent<ToolPanelContent>).detail;
       if (ownedSource.current && content.sourceId === ownedSource.current) setSource(content);
     };
+    const unsubscribe = useToolPanelStore.subscribe((state) => {
+      if (
+        ownedSource.current &&
+        (!state.isOpen || !state.isWindowHosted || state.content?.sourceId !== ownedSource.current)
+      ) {
+        previousPanel.current = null;
+        ownedSource.current = undefined;
+        setSource(null);
+      }
+    });
     window.addEventListener("preview:update-source", updateSource);
     window.addEventListener("focus:open-source", openSource);
     window.addEventListener("preview:open-source", openSource, true);
     return () => {
+      unsubscribe();
       releaseSource();
       window.removeEventListener("preview:update-source", updateSource);
       window.removeEventListener("focus:open-source", openSource);
