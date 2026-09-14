@@ -1,3 +1,5 @@
+import { ChatEmptyState } from "./chat-empty-state.tsx";
+import { useAppStore } from "../lib/app-store.ts";
 import { type CSSProperties } from "react";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 import { X, PanelLeft, MessageSquare } from "lucide-react";
@@ -19,6 +21,7 @@ export function FocusChatPane({
   source: boolean;
   onClose: () => void;
 }) {
+  const pageLabel = useAppStore((state) => state.navContext.label);
   return (
     <aside
       aria-label="Focused content chat"
@@ -74,6 +77,7 @@ export function FocusChatPane({
       )}
       {chatOpen && (
         <ChatContent
+          emptyState={<ChatEmptyState pageLabel={pageLabel} />}
           compactComposer
           showPinButton={false}
           hideCurrentPageBadge

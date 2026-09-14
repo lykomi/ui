@@ -29,7 +29,8 @@ export function ChatContext() {
     // rather than keeping a competing focus state inside the chat UI.
     const events = ["focusin", "pointerup", "input", "selectionchange"];
     for (const event of events) document.addEventListener(event, refresh);
-    const handles = "[data-focused], [data-context-ref-type='entity-field']";
+    const handles =
+      "[data-focused], [data-context-ref-type='entity-field'], [data-agent-component]";
     const observer =
       typeof MutationObserver === "undefined"
         ? null
@@ -53,6 +54,8 @@ export function ChatContext() {
       childList: true,
       attributes: true,
       attributeFilter: [
+        "data-agent-selected",
+        "data-agent-component-label",
         "data-focused",
         "data-focus-title",
         "data-focus-kind",

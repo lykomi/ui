@@ -18,6 +18,7 @@ export function summarizeChatContext(state: AgentStateProjection) {
     },
   );
   const field = references.find((item) => item.meta.fieldFocus === "active");
+  const component = references.find((item) => item.meta.componentFocus === "active");
   const selected = references.find(
     (item) => item.type === "selection" || item.meta.selectionScope === "text",
   );
@@ -26,7 +27,9 @@ export function summarizeChatContext(state: AgentStateProjection) {
     ? "Selected text"
     : field
       ? text(target?.label) || text(field.meta.fieldLabel) || text(field.label)
-      : "";
+      : component
+        ? text(component.meta.componentLabel) || text(component.label)
+        : "";
   const pageLabel =
     nav.label && !nav.label.startsWith("/") && !/^\/?chat$/i.test(nav.label)
       ? nav.label
@@ -35,7 +38,7 @@ export function summarizeChatContext(state: AgentStateProjection) {
   const open = references.filter((item) => item.meta.windowState === "open");
   return {
     label,
-    detail,
+    detail: detail === label ? "" : detail,
     focused: Boolean(focused.title),
     path: nav.page,
     field: Boolean(field),

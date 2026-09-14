@@ -61,3 +61,39 @@ it("shows the focused table and explicitly selected passage from the request pro
     references: ["Contract"],
   });
 });
+
+it("shows the selected dashboard component from the same agent projection", () => {
+  const projection = state();
+  projection.contextItems = [
+    {
+      type: "ref",
+      payload: {
+        meta: {
+          componentFocus: "active",
+          componentLabel: "Items by status",
+        },
+      },
+    },
+  ];
+  expect(summarizeChatContext(projection)).toMatchObject({
+    label: "Briefing",
+    detail: "Items by status",
+  });
+});
+
+it("does not repeat the focused field title", () => {
+  const projection = state();
+  projection.navigation.meta.focusedSurface = { title: "Instructions" };
+  projection.contextItems = [
+    {
+      type: "ref",
+      payload: {
+        meta: {
+          fieldFocus: "active",
+          fieldLabel: "Instructions",
+        },
+      },
+    },
+  ];
+  expect(summarizeChatContext(projection)).toMatchObject({ label: "Instructions", detail: "" });
+});
