@@ -163,7 +163,6 @@ export function WorkbenchPreview({
                     <WelcomeIntro navGroups={navGroups} historyShortcut={historyShortcut} />
                   ) : undefined
                 }
-                placeholder={chatOnly ? "Ask anything" : "Ask about this page…"}
                 compactComposer={!spaciousChat}
                 hideCurrentPageBadge
                 showPinButton={false}
