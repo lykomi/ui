@@ -427,7 +427,7 @@ export interface ChatContentProps {
  * invitation is what belongs here: it says the box takes anything, which is
  * the one thing a first-time user does not know.
  */
-export const DEFAULT_COMPOSER_PLACEHOLDER = "Ask anything";
+export const DEFAULT_COMPOSER_PLACEHOLDER = "Do anything";
 
 /**
  * Reusable chat content — used by ChatPage and ChatBubble.
