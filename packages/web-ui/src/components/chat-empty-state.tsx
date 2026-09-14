@@ -14,7 +14,7 @@ export function ChatEmptyState({
   homeStarterPriority?: number;
 }) {
   return (
-    <div className="flex min-h-full flex-col justify-start gap-3 px-6 py-8">
+    <div className="flex min-h-full flex-col justify-start gap-3 px-6 pb-8 pt-0">
       <h1 className="text-lg font-semibold tracking-tight">What would you like to get done?</h1>
       <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
         {pageLabel && !pageLabel.startsWith("/") ? (

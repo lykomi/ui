@@ -16,6 +16,7 @@ import {
   Loader2,
   ChevronDown,
   Check,
+  History,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "../index.ts";
 
@@ -79,7 +80,9 @@ export function ConversationHistory({
     <section
       data-conversation-history
       aria-label={compact ? "Recent conversations" : "Chat history"}
-      className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-4"
+      className={
+        compact ? "w-full" : "mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-4"
+      }
     >
       {welcome && (
         <div className="pb-6 pt-8">
@@ -97,41 +100,17 @@ export function ConversationHistory({
           <ArrowLeft size={14} /> Back to chat
         </button>
       )}
-      <div
-        className={
-          compact && !items.length ? "mt-1" : "mb-3 mt-2 flex items-center justify-between"
-        }
-      >
-        {compact && !items.length ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onViewAll}
-            className="h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
+      {(!compact || items.length > 0) && (
+        <div className="mb-2 mt-2 flex items-center justify-between">
+          <h2
+            className={
+              compact ? "text-xs font-medium text-muted-foreground" : "text-base font-semibold"
+            }
           >
-            <MessageSquare className="size-4" aria-hidden />
-            Conversations
-          </Button>
-        ) : (
-          <>
-            <h2
-              className={
-                compact ? "text-xs font-medium text-muted-foreground" : "text-base font-semibold"
-              }
-            >
-              {compact ? "Recent conversations" : "Conversation history"}
-            </h2>
-            {compact && (
-              <button
-                onClick={onViewAll}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Conversations
-              </button>
-            )}
-          </>
-        )}
-      </div>
+            {compact ? "Recent conversations" : "Conversation history"}
+          </h2>
+        </div>
+      )}
       {Boolean(workspaceId) && !compact && (
         <div className="mb-3">
           <DropdownMenu>
@@ -312,6 +291,17 @@ export function ConversationHistory({
           </p>
         )}
       </div>
+      {compact && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onViewAll}
+          className="mt-1 h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
+        >
+          <History className="size-4" aria-hidden />
+          Conversation history
+        </Button>
+      )}
     </section>
   );
 }

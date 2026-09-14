@@ -1,6 +1,7 @@
 import { useLocation } from "react-router";
 import { useAuiState } from "@assistant-ui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@iloveagents/foundry-web-primitives";
 import {
   useSidebarStore,
   useChatBubbleStore,
@@ -9,7 +10,7 @@ import {
   useNavStore,
   useAppStore,
 } from "../index.ts";
-import { Settings, Layers } from "lucide-react";
+import { History, Settings, Layers } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
 function useWorkbenchNavigation() {
   const navGroups = useNavStore((s) => s.config);
@@ -103,6 +104,17 @@ export function useWorkbenchState(chatRoute: boolean) {
   const openHistory = () => {
     setHistoryOpen(true);
   };
+  const historyShortcut = (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={openHistory}
+      className="h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
+    >
+      <History className="size-4" aria-hidden />
+      Conversation history
+    </Button>
+  );
   const toggleNavigation = useSidebarStore((s) => s.toggleMobile);
   const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
   useEffect(() => {
@@ -153,6 +165,7 @@ export function useWorkbenchState(chatRoute: boolean) {
     spaciousChat,
     returnToChat,
     openHistory,
+    historyShortcut,
     toggleNavigation,
     navGroups,
     workspaceGroups,

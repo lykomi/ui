@@ -169,7 +169,7 @@ it("shows only the conversations action when an entity has no exact recent chat"
     </MemoryRouter>,
   );
   expect(screen.queryByText("No chats yet")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Conversations" }));
+  fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
   expect(viewAll).toHaveBeenCalledOnce();
 });
 

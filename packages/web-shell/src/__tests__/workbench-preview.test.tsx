@@ -232,7 +232,7 @@ describe("layout preview", () => {
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
-    fireEvent.click(screen.getByRole("button", { name: "Conversations" }));
+    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
     expect(screen.getByRole("heading", { name: "Conversation history" })).toBeTruthy();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("none");
     fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
@@ -246,7 +246,7 @@ describe("layout preview", () => {
     fireEvent.change(draft, { target: { value: "Draft question" } });
     fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Conversations" }));
+    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
     expect(screen.getByRole("region", { name: "Chat history" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
     expect(screen.getByLabelText("Chat draft")).toBe(draft);
