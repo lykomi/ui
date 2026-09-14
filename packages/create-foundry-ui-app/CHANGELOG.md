@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.5
+
+### Patch Changes
+
+- Refresh starter package pins to include the collapsed chat activity indicator.
+
 ## 0.8.4
 
 ### Patch Changes
