@@ -22,6 +22,7 @@ export function WorkbenchPreview({
     panelOpen,
     chatOnly,
     pageLabel,
+    entityId,
     chatWidth,
     collapsed,
     running,
@@ -37,7 +38,6 @@ export function WorkbenchPreview({
     spaciousChat,
     returnToChat,
     openHistory,
-    historyShortcut,
     toggleNavigation,
     navGroups,
     workspaceGroups,
@@ -45,6 +45,19 @@ export function WorkbenchPreview({
     closePanel,
     startChat,
   } = useWorkbenchState(chatRoute);
+  const workspaceId = workspaceGroups?.[0]?.meta?.exclusiveRootId;
+  const conversationHome = (
+    <ConversationHistory
+      groups={navGroups}
+      workspaceId={workspaceId}
+      entityId={entityId}
+      rootContext={Boolean(workspaceId && entityId === workspaceId)}
+      onClose={returnToChat}
+      onViewAll={openHistory}
+      showBack={false}
+      compact
+    />
+  );
   const buttonClass =
     "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary";
   return (
@@ -147,7 +160,7 @@ export function WorkbenchPreview({
             {!collapsed && showHistory && (
               <ConversationHistory
                 groups={navGroups}
-                workspaceId={workspaceGroups?.[0]?.meta?.exclusiveRootId}
+                workspaceId={workspaceId}
                 onClose={returnToChat}
                 showBack
               />
@@ -168,7 +181,7 @@ export function WorkbenchPreview({
                 centerComposer={spaciousChat && emptyChat && !historyOpen}
                 composerIntro={
                   spaciousChat && emptyChat ? (
-                    <WelcomeIntro navGroups={navGroups} historyShortcut={historyShortcut} />
+                    <WelcomeIntro navGroups={navGroups} historyShortcut={conversationHome} />
                   ) : undefined
                 }
                 compactComposer={!spaciousChat}
@@ -177,7 +190,7 @@ export function WorkbenchPreview({
                 starterSuggestions={[]}
                 emptyState={
                   <ChatEmptyState pageLabel={pageLabel} showHomeStarters={!spaciousChat}>
-                    {historyShortcut}
+                    {conversationHome}
                   </ChatEmptyState>
                 }
               />
