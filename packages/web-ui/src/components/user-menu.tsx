@@ -22,23 +22,25 @@ export const UserMenu: FC = () => {
   );
 
   let preview = false;
-  if (import.meta.env.DEV) {
-    try {
-      const choice = new URLSearchParams(window.location.search).get("ux");
-      preview =
-        choice === "workbench" ||
-        (choice !== "classic" && sessionStorage.getItem("foundry.workbench-preview") === "on");
-    } catch {
-      /* Storage may be unavailable in embedded browsers. */
-    }
+  try {
+    const choice = new URLSearchParams(window.location.search).get("ux");
+    preview =
+      choice === "workbench" ||
+      (choice !== "classic" && sessionStorage.getItem("foundry.workbench-preview") === "on");
+  } catch {
+    /* Storage may be unavailable in embedded browsers. */
   }
-  if (!user) return null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2 rounded-full px-2">
-          {user.avatar ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 rounded-full px-2"
+          aria-label={user ? "User menu" : "Interface menu"}
+        >
+          {user?.avatar ? (
             <img src={user.avatar} alt={user.name} className="size-6 rounded-full" />
           ) : (
             <div
@@ -51,36 +53,40 @@ export const UserMenu: FC = () => {
               <User className="size-3.5" />
             </div>
           )}
-          <span className="text-xs text-muted-foreground hidden sm:inline">{user.name}</span>
+          {user && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">{user.name}</span>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-medium">{user.name}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {import.meta.env.DEV && (
+        {user && (
           <>
-            <DropdownMenuCheckboxItem
-              checked={preview}
-              onCheckedChange={(enabled) => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("ux", enabled ? "workbench" : "classic");
-                window.location.assign(url.href);
-              }}
-            >
-              UI preview
-            </DropdownMenuCheckboxItem>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
         )}
-        <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
-          <LogOut className="size-4" />
-          Sign out
-        </DropdownMenuItem>
+        <DropdownMenuCheckboxItem
+          checked={preview}
+          onCheckedChange={(enabled) => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("ux", enabled ? "workbench" : "classic");
+            window.location.assign(url.href);
+          }}
+        >
+          UI preview
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
+        {user && (
+          <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
+            <LogOut className="size-4" />
+            Sign out
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

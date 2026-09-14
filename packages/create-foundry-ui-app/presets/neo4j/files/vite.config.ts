@@ -57,6 +57,11 @@ export default defineConfig({
           if (pkg.startsWith("@assistant-ui/")) return "vendor-assistant-ui";
           if (pkg.startsWith("@ag-ui/")) return "vendor-ag-ui";
           if (pkg.startsWith("@azure/msal")) return "vendor-auth";
+          if (
+            pkg.startsWith("@iloveagents/foundry-web-ui/dist/workbench.js") ||
+            pkg.startsWith("@iloveagents/foundry-web-ui/dist/workbench/")
+          )
+            return "foundry-workbench";
           if (pkg.startsWith("@iloveagents/foundry-web-ui/")) return "vendor-foundry-ui";
           if (pkg.startsWith("@iloveagents/foundry-web-shell/")) return "vendor-foundry-shell";
           if (pkg.startsWith("@iloveagents/foundry-agent/")) return "vendor-foundry-agent";

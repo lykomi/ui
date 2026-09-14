@@ -295,7 +295,7 @@ describe("layout preview", () => {
     expect(state.sidebar.mock.lastCall?.[0].hideFooterActions).toBe(false);
   });
 
-  it("is opt-in, survives local navigation, restores classic, and cannot enable in production", () => {
+  it("is opt-in, survives local navigation, and restores classic", () => {
     vi.stubEnv("DEV", true);
     expect(isWorkbenchPreviewEnabled()).toBe(false);
     window.history.replaceState({}, "", "/?ux=workbench");
@@ -306,7 +306,16 @@ describe("layout preview", () => {
     expect(isWorkbenchPreviewEnabled()).toBe(false);
     vi.stubEnv("DEV", false);
     window.history.replaceState({}, "", "/?ux=workbench");
-    expect(isWorkbenchPreviewEnabled()).toBe(false);
+    expect(isWorkbenchPreviewEnabled()).toBe(true);
+  });
+
+  it("honors an explicit preview URL when session storage is unavailable", () => {
+    window.history.replaceState({}, "", "/?ux=workbench");
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("blocked");
+    });
+
+    expect(isWorkbenchPreviewEnabled()).toBe(true);
   });
 
   it("preserves unsaved fields and chat drafts when collapsed to a rail", () => {

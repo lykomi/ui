@@ -109,6 +109,12 @@ const readAll = (ext) =>
 
 step("Checking the bundle");
 
+if (!assets.some((file) => file.startsWith("foundry-workbench-"))) {
+  throw new Error(
+    "The workbench preview was folded into the initial vendor bundle instead of its lazy chunk.",
+  );
+}
+
 // `react-force-graph-2d`, `react-kapsule` and `foundry-web-graph` all contain
 // "react", so the vendor-graph rule in vite.config.ts has to come BEFORE the
 // react rule. Get that wrong and the whole force engine lands in vendor-react:

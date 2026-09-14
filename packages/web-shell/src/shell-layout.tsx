@@ -24,13 +24,11 @@ import { X } from "lucide-react";
 import type { ChatModule } from "./types.ts";
 import { usePagePanelWidth, MIN_PAGE_PANEL_WIDTH } from "./use-page-panel-width.ts";
 import { isWorkbenchPreviewEnabled } from "./runtime-config.ts";
-const WorkbenchPreview = import.meta.env.DEV
-  ? lazy(() =>
-      import("@iloveagents/foundry-web-ui/workbench").then((module) => ({
-        default: module.WorkbenchPreview,
-      })),
-    )
-  : null;
+const WorkbenchPreview = lazy(() =>
+  import("@iloveagents/foundry-web-ui/workbench").then((module) => ({
+    default: module.WorkbenchPreview,
+  })),
+);
 
 interface ShellLayoutProps {
   modules: ChatModule[];
@@ -136,9 +134,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
         {layoutExtras}
         {preview ? (
           <Suspense fallback={null}>
-            {WorkbenchPreview && (
-              <WorkbenchPreview page={isChatRoute ? null : page} chatOnly={isChatRoute} />
-            )}
+            <WorkbenchPreview page={isChatRoute ? null : page} chatOnly={isChatRoute} />
           </Suspense>
         ) : (
           <div className="flex min-h-0 flex-1 overflow-hidden">
