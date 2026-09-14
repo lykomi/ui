@@ -122,3 +122,20 @@ describe("Page tools", () => {
     expect(JSON.parse(result).received).toBe("hello");
   });
 });
+
+it("returns the active form acknowledgement instead of writing the shared draft", async () => {
+  const handle = (event: Event) => {
+    event.preventDefault();
+    (event as CustomEvent).detail.result = { status: "error", error: "Invalid field" };
+  };
+  window.addEventListener("ui:update-content", handle);
+  try {
+    const result = await registry().executeTool(
+      "ui_update_content",
+      '{"fields":{"unknown":"value"}}',
+    );
+    expect(JSON.parse(result)).toMatchObject({ status: "error", error: "Invalid field" });
+  } finally {
+    window.removeEventListener("ui:update-content", handle);
+  }
+});

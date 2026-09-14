@@ -1,5 +1,6 @@
+import { PinStateIcon } from "./pin-state-icon.tsx";
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
-import { X, Maximize2, Minimize2, Copy, Check, Pin, PinOff, FolderOpen } from "lucide-react";
+import { X, Maximize2, Minimize2, Copy, Check, FolderOpen } from "lucide-react";
 import { useNavigate } from "react-router";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -15,7 +16,7 @@ import { markdownComponents } from "./markdown-text.tsx";
 import { SelectionPopover } from "./selection-popover.tsx";
 
 /** Renders panel content using the renderer registry, then built-in markdown/text. */
-function PanelContentRenderer({ content }: { content: ToolPanelContent }) {
+export function PanelContentRenderer({ content }: { content: ToolPanelContent }) {
   const renderers = useToolPanelStore((s) => s.renderers);
 
   // Check registered renderers first (e.g., PDF viewer, entity pages, demo pages)
@@ -47,9 +48,11 @@ function PanelContentRenderer({ content }: { content: ToolPanelContent }) {
   );
 }
 
-export function ToolPanel() {
-  const isOpen = useToolPanelStore((state) => state.isOpen);
-  const content = useToolPanelStore((state) => state.content);
+export function ToolPanel({ contained = false }: { contained?: boolean }) {
+  const isOpen = useToolPanelStore((state) => state.isOpen && !state.isWindowHosted);
+  const content = useToolPanelStore((state) =>
+    state.isWindowHosted ? state.hostedOwnerContent : state.content,
+  );
   const closePanel = useToolPanelStore((state) => state.closePanel);
   const panelWidth = useToolPanelStore((state) => state.panelWidth);
   const setPanelWidth = useToolPanelStore((state) => state.setPanelWidth);
@@ -141,7 +144,12 @@ export function ToolPanel() {
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (
+        e.key === "Escape" &&
+        isOpen &&
+        !e.defaultPrevented &&
+        !(e.target instanceof Element && e.target.closest('[role="dialog"]'))
+      ) {
         closePanel();
       }
     };
@@ -156,21 +164,23 @@ export function ToolPanel() {
     <div
       data-tool-panel
       className={cn(
-        "fixed top-0 right-0 z-40",
-        "h-dvh",
-        "bg-background border-l border-border shadow-2xl",
+        contained ? "absolute inset-0 z-10 h-full" : "fixed top-0 right-0 z-40 h-dvh",
+        "bg-background border-l border-border",
+        !contained && "shadow-2xl",
         "transition-transform duration-300 ease-in-out",
         "flex flex-col",
         isOpen ? "translate-x-0" : "translate-x-full",
       )}
-      style={{ width: panelWidth }}
+      style={{ width: contained ? "100%" : panelWidth }}
+      inert={!isOpen}
+      aria-hidden={!isOpen}
     >
       {/* Drag-to-resize the split (side-by-side mode only). Mirrors the
           navigation sidebar's handle: listeners live in an effect, the
           drag ends on pointerup OR pointercancel, and cleanup always
           restores userSelect. Keyboard: arrows nudge, Shift jumps,
           Home/End go to the extremes. */}
-      {isOpen && !useOverlay && !isFullscreen ? (
+      {!contained && isOpen && !useOverlay && !isFullscreen ? (
         <div
           role="separator"
           aria-orientation="vertical"
@@ -218,16 +228,13 @@ export function ToolPanel() {
                     "size-8 rounded-md shrink-0",
                     "hover:bg-muted transition-colors",
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                    isEntityPinned && "text-primary",
+                    isEntityPinned ? "text-foreground" : "text-muted-foreground",
                   )}
+                  aria-pressed={isEntityPinned}
                   aria-label={isEntityPinned ? "Unpin document" : "Pin document"}
                   title={isEntityPinned ? "Unpin document" : "Pin document"}
                 >
-                  {isEntityPinned ? (
-                    <PinOff className="size-4" />
-                  ) : (
-                    <Pin className="size-4 text-muted-foreground" />
-                  )}
+                  <PinStateIcon pinned={isEntityPinned} />
                 </button>
                 <button
                   type="button"
@@ -262,23 +269,25 @@ export function ToolPanel() {
                 <Copy className="size-4 text-muted-foreground" />
               )}
             </button>
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className={cn(
-                "flex items-center justify-center",
-                "size-8 rounded-md flex-shrink-0",
-                "hover:bg-muted transition-colors",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-              )}
-              aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-            >
-              {isFullscreen ? (
-                <Minimize2 className="size-4 text-muted-foreground" />
-              ) : (
-                <Maximize2 className="size-4 text-muted-foreground" />
-              )}
-            </button>
+            {!contained && (
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className={cn(
+                  "flex items-center justify-center",
+                  "size-8 rounded-md flex-shrink-0",
+                  "hover:bg-muted transition-colors",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                )}
+                aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="size-4 text-muted-foreground" />
+                ) : (
+                  <Maximize2 className="size-4 text-muted-foreground" />
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={closePanel}

@@ -136,6 +136,9 @@ export interface GraphViewProps {
    */
   onExpandNode?: (node: GraphNode) => void;
   onSelectionChange?: (node: GraphNode | null) => void;
+  onEdgeSelectionChange?: (edge: GraphEdge | null) => void;
+  onFullscreen?: () => void;
+  isFullscreen?: boolean;
   /** Fires when the search term changes, whoever changed it. */
   onQueryChange?: (query: string) => void;
   /**
@@ -199,13 +202,34 @@ export function GraphView({
   limits = DEFAULT_LIMITS,
   onExpandNode,
   onSelectionChange,
+  onEdgeSelectionChange,
+  onFullscreen,
+  isFullscreen,
   onQueryChange,
   onFilterChange,
   inspectorActions,
   forceTable = false,
   handleRef,
 }: GraphViewProps) {
+  const [inspectorWidth, setInspectorWidth] = useState(GRAPH_INSPECTOR_WIDTH);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState(false);
+  useEffect(() => {
+    const update = () =>
+      setFullscreen(Boolean(container && document.fullscreenElement === container));
+    document.addEventListener("fullscreenchange", update);
+    return () => document.removeEventListener("fullscreenchange", update);
+  }, [container]);
+  const toggleFullscreen = async () => {
+    setFullscreenError(false);
+    try {
+      if (document.fullscreenElement === container) await document.exitFullscreen();
+      else await container?.requestFullscreen();
+    } catch {
+      setFullscreenError(true);
+    }
+  };
   // The canvas is opaque to a screen reader; the table is the same graph as
   // real DOM. Off by default, one button away.
   const [tableRequested, setTableRequested] = useState(false);
@@ -299,6 +323,19 @@ export function GraphView({
         selection.node.properties ?? {},
       ]
     : null;
+  const edgeValue = selection.edge
+    ? {
+        ...selection.edge,
+        source: endpointId(selection.edge.source) ?? "",
+        target: endpointId(selection.edge.target) ?? "",
+      }
+    : null;
+  const notifiedEdge = useRef(edgeValue);
+  useEffect(() => {
+    if (deepEqual(notifiedEdge.current, edgeValue)) return;
+    notifiedEdge.current = edgeValue;
+    onEdgeSelectionChange?.(edgeValue);
+  });
   const notifiedSelection = useRef(selectionValue);
   useEffect(() => {
     if (deepEqual(notifiedSelection.current, selectionValue)) return;
@@ -335,7 +372,19 @@ export function GraphView({
       0,
     );
   }, [state.matchedIds, visibleModel.nodes]);
-  const inspectorInset = showsInspector ? Math.min(GRAPH_INSPECTOR_WIDTH, size.width * 0.85) : 0;
+  const inspectorInset = showsInspector ? Math.min(inspectorWidth, size.width * 0.85) : 0;
+  const selectionDrawn = visibleModel.nodes.some((node) => node.id === selection.node?.id);
+  useEffect(() => {
+    if (!selection.node || !selectionDrawn || variant !== "full") return;
+    const id = selection.node.id;
+    let cancelled = false;
+    afterDrawer(() => {
+      if (!cancelled) canvasRef.current?.reveal(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selection.node?.id, selectionDrawn, variant, inspectorInset]);
 
   const notifiedQuery = useRef(state.query);
   useEffect(() => {
@@ -456,7 +505,11 @@ export function GraphView({
   return (
     <div
       ref={setContainer}
-      className={cn("flex min-h-0 flex-col gap-2", className)}
+      className={cn(
+        "flex min-h-0 flex-col gap-2 bg-background text-foreground",
+        fullscreen && "p-4",
+        className,
+      )}
       style={{ height }}
     >
       <GraphToolbar
@@ -471,6 +524,10 @@ export function GraphView({
         edgeCount={visibleModel.links.length}
         onZoomToFit={() => canvasRef.current?.zoomToFit()}
         onReheat={() => canvasRef.current?.reheat()}
+        onFullscreen={
+          onFullscreen ?? (container?.requestFullscreen ? () => void toggleFullscreen() : undefined)
+        }
+        fullscreen={isFullscreen ?? fullscreen}
         pinnedCount={state.pinnedIds.size}
         onUnpinAll={state.unpinAll}
         showsTable={useTable}
@@ -482,13 +539,18 @@ export function GraphView({
         className="shrink-0"
       />
 
+      {fullscreenError && (
+        <p role="alert" className="text-sm text-destructive">
+          Fullscreen could not open. Please try again.
+        </p>
+      )}
       <GraphLegend
         styleMap={styleMap}
         counts={counts}
         hiddenLabels={state.hiddenLabels}
         onToggleLabel={state.toggleLabel}
         onShowAll={state.showAllLabels}
-        className="shrink-0"
+        className="shrink-0 pt-2"
       />
 
       {(model.lossy || data.truncated) && (
@@ -560,6 +622,9 @@ export function GraphView({
 
           {showsInspector && (
             <GraphInspector
+              width={inspectorWidth}
+              maxWidth={size.width > 0 ? Math.min(640, size.width * 0.85) : 640}
+              onWidthChange={setInspectorWidth}
               selection={selection}
               colorForLabel={styleMap.colorForLabel}
               captionOf={captionOf}

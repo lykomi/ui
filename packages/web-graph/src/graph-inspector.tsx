@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Maximize2, Snowflake, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -88,6 +88,9 @@ export interface GraphInspectorProps {
   /** Host-supplied actions for the footer — e.g. "pin to chat". */
   actions?: ReactNode;
   className?: string;
+  width?: number;
+  maxWidth?: number;
+  onWidthChange?: (width: number) => void;
 }
 
 /**
@@ -114,7 +117,14 @@ export function GraphInspector({
   isFrozen,
   actions,
   className,
+  width = GRAPH_INSPECTOR_WIDTH,
+  maxWidth = 640,
+  onWidthChange,
 }: GraphInspectorProps) {
+  const minimumWidth = Math.min(240, maxWidth);
+  const clampWidth = (value: number) => Math.max(minimumWidth, Math.min(maxWidth, value));
+  width = clampWidth(width);
+  const drag = useRef<{ x: number; width: number } | null>(null);
   const { node, edge } = selection;
   const open = Boolean(node || edge);
 
@@ -158,8 +168,51 @@ export function GraphInspector({
         role="dialog"
         aria-modal="false"
         aria-label={node ? "Selected node" : "Selected relationship"}
-        className="foundry-graph-drawer border-border bg-background pointer-events-auto flex h-full w-80 max-w-[85%] flex-col border-l shadow-2xl"
+        style={{ width }}
+        className="foundry-graph-drawer relative border-border bg-background pointer-events-auto flex h-full max-w-[85%] flex-col border-l shadow-2xl"
       >
+        {onWidthChange && (
+          <div
+            role="separator"
+            aria-label="Resize graph details"
+            aria-orientation="vertical"
+            aria-valuemin={minimumWidth}
+            aria-valuemax={maxWidth}
+            aria-valuenow={width}
+            tabIndex={0}
+            className="absolute -left-1 top-0 z-30 h-full w-2 cursor-col-resize touch-none hover:bg-muted-foreground/20 focus-visible:bg-muted-foreground/20 focus-visible:outline-none"
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              event.preventDefault();
+              drag.current = { x: event.clientX, width };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => {
+              if (drag.current)
+                onWidthChange(clampWidth(drag.current.width + drag.current.x - event.clientX));
+            }}
+            onPointerUp={() => {
+              drag.current = null;
+            }}
+            onPointerCancel={() => {
+              if (drag.current) onWidthChange(drag.current.width);
+              drag.current = null;
+            }}
+            onLostPointerCapture={() => {
+              drag.current = null;
+            }}
+            onDoubleClick={() => onWidthChange(clampWidth(GRAPH_INSPECTOR_WIDTH))}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                event.preventDefault();
+                onWidthChange(clampWidth(width + (event.key === "ArrowLeft" ? 32 : -32)));
+              } else if (event.key === "Home" || event.key === "End") {
+                event.preventDefault();
+                onWidthChange(event.key === "Home" ? minimumWidth : maxWidth);
+              }
+            }}
+          />
+        )}
         <header className="border-border flex items-start justify-between gap-3 border-b px-4 py-3">
           <div className="min-w-0">
             {node ? (

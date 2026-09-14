@@ -1,3 +1,5 @@
+import { ChatContext } from "./chat-context.tsx";
+import { ComposerInput } from "./composer-input.tsx";
 import { useRef, useState } from "react";
 import {
   ThreadPrimitive,
@@ -47,39 +49,42 @@ import { RAIL_WIDTH, useSidebarStore } from "../lib/sidebar-store.ts";
 const CHAT_BUBBLE_INSET = 8;
 
 function BubbleAssistantMessage() {
+  const running = useAuiState((s) => s.message.status?.type === "running");
   return (
     <MessagePrimitive.Root className="w-full mb-2 group">
       <div className="text-foreground text-sm leading-relaxed flex flex-col gap-2">
         <ChatMessageParts />
       </div>
       <MessageError compact />
-      <div className="flex h-7 items-center gap-2 mt-1">
-        <ActionBarPrimitive.Root
-          hideWhenRunning
-          className={cn(
-            "pointer-events-none flex items-center gap-1 opacity-0 transition-opacity",
-            "group-hover:pointer-events-auto group-hover:opacity-100",
-            "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
-          )}
-        >
-          <ActionBarPrimitive.Copy asChild>
-            <TooltipIconButton tooltip="Copy" size="icon" className="size-7">
-              <MessagePrimitive.If copied={false}>
-                <Copy className="size-3" />
-              </MessagePrimitive.If>
-              <MessagePrimitive.If copied>
-                <Check className="size-3 text-primary" />
-              </MessagePrimitive.If>
-            </TooltipIconButton>
-          </ActionBarPrimitive.Copy>
-          <ActionBarPrimitive.Reload asChild>
-            <TooltipIconButton tooltip="Retry" size="icon" className="size-7">
-              <RefreshCw className="size-3" />
-            </TooltipIconButton>
-          </ActionBarPrimitive.Reload>
-        </ActionBarPrimitive.Root>
-        <MessageTimestamp />
-      </div>
+      {!running && (
+        <div className="flex h-7 items-center gap-2 mt-1">
+          <ActionBarPrimitive.Root
+            hideWhenRunning
+            className={cn(
+              "pointer-events-none flex items-center gap-1 opacity-0 transition-opacity",
+              "group-hover:pointer-events-auto group-hover:opacity-100",
+              "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+            )}
+          >
+            <ActionBarPrimitive.Copy asChild>
+              <TooltipIconButton tooltip="Copy" size="icon" className="size-7">
+                <MessagePrimitive.If copied={false}>
+                  <Copy className="size-3" />
+                </MessagePrimitive.If>
+                <MessagePrimitive.If copied>
+                  <Check className="size-3 text-primary" />
+                </MessagePrimitive.If>
+              </TooltipIconButton>
+            </ActionBarPrimitive.Copy>
+            <ActionBarPrimitive.Reload asChild>
+              <TooltipIconButton tooltip="Retry" size="icon" className="size-7">
+                <RefreshCw className="size-3" />
+              </TooltipIconButton>
+            </ActionBarPrimitive.Reload>
+          </ActionBarPrimitive.Root>
+          <MessageTimestamp />
+        </div>
+      )}
     </MessagePrimitive.Root>
   );
 }
@@ -356,6 +361,7 @@ export function ChatBubble() {
               <div className="shrink-0 border-t border-border">
                 <ChatComposerBannerSlot />
                 <div className="px-3 py-3">
+                  <ChatContext />
                   <ComposerPrimitive.Root
                     className={cn(
                       // Query container for the controls inside: the bubble is
@@ -380,7 +386,7 @@ export function ChatBubble() {
                         <ComposerAddMenu compact />
                         <ContextPins compact />
                       </div>
-                      <ComposerPrimitive.Input
+                      <ComposerInput
                         autoFocus
                         placeholder={DEFAULT_COMPOSER_PLACEHOLDER}
                         rows={1}

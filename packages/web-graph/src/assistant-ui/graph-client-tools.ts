@@ -1,3 +1,4 @@
+import { graphViewSummary } from "../graph-view-summary.ts";
 import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-agent";
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
 import {
@@ -237,17 +238,13 @@ const getView: ClientToolEntry = {
     return ok({
       open: true,
       title,
-      nodeCount: view.nodes.length,
-      edgeCount: view.edges.length,
+      ...graphViewSummary(view, payload),
       // The producer's own truncation OR the render cap. Reporting only the
       // former said `false` while the UI was showing a loss notice.
-      truncated: (payload.truncated ?? false) || view.lossy,
       labels: Object.fromEntries(labels),
       relationshipTypes: Object.fromEntries(types),
       // Named, so the agent can say "Person is hidden" rather than silently
       // reporting a smaller graph than the query returned.
-      hiddenLabels: view.hiddenLabels,
-      hiddenNodeCount: payload.nodes.length - view.nodes.length,
       selectedNode: view.selection ? describe(view.selection, payload.legend) : null,
       // A selected node whose label the legend hides stays selected — the
       // drawer is still open and its properties are still what the user is
@@ -255,7 +252,6 @@ const getView: ClientToolEntry = {
       // plainly here, so the agent can answer "selected, though its label is
       // currently hidden" instead of describing a node this same result says
       // is not on screen.
-      selectedNodeHidden: view.selection ? !view.selectionDrawn : false,
       // A relationship can be selected too, and the drawer shows it. Reporting
       // only nodes said "nothing is selected" with an edge plainly selected.
       selectedRelationship: view.selectedEdge
@@ -267,7 +263,6 @@ const getView: ClientToolEntry = {
             properties: view.selectedEdge.properties ?? {},
           }
         : null,
-      search: view.query || null,
     });
   },
 };

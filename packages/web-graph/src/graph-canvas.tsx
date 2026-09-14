@@ -248,6 +248,8 @@ export function GraphCanvas({
   reducedMotion = false,
 }: GraphCanvasProps) {
   const engineRef = useRef<ForceGraphMethods<EngineNode, EngineLink> | undefined>(undefined);
+  const hiddenLabelsRef = useRef(state.hiddenLabels);
+  hiddenLabelsRef.current = state.hiddenLabels;
   const insetRightRef = useRef(insetRight);
   insetRightRef.current = insetRight;
 
@@ -264,7 +266,11 @@ export function GraphCanvas({
     const engine = engineRef.current;
     if (!engine) return;
     const inset = insetRightRef.current;
-    engine.zoomToFit(durationMs, FIT_PADDING + inset / 2);
+    engine.zoomToFit(
+      durationMs,
+      FIT_PADDING + inset / 2,
+      (node) => !hiddenLabelsRef.current.has(primaryLabel(node)),
+    );
     if (inset <= 0) return;
     const zoom = engine.zoom() || 1;
     const centre = engine.centerAt();
@@ -650,6 +656,7 @@ export function GraphCanvas({
       // balls. Capping keeps a small graph looking like a small graph.
       maxZoom={MAX_ZOOM}
       nodeRelSize={4}
+      nodeVal={(node) => (styleMap.styleForNode(node as EngineNode).radius / 4) ** 2}
       nodeVisibility={(node) => !isHidden(node)}
       // Hiding a label has to hide its relationships too. `nodeVisibility`
       // alone leaves the links drawn, so filtering a type out of the legend
@@ -668,7 +675,7 @@ export function GraphCanvas({
       // as a line without competing with the nodes.
       linkColor={() => theme.mutedForeground}
       linkWidth={1.1}
-      linkDirectionalArrowLength={5}
+      linkDirectionalArrowLength={4}
       linkDirectionalArrowRelPos={1}
       linkDirectionalArrowColor={() => theme.mutedForeground}
       d3VelocityDecay={0.32}

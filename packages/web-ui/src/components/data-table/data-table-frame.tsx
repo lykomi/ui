@@ -1,27 +1,7 @@
-/**
- * The frame around a list: normally a plain container, in focus mode a
- * fullscreen layer (Escape leaves it). `DataTableToolbar` shows the focus
- * button whenever it renders inside a frame — users with wide lists get a
- * way out of a cramped page without the host doing anything.
- *
- * The focus layer stays where it is in the tree — only its classes change —
- * so entering and leaving focus never remounts the list (its rows, drawer,
- * selection and in-flight edits survive) and it keeps inheriting the host's
- * theme scope. It never scrolls itself: it is a fixed flex column whose
- * growing child — the table — owns the scrolling, which keeps the toolbar in
- * place while the rows move under a sticky header (see `DataTable`, which
- * reads this context).
- *
- * A `position: fixed` layer is relative to the viewport unless an ancestor
- * establishes a containing block (`transform`, `filter`, `perspective`,
- * `contain: paint`); a host that does that on a list's ancestor has to opt
- * out of focus mode.
- */
 import {
   createContext,
   forwardRef,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -29,81 +9,92 @@ import {
   type ReactNode,
 } from "react";
 import { cn } from "@iloveagents/foundry-web-primitives";
+import { TooltipProvider } from "../../ui/tooltip.tsx";
+import { Dialog, DialogPortal } from "../../ui/dialog.tsx";
+import { FocusDialog } from "../focus-dialog.tsx";
 
+/** A stable portal host preserves filters, selection and drafts across focus transitions. */
 export interface DataTableFrameContextValue {
   focused: boolean;
   setFocused: (focused: boolean) => void;
 }
-
 const DataTableFrameContext = createContext<DataTableFrameContextValue | null>(null);
-
-/** The enclosing frame's focus state, or `null` outside a frame. */
 export function useDataTableFrame(): DataTableFrameContextValue | null {
   return useContext(DataTableFrameContext);
 }
-
 export interface DataTableFrameProps extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
   children: ReactNode;
-  /** Classes applied in focus mode on top of the fullscreen layer. */
   focusClassName?: string;
   defaultFocused?: boolean;
-  /** Told when focus mode turns on or off — a host with room to spare can show more. */
   onFocusChange?: (focused: boolean) => void;
 }
-
 export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
   function DataTableFrame(
     { children, className, focusClassName, defaultFocused = false, onFocusChange, ...rest },
     ref,
   ) {
     const [focused, setFocused] = useState(defaultFocused);
-    const changeRef = useRef(onFocusChange);
-    changeRef.current = onFocusChange;
-    useEffect(() => {
-      if (!focused) return;
-      const onKeyDown = (event: KeyboardEvent) => {
-        // Through the same door as the button: a host told about focus mode
-        // must hear about it however it ended.
-        if (event.key === "Escape") {
-          setFocused(false);
-          changeRef.current?.(false);
-        }
-      };
-      document.addEventListener("keydown", onKeyDown);
-      const previousOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.removeEventListener("keydown", onKeyDown);
-        document.body.style.overflow = previousOverflow;
-      };
-    }, [focused]);
+    const [host] = useState(() =>
+      typeof document === "undefined" ? null : document.createElement("div"),
+    );
+    const returnFocus = useRef<HTMLElement | null>(null);
     const value = useMemo(
       () => ({
         focused,
         setFocused: (next: boolean) => {
+          if (next && !focused) returnFocus.current = document.activeElement as HTMLElement | null;
           setFocused(next);
-          changeRef.current?.(next);
+          onFocusChange?.(next);
         },
       }),
-      [focused],
+      [focused, onFocusChange],
+    );
+    const attach = (element: HTMLDivElement | null) => {
+      if (element && host && host.parentElement !== element) {
+        host.style.display = "contents";
+        element.appendChild(host);
+      }
+    };
+    const content = (
+      <div
+        {...rest}
+        ref={ref}
+        data-focused={focused ? "" : undefined}
+        data-focus-title={rest["aria-label"] || "Focused content"}
+        className={
+          focused
+            ? cn(
+                "flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-background p-4 sm:p-6",
+                focusClassName,
+              )
+            : className
+        }
+      >
+        {children}
+      </div>
     );
     return (
       <DataTableFrameContext.Provider value={value}>
-        <div
-          {...rest}
-          ref={ref}
-          data-focused={focused ? "" : undefined}
-          className={
-            focused
-              ? cn(
-                  "fixed inset-0 z-50 flex flex-col gap-3 overflow-hidden bg-background p-4 sm:p-6",
-                  focusClassName,
-                )
-              : className
-          }
-        >
-          {children}
-        </div>
+        <TooltipProvider>
+          <div ref={focused ? undefined : attach} className="contents" />
+          <Dialog open={focused} onOpenChange={value.setFocused}>
+            <FocusDialog
+              focused={focused}
+              setFocused={value.setFocused}
+              host={host}
+              attach={attach}
+              title={rest["aria-label"] || "Table focus"}
+              onReturnFocus={() => returnFocus.current?.focus()}
+            />
+            {host ? (
+              <DialogPortal container={host} forceMount>
+                {content}
+              </DialogPortal>
+            ) : (
+              content
+            )}
+          </Dialog>
+        </TooltipProvider>
       </DataTableFrameContext.Provider>
     );
   },

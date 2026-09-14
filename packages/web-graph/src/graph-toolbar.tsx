@@ -1,4 +1,4 @@
-import { Maximize2, PinOff, Play, Search, Share2, Table2, X } from "lucide-react";
+import { Maximize2, Minimize2, Scan, PinOff, Play, Search, Share2, Table2, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface GraphToolbarProps {
@@ -10,6 +10,8 @@ export interface GraphToolbarProps {
   edgeCount: number;
   onZoomToFit: () => void;
   onReheat: () => void;
+  onFullscreen?: () => void;
+  fullscreen?: boolean;
   pinnedCount: number;
   onUnpinAll: () => void;
   /**
@@ -34,6 +36,8 @@ export function GraphToolbar({
   edgeCount,
   onZoomToFit,
   onReheat,
+  onFullscreen,
+  fullscreen,
   pinnedCount,
   onUnpinAll,
   showsTable,
@@ -108,9 +112,20 @@ export function GraphToolbar({
         <span className="sr-only">Restart layout</span>
       </button>
       <button type="button" onClick={onZoomToFit} title="Zoom to fit" className={iconButton}>
-        <Maximize2 className="size-3.5" />
+        <Scan className="size-3.5" />
         <span className="sr-only">Zoom to fit</span>
       </button>
+      {onFullscreen && (
+        <button
+          type="button"
+          onClick={onFullscreen}
+          title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+          aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+          className={iconButton}
+        >
+          {fullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+        </button>
+      )}
     </div>
   );
 }

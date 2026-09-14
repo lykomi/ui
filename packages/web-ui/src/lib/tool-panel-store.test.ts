@@ -46,3 +46,34 @@ describe("setPanelWidth", () => {
     expect(useToolPanelStore.getState().panelWidth).toBe(1000);
   });
 });
+
+it("gives distinct results stable identities across updates and restoration", () => {
+  const store = useToolPanelStore.getState;
+  const result = { type: "text" as const, title: "Result", content: "First" };
+  store().openPanel(result);
+  const first = store().content!.sourceId;
+  store().setContent({ ...result, content: "Updated" });
+  expect(store().content!.sourceId).toBe(first);
+  store().openPanel(result);
+  expect(store().content!.sourceId).not.toBe(first);
+  store().openPanel({ ...result, sourceId: first });
+  expect(store().content!.sourceId).toBe(first);
+});
+
+it("keeps the owning renderer when a focused host accepts another result", () => {
+  const store = useToolPanelStore.getState;
+  store().openPanel({ type: "graph", title: "Owner graph", content: "{}" });
+  const owner = store().content;
+  const accept = (event: Event) => event.preventDefault();
+  window.addEventListener("preview:open-source", accept);
+  try {
+    store().openPanel({ type: "text", title: "Source", content: "New result" });
+    expect(store().hostedOwnerContent).toBe(owner);
+    expect(store().content?.title).toBe("Source");
+    store().setContent({ type: "text", title: "Source", content: "Updated" });
+    expect(store().hostedOwnerContent).toBe(owner);
+  } finally {
+    window.removeEventListener("preview:open-source", accept);
+    store().closePanel();
+  }
+});

@@ -14,6 +14,8 @@
  *     chat (``ChatContent``) and the floating bubble panel. It renders
  *     inside a fixed (non-scrolling) footer, so it never scrolls away
  *     with the thread.
+ *   - ``contextDetails`` — grouped capabilities beneath the current context
+ *     in the composer flyout. Call ``onDismiss`` before opening action dialogs.
  *   - ``launcherBadge`` — inside the collapsed chat-bubble launcher's
  *     wrapper (a positioned ``group`` container around the round button),
  *     so a badge can position itself absolutely over the button and use
@@ -45,6 +47,9 @@ import { useAuiState } from "@assistant-ui/react";
 
 interface ChatSlotsState {
   composerBanner: ComponentType | null;
+  /** Extra capabilities in the context flyout. Providers own section headings
+   * and can dismiss the flyout before opening a dialog or starting an action. */
+  contextDetails: ComponentType<{ onDismiss: () => void }> | null;
   launcherBadge: ComponentType | null;
   composerActions: ComponentType | null;
   /** Let ``composerActions`` stand in for Send while the composer is empty. */
@@ -55,6 +60,7 @@ interface ChatSlotsState {
 
 export const useChatSlotsStore = create<ChatSlotsState>(() => ({
   composerBanner: null,
+  contextDetails: null,
   launcherBadge: null,
   composerActions: null,
   composerActionsReplaceSend: false,
@@ -70,6 +76,7 @@ export const useChatSlotsStore = create<ChatSlotsState>(() => ({
 export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
   const next: Partial<ChatSlotsState> = {};
   if (slots.composerBanner !== undefined) next.composerBanner = slots.composerBanner;
+  if (slots.contextDetails !== undefined) next.contextDetails = slots.contextDetails;
   if (slots.launcherBadge !== undefined) next.launcherBadge = slots.launcherBadge;
   if (slots.composerActions !== undefined) next.composerActions = slots.composerActions;
   if (slots.composerActionsReplaceSend !== undefined) {
@@ -82,6 +89,11 @@ export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
 export function ChatComposerBannerSlot() {
   const Banner = useChatSlotsStore((s) => s.composerBanner);
   return Banner ? <Banner /> : null;
+}
+
+export function ChatContextDetailsSlot({ onDismiss }: { onDismiss: () => void }) {
+  const Details = useChatSlotsStore((s) => s.contextDetails);
+  return Details ? <Details onDismiss={onDismiss} /> : null;
 }
 
 export function ChatLauncherBadgeSlot() {

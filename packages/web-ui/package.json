@@ -31,7 +31,11 @@
       "types": "./dist/chart.d.ts",
       "import": "./dist/chart.js"
     },
-    "./styles.css": "./dist/styles.css"
+    "./styles.css": "./dist/styles.css",
+    "./workbench": {
+      "types": "./dist/workbench.d.ts",
+      "import": "./dist/workbench.js"
+    }
   },
   "files": [
     "dist",

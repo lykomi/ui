@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { DataTable } from "../components/data-table/data-table.tsx";
 import {
@@ -17,7 +17,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu.tsx";
-import { DataTableFrame } from "../components/data-table/data-table-frame.tsx";
+import { DataTableFrame, useDataTableFrame } from "../components/data-table/data-table-frame.tsx";
 import { DataTableToolbar, visibleFacets } from "../components/data-table/data-table-toolbar.tsx";
 import {
   FACET_EMPTY,
@@ -70,6 +70,12 @@ const COLUMNS: ColumnDef<Task, unknown>[] = [
   { accessorKey: "tags", header: "Tags", filterFn: facetFilterFn },
 ];
 
+beforeEach(() => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: false, addEventListener() {}, removeEventListener() {} })),
+  );
+});
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
@@ -776,17 +782,17 @@ describe("useDataTable + DataTable", () => {
       );
     });
     const headers = () =>
-      Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")).map(
+      Array.from(document.body.querySelectorAll("thead th:not([aria-hidden])")).map(
         (th) => th.textContent,
       );
     const facetIds = () =>
-      Array.from(container!.querySelectorAll("button[data-facet]")).map((b) =>
+      Array.from(document.body.querySelectorAll("button[data-facet]")).map((b) =>
         b.getAttribute("data-facet"),
       );
     // on a page: the focus-only column waits, and only the pinned facets show
     expect(headers()).toEqual(["Title", "Priority", "Tags"]);
     expect(facetIds()).toEqual(["status", "priority", "tags"].slice(0, 3));
-    const focusButton = container!.querySelector<HTMLButtonElement>(
+    const focusButton = document.body.querySelector<HTMLButtonElement>(
       "button[aria-label='Focus on the list']",
     )!;
     act(() => focusButton.click());
@@ -806,21 +812,21 @@ describe("useDataTable + DataTable", () => {
       );
     });
     const button = () =>
-      container!.querySelector<HTMLButtonElement>(
+      document.body.querySelector<HTMLButtonElement>(
         "button[aria-label='Focus on the list'], button[aria-label='Leave focus mode']",
       )!;
-    const layer = () => container!.querySelector("[data-focused]");
+    const layer = () => document.body.querySelector("[data-focused]");
     expect(button().getAttribute("aria-pressed")).toBe("false");
     expect(layer()).toBeNull();
-    expect(container!.querySelector("table")!.parentElement!.className).toContain(
+    expect(document.body.querySelector("table")!.parentElement!.className).toContain(
       "overflow-x-auto",
     );
-    const rowBefore = container!.querySelector("tbody tr[data-row-id]");
+    const rowBefore = document.body.querySelector("tbody tr[data-row-id]");
     act(() => button().click());
     expect(layer()).not.toBeNull();
-    // The subtree stays mounted: focus mode only swaps the frame's classes,
+    // The subtree stays mounted: the dialog moves the stable portal host,
     // so the list keeps its state (and its theme scope).
-    expect(container!.querySelector("tbody tr[data-row-id]")).toBe(rowBefore);
+    expect(document.body.querySelector("tbody tr[data-row-id]")).toBe(rowBefore);
     expect(button().getAttribute("aria-pressed")).toBe("true");
     // The layer itself never scrolls: the table is the scroll region (both
     // axes) and its header sticks while the rows move.
@@ -834,8 +840,8 @@ describe("useDataTable + DataTable", () => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     });
     expect(layer()).toBeNull();
-    expect(container!.querySelector(".plain")).not.toBeNull();
-    expect(container!.querySelector("table")!.parentElement!.className).toContain(
+    expect(document.body.querySelector(".plain")).not.toBeNull();
+    expect(document.body.querySelector("table")!.parentElement!.className).toContain(
       "overflow-x-auto",
     );
   });
@@ -1489,4 +1495,123 @@ describe("URL state", () => {
     expect(parsed.columnVisibility).toEqual({ tags: false });
     expect(parseDataTableState(new URLSearchParams("hide=")).columnVisibility).toEqual({});
   });
+});
+
+it("opens evidence beside focus and Escape closes evidence before leaving focus", async () => {
+  function Source() {
+    const frame = useDataTableFrame()!;
+    return (
+      <>
+        <button onClick={() => frame.setFocused(true)}>Focus test</button>
+        <a
+          href="/source"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            window.dispatchEvent(
+              new CustomEvent("focus:open-source", {
+                cancelable: true,
+                detail: { type: "text", title: "Evidence", content: "Source passage" },
+              }),
+            );
+          }}
+        >
+          Source
+        </a>
+      </>
+    );
+  }
+  container = document.createElement("div");
+  document.body.append(container);
+  root = createRoot(container);
+  act(() =>
+    root!.render(
+      <DataTableFrame>
+        <Source />
+      </DataTableFrame>,
+    ),
+  );
+  const original = container.querySelector("a");
+  act(() => container!.querySelector<HTMLButtonElement>("button")!.click());
+  act(() => document.querySelector<HTMLAnchorElement>('[role="dialog"] a')!.click());
+  expect(document.querySelector('[aria-label="Citation source"]')?.textContent).toContain(
+    "Source passage",
+  );
+  act(() =>
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+    ),
+  );
+  expect(document.querySelector('[aria-label="Citation source"]')).toBeNull();
+  expect(document.querySelector('[role="dialog"] a')).toBe(original);
+});
+
+it("routes tool results into focus and leaves the underlying panel open on Escape", async () => {
+  const { MemoryRouter } = await import("react-router");
+  const { ToolPanel } = await import("../components/tool-panel.tsx");
+  const { useToolPanelStore } = await import("../lib/tool-panel-store.ts");
+  const { TooltipProvider } = await import("../ui/tooltip.tsx");
+  function Source() {
+    const frame = useDataTableFrame()!;
+    return <button onClick={() => frame.setFocused(true)}>Focus graph</button>;
+  }
+  useToolPanelStore
+    .getState()
+    .openPanel({ type: "text", title: "Graph", content: "Underlying graph" });
+  container = document.createElement("div");
+  document.body.append(container);
+  root = createRoot(container);
+  act(() =>
+    root!.render(
+      <MemoryRouter>
+        <TooltipProvider>
+          <ToolPanel />
+          <DataTableFrame>
+            <Source />
+          </DataTableFrame>
+        </TooltipProvider>
+      </MemoryRouter>,
+    ),
+  );
+  act(() =>
+    [...container!.querySelectorAll("button")]
+      .find((button) => button.textContent === "Focus graph")!
+      .click(),
+  );
+  act(() =>
+    useToolPanelStore.getState().openPanel({ type: "text", title: "Empty result", content: "" }),
+  );
+  expect(document.querySelector('[aria-label="Citation source"]')?.textContent).toContain(
+    "Empty result",
+  );
+  act(() =>
+    useToolPanelStore
+      .getState()
+      .setContent({ type: "text", title: "Updated result", content: "Streamed content" }),
+  );
+  expect(document.querySelector('[aria-label="Citation source"]')?.textContent).toContain(
+    "Streamed content",
+  );
+
+  act(() =>
+    useToolPanelStore
+      .getState()
+      .openPanel({ type: "text", title: "Tool result", content: "Focused tool output" }),
+  );
+  expect(document.querySelector('[aria-label="Citation source"]')?.textContent).toContain(
+    "Focused tool output",
+  );
+  const escape = () =>
+    act(() =>
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      ),
+    );
+  escape();
+  expect(document.querySelector('[aria-label="Citation source"]')).toBeNull();
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  escape();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(useToolPanelStore.getState().isOpen).toBe(true);
+  act(() => useToolPanelStore.getState().closePanel());
 });

@@ -42,9 +42,9 @@ export function LoadingIndicator() {
     // above it — measured, not guessed: the rows sit at x=469 and so does
     // this. The old `h-10` did NOT belong: a fixed 40px block on top of the
     // parts' own gap-4 left a visible hole under the last tool row.
-    <div className="min-h-6 px-4">
+    <div role="status" aria-live="polite" className="min-h-6 px-4">
       <div className="flex items-center gap-2 py-0.5 text-foreground leading-relaxed animate-in fade-in duration-300">
-        <span className={stalled ? "text-sm text-warning" : "text-sm text-muted-foreground"}>
+        <span className={stalled ? "text-xs text-warning" : "text-xs text-muted-foreground"}>
           {label}
         </span>
         {/* One pulsing dot. Three read as a typing indicator borrowed from a

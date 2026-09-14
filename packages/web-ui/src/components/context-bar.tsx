@@ -1,3 +1,4 @@
+import { PinStateIcon } from "./pin-state-icon.tsx";
 /**
  * Context Pins — pin button with count badge and hover flyout.
  *
@@ -7,16 +8,7 @@
 
 import { type FC, useState, useRef, useEffect, createElement } from "react";
 import { useNavigate } from "react-router";
-import {
-  X,
-  Pin,
-  PinOff,
-  TextSelect,
-  FileText,
-  Link2,
-  StickyNote,
-  type LucideIcon,
-} from "lucide-react";
+import { X, TextSelect, FileText, Link2, StickyNote, type LucideIcon } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { useAppStore, type ContextItem, type ContextItemType } from "../lib/app-store.ts";
@@ -29,6 +21,7 @@ const CONTEXT_ICONS: Record<ContextItemType, LucideIcon> = {
 };
 
 interface ContextPinsProps {
+  allowPageToggle?: boolean;
   /** Show the pin button to add current page */
   showPinButton?: boolean;
   /** Compact mode for small containers (mini chat bubble header) */
@@ -119,6 +112,7 @@ export function usePagePin() {
 }
 
 export const ContextPins: FC<ContextPinsProps> = ({
+  allowPageToggle = true,
   showPinButton = false,
   compact = false,
   flyoutDirection = "up",
@@ -163,22 +157,30 @@ export const ContextPins: FC<ContextPinsProps> = ({
       ref={containerRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocus={handleMouseEnter}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFlyoutOpen(false);
+      }}
     >
       <TooltipIconButton
-        tooltip={isCurrentPagePinned ? "Unpin this page" : "Pin this page"}
+        tooltip={
+          allowPageToggle
+            ? isCurrentPagePinned
+              ? "Unpin this page"
+              : "Pin this page"
+            : "Manage pinned context"
+        }
         size="icon"
         className={cn(
           "shrink-0 relative",
           compact ? "size-7" : "size-8",
-          isCurrentPagePinned && "text-primary",
+          isCurrentPagePinned ? "text-foreground" : "text-muted-foreground",
         )}
-        onClick={handleTogglePin}
+        aria-pressed={allowPageToggle ? isCurrentPagePinned : undefined}
+        aria-expanded={!allowPageToggle ? flyoutOpen : undefined}
+        onClick={allowPageToggle ? handleTogglePin : () => setFlyoutOpen(true)}
       >
-        {isCurrentPagePinned ? (
-          <PinOff className={compact ? "size-3.5" : "size-4"} />
-        ) : (
-          <Pin className={compact ? "size-3.5" : "size-4"} />
-        )}
+        <PinStateIcon pinned={isCurrentPagePinned} className={compact ? "size-3.5" : "size-4"} />
         {pinned.length > 0 && (
           <span
             className={cn(

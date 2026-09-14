@@ -7,6 +7,7 @@ import { authStore } from "@iloveagents/foundry-agent/msal";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -20,6 +21,17 @@ export const UserMenu: FC = () => {
     useShallow((s) => ({ user: s.user, signOut: s.signOut })),
   );
 
+  let preview = false;
+  if (import.meta.env.DEV) {
+    try {
+      const choice = new URLSearchParams(window.location.search).get("ux");
+      preview =
+        choice === "workbench" ||
+        (choice !== "classic" && sessionStorage.getItem("foundry.workbench-preview") === "on");
+    } catch {
+      /* Storage may be unavailable in embedded browsers. */
+    }
+  }
   if (!user) return null;
 
   return (
@@ -50,6 +62,21 @@ export const UserMenu: FC = () => {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {import.meta.env.DEV && (
+          <>
+            <DropdownMenuCheckboxItem
+              checked={preview}
+              onCheckedChange={(enabled) => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("ux", enabled ? "workbench" : "classic");
+                window.location.assign(url.href);
+              }}
+            >
+              UI preview
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
           <LogOut className="size-4" />
           Sign out

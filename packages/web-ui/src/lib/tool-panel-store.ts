@@ -1,3 +1,4 @@
+import { createUiId } from "./create-ui-id.ts";
 /**
  * Tool Panel State Management
  *
@@ -14,6 +15,10 @@ export interface PdfHighlightRef {
 }
 
 export interface ToolPanelContent {
+  /** Stable result identity, preserved across updates and retained-window restoration. */
+  sourceId?: string;
+  /** Explicit retention preference when a window host opens this source. */
+  keepOpen?: boolean;
   title: string;
   content: string;
   type: "markdown" | "text" | "page" | "pdf" | "graph";
@@ -93,6 +98,9 @@ const shouldUseOverlay = (): boolean => {
 
 interface ToolPanelState {
   isOpen: boolean;
+  isWindowHosted: boolean;
+  /** Keep the renderer that owns a focused host mounted while it displays another result. */
+  hostedOwnerContent: ToolPanelContent | null;
   content: ToolPanelContent | null;
 
   // Layout state
@@ -117,13 +125,33 @@ interface ToolPanelState {
 
 export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
   isOpen: false,
+  isWindowHosted: false,
+  hostedOwnerContent: null,
   content: null,
   panelWidth: getPanelWidth(),
   useOverlay: shouldUseOverlay(),
   isFullscreen: false,
   renderers: [],
 
-  openPanel: (content) => set({ isOpen: true, content }),
+  openPanel: (content) => {
+    content = { ...content, sourceId: content.sourceId ?? `tool:${createUiId()}` };
+    const request =
+      typeof window === "undefined"
+        ? null
+        : new CustomEvent("preview:open-source", { detail: content, cancelable: true });
+    if (request) window.dispatchEvent(request);
+    const hosted = request?.defaultPrevented ?? false;
+    set({
+      isOpen: true,
+      content,
+      isWindowHosted: hosted,
+      hostedOwnerContent: hosted
+        ? get().isWindowHosted
+          ? get().hostedOwnerContent
+          : get().content
+        : null,
+    });
+  },
   registerRenderer: (entry) =>
     set((state) => {
       if (entry.id === undefined) return { renderers: [...state.renderers, entry] };
@@ -135,8 +163,14 @@ export const useToolPanelStore = create<ToolPanelState>((set, get) => ({
       renderers[index] = entry;
       return { renderers };
     }),
-  closePanel: () => set({ isOpen: false, isFullscreen: false }),
-  setContent: (content) => set({ content }),
+  closePanel: () =>
+    set({ isOpen: false, isFullscreen: false, isWindowHosted: false, hostedOwnerContent: null }),
+  setContent: (content) => {
+    content = { ...content, sourceId: content.sourceId ?? get().content?.sourceId };
+    set({ content });
+    if (get().isWindowHosted && typeof window !== "undefined")
+      window.dispatchEvent(new CustomEvent("preview:update-source", { detail: content }));
+  },
   setPanelWidth: (width) => {
     if (typeof window === "undefined") return;
     if (get().isFullscreen) return;

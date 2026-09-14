@@ -1,0 +1,57 @@
+import { type ReactNode } from "react";
+import { Button } from "@iloveagents/foundry-web-primitives";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  useNavStore,
+} from "../index.ts";
+import { Layers } from "lucide-react";
+export function WelcomeIntro({
+  navGroups,
+  historyShortcut,
+}: {
+  navGroups: ReturnType<typeof useNavStore.getState>["config"];
+  historyShortcut: ReactNode;
+}) {
+  return (
+    <div className="mb-4 text-center">
+      <h1 className="text-2xl font-semibold tracking-tight">What would you like to get done?</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Find information, create or edit content, and run actions across your spaces.
+      </p>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        {historyShortcut}
+        {navGroups.some(
+          (group) => group.meta?.type === "spaces-workspaces" && group.createActions?.length,
+        ) && (
+          <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-2 px-3 text-xs font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
+                >
+                  <Layers className="size-3.5" aria-hidden="true" />
+                  Create a space
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                {navGroups
+                  .filter((group) => group.meta?.type === "spaces-workspaces")
+                  .flatMap((group) => group.createActions ?? [])
+                  .map((action) => (
+                    <DropdownMenuItem key={action.id} onSelect={() => action.handler()}>
+                      {action.label}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

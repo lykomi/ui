@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  type ReactNode,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { NavLink, useLocation, useNavigate } from "react-router";
 import {
   Ellipsis,
@@ -17,6 +26,7 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   useSidebarStore,
   RAIL_WIDTH,
+  SIDEBAR_WIDTH,
   SIDEBAR_MIN_WIDTH,
   SIDEBAR_MAX_WIDTH,
 } from "../lib/sidebar-store.ts";
@@ -512,7 +522,7 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
         await dnd.onDrop(draggedData);
       }}
       className={cn(
-        "mx-2 rounded-md transition-all overflow-hidden",
+        "relative mx-2 rounded-md overflow-hidden",
         isDragOver
           ? cn(
               "h-7 flex items-center justify-center gap-1",
@@ -520,7 +530,7 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
                 ? "bg-primary/10 border border-dashed border-primary"
                 : "bg-primary/10 border border-dashed border-primary/30",
             )
-          : "h-1",
+          : "-mt-1 h-1",
       )}
     >
       {isDragOver && (
@@ -599,7 +609,7 @@ function NavTwisty({
           <span
             data-nav-leaf-dot
             className={cn(
-              "size-1 rounded-full",
+              "block size-1 shrink-0 rounded-full",
               isActive ? "bg-primary/70" : "bg-sidebar-foreground/30",
             )}
           />
@@ -726,6 +736,7 @@ function NavLeafItem({
         ref={activeRowRef}
         data-active-nav-row={isActive ? "true" : undefined}
         data-nav-depth={depth}
+        style={{ "--nav-depth": depth } as React.CSSProperties}
         {...(isDisabled ? {} : dropTargetProps)}
         {...(isDisabled ? {} : draggableProps)}
         className={cn(
@@ -809,6 +820,7 @@ function NavLeafItem({
       ref={activeButtonRef}
       data-active-nav-row={isActive ? "true" : undefined}
       data-nav-depth={depth}
+      style={{ "--nav-depth": depth } as React.CSSProperties}
       type="button"
       disabled={isDisabled}
       onClick={isDisabled ? undefined : onClick}
@@ -893,7 +905,8 @@ function SubNavItems({
   return (
     <div>
       {items.map((child) => {
-        const hasNestedChildren = child.children && child.children.length > 0;
+        const hasNestedChildren =
+          !child.childrenHidden && child.children && child.children.length > 0;
 
         // Folders with children render as collapsible nested items
         if (hasNestedChildren) {
@@ -905,7 +918,7 @@ function SubNavItems({
         // parent path (e.g., folders) are never highlighted on the parent page.
         const isActive = allShareParent
           ? isOnParent && activeLabel === child.label
-          : child.to !== parentPath && currentPath === child.to;
+          : child.to !== parentPath && isSelectedNavItem(currentPath, child);
         return (
           <NavLeafItem
             key={child.to + child.label}
@@ -939,6 +952,12 @@ function isInSubtree(currentPage: string, item: NavItem): boolean {
   return item.children?.some((c) => isInSubtree(currentPage, c)) ?? false;
 }
 
+/** A list owns the sidebar selection of descendants it deliberately does not draw.
+ * The route lookup still resolves the actual descendant for chat and page actions. */
+function isSelectedNavItem(currentPage: string, item: NavItem): boolean {
+  return currentPage === item.to || Boolean(item.childrenHidden && isInSubtree(currentPage, item));
+}
+
 /** Nested folder with collapsible children (used inside SubNavItems). */
 function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const navigate = useNavigate();
@@ -946,10 +965,9 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
   const isInsideSubtree = isInSubtree(currentPath, item);
-  const isActive = currentPath === item.to;
+  const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
-  const [manualOverride, setManualOverride] = useState<boolean | null>(null);
-  const isExpanded = manualOverride ?? isInsideSubtree;
+  const [isExpanded, setExpanded] = useTreeExpanded(item.to, isInsideSubtree);
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const bodyPl = getNavDepthOffsets(depth).body;
 
@@ -963,6 +981,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         ref={activeRowRef}
         data-active-nav-row={isActive ? "true" : undefined}
         data-nav-depth={depth}
+        style={{ "--nav-depth": depth } as React.CSSProperties}
         {...(isDisabled ? {} : draggableProps)}
         className={cn(
           "group relative flex items-center w-full",
@@ -985,7 +1004,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         <NavTwisty
           hasChildren
           isExpanded={isExpanded}
-          onToggle={() => setManualOverride(!isExpanded)}
+          onToggle={() => setExpanded(!isExpanded)}
           label={item.label}
           isActive={(isActive || isAncestorActive) && !isDisabled}
           depth={depth}
@@ -995,7 +1014,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           disabled={isDisabled}
           onClick={() => {
             if (isDisabled) return;
-            setManualOverride(true);
+            setExpanded(true);
             setNavContext({
               ...navContext,
               label: item.label,
@@ -1061,13 +1080,14 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
       {isExpanded && item.children && (
         <div>
           {item.children.map((child) => {
-            const hasNestedChildren = child.children && child.children.length > 0;
+            const hasNestedChildren =
+              !child.childrenHidden && child.children && child.children.length > 0;
             if (hasNestedChildren) {
               return (
                 <NestedFolderItem key={child.to + child.label} item={child} depth={depth + 1} />
               );
             }
-            const isChildActive = currentPath === child.to;
+            const isChildActive = isSelectedNavItem(currentPath, child);
             return (
               <NavLeafItem
                 key={child.to + child.label}
@@ -1116,13 +1136,13 @@ function CollapsibleNavItem({
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
   const isInsideSubtree = isInSubtree(currentPath, item);
-  const isActive = currentPath === item.to;
+  const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
-  const [manualOverride, setManualOverride] = useState<boolean | null>(null);
+  const [treeExpanded, setExpanded] = useTreeExpanded(item.to, isInsideSubtree);
   // A heading is never collapsed and carries no chevron: its children ARE
   // the tree it stands for.
-  const isExpanded = heading ? true : (manualOverride ?? isInsideSubtree);
-  const hasChildren = Boolean(item.children && item.children.length > 0);
+  const isExpanded = heading ? true : treeExpanded;
+  const hasChildren = Boolean(!item.childrenHidden && item.children && item.children.length > 0);
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const rowInTree = inTree && !heading;
@@ -1165,7 +1185,7 @@ function CollapsibleNavItem({
           childrenUnloaded={item.childrenUnloaded}
           inTree={rowInTree}
           isExpanded={isExpanded}
-          onToggle={hasChildren && !heading ? () => setManualOverride(!isExpanded) : undefined}
+          onToggle={hasChildren && !heading ? () => setExpanded(!isExpanded) : undefined}
           label={item.label}
           isActive={(selected || ancestor) && !isDisabled}
           depth={0}
@@ -1184,7 +1204,7 @@ function CollapsibleNavItem({
                   .filter(Boolean)
                   .join("\n") || null,
             });
-            if (hasChildren) setManualOverride(true);
+            if (hasChildren) setExpanded(true);
             navigate(item.to);
           }}
           className={cn(
@@ -1284,12 +1304,12 @@ function CollapsibleNavItem({
   return (
     <NavLink
       ref={activeLinkRef}
-      data-active-nav-row={currentPath === item.to ? "true" : undefined}
+      data-active-nav-row={isActive ? "true" : undefined}
       data-nav-depth={0}
       to={item.to}
       {...draggableProps}
       {...dropTargetProps}
-      className={({ isActive }) =>
+      className={() =>
         cn(
           "relative flex items-center gap-2 w-full",
           bodyClass,
@@ -1311,7 +1331,7 @@ function CollapsibleNavItem({
         )
       }
     >
-      {({ isActive }) => (
+      {() => (
         <>
           <NavTwisty
             hasChildren={false}
@@ -1385,6 +1405,9 @@ function SidebarResizeHandle() {
 
   return (
     <div
+      data-panel-resize
+      title="Drag to resize navigation. Double-click to reset."
+      onDoubleClick={() => setWidth(SIDEBAR_WIDTH)}
       className="absolute inset-y-0 right-0 z-20 hidden w-3 cursor-col-resize md:block"
       onPointerDown={(event) => {
         event.preventDefault();
@@ -1399,11 +1422,11 @@ function SidebarResizeHandle() {
       onKeyDown={(event) => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();
-          setWidth(width - 16);
+          setWidth(width - (event.shiftKey ? 40 : 16));
         }
         if (event.key === "ArrowRight") {
           event.preventDefault();
-          setWidth(width + 16);
+          setWidth(width + (event.shiftKey ? 40 : 16));
         }
         if (event.key === "Home") {
           event.preventDefault();
@@ -1529,6 +1552,18 @@ function useGroupCollapsed(label: string, defaultCollapsed: boolean | undefined)
   return Object.prototype.hasOwnProperty.call(map, label) ? map[label] : Boolean(defaultCollapsed);
 }
 
+/** Keep opened branches stable while routes and asynchronously loaded children change. */
+function useTreeExpanded(to: string, inside: boolean): [boolean, (expanded: boolean) => void] {
+  const key = `tree:${to}`;
+  const collapsed = useGroupCollapsed(key, !inside);
+  useEffect(() => {
+    if (inside && !Object.prototype.hasOwnProperty.call(readCollapseMap(), key)) {
+      writeCollapseMap({ ...readCollapseMap(), [key]: false });
+    }
+  }, [inside, key]);
+  return [!collapsed, (expanded) => writeCollapseMap({ ...readCollapseMap(), [key]: !expanded })];
+}
+
 function toggleGroupCollapsed(label: string, current: boolean): void {
   writeCollapseMap({ ...readCollapseMap(), [label]: !current });
 }
@@ -1565,7 +1600,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   // renders either way, so flat rows keep the same label column as tree
   // rows and the sidebar stays on one grid.
   const groupHasBranches = group.items.some((item) =>
-    Boolean(item.children && item.children.length > 0),
+    Boolean(!item.childrenHidden && item.children && item.children.length > 0),
   );
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy
@@ -1803,7 +1838,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
               // that branches. Decided per GROUP: Workspaces has branches, so
               // its leaves are marked; Chats has none, so a dot on every row
               // would mark a distinction that does not exist.
-              inTree={groupHasBranches}
+              inTree={group.tree ?? groupHasBranches}
               heading={focused}
               underHeader={!group.hideLabel}
             />
@@ -1852,9 +1887,32 @@ function CreateActionsMenu({ group }: { group: NavGroup }) {
   );
 }
 
-function SidebarContent({ collapsed }: { collapsed: boolean }) {
+interface SidebarViewProps {
+  /** Display-only navigation override; the navigation registry remains intact. */
+  groups?: NavGroup[];
+  onNewConversation?: () => void;
+  hideFooterActions?: boolean;
+  hideNewConversation?: boolean;
+  /** Compact rail shows group entry points instead of every child item. */
+  collapsedGroupsOnly?: boolean;
+  /** Place the primary action beneath a scope heading instead of above navigation. */
+  newConversationAfterGroup?: string;
+  newConversationLabel?: string;
+}
+
+function SidebarContent({
+  collapsed,
+  groups,
+  onNewConversation,
+  hideFooterActions,
+  hideNewConversation,
+  collapsedGroupsOnly,
+  newConversationAfterGroup,
+  newConversationLabel = "New Thread",
+}: SidebarViewProps & { collapsed: boolean }) {
   const toggle = useSidebarStore((s) => s.toggle);
-  const handleNewConversation = useNewConversation();
+  const defaultNewConversation = useNewConversation();
+  const handleNewConversation = onNewConversation ?? defaultNewConversation;
   const rawNavConfig = useNavStore((s) => s.config);
   const navLoading = useNavStore((s) => s.navLoading);
   // Sort by `priority` descending so feature hooks can declare slot
@@ -1864,17 +1922,19 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
   // the legacy append-where-you-arrive behaviour.
   const navConfig = useMemo(
     () =>
-      [...rawNavConfig]
+      [...(groups ?? rawNavConfig)]
         .map((g, i) => ({ g, i, p: g.priority ?? 0 }))
         .sort((a, b) => b.p - a.p || a.i - b.i)
         .map(({ g }) => g),
-    [rawNavConfig],
+    [rawNavConfig, groups],
   );
   // Show skeleton rows during the cold nav fetch — but only until the
   // integrator's primary dynamic group ("Workspaces") has been published.
   // Once it exists, real rows render even if a later phase (status dots) is
   // still resolving, so the skeleton never flashes over a populated tree.
-  const hasWorkspacesGroup = navConfig.some((group) => group.label === "Workspaces");
+  const hasWorkspacesGroup = navConfig.some(
+    (group) => group.label === "Workspaces" || group.meta?.type === "spaces-workspaces",
+  );
   const showNavSkeleton = navLoading && !hasWorkspacesGroup;
   const currentPage = useLocation().pathname;
   const navContext = useAppStore((s) => s.navContext);
@@ -1891,9 +1951,15 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         <TooltipIconButton tooltip="Expand sidebar" side="right" onClick={toggle}>
           <PanelLeftOpen className="size-5" />
         </TooltipIconButton>
-        <TooltipIconButton tooltip="New Thread" side="right" onClick={handleNewConversation}>
-          <SquarePen className="size-4 text-sidebar-icon" />
-        </TooltipIconButton>
+        {!hideNewConversation && !collapsedGroupsOnly && (
+          <TooltipIconButton
+            tooltip={newConversationLabel}
+            side="right"
+            onClick={handleNewConversation}
+          >
+            <SquarePen className="size-4 text-sidebar-icon" />
+          </TooltipIconButton>
+        )}
         <div className="mt-4 flex w-full flex-col items-stretch gap-1">
           {/* `w-full` on this inner column makes children resolve to the
               rail width even though the outer rail uses `items-center`
@@ -1904,65 +1970,131 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
               (not array-index). Without this an empty group at idx 0
               would push a `border-t` onto whatever group renders first,
               giving the rail a stray divider above the very first icon. */}
-          {navConfig
-            .map((group, groupIndex) => {
-              // Modules with a non-flat collapsed rail (e.g. Spaces'
-              // "header + active workspace") supply `collapsedRail`; the
-              // shell stays module-agnostic.
-              const items = group.collapsedRail
-                ? group
-                    .collapsedRail({
-                      currentPage,
-                      navContextMeta: navContext.meta ?? {},
-                    })
-                    .map((it) => ({
-                      to: it.to,
-                      label: it.label,
-                      icon: it.icon,
-                      isActive: it.isActive,
-                    }))
-                : group.items.map((it) => ({
-                    to: it.to,
-                    label: it.label,
-                    icon: it.icon,
-                    isActive: currentPage === it.to,
-                  }));
-              return { group, groupIndex, items };
-            })
-            .filter(({ items }) => items.length > 0)
-            .map(({ group, groupIndex, items }, visibleIndex) => (
-              // Each non-first VISIBLE group gets a thin top border —
-              // visually separates groups (e.g. user Workspaces vs
-              // Admin) in the collapsed rail without changing the
-              // CollapsedRailItem shape. The wrapper itself is a centred
-              // column so icons stay aligned with the rail.
-              <div
-                key={`${group.label || ""}-${groupIndex}`}
-                className={cn(
-                  "flex flex-col items-center gap-1",
-                  visibleIndex > 0 && "mt-2 pt-2 border-t border-sidebar-border/40",
-                )}
-              >
-                {items.map(({ to, label, icon, isActive }) => (
-                  <CollapsedNavShortcut
-                    key={to}
-                    to={to}
-                    label={label}
-                    icon={icon}
-                    isActive={isActive}
-                  />
+          {collapsedGroupsOnly
+            ? navConfig
+                .filter(
+                  (group) =>
+                    !group.meta?.hideInCollapsedRail &&
+                    (group.to || group.items.length > 0) &&
+                    group.collapsedRail?.({ currentPage, navContextMeta: navContext.meta ?? {} })
+                      .length !== 0,
+                )
+                .map((group) => {
+                  const rail = group.collapsedRail?.({
+                    currentPage,
+                    navContextMeta: navContext.meta ?? {},
+                  });
+                  const active =
+                    currentPage === group.to ||
+                    group.items.some((item) => isInSubtree(currentPage, item)) ||
+                    Boolean(rail?.some((item) => item.isActive));
+                  const Icon =
+                    group.icon ??
+                    group.collapsedRail?.({ currentPage, navContextMeta: navContext.meta ?? {} })[0]
+                      ?.icon ??
+                    group.items[0]?.icon ??
+                    Layers;
+                  return group.to ? (
+                    <CollapsedNavShortcut
+                      key={group.label}
+                      to={group.to}
+                      label={group.label}
+                      icon={Icon}
+                      isActive={active}
+                    />
+                  ) : (
+                    <TooltipIconButton
+                      key={group.label}
+                      tooltip={group.label}
+                      side="right"
+                      aria-label={`Open ${group.label}`}
+                      aria-current={active ? "page" : undefined}
+                      className={active ? ACTIVE_NAV_ROW_CLASS : undefined}
+                      onClick={() => {
+                        toggleGroupCollapsed(group.label, true);
+                        toggle();
+                      }}
+                    >
+                      <Icon className="size-4" />
+                    </TooltipIconButton>
+                  );
+                })
+            : navConfig
+                .map((group, groupIndex) => {
+                  // Modules with a non-flat collapsed rail (e.g. Spaces'
+                  // "header + active workspace") supply `collapsedRail`; the
+                  // shell stays module-agnostic.
+                  const items = group.collapsedRail
+                    ? group
+                        .collapsedRail({
+                          currentPage,
+                          navContextMeta: navContext.meta ?? {},
+                        })
+                        .map((it) => ({
+                          to: it.to,
+                          label: it.label,
+                          icon: it.icon,
+                          isActive: it.isActive,
+                        }))
+                    : group.items.map((it) => ({
+                        to: it.to,
+                        label: it.label,
+                        icon: it.icon,
+                        isActive: currentPage === it.to,
+                      }));
+                  return { group, groupIndex, items };
+                })
+                .filter(({ items }) => items.length > 0)
+                .map(({ group, groupIndex, items }, visibleIndex) => (
+                  // Each non-first VISIBLE group gets a thin top border —
+                  // visually separates groups (e.g. user Workspaces vs
+                  // Admin) in the collapsed rail without changing the
+                  // CollapsedRailItem shape. The wrapper itself is a centred
+                  // column so icons stay aligned with the rail.
+                  <div
+                    key={`${group.label || ""}-${groupIndex}`}
+                    className={cn(
+                      "flex flex-col items-center gap-1",
+                      visibleIndex > 0 && "mt-2 pt-2 border-t border-sidebar-border/40",
+                    )}
+                  >
+                    {items.map(({ to, label, icon, isActive }) => (
+                      <CollapsedNavShortcut
+                        key={to}
+                        to={to}
+                        label={label}
+                        icon={icon}
+                        isActive={isActive}
+                      />
+                    ))}
+                  </div>
                 ))}
-              </div>
-            ))}
         </div>
       </div>
     );
   }
 
+  const newConversationAction = (
+    <div className="px-1 mb-0.5">
+      <button
+        type="button"
+        onClick={handleNewConversation}
+        className={cn(
+          "flex items-center gap-2 w-full",
+          "rounded-xl px-3 py-2 text-sm text-left",
+          "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
+        )}
+      >
+        <SquarePen className="size-4 shrink-0 text-sidebar-icon" />
+        {newConversationLabel}
+      </button>
+    </div>
+  );
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-3">
+      <div data-navigation-header className="flex items-center justify-between px-3 py-3">
         <NavLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <AppBrand
             iconClassName="text-primary"
@@ -1974,21 +2106,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         </TooltipIconButton>
       </div>
 
-      {/* New Thread */}
-      <div className="px-1 mb-0.5">
-        <button
-          type="button"
-          onClick={handleNewConversation}
-          className={cn(
-            "flex items-center gap-2 w-full",
-            "rounded-xl px-3 py-2 text-sm text-left",
-            "text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent/70",
-          )}
-        >
-          <SquarePen className="size-4 shrink-0 text-sidebar-icon" />
-          New Thread
-        </button>
-      </div>
+      {!hideNewConversation && !newConversationAfterGroup && newConversationAction}
 
       {/* ThreadIndicator removed — the active conversation's row in
           the Recents group is now the source of truth for "you're in a
@@ -2001,7 +2119,12 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
         onDropCapture={preventNativeFileDrop}
       >
         {navConfig.map((group) => (
-          <NavGroupSection key={group.label} group={group} />
+          <Fragment key={group.label}>
+            <NavGroupSection group={group} />
+            {!hideNewConversation &&
+              group.label === newConversationAfterGroup &&
+              newConversationAction}
+          </Fragment>
         ))}
         {showNavSkeleton && (
           <div className="space-y-1 px-1 pt-2" aria-hidden="true">
@@ -2013,7 +2136,7 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
       </nav>
 
       {/* Footer actions — registered by feature modules */}
-      <SidebarFooterActions />
+      {!hideFooterActions && <SidebarFooterActions />}
     </div>
   );
 }
@@ -2050,9 +2173,15 @@ function SidebarFooterActions() {
 }
 
 /** Mobile drawer overlay */
-function MobileDrawer() {
+function MobileDrawer({ footer, ...view }: SidebarViewProps & { footer?: ReactNode }) {
   const isMobileOpen = useSidebarStore((s) => s.isMobileOpen);
   const closeMobile = useSidebarStore((s) => s.closeMobile);
+  const locationKey = useLocation().key;
+  const previousLocationKey = useRef(locationKey);
+  useEffect(() => {
+    if (previousLocationKey.current !== locationKey) closeMobile();
+    previousLocationKey.current = locationKey;
+  }, [locationKey, closeMobile]);
   const isToolPanelOpen = useToolPanelStore((s) => s.isOpen);
   const width = useSidebarStore((s) => s.width);
   const drawerWidth = Math.min(
@@ -2105,20 +2234,29 @@ function MobileDrawer() {
         role="complementary"
         aria-label="Navigation sidebar"
       >
-        <SidebarContent collapsed={false} />
+        <SidebarContent collapsed={false} {...view} />
+        {footer}
       </aside>
     </>
   );
 }
 
 /** Desktop inline sidebar (expanded or collapsed rail) */
-function DesktopSidebar() {
+function DesktopSidebar({
+  footer,
+  collapsedFooter,
+  ...view
+}: SidebarViewProps & {
+  footer?: ReactNode;
+  collapsedFooter?: ReactNode;
+}) {
   const isOpen = useSidebarStore((s) => s.isOpen);
   const width = useSidebarStore((s) => s.width);
 
   return (
     <aside
       data-sidebar-surface="desktop"
+      data-sidebar-collapsed={!isOpen || undefined}
       className={cn(
         "group/sidebar relative hidden md:flex flex-col shrink-0",
         "h-full",
@@ -2130,17 +2268,22 @@ function DesktopSidebar() {
       role="complementary"
       aria-label="Navigation sidebar"
     >
-      <SidebarContent collapsed={!isOpen} />
+      <SidebarContent collapsed={!isOpen} {...view} />
+      {isOpen ? footer : collapsedFooter}
       {isOpen && <SidebarResizeHandle />}
     </aside>
   );
 }
 
-export function Sidebar() {
+export function Sidebar({
+  footer,
+  collapsedFooter,
+  ...view
+}: SidebarViewProps & { footer?: ReactNode; collapsedFooter?: ReactNode } = {}) {
   return (
     <>
-      <MobileDrawer />
-      <DesktopSidebar />
+      <MobileDrawer footer={footer} {...view} />
+      <DesktopSidebar footer={footer} collapsedFooter={collapsedFooter} {...view} />
     </>
   );
 }

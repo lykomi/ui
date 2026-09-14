@@ -6,6 +6,7 @@ import {
   GRAPH_SELECTION_CONTEXT_KEY,
   GraphContextPinButton,
   syncGraphSelectionContext,
+  syncGraphEdgeContext,
 } from "../assistant-ui/graph-context.tsx";
 import type { GraphNode } from "../model.ts";
 
@@ -72,4 +73,25 @@ describe("GraphContextPinButton", () => {
     expect((tracked()?.payload as { preview?: string })?.preview).toBe("Le Film");
     expect(tracked()?.sourcePage).toBe("graph:Films");
   });
+});
+
+it("tracks a relationship with direction and properties, then clears it on deselection", () => {
+  syncGraphEdgeContext(
+    {
+      id: "edge1",
+      source: "higher",
+      target: "lower",
+      type: "PREVAILS_OVER",
+      properties: { clause: "3" },
+    },
+    "graph:Contract",
+  );
+  const selected = items().find((item) => item.key === "graph.edge-selection");
+  expect(selected?.payload).toMatchObject({
+    refType: "graph-relationship",
+    refId: "edge1",
+    meta: { source: "higher", target: "lower", type: "PREVAILS_OVER", properties: { clause: "3" } },
+  });
+  syncGraphEdgeContext(null, "graph:Contract");
+  expect(items().find((item) => item.key === "graph.edge-selection")).toBeUndefined();
 });

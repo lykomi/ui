@@ -1,4 +1,5 @@
-import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { useFreshConversationId } from "./use-fresh-conversation-id.ts";
+import { type ReactNode, Suspense, useCallback, useEffect, useMemo } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { AGUIRuntimeProvider } from "@iloveagents/foundry-web-ui";
 import type {
@@ -296,26 +297,7 @@ function RuntimeBody({
   toolUIs,
   children,
 }: ChildRuntimeProps & { sticky: string | null }) {
-  // Pre-mint a fresh UUID so the runtime's ``threadId`` is set from
-  // the very first render — never goes through ``undefined → defined``,
-  // which would otherwise force a remount of the assistant-ui runtime
-  // (and wipe in-flight messages) the moment the user sent their first
-  // message on a fresh chat. The backend collapse (``conversation_id ==
-  // agui_thread_id``) ensures the id the runtime uses from the start
-  // matches the row the lazy ``ensureConversationId`` creates — same
-  // value, no mid-conversation switch.
-  //
-  // Mint a new one only when the user actually starts a new thread:
-  // ``sticky`` transitions from a value back to ``null`` (the module
-  // clears it on the ``/`` "New Thread" landing).
-  const freshIdRef = useRef<string>(_genUuid());
-  const prevStickyRef = useRef<string | null>(sticky);
-  if (sticky === null && prevStickyRef.current !== null) {
-    // User just navigated back to "/" (New Thread). The previous chat
-    // is being abandoned; mint a fresh UUID for the next session.
-    freshIdRef.current = _genUuid();
-  }
-  prevStickyRef.current = sticky;
+  const freshId = useFreshConversationId(sticky);
 
   // Effective id seen by AGUIRuntimeProvider — always defined.
   //
@@ -346,11 +328,11 @@ function RuntimeBody({
   //   2. ``sticky`` — for non-chat URLs (``/spaces``, ``/tasks`` …)
   //      ``urlMatch`` is ``undefined``. ``sticky`` keeps the popout
   //      chat "live" while the user browses elsewhere.
-  //   3. ``freshIdRef.current`` — brand-new chat on ``/`` with no
+  //   3. ``freshId`` — brand-new chat on ``/`` with no
   //      sticky and no URL match. Pre-minted so the runtime's
   //      ``threadId`` is defined from the first render (no
   //      ``undefined → defined`` remount of assistant-ui).
-  const effectiveThreadId: string = urlMatch ?? sticky ?? freshIdRef.current;
+  const effectiveThreadId: string = urlMatch ?? sticky ?? freshId;
 
   const historyAdapterFactory = useCallback<AGUIHistoryAdapterFactory>(
     (args: AGUIChatConversationFactoryArgs) =>
@@ -381,24 +363,6 @@ function RuntimeBody({
 
 function ToolUIGroup({ children }: { children: ReactNode }) {
   return <>{children}</>;
-}
-
-/**
- * RFC 4122 v4 UUID. Use ``crypto.randomUUID`` when available; fall
- * back to a math-random shim for the rare environments without it
- * (older Safari on non-HTTPS dev hosts). The shim is fine for our
- * use — these UUIDs identify a conversation row in our backend; they
- * don't need cryptographic strength.
- */
-function _genUuid(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
 }
 
 interface ComposedWrappersProps {

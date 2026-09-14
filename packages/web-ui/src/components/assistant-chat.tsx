@@ -1,4 +1,5 @@
-import { type FC, useState, useRef, useCallback, useEffect } from "react";
+import { ComposerInput } from "./composer-input.tsx";
+import { type FC, type ReactNode, useState, useRef, useCallback, useEffect } from "react";
 import {
   ThreadPrimitive,
   ComposerPrimitive,
@@ -32,6 +33,7 @@ import { userAttachmentComponents, composerAttachmentComponents } from "./chat-a
 import { SentContextBadges, ComposerContextBadges } from "./context-badges.tsx";
 import { ComposerAddMenu } from "./composer-add-menu.tsx";
 import { ContextPins } from "./context-bar.tsx";
+import { ChatContext } from "./chat-context.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import {
   ChatComposerActionsSlot,
@@ -75,14 +77,23 @@ const UserMessage: FC = () => {
       <div className="flex flex-col items-end gap-1">
         <MessagePrimitive.Attachments components={userAttachmentComponents} />
         <SentContextBadges messageId={messageId} />
-        <div className={cn("max-w-[80%]", "bg-muted rounded-2xl", "px-4 py-3", "text-foreground")}>
+        <div
+          className={cn(
+            "max-w-[80%]",
+            "bg-muted rounded-2xl",
+            "px-4 py-3",
+            "text-sm leading-relaxed text-foreground",
+          )}
+        >
           <MessagePrimitive.Content />
         </div>
-        <div className="flex h-8 items-center justify-end gap-2 pr-2">
+        <div className="flex h-6 items-center justify-end gap-2 pr-2">
           <MessageTimestamp />
           <BranchPicker />
           <div className="flex h-8 w-10 items-center justify-end">
-            <UserActionBar />
+            <ThreadPrimitive.If running={false}>
+              <UserActionBar />
+            </ThreadPrimitive.If>
           </div>
         </div>
       </div>
@@ -104,6 +115,7 @@ const UserActionBar: FC = () => (
 );
 
 const AssistantMessage: FC = () => {
+  const running = useAuiState((s) => s.message.status?.type === "running");
   // Until the message has parts there is nothing to copy, retry or branch.
   // `AssistantActionBar` already hides its BUTTONS while running, but the
   // row reserving their height did not — so an empty assistant message put
@@ -116,12 +128,12 @@ const AssistantMessage: FC = () => {
   return (
     <MessagePrimitive.Root className="w-full mb-2 group">
       <div className="mx-auto max-w-3xl px-4">
-        <div className="text-foreground leading-relaxed flex flex-col gap-4">
+        <div className="text-sm text-foreground leading-relaxed flex flex-col gap-3">
           <ChatMessageParts />
         </div>
         <MessageError />
 
-        {hasParts && (
+        {hasParts && !running && (
           <div className="flex items-center gap-2 mt-1">
             <div className="flex h-8 w-[4.25rem] items-center">
               <AssistantActionBar />
@@ -174,11 +186,11 @@ const EditComposer: FC = () => (
             "px-4 py-3",
           )}
         >
-          <ComposerPrimitive.Input
+          <ComposerInput
             autoFocus
             className={cn(
               "w-full bg-transparent",
-              "text-base text-foreground",
+              "text-base sm:text-sm text-foreground",
               "outline-none resize-none",
               "placeholder:text-muted-foreground",
             )}
@@ -268,7 +280,10 @@ const ScrollToBottomButton: FC = () => {
   );
 };
 
-const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
+const DropZone: FC<{ children: React.ReactNode; centered?: boolean }> = ({
+  children,
+  centered,
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dropError, setDropError] = useState<string | null>(null);
   const dropErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -335,7 +350,10 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div
-      className="relative flex flex-col flex-1 overflow-hidden"
+      className={cn(
+        "relative flex flex-col flex-1",
+        centered ? "justify-center overflow-y-auto" : "overflow-hidden",
+      )}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -370,6 +388,16 @@ const DropZone: FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 export interface ChatContentProps {
+  centerComposer?: boolean;
+  composerIntro?: ReactNode;
+  composerFooter?: ReactNode;
+  /** Compact two-row composer with an auto-growing input. */
+  compactComposer?: boolean;
+  hiddenPageLabels?: string[];
+  /** Hide the already-visible navigation page badge, without removing context. */
+  hideCurrentPageBadge?: boolean;
+  /** Optional empty conversation presentation; leaves the composer and runtime unchanged. */
+  emptyState?: ReactNode;
   /**
    * Starter prompts shown when the thread is empty. Defaults to
    * `DEFAULT_STARTER_SUGGESTIONS`. Pass an empty array to hide the
@@ -406,6 +434,13 @@ export const DEFAULT_COMPOSER_PLACEHOLDER = "Ask anything";
  * Renders inside a ThreadPrimitive.Root context.
  */
 export function ChatContent({
+  centerComposer = false,
+  composerIntro,
+  composerFooter,
+  compactComposer = false,
+  hiddenPageLabels = [],
+  hideCurrentPageBadge = false,
+  emptyState,
   starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
   showPinButton = true,
   placeholder = DEFAULT_COMPOSER_PLACEHOLDER,
@@ -446,8 +481,11 @@ export function ChatContent({
           </div>
         </div>
       )}
-      <DropZone>
-        <div className="relative flex-1 overflow-hidden">
+      <DropZone centered={centerComposer}>
+        <div
+          className="relative flex-1 overflow-hidden"
+          style={centerComposer && !ThreadSurface ? { display: "none" } : undefined}
+        >
           {/* A module can take the conversation's place — a live voice call
               replaces the transcript rather than scrolling it past. The
               thread is not unmounted, only hidden, so its scroll position
@@ -468,25 +506,27 @@ export function ChatContent({
             aria-hidden={ThreadSurface ? true : undefined}
           >
             <ThreadPrimitive.Empty>
-              <div
-                className={cn("flex min-h-full flex-col", "items-center justify-center", "px-4")}
-              >
-                <Bot className="size-16 mb-6 text-primary/70" />
-                <h1 className="text-[2rem] font-normal text-foreground text-center mb-6">
-                  How can I help you today?
-                </h1>
-                {starterSuggestions.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                    {starterSuggestions.map((prompt) => (
-                      <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
-                        <Button variant="outline" className="text-sm">
-                          {prompt}
-                        </Button>
-                      </ThreadPrimitive.Suggestion>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {emptyState ?? (
+                <div
+                  className={cn("flex min-h-full flex-col", "items-center justify-center", "px-4")}
+                >
+                  <Bot className="size-16 mb-6 text-primary/70" />
+                  <h1 className="text-[2rem] font-normal text-foreground text-center mb-6">
+                    How can I help you today?
+                  </h1>
+                  {starterSuggestions.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                      {starterSuggestions.map((prompt) => (
+                        <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
+                          <Button variant="outline" className="text-sm">
+                            {prompt}
+                          </Button>
+                        </ThreadPrimitive.Suggestion>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </ThreadPrimitive.Empty>
 
             <ThreadPrimitive.If empty={false}>
@@ -523,16 +563,19 @@ export function ChatContent({
         </div>
 
         <div className="shrink-0 bg-background">
+          {composerIntro && <div className="mx-auto max-w-3xl px-4 pt-4">{composerIntro}</div>}
           <ChatComposerBannerSlot />
           <ThreadPrimitive.If running={false}>
-            <div className="border-t border-border" />
+            <div data-chat-composer-divider className="border-t border-border" />
           </ThreadPrimitive.If>
           <ThreadPrimitive.If running>
             <LoadingBar />
           </ThreadPrimitive.If>
 
           <div className="mx-auto max-w-3xl px-4 py-4">
+            <ChatContext />
             <ComposerPrimitive.Root
+              style={compactComposer ? { borderRadius: 16 } : undefined}
               className={cn(
                 // Query container for the controls inside, so they size
                 // against the composer rather than the viewport. This one
@@ -547,7 +590,10 @@ export function ChatContent({
               )}
             >
               <ComposerSubmitBridge />
-              <ComposerContextBadges />
+              <ComposerContextBadges
+                hideCurrentPage={hideCurrentPageBadge}
+                hiddenPageLabels={hiddenPageLabels}
+              />
               <ComposerPrimitive.Attachments components={composerAttachmentComponents} />
               {/* One row when there is room, two when there is not — and the
                   wrap does it, not a breakpoint.
@@ -561,33 +607,51 @@ export function ChatContent({
                   Past the container's `md`, it goes nowrap and everything
                   sits on one line. `order-*` is what lets the `+` lead the
                   single row but head the control row when stacked. */}
-              <div className="flex flex-wrap items-center gap-2 @md:flex-nowrap">
-                <div className="order-2 flex shrink-0 items-center gap-1 @md:order-1">
+              <div
+                className={cn(
+                  "flex items-center gap-2",
+                  compactComposer ? "flex-wrap" : "flex-wrap @md:flex-nowrap",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center gap-1",
+                    compactComposer ? "order-2" : "order-2 @md:order-1",
+                  )}
+                >
                   <ComposerAddMenu showPin={showPinButton} />
                   {/* Renders only once something is pinned — the affordance
                       to pin now lives in the menu. */}
-                  <ContextPins />
+                  <ContextPins allowPageToggle={showPinButton} />
                 </div>
 
-                <ComposerPrimitive.Input
+                <ComposerInput
                   autoFocus
                   placeholder={placeholder}
                   rows={1}
                   className={cn(
-                    "order-1 w-full bg-transparent",
-                    "py-2 text-base",
+                    "bg-transparent",
+                    compactComposer
+                      ? "order-1 w-full"
+                      : "order-1 w-full @md:order-2 @md:w-auto @md:flex-1",
+                    "py-2 text-base sm:text-sm leading-relaxed",
                     "text-foreground outline-none",
                     "placeholder:text-muted-foreground",
                     "resize-none max-h-32",
-                    "@md:order-2 @md:w-auto @md:flex-1",
                   )}
                 />
 
-                <div className="order-3 ml-auto flex shrink-0 items-center gap-2 @md:ml-0">
+                <div
+                  className={cn(
+                    "order-3 ml-auto flex shrink-0 items-center gap-2",
+                    !compactComposer && "@md:ml-0",
+                  )}
+                >
                   <ComposerActionButton />
                 </div>
               </div>
             </ComposerPrimitive.Root>
+            {composerFooter}
           </div>
         </div>
       </DropZone>

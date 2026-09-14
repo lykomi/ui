@@ -133,3 +133,28 @@ describe("findNavItem", () => {
     expect(result!.item.label).toBe("Contradictions");
   });
 });
+
+it("resolves a record's identity while its list represents it in the sidebar", () => {
+  const record = {
+    to: "/s/space/first-task",
+    label: "first task",
+    icon: DEFAULT_NAV_CONFIG[0].items[0].icon,
+    meta: { entityId: "first" },
+  };
+  const config = [
+    {
+      label: "Workspace",
+      items: [
+        {
+          ...record,
+          to: "/s/space/tasks",
+          label: "Tasks",
+          childrenHidden: true,
+          children: [record],
+        },
+      ],
+    },
+  ];
+  expect(findNavItem(config, record.to)?.item).toBe(record);
+  expect(findNavItem(config, "/s/space/tasks")?.item.label).toBe("Tasks");
+});

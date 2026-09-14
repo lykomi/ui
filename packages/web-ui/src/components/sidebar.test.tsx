@@ -136,6 +136,25 @@ describe("Sidebar active state", () => {
     }
   });
 
+  it("retains expanded folders when refreshed navigation remounts a renamed row", async () => {
+    const child = { to: "/folder-child", label: "Child", icon: FolderOpen };
+    await renderWithItems([
+      { to: "/folder-parent", label: "Parent", icon: FolderOpen, children: [child] },
+    ]);
+    await act(async () => twisty(container, "Parent")!.click());
+    expect(navRow(container, "Child")).toBeTruthy();
+    await renderWithItems([
+      {
+        to: "/folder-parent",
+        label: "Renamed parent",
+        icon: FolderOpen,
+        children: [child, { to: "/new-folder", label: "New folder", icon: FolderOpen }],
+      },
+    ]);
+    expect(navRow(container, "New folder")).toBeTruthy();
+    expect(twisty(container, "Renamed parent")?.getAttribute("aria-expanded")).toBe("true");
+  });
+
   /**
    * A tree row shows a chevron when it branches and a dot when it is a leaf.
    * That is two markers for a question with THREE answers, the third being
@@ -155,6 +174,57 @@ describe("Sidebar active state", () => {
       );
     });
   };
+
+  it.each([false, true])(
+    "keeps a hidden list selected without rendering its records (nested=%s)",
+    async (nested) => {
+      const list = {
+        to: "/spaces/tasks",
+        label: "Tasks",
+        icon: FolderOpen,
+        childrenHidden: true,
+        children: Array.from({ length: 1000 }, (_, i) => ({
+          to: i === 0 ? "/spaces/demo" : `/spaces/task-${i}`,
+          label: `Task ${i}`,
+          icon: MessageSquare,
+        })),
+      };
+      await renderWithItems(
+        nested ? [{ to: "/spaces", label: "Space", icon: FolderOpen, children: [list] }] : [list],
+      );
+      for (const surface of container.querySelectorAll("[data-sidebar-surface]")) {
+        const selected = surface.querySelector('[data-active-nav-row="true"]');
+        expect(selected?.textContent).toBe("Tasks");
+        expect(surface.textContent).not.toContain("Task 0");
+        expect(surface.textContent).not.toContain("Task 999");
+      }
+      expect(twisty(container, "Tasks")).toBeUndefined();
+      // A status refresh must preserve selection, and clicking the selected
+      // owner must still open the list, rather than the current record.
+      await act(async () => useNavStore.getState().setConfig([...useNavStore.getState().config]));
+      expect(navRow(container, "Tasks")?.dataset.activeNavRow).toBe("true");
+      const row = navRow(container, "Tasks")!;
+      const link = row.matches("a,button") ? row : row.querySelector<HTMLElement>("a,button")!;
+      await act(async () => link.click());
+      expect(navRow(container, "Tasks")?.dataset.activeNavRow).toBe("true");
+      expect(navRow(container, "Task 0")).toBeUndefined();
+    },
+  );
+
+  it("closes the mobile drawer on navigation, including repeat selection of the current address", async () => {
+    window.innerWidth = 390;
+    await renderWithItems([{ to: "/spaces/demo/document", label: "Document", icon: FolderOpen }]);
+    const documentLink = container.querySelector<HTMLAnchorElement>(
+      '[data-sidebar-surface="mobile"] a[href="/spaces/demo/document"]',
+    );
+    expect(documentLink).toBeTruthy();
+    for (let i = 0; i < 2; i++) {
+      await act(async () => useSidebarStore.getState().toggleMobile());
+      expect(useSidebarStore.getState().isMobileOpen).toBe(true);
+      await act(async () => documentLink!.click());
+      expect(useSidebarStore.getState().isMobileOpen).toBe(false);
+    }
+  });
 
   it("marks the unvisited workspace as unknown, not as a leaf", async () => {
     // Chris's case: one workspace selected (tree fetched, so it branches),
@@ -328,6 +398,35 @@ describe("Sidebar active state", () => {
     expect(twistyCell(container, "Activity")).toBeTruthy();
     expect(twistyCell(container, "Activity")?.children.length).toBe(0);
     expect(twistyCell(container, "A chat")?.children.length).toBe(0);
+  });
+
+  it("keeps leaf indicators in an explicitly declared tree without branches", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+
+    useNavStore.getState().setConfig([
+      {
+        label: "Content",
+        tree: true,
+        items: [
+          { to: "/activity", label: "Activity", icon: MessageSquare },
+          { to: "/threads/1", label: "A chat", icon: MessageSquare },
+        ],
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/activity"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(twistyCell(container, "Activity")).toBeTruthy();
+    expect(twistyCell(container, "Activity")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
+    expect(twistyCell(container, "A chat")?.querySelector("[data-nav-leaf-dot]")).toBeTruthy();
   });
 
   it("keeps leaf dots in a group that does branch", async () => {

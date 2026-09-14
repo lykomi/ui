@@ -23,6 +23,8 @@
 import { create } from "zustand";
 
 interface ChatLifecycleStore {
+  newConversationVersion: number;
+  startNewConversation: () => void;
   /**
    * Called from :func:`useNewConversation` when the user starts a
    * new thread. Spaces wires this to clear the active-chat sticky id.
@@ -31,7 +33,12 @@ interface ChatLifecycleStore {
   setOnNewConversation: (fn: (() => void) | null) => void;
 }
 
-export const useChatLifecycleStore = create<ChatLifecycleStore>((set) => ({
+export const useChatLifecycleStore = create<ChatLifecycleStore>((set, get) => ({
+  newConversationVersion: 0,
+  startNewConversation: () => {
+    get().onNewConversation?.();
+    set((state) => ({ newConversationVersion: state.newConversationVersion + 1 }));
+  },
   onNewConversation: null,
   setOnNewConversation: (fn) => set({ onNewConversation: fn }),
 }));

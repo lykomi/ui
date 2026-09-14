@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
 import { GraphView } from "../graph-view.tsx";
 
@@ -81,4 +81,29 @@ describe("GraphView without a usable canvas", () => {
     expect(titles).not.toContain("Show the graph");
     expect(titles).not.toContain("Show as a table");
   });
+});
+
+it("requests fullscreen from the graph surface and reports a rejected request", async () => {
+  const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "requestFullscreen");
+  const request = vi.fn().mockRejectedValue(new Error("Unavailable"));
+  Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+    configurable: true,
+    value: request,
+  });
+  try {
+    await act(async () => root.render(<GraphView data={payload} />));
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('[aria-label="Fullscreen"]')!.click(),
+    );
+    expect(request).toHaveBeenCalledOnce();
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "Fullscreen could not open",
+    );
+    expect(container.querySelector('[title="Zoom to fit"]')).not.toBeNull();
+  } finally {
+    if (original) Object.defineProperty(HTMLElement.prototype, "requestFullscreen", original);
+    else
+      delete (HTMLElement.prototype as unknown as { requestFullscreen?: unknown })
+        .requestFullscreen;
+  }
 });

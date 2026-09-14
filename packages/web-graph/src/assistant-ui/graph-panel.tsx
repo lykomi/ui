@@ -1,11 +1,22 @@
+import { graphViewSummary } from "../graph-view-summary.ts";
+import { useGraphSurfaceVisible } from "./use-graph-surface-visible.ts";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
 import { hasOwn, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
-import { submitComposerText, useAppStore, useToolPanelStore } from "@iloveagents/foundry-web-ui";
+import {
+  DataTableFrame,
+  useDataTableFrame,
+  submitComposerText,
+  useAppStore,
+} from "@iloveagents/foundry-web-ui";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
-import { GraphContextPinButton, syncGraphSelectionContext } from "./graph-context.tsx";
+import {
+  GraphContextPinButton,
+  syncGraphSelectionContext,
+  syncGraphEdgeContext,
+} from "./graph-context.tsx";
 
 /**
  * Full-size graph for the tool panel, connected to the shared workspace.
@@ -15,11 +26,24 @@ import { GraphContextPinButton, syncGraphSelectionContext } from "./graph-contex
  * bundle until a graph panel is actually opened.
  */
 export default function GraphPanel({ content }: { content: GraphPanelContentLike }) {
+  return (
+    <DataTableFrame
+      data-focus-kind="graph"
+      aria-label={content.title}
+      className="absolute inset-0 flex min-h-0 flex-col p-3"
+      focusClassName="p-3 sm:p-3"
+    >
+      <GraphPanelBody content={content} />
+    </DataTableFrame>
+  );
+}
+function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
+  const frame = useDataTableFrame();
   const handleRef = useRef<GraphViewHandle>(null);
   // Memoised on the panel's own content, so an unrelated re-render does not
   // hand `GraphView` a new payload object and re-run the workspace effect.
   const payload = useMemo(() => graphPanelPayload(content), [content]);
-  const isOpen = useToolPanelStore((state) => state.isOpen);
+  const { ref: surfaceRef, visible: isOpen } = useGraphSurfaceVisible(frame?.focused);
   const currentPage = useAppStore((state) => state.currentPage);
 
   /**
@@ -78,6 +102,7 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
     // and from the view's side nothing changed.
     const view = handle.getViewState();
     workspace.setSelection(view.selection);
+    syncGraphEdgeContext(view.selectedEdge, `graph:${content.title}`);
     workspace.setQuery(view.query);
     workspace.setHiddenLabels(view.hiddenLabels);
     syncGraphSelectionContext(
@@ -85,7 +110,13 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
       `graph:${content.title}`,
       view.selection ? captionKeyFor(view.selection) : undefined,
     );
-    return () => graphWorkspaceStore.getState().disconnect(handle);
+    return () => {
+      if (graphWorkspaceStore.getState().handle === handle) {
+        syncGraphSelectionContext(null, "");
+        syncGraphEdgeContext(null, "");
+      }
+      graphWorkspaceStore.getState().disconnect(handle);
+    };
     // `currentPage` is a dependency for the same reason `isOpen` is, and it is
     // easy to miss because the panel does not move: `setCurrentPage` clears
     // every keyed and ephemeral context item on navigation, on the reasonable
@@ -97,20 +128,40 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
     // the same job it already does for reopening a closed panel.
   }, [content.title, payload, isOpen, currentPage]);
 
-  /**
-   * The selected node leaves the conversation when the graph does — and not
-   * before.
-   *
-   * This used to ride in the cleanup above, which made it fire on every
-   * payload change: an in-place merge, the thing this panel is built around,
-   * dropped the user's selected node out of the chat context even though it
-   * was still on screen and still selected. Visibility is its own lifetime.
-   */
   useEffect(() => {
-    if (isOpen) return;
-    syncGraphSelectionContext(null, "");
-  }, [isOpen]);
-  useEffect(() => () => syncGraphSelectionContext(null, ""), []);
+    const surface = surfaceRef.current?.closest("[data-focused]");
+    if (!surface) return;
+    const collect = (event: Event) => {
+      const workspace = graphWorkspaceStore.getState();
+      const view = workspace.handle?.getViewState();
+      if (!view) return;
+      (event as CustomEvent).detail.context = {
+        kind: "graph",
+        title: workspace.title,
+        ...graphViewSummary(view, workspace.payload),
+        selectedNode: view.selection
+          ? {
+              id: view.selection.id,
+              label: resolveCaption(
+                view.selection,
+                workspace.payload?.legend?.[primaryLabel(view.selection)]?.captionKey,
+              ),
+            }
+          : null,
+        selectedRelationship: view.selectedEdge
+          ? {
+              id: view.selectedEdge.id,
+              source: view.selectedEdge.source,
+              target: view.selectedEdge.target,
+              type: view.selectedEdge.type,
+            }
+          : null,
+        inspectTool: "graph_get_view",
+      };
+    };
+    surface.addEventListener("focus:collect-context", collect);
+    return () => surface.removeEventListener("focus:collect-context", collect);
+  }, [frame?.focused, content.title, captionKeyFor, surfaceRef]);
 
   if (!payload) {
     return <GraphEmptyState message="This panel does not contain a readable graph." />;
@@ -126,9 +177,12 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
   // makes the canvas exactly the size of what the user can see, which is also
   // what the ResizeObserver needs to re-fit on drag-resize and fullscreen.
   return (
-    <div className="absolute inset-0 p-3">
+    <div ref={surfaceRef} data-graph-surface className="relative min-h-0 flex-1">
       <GraphView
         data={payload}
+        onFullscreen={() => frame?.setFocused(!frame.focused)}
+        isFullscreen={frame?.focused}
+        onEdgeSelectionChange={(edge) => syncGraphEdgeContext(edge, `graph:${content.title}`)}
         variant="full"
         height="100%"
         handleRef={handleRef}

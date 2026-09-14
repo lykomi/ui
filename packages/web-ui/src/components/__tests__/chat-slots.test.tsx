@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   ChatComposerActionsSlot,
   ChatComposerBannerSlot,
+  ChatContextDetailsSlot,
   ChatLauncherBadgeSlot,
   registerChatSlots,
   useChatSlotsStore,
@@ -37,6 +38,7 @@ describe("chat slots", () => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     useChatSlotsStore.setState({
       composerBanner: null,
+      contextDetails: null,
       launcherBadge: null,
       composerActions: null,
       threadSurface: null,
@@ -57,6 +59,7 @@ describe("chat slots", () => {
       root.render(
         <>
           <ChatComposerBannerSlot />
+          <ChatContextDetailsSlot onDismiss={() => {}} />
           <ChatLauncherBadgeSlot />
           <ChatComposerActionsSlot />
         </>,
@@ -96,6 +99,23 @@ describe("chat slots", () => {
     registerChatSlots({ composerBanner: undefined, launcherBadge: Badge });
     expect(useChatSlotsStore.getState().composerBanner).toBe(Banner);
     expect(useChatSlotsStore.getState().launcherBadge).toBe(Badge);
+  });
+
+  it("adds context capabilities without replacing composer actions or the banner", () => {
+    const Details = ({ onDismiss }: { onDismiss: () => void }) => (
+      <button onClick={onDismiss}>Context action</button>
+    );
+    registerChatSlots({
+      composerBanner: Banner,
+      composerActions: Actions,
+      contextDetails: Details,
+    });
+    renderSlots();
+    expect(container.textContent).toContain("Context action");
+    expect(container.querySelector('[data-testid="banner"]')).not.toBeNull();
+    act(() => registerChatSlots({ contextDetails: null }));
+    expect(container.textContent).not.toContain("Context action");
+    expect(useChatSlotsStore.getState().composerActions).toBe(Actions);
   });
 
   it("threadSurface is set and cleared at runtime, unlike the other slots", () => {
