@@ -12,6 +12,7 @@ import {
 } from "../index.ts";
 import { History, Settings, Layers } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
+import { findNavItem } from "../lib/nav-config.ts";
 function useWorkbenchNavigation() {
   const navGroups = useNavStore((s) => s.config);
   const workspaceGroups = useMemo(() => {
@@ -70,8 +71,13 @@ export function useWorkbenchState(chatRoute: boolean) {
   const panelOpen = useToolPanelStore((s) => s.isOpen && !s.isWindowHosted);
   const chatOnly = chatRoute && !panelOpen;
   const location = useLocation();
+  const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
+  const routeItem = useMemo(() => {
+    const match = findNavItem(navGroups, location.pathname);
+    return match?.item.to === location.pathname ? match.item : undefined;
+  }, [location.pathname, navGroups]);
   const pageLabel = useAppStore((s) => s.navContext.label);
-  const entityId = useAppStore((s) => s.navContext.meta?.spacesEntityId);
+  const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();
   const [desktopCollapsed, setCollapsed] = useState(false);
   const collapsed = !chatWidth.compact && desktopCollapsed;
@@ -116,7 +122,6 @@ export function useWorkbenchState(chatRoute: boolean) {
     </Button>
   );
   const toggleNavigation = useSidebarStore((s) => s.toggleMobile);
-  const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
   useEffect(() => {
     if (panelOpen) {
       setContentCollapsed(false);

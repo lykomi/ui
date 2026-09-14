@@ -48,15 +48,11 @@ export function WorkbenchPreview({
     startChat,
   } = useWorkbenchState(chatRoute);
   const workspaceId = workspaceGroups?.[0]?.meta?.exclusiveRootId;
-  const rootItem = workspaceGroups?.[0]?.items.find(
-    (item) => item.meta?.spacesEntityId === workspaceId,
-  );
-  const rootContext = Boolean(
-    workspaceId &&
-    (entityId === workspaceId ||
-      rootItem?.to === currentPage ||
-      workspaceGroups?.[0]?.focusOn === currentPage),
-  );
+  const rootItem = workspaceGroups?.[0]
+    ? (workspaceGroups[0].items.find((item) => item.to === workspaceGroups[0].focusOn) ??
+      workspaceGroups[0].items[0])
+    : undefined;
+  const rootContext = Boolean(workspaceId && rootItem?.to === currentPage);
   const conversationHome = (
     <ConversationHistory
       groups={navGroups}

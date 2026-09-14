@@ -247,13 +247,12 @@ describe("layout preview", () => {
     state.groups = [
       {
         label: "Workspaces",
-        focusOn: "/",
         items: [
           {
             label: "Workspace one",
             to: "/",
             icon: Folder,
-            meta: { spacesEntityId: "w1", spacesRootId: "w1" },
+            meta: { spacesRootId: "w1" },
           },
         ],
         meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
@@ -262,6 +261,65 @@ describe("layout preview", () => {
     ];
     render(<WorkbenchPreview page={<Editor />} />);
     expect(screen.getByRole("link", { name: /Workspace review/ })).toBeTruthy();
+  });
+
+  it("uses the current route for contextual recents while nav context catches up", () => {
+    state.empty = true;
+    state.navContext.meta = { spacesEntityId: "w1", spacesRootId: "w1" };
+    state.groups = [
+      {
+        label: "Workspaces",
+        items: [
+          {
+            label: "Workspace one",
+            to: "/",
+            icon: Folder,
+            meta: { spacesRootId: "w1" },
+            children: [
+              {
+                label: "Task",
+                to: "/task",
+                icon: Folder,
+                meta: { spacesEntityId: "task", spacesRootId: "w1" },
+              },
+            ],
+          },
+        ],
+        meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
+      },
+      {
+        label: "Recent conversations",
+        items: [],
+        meta: {
+          type: "recent-chats",
+          workspaceId: "w1",
+          workspaceConversations: [
+            {
+              label: "Workspace review",
+              to: "/chat/workspace",
+              icon: MessageSquare,
+              meta: { previewEntityId: "w1" },
+            },
+            {
+              label: "Task review",
+              to: "/chat/task",
+              icon: MessageSquare,
+              meta: { previewEntityId: "task" },
+            },
+          ],
+        },
+      },
+    ];
+    render(
+      <>
+        <Link to="/task">Open task</Link>
+        <WorkbenchPreview page={<Editor />} />
+      </>,
+    );
+    expect(screen.getByRole("link", { name: /Workspace review/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("link", { name: "Open task" }));
+    expect(screen.queryByRole("link", { name: /Workspace review/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Task review/ })).toBeTruthy();
   });
 
   it("keeps a fresh composer after reset and opens history explicitly", () => {
