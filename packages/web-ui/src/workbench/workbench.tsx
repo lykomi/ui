@@ -176,7 +176,9 @@ export function WorkbenchPreview({
                 showPinButton={false}
                 starterSuggestions={[]}
                 emptyState={
-                  <ChatEmptyState pageLabel={pageLabel}>{historyShortcut}</ChatEmptyState>
+                  <ChatEmptyState pageLabel={pageLabel} showHomeStarters={!spaciousChat}>
+                    {historyShortcut}
+                  </ChatEmptyState>
                 }
               />
             </div>
