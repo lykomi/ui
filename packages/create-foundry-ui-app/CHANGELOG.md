@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.3
+
+### Patch Changes
+
+- Refresh starter package pins to include the shared action-oriented composer placeholder.
+
 ## 0.8.2
 
 ### Patch Changes
