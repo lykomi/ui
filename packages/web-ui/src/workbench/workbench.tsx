@@ -13,9 +13,11 @@ import { ConversationHistory } from "./conversation-history.tsx";
 export function WorkbenchPreview({
   page,
   chatOnly: chatRoute = false,
+  uiPreviewAvailable,
 }: {
   page: ReactNode;
   chatOnly?: boolean;
+  uiPreviewAvailable?: boolean;
 }) {
   const {
     panelOpen,
@@ -55,6 +57,7 @@ export function WorkbenchPreview({
         groups={staticNavigationGroups}
         workspace={!!workspaceGroups}
         onNewConversation={startChat}
+        uiPreviewAvailable={uiPreviewAvailable}
       />
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"

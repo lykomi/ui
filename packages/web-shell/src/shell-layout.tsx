@@ -23,14 +23,12 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 import { X } from "lucide-react";
 import type { ChatModule } from "./types.ts";
 import { usePagePanelWidth, MIN_PAGE_PANEL_WIDTH } from "./use-page-panel-width.ts";
-import { isWorkbenchPreviewEnabled } from "./runtime-config.ts";
-const WorkbenchPreview = import.meta.env.DEV
-  ? lazy(() =>
-      import("@iloveagents/foundry-web-ui/workbench").then((module) => ({
-        default: module.WorkbenchPreview,
-      })),
-    )
-  : null;
+import { isWorkbenchPreviewAvailable, isWorkbenchPreviewEnabled } from "./runtime-config.ts";
+const WorkbenchPreview = lazy(() =>
+  import("@iloveagents/foundry-web-ui/workbench").then((module) => ({
+    default: module.WorkbenchPreview,
+  })),
+);
 
 interface ShellLayoutProps {
   modules: ChatModule[];
@@ -69,6 +67,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
 
   const themeMode = useThemeStore((s) => s.mode);
   const { pathname } = useLocation();
+  const [previewAvailable] = useState(isWorkbenchPreviewAvailable);
   const [preview] = useState(isWorkbenchPreviewEnabled);
   const isChatRoute =
     pathname === "/" ||
@@ -136,9 +135,11 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
         {layoutExtras}
         {preview ? (
           <Suspense fallback={null}>
-            {WorkbenchPreview && (
-              <WorkbenchPreview page={isChatRoute ? null : page} chatOnly={isChatRoute} />
-            )}
+            <WorkbenchPreview
+              page={isChatRoute ? null : page}
+              chatOnly={isChatRoute}
+              uiPreviewAvailable={previewAvailable}
+            />
           </Suspense>
         ) : (
           <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -169,7 +170,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
               >
                 {isExpanded && (
                   <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                    <ChatHeader />
+                    <ChatHeader uiPreviewAvailable={previewAvailable} />
                     <ChatContent />
                   </div>
                 )}
@@ -204,7 +205,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
                   />
                 )}
 
-                {!isExpanded && <ChatHeader />}
+                {!isExpanded && <ChatHeader uiPreviewAvailable={previewAvailable} />}
 
                 {/* The page column: ALWAYS this slot, ALWAYS this wrapper. */}
                 <div

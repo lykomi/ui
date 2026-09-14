@@ -15,14 +15,16 @@ import {
 } from "../ui/dropdown-menu.tsx";
 import { Button } from "@iloveagents/foundry-web-primitives";
 
-export const UserMenu: FC = () => {
+export const UserMenu: FC<{ uiPreviewAvailable?: boolean }> = ({
+  uiPreviewAvailable = import.meta.env.DEV,
+}) => {
   const { user, signOut } = useStore(
     authStore,
     useShallow((s) => ({ user: s.user, signOut: s.signOut })),
   );
 
   let preview = false;
-  if (import.meta.env.DEV) {
+  if (uiPreviewAvailable) {
     try {
       const choice = new URLSearchParams(window.location.search).get("ux");
       preview =
@@ -62,7 +64,7 @@ export const UserMenu: FC = () => {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {import.meta.env.DEV && (
+        {uiPreviewAvailable && (
           <>
             <DropdownMenuCheckboxItem
               checked={preview}

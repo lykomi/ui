@@ -4,10 +4,12 @@ export function WorkbenchNavigation({
   groups,
   workspace,
   onNewConversation,
+  uiPreviewAvailable,
 }: {
   groups: NavGroup[];
   workspace: boolean;
   onNewConversation: () => void;
+  uiPreviewAvailable?: boolean;
 }) {
   return (
     <SelectionBridge>
@@ -24,7 +26,7 @@ export function WorkbenchNavigation({
             aria-label="Account and appearance"
           >
             <div className="flex min-w-0 items-center justify-between gap-1">
-              <UserMenu />
+              <UserMenu uiPreviewAvailable={uiPreviewAvailable} />
               <ThemeToggle />
             </div>
           </footer>
@@ -35,7 +37,7 @@ export function WorkbenchNavigation({
             aria-label="Account and appearance"
           >
             <ThemeToggle />
-            <UserMenu />
+            <UserMenu uiPreviewAvailable={uiPreviewAvailable} />
           </footer>
         }
       />

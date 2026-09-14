@@ -65,7 +65,7 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ),
 }));
 import { WorkbenchPreview } from "@iloveagents/foundry-web-ui/workbench";
-import { isWorkbenchPreviewEnabled } from "../runtime-config.ts";
+import { isWorkbenchPreviewAvailable, isWorkbenchPreviewEnabled } from "../runtime-config.ts";
 
 function Editor() {
   useEffect(() => () => state.unmount(), []);
@@ -295,7 +295,7 @@ describe("layout preview", () => {
     expect(state.sidebar.mock.lastCall?.[0].hideFooterActions).toBe(false);
   });
 
-  it("is opt-in, survives local navigation, restores classic, and cannot enable in production", () => {
+  it("is opt-in, survives local navigation, and restores classic", () => {
     vi.stubEnv("DEV", true);
     expect(isWorkbenchPreviewEnabled()).toBe(false);
     window.history.replaceState({}, "", "/?ux=workbench");
@@ -307,6 +307,10 @@ describe("layout preview", () => {
     vi.stubEnv("DEV", false);
     window.history.replaceState({}, "", "/?ux=workbench");
     expect(isWorkbenchPreviewEnabled()).toBe(false);
+    expect(isWorkbenchPreviewAvailable()).toBe(false);
+    vi.stubGlobal("__APP_CONFIG__", { VITE_WORKBENCH_PREVIEW: "true" });
+    expect(isWorkbenchPreviewAvailable()).toBe(true);
+    expect(isWorkbenchPreviewEnabled()).toBe(true);
   });
 
   it("preserves unsaved fields and chat drafts when collapsed to a rail", () => {
