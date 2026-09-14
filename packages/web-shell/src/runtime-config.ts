@@ -32,10 +32,29 @@ const WORKBENCH_STORAGE_KEY = "foundry.workbench-preview";
 
 /** Tab-local selection between the workbench preview and the classic shell. */
 export function isWorkbenchPreviewEnabled() {
+  let choice: string | null;
   try {
-    const choice = new URLSearchParams(window.location.search).get("ux");
-    if (choice === "workbench") sessionStorage.setItem(WORKBENCH_STORAGE_KEY, "on");
-    if (choice === "classic") sessionStorage.removeItem(WORKBENCH_STORAGE_KEY);
+    choice = new URLSearchParams(window.location.search).get("ux");
+  } catch {
+    return false;
+  }
+  if (choice === "workbench") {
+    try {
+      sessionStorage.setItem(WORKBENCH_STORAGE_KEY, "on");
+    } catch {
+      // The URL is authoritative even where storage is unavailable.
+    }
+    return true;
+  }
+  if (choice === "classic") {
+    try {
+      sessionStorage.removeItem(WORKBENCH_STORAGE_KEY);
+    } catch {
+      // The URL is authoritative even where storage is unavailable.
+    }
+    return false;
+  }
+  try {
     return sessionStorage.getItem(WORKBENCH_STORAGE_KEY) === "on";
   } catch {
     return false;

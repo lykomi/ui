@@ -410,6 +410,11 @@ const readAssets = (ext) =>
     .join("\n");
 
 const defaultJs = readAssets(".js");
+if (!readdirSync(assetsDir).some((file) => file.startsWith("foundry-workbench-"))) {
+  throw new Error(
+    "The workbench preview was folded into the initial vendor bundle instead of its lazy chunk.",
+  );
+}
 for (const marker of ["VoiceLiveAvatar", "createVoiceModule", "getUserMedia", "AudioWorklet"]) {
   if (defaultJs.includes(marker)) {
     throw new Error(
