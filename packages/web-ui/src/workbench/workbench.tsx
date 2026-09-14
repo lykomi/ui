@@ -4,7 +4,7 @@ import { WorkbenchContentPane } from "./content-pane.tsx";
 import { ChatResizeHandle } from "./chat-resize-handle.tsx";
 import { ChatEmptyState } from "../components/chat-empty-state.tsx";
 import { WelcomeIntro } from "./welcome-intro.tsx";
-import { useWorkbenchState } from "./use-workbench-state.tsx";
+import { normalizeWorkbenchPath, useWorkbenchState } from "./use-workbench-state.tsx";
 import { WorkbenchStyles } from "./workbench-styles.tsx";
 import { type ReactNode } from "react";
 import { Button } from "@iloveagents/foundry-web-primitives";
@@ -52,7 +52,11 @@ export function WorkbenchPreview({
     ? (workspaceGroups[0].items.find((item) => item.to === workspaceGroups[0].focusOn) ??
       workspaceGroups[0].items[0])
     : undefined;
-  const rootContext = Boolean(workspaceId && rootItem?.to === currentPage);
+  const rootContext = Boolean(
+    workspaceId &&
+    rootItem &&
+    normalizeWorkbenchPath(rootItem.to) === normalizeWorkbenchPath(currentPage),
+  );
   const conversationHome = (
     <ConversationHistory
       groups={navGroups}

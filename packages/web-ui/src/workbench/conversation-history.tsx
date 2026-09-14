@@ -293,7 +293,7 @@ export function ConversationHistory({
           </p>
         )}
       </div>
-      {compact && (
+      {compact && onViewAll && (
         <Button
           variant="ghost"
           size="sm"

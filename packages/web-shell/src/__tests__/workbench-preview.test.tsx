@@ -322,6 +322,54 @@ describe("layout preview", () => {
     expect(screen.getByRole("link", { name: /Task review/ })).toBeTruthy();
   });
 
+  it("keeps entity recents on a route with a trailing slash", () => {
+    state.empty = true;
+    state.groups = [
+      {
+        label: "Workspaces",
+        items: [
+          {
+            label: "Workspace one",
+            to: "/workspace",
+            icon: Folder,
+            meta: { spacesRootId: "w1" },
+            children: [
+              {
+                label: "Task",
+                to: "/workspace/task",
+                icon: Folder,
+                meta: { spacesEntityId: "task", spacesRootId: "w1" },
+              },
+            ],
+          },
+        ],
+        meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
+      },
+      {
+        label: "Recent conversations",
+        items: [],
+        meta: {
+          type: "recent-chats",
+          workspaceId: "w1",
+          workspaceConversations: [
+            {
+              label: "Task review",
+              to: "/chat/task",
+              icon: MessageSquare,
+              meta: { previewEntityId: "task" },
+            },
+          ],
+        },
+      },
+    ];
+    renderUI(<WorkbenchPreview page={<Editor />} />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={["/workspace/task/"]}>{children}</MemoryRouter>
+      ),
+    });
+    expect(screen.getByRole("link", { name: /Task review/ })).toBeTruthy();
+  });
+
   it("keeps a fresh composer after reset and opens history explicitly", () => {
     state.empty = true;
     const view = render(<WorkbenchPreview page={<Editor />} />);

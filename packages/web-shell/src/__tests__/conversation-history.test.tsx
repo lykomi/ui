@@ -202,7 +202,7 @@ it("does not leak workspace recents when the current entity metadata is unavaila
     </MemoryRouter>,
   );
   expect(screen.queryByText("Private task review")).toBeNull();
-  expect(screen.getByRole("button", { name: "Conversation history" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Conversation history" })).toBeNull();
 });
 
 it("separates pinned chats from recents without duplicating entries", () => {

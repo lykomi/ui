@@ -13,6 +13,10 @@ import {
 import { History, Settings, Layers } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
 import { findNavItem } from "../lib/nav-config.ts";
+
+export function normalizeWorkbenchPath(path: string) {
+  return path === "/" ? path : path.replace(/\/+$/, "");
+}
 function useWorkbenchNavigation() {
   const navGroups = useNavStore((s) => s.config);
   const workspaceGroups = useMemo(() => {
@@ -74,7 +78,10 @@ export function useWorkbenchState(chatRoute: boolean) {
   const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
   const routeItem = useMemo(() => {
     const match = findNavItem(navGroups, location.pathname);
-    return match?.item.to === location.pathname ? match.item : undefined;
+    return match &&
+      normalizeWorkbenchPath(match.item.to) === normalizeWorkbenchPath(location.pathname)
+      ? match.item
+      : undefined;
   }, [location.pathname, navGroups]);
   const pageLabel = useAppStore((s) => s.navContext.label);
   const entityId = routeItem?.meta?.spacesEntityId;
