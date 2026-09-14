@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.4
+
+### Patch Changes
+
+- 40a3137: Offer the workbench preview switch in production as well as local development.
+
 ## 0.8.3
 
 ### Patch Changes
