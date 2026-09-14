@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.28.1
+
+### Patch Changes
+
+- d54f225: Show ongoing AI activity in the collapsed chat rail and compact chat selector.
+  - @iloveagents/foundry-agent@0.28.1
+  - @iloveagents/foundry-web-primitives@0.28.1
+
 ## 0.28.0
 
 ### Minor Changes
