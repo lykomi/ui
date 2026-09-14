@@ -1,5 +1,45 @@
 # @iloveagents/foundry-web-ui
 
+## 0.27.0
+
+### Minor Changes
+
+- 64ef94c: Add group-only collapsed navigation and a centered welcome composer. Refine preview navigation with recent chats, static section labels, consistent spacing, and recognizable panel reopening icons. Show recent history in empty side chats while preserving the composer.
+- 64ef94c: Show current request context beside the composer and replace duplicated workbench history with an explicit conversation history view. Keep empty chat layouts bounded and preserve the conversation while browsing content.
+
+  Keep hidden list descendants in the navigation context model via `NavItem.childrenHidden`, selecting the visible list owner without rendering its rows. Show the last-location subline consistently for workspace and non-workspace conversations.
+
+  Add an optional `contextDetails` chat slot for grouped capabilities in the context flyout. Make conversation history discoverable from the chat home, default its filter to the current workspace, and support last-entity sublines.
+
+- 64ef94c: Add a reversible development preview that connects navigation, chat, and content in one adjustable workbench. Include chat history, collapsible panes, a compact composer, and optional sidebar and contained-panel presentation controls while preserving the classic layout.
+- 64ef94c: Expose the shared workbench presentation through a lazy-loadable web-ui/workbench entry point. Keep the shell responsible only for opt-in/runtime wiring, and split navigation, pane controls, resize handling, welcome content, and layout state into focused UI components and hooks. Preserve entity-field retargeting and sidebar contour updates.
+
+  Export the shared themed PinToggle and reuse the pin state glyph across content controls.
+
+### Patch Changes
+
+- 64ef94c: Make overflowing table columns discoverable with themed previous/next controls and a keyboard-focusable scroll region.
+- 64ef94c: Refine preview chat history with pinned groups and row actions, preserve document context when resuming same-space chats, and simplify the global welcome header.
+- 64ef94c: Align conversation and composer typography with themed interface text, and keep live status close to activity by removing unused action spacing during generation.
+- 64ef94c: Standardize context pin state with upright outline and filled icons, theme-based contrast, and pressed-state semantics on toggle buttons.
+- 64ef94c: Separate focused dialog/chat/source presentation from the stable table frame. Route tool results into the topmost focused source pane and make Escape close that layer without closing the underlying tool panel. Active folder drop targets reserve their own row instead of covering the final child.
+- 64ef94c: Preserve focused renderer ownership while updating source results, keep graph context tied to visible surfaces, and improve focus-pane and pinned-context accessibility. Route client draft updates to an active form when it handles the request.
+- 64ef94c: Preserve folder expansion across navigation and tree refreshes, including creation of nested items.
+- 64ef94c: Allow resizing chat and source panes in table focus mode with pointer and keyboard controls, including reset to automatic sizing.
+- 64ef94c: Preserve stable tool-result identities across updates and restored surfaces, while keeping separate results with the same title distinct.
+- 64ef94c: Use an accessible full-screen dialog for table focus mode, retaining the mounted table and restoring keyboard focus when closing. The dialog escapes narrow containers and retains theme context.
+
+  When an assistant runtime is available, focus mode offers the existing conversation in a collapsed chat pane. Source references open beside the focused content. Agent state includes the focused surface and bounded table contents.
+
+  Unify workbench list typography and navigation behavior. Recalculate composer height on pane resizing and keep an empty composer compact.
+
+- 64ef94c: Refine the workbench preview with recent chats above the empty composer, compact history rows, accessible icon tooltips, aligned dropdown chevrons, and matching hover-only resize grips. Add navigation width reset on double-click.
+- 64ef94c: Allow the workbench to host tool results in retained windows while keeping graph updates connected to the tool panel store.
+- 64ef94c: Remove accumulated blank space after expanded navigation folders without removing their drop targets.
+- 64ef94c: Keep the development workbench behind a lazy boundary and separate navigation, layout state, chat controls, and resizing. Preserve live thread surfaces, accessible pin controls, browser API fallbacks, and truncation metadata in shared UI components.
+  - @iloveagents/foundry-agent@0.27.0
+  - @iloveagents/foundry-web-primitives@0.27.0
+
 ## 0.26.0
 
 ### Minor Changes

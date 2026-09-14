@@ -1,5 +1,69 @@
 # @iloveagents/foundry-web-shell
 
+## 0.27.0
+
+### Minor Changes
+
+- 64ef94c: Add a reversible development preview that connects navigation, chat, and content in one adjustable workbench. Include chat history, collapsible panes, a compact composer, and optional sidebar and contained-panel presentation controls while preserving the classic layout.
+
+### Patch Changes
+
+- 64ef94c: Refine preview chat history with pinned groups and row actions, preserve document context when resuming same-space chats, and simplify the global welcome header.
+- 64ef94c: Add group-only collapsed navigation and a centered welcome composer. Refine preview navigation with recent chats, static section labels, consistent spacing, and recognizable panel reopening icons. Show recent history in empty side chats while preserving the composer.
+- 64ef94c: Show current request context beside the composer and replace duplicated workbench history with an explicit conversation history view. Keep empty chat layouts bounded and preserve the conversation while browsing content.
+
+  Keep hidden list descendants in the navigation context model via `NavItem.childrenHidden`, selecting the visible list owner without rendering its rows. Show the last-location subline consistently for workspace and non-workspace conversations.
+
+  Add an optional `contextDetails` chat slot for grouped capabilities in the context flyout. Make conversation history discoverable from the chat home, default its filter to the current workspace, and support last-entity sublines.
+
+- 64ef94c: Move the preview content collapse control into its own panel header, matching the chat and navigation controls while preserving mounted content and chat drafts.
+- 64ef94c: Clarify workspace navigation hierarchy in the workbench preview with a stronger workspace heading and indented content tree.
+- 64ef94c: Reopen collapsed workbench content when navigating, while preserving the mounted editor and chat.
+
+  Hide the manual page pin action in the workbench composer, where content windows provide context automatically.
+
+- 64ef94c: Remove the duplicate sidebar divider beside the preview surface's rounded corner when navigation is collapsed or has no connected selection.
+- 64ef94c: Add a subtle Create a space action to the empty chat home, reusing the permitted creation actions from navigation.
+- 64ef94c: Use an accessible full-screen dialog for table focus mode, retaining the mounted table and restoring keyboard focus when closing. The dialog escapes narrow containers and retains theme context.
+
+  When an assistant runtime is available, focus mode offers the existing conversation in a collapsed chat pane. Source references open beside the focused content. Agent state includes the focused surface and bounded table contents.
+
+  Unify workbench list typography and navigation behavior. Recalculate composer height on pane resizing and keep an empty composer compact.
+
+- 64ef94c: Use shared themed dropdown and input components for conversation history.
+- 64ef94c: Refine the workbench preview with recent chats above the empty composer, compact history rows, accessible icon tooltips, aligned dropdown chevrons, and matching hover-only resize grips. Add navigation width reset on double-click.
+- 64ef94c: Allow the workbench to host tool results in retained windows while keeping graph updates connected to the tool panel store.
+- 64ef94c: Keep the development workbench behind a lazy boundary and separate navigation, layout state, chat controls, and resizing. Preserve live thread surfaces, accessible pin controls, browser API fallbacks, and truncation metadata in shared UI components.
+- 64ef94c: Expose the shared workbench presentation through a lazy-loadable web-ui/workbench entry point. Keep the shell responsible only for opt-in/runtime wiring, and split navigation, pane controls, resize handling, welcome content, and layout state into focused UI components and hooks. Preserve entity-field retargeting and sidebar contour updates.
+
+  Export the shared themed PinToggle and reuse the pin state glyph across content controls.
+
+- 64ef94c: Remove the guide line beside direct workspace items while preserving their alignment and nested navigation guides.
+
+  Use a compact 12px workspace-content inset and consistent 16px nested navigation steps.
+
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+  - @iloveagents/foundry-web-ui@0.27.0
+  - @iloveagents/foundry-agent@0.27.0
+  - @iloveagents/foundry-web-primitives@0.27.0
+
 ## 0.26.0
 
 ### Patch Changes

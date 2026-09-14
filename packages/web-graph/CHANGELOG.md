@@ -1,5 +1,34 @@
 # @iloveagents/foundry-web-graph
 
+## 0.2.2
+
+### Patch Changes
+
+- 64ef94c: Preserve focused renderer ownership while updating source results, keep graph context tied to visible surfaces, and improve focus-pane and pinned-context accessibility. Route client draft updates to an active form when it handles the request.
+- 64ef94c: Place clearer relationship arrows outside custom node circles and allow resizing the graph details drawer.
+- 64ef94c: Use the shared focus layout with collapsible chat for graph panels, include selected relationship context in chat, distinguish zoom-to-fit from fullscreen, and add spacing above graph type filters.
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+- Updated dependencies [64ef94c]
+  - @iloveagents/foundry-web-ui@0.27.0
+  - @iloveagents/foundry-agent@0.27.0
+  - @iloveagents/foundry-web-primitives@0.27.0
+
 ## 0.2.1
 
 ### Patch Changes
