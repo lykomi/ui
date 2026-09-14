@@ -82,9 +82,15 @@ export function FocusDialog({
       if (ownedSource.current && content.sourceId === ownedSource.current) setSource(content);
     };
     const unsubscribe = useToolPanelStore.subscribe((state) => {
+      const dialogs = Array.from(
+        document.querySelectorAll('[role="dialog"]:not([aria-modal="false"])'),
+      );
+      const isActiveHost = host?.closest('[role="dialog"]') === dialogs[dialogs.length - 1];
       if (
         ownedSource.current &&
-        (!state.isOpen || !state.isWindowHosted || state.content?.sourceId !== ownedSource.current)
+        (!state.isOpen ||
+          !state.isWindowHosted ||
+          (isActiveHost && state.content?.sourceId !== ownedSource.current))
       ) {
         previousPanel.current = null;
         ownedSource.current = undefined;
