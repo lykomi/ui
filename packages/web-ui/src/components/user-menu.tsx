@@ -15,24 +15,20 @@ import {
 } from "../ui/dropdown-menu.tsx";
 import { Button } from "@iloveagents/foundry-web-primitives";
 
-export const UserMenu: FC<{ uiPreviewAvailable?: boolean }> = ({
-  uiPreviewAvailable = import.meta.env.DEV,
-}) => {
+export const UserMenu: FC = () => {
   const { user, signOut } = useStore(
     authStore,
     useShallow((s) => ({ user: s.user, signOut: s.signOut })),
   );
 
   let preview = false;
-  if (uiPreviewAvailable) {
-    try {
-      const choice = new URLSearchParams(window.location.search).get("ux");
-      preview =
-        choice === "workbench" ||
-        (choice !== "classic" && sessionStorage.getItem("foundry.workbench-preview") === "on");
-    } catch {
-      /* Storage may be unavailable in embedded browsers. */
-    }
+  try {
+    const choice = new URLSearchParams(window.location.search).get("ux");
+    preview =
+      choice === "workbench" ||
+      (choice !== "classic" && sessionStorage.getItem("foundry.workbench-preview") === "on");
+  } catch {
+    /* Storage may be unavailable in embedded browsers. */
   }
   if (!user) return null;
 
@@ -64,21 +60,17 @@ export const UserMenu: FC<{ uiPreviewAvailable?: boolean }> = ({
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {uiPreviewAvailable && (
-          <>
-            <DropdownMenuCheckboxItem
-              checked={preview}
-              onCheckedChange={(enabled) => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("ux", enabled ? "workbench" : "classic");
-                window.location.assign(url.href);
-              }}
-            >
-              UI preview
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator />
-          </>
-        )}
+        <DropdownMenuCheckboxItem
+          checked={preview}
+          onCheckedChange={(enabled) => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("ux", enabled ? "workbench" : "classic");
+            window.location.assign(url.href);
+          }}
+        >
+          UI preview
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
           <LogOut className="size-4" />
           Sign out

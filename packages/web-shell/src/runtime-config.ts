@@ -30,15 +30,8 @@ export function runtimeConfig(key: string): string {
 
 const WORKBENCH_STORAGE_KEY = "foundry.workbench-preview";
 
-/** Whether this deployment offers the workbench as an opt-in UI preview. */
-export function isWorkbenchPreviewAvailable() {
-  if (import.meta.env.DEV) return true;
-  return ["1", "true", "on"].includes(runtimeConfig("VITE_WORKBENCH_PREVIEW").toLowerCase());
-}
-
-/** Tab-local selection. Deployments must explicitly make the preview available. */
+/** Tab-local selection between the workbench preview and the classic shell. */
 export function isWorkbenchPreviewEnabled() {
-  if (!isWorkbenchPreviewAvailable()) return false;
   try {
     const choice = new URLSearchParams(window.location.search).get("ux");
     if (choice === "workbench") sessionStorage.setItem(WORKBENCH_STORAGE_KEY, "on");

@@ -10,7 +10,7 @@ import { useSidebarStore } from "../lib/sidebar-store.ts";
 import { useNewConversation } from "../lib/use-new-conversation.ts";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 
-export const ChatHeader: FC<{ uiPreviewAvailable?: boolean }> = ({ uiPreviewAvailable }) => {
+export const ChatHeader: FC = () => {
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   // In expanded mode the default "navigate to /" would land on the chat
   // route, and the shell collapses expanded chat there — so New Thread
@@ -45,7 +45,7 @@ export const ChatHeader: FC<{ uiPreviewAvailable?: boolean }> = ({ uiPreviewAvai
           <TooltipIconButton tooltip="New Thread" size="icon" onClick={handleNewConversation}>
             <SquarePen className="size-4 text-primary" />
           </TooltipIconButton>
-          <UserMenu uiPreviewAvailable={uiPreviewAvailable} />
+          <UserMenu />
         </div>
       </div>
     </div>

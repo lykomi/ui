@@ -21,8 +21,8 @@ The default auth adapter is MSAL-backed and reads `VITE_MSAL_CLIENT_ID`,
 `VITE_MSAL_AUTHORITY`, and `VITE_MSAL_API_SCOPE`. Starter/demo apps can pass a
 custom `authProvider` and `agentFetch` for local unauthenticated development.
 
-The workbench UI remains opt-in. It is available automatically during local
-development; a production deployment can expose the user-menu switch by setting
-`VITE_WORKBENCH_PREVIEW=true` in runtime configuration.
+The workbench UI remains opt-in and can be selected from the user menu. The
+selection is tab-local, so users can compare it with the classic shell without
+changing the deployment or other users' sessions.
 
 This package publishes built ESM JavaScript and `.d.ts` declarations.

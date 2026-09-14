@@ -65,7 +65,7 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ),
 }));
 import { WorkbenchPreview } from "@iloveagents/foundry-web-ui/workbench";
-import { isWorkbenchPreviewAvailable, isWorkbenchPreviewEnabled } from "../runtime-config.ts";
+import { isWorkbenchPreviewEnabled } from "../runtime-config.ts";
 
 function Editor() {
   useEffect(() => () => state.unmount(), []);
@@ -306,10 +306,6 @@ describe("layout preview", () => {
     expect(isWorkbenchPreviewEnabled()).toBe(false);
     vi.stubEnv("DEV", false);
     window.history.replaceState({}, "", "/?ux=workbench");
-    expect(isWorkbenchPreviewEnabled()).toBe(false);
-    expect(isWorkbenchPreviewAvailable()).toBe(false);
-    vi.stubGlobal("__APP_CONFIG__", { VITE_WORKBENCH_PREVIEW: "true" });
-    expect(isWorkbenchPreviewAvailable()).toBe(true);
     expect(isWorkbenchPreviewEnabled()).toBe(true);
   });
 
