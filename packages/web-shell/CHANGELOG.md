@@ -1,5 +1,18 @@
 # @iloveagents/foundry-web-shell
 
+## 0.28.0
+
+### Minor Changes
+
+- 40a3137: Offer the workbench preview switch in production as well as local development.
+
+### Patch Changes
+
+- Updated dependencies [40a3137]
+  - @iloveagents/foundry-web-ui@0.28.0
+  - @iloveagents/foundry-agent@0.28.0
+  - @iloveagents/foundry-web-primitives@0.28.0
+
 ## 0.27.1
 
 ### Patch Changes
