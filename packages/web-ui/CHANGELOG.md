@@ -1,5 +1,19 @@
 # @iloveagents/foundry-web-ui
 
+## 0.29.0
+
+### Minor Changes
+
+- 7ac54a2: Show a short, context-aware recent conversation list in empty workbench chats and align the empty state with the top of the working panes.
+- 863a2c2: Add a module-owned chat home starter slot across workbench, full chat and bubble surfaces. Align the conversation history shortcut with the chat home content.
+
+### Patch Changes
+
+- 863a2c2: Use the same compact conversation home in workbench and focus chat panes, including contextual starters.
+- 863a2c2: Distinguish unpinned items with a tilted, lightly filled pin. Indicate pinned state through the glyph tint without a persistent button background.
+  - @iloveagents/foundry-agent@0.29.0
+  - @iloveagents/foundry-web-primitives@0.29.0
+
 ## 0.28.1
 
 ### Patch Changes

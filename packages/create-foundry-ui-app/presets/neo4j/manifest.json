@@ -5,7 +5,7 @@
   "extends": "default",
   "filesDir": "files",
   "extraDependencies": {
-    "@iloveagents/foundry-web-graph": "0.2.3"
+    "@iloveagents/foundry-web-graph": "0.2.4"
   },
   "extraScripts": {
     "graph:up": "docker compose up -d",
