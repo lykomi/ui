@@ -90,3 +90,11 @@ it("keeps the persisted title and location after a run finishes, without duplica
   expect(host.textContent).not.toContain("Running");
   expect(host.textContent).toContain("Saved saved");
 });
+
+it("does not resurrect a terminal chat absent from persisted history", async () => {
+  begin("deleted", "workspace");
+  updateChatRun("deleted", "completed");
+  await render(false);
+  expect(host.querySelector('a[href="/chat/deleted"]')).toBeNull();
+  expect(host.textContent).toContain("Saved saved");
+});

@@ -324,12 +324,23 @@ function findExactNavItem(items: NavItem[], path: string): NavItem | null {
 function findBestPrefixNavItem(
   items: NavItem[],
   path: string,
-  currentBest: { item: NavItem; length: number } | null = null,
-): { item: NavItem; length: number } | null {
+  currentBest: { item: NavItem; length: number; scope: number } | null = null,
+): { item: NavItem; length: number; scope: number } | null {
   let best = currentBest;
+  const target = new URL(path, "http://navigation.local");
   for (const item of items) {
-    if (path.startsWith(item.to + "/") && item.to.length > (best?.length ?? 0)) {
-      best = { item, length: item.to.length };
+    const route = new URL(item.to, target.origin);
+    const pathname = route.pathname.replace(/\/+$/, "");
+    const scope = route.searchParams.size;
+    if (
+      target.pathname.startsWith(pathname + "/") &&
+      [...route.searchParams].every(([key, value]) =>
+        target.searchParams.getAll(key).includes(value),
+      ) &&
+      (pathname.length > (best?.length ?? 0) ||
+        (pathname.length === best?.length && scope > best.scope))
+    ) {
+      best = { item, length: pathname.length, scope };
     }
     if (item.children) {
       best = findBestPrefixNavItem(item.children, path, best);
@@ -357,11 +368,11 @@ export function findNavItem(config: NavGroup[], path: string): NavMatch | null {
     }
   }
   if (exact) return exact;
-  path = new URL(path, "http://navigation.local").pathname;
+  const pathname = new URL(path, "http://navigation.local").pathname;
 
   // Pass 2: group-level `to` match (e.g. /spaces matches Workspaces group)
   for (const group of config) {
-    if (group.to && group.to === path) {
+    if (group.to && group.to === pathname) {
       return {
         group: group.label,
         groupMeta: group.meta,
@@ -375,6 +386,7 @@ export function findNavItem(config: NavGroup[], path: string): NavMatch | null {
   // Pass 3: longest-prefix match (for dynamic/parameterized routes)
   let best: NavMatch | null = null;
   let bestLen = 0;
+  let bestScope = -1;
   for (const group of config) {
     const base = {
       group: group.label,
@@ -383,9 +395,13 @@ export function findNavItem(config: NavGroup[], path: string): NavMatch | null {
       groupInstructions: group.contextInstructions,
     };
     const match = findBestPrefixNavItem(group.items, path);
-    if (match && match.length > bestLen) {
+    if (
+      match &&
+      (match.length > bestLen || (match.length === bestLen && match.scope > bestScope))
+    ) {
       best = { ...base, item: match.item };
       bestLen = match.length;
+      bestScope = match.scope;
     }
   }
   return best;

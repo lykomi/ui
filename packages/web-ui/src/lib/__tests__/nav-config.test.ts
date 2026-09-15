@@ -176,3 +176,15 @@ it("resolves a record's identity while its list represents it in the sidebar", (
   expect(findNavItem(config, record.to)?.item).toBe(record);
   expect(findNavItem(config, "/s/space/tasks")?.item.label).toBe("Tasks");
 });
+
+it("preserves workspace scope for descendant routes without leaking across scopes", () => {
+  const icon = DEFAULT_NAV_CONFIG[0].items[0].icon;
+  const global = { to: "/tasks", label: "Global", icon };
+  const scoped = { to: "/tasks?workspace=a", label: "Scoped", icon };
+  const config = [
+    { label: "Global", items: [global] },
+    { label: "Workspace", items: [scoped] },
+  ];
+  expect(findNavItem(config, "/tasks/123?workspace=a&filter=running")?.item).toBe(scoped);
+  expect(findNavItem(config, "/tasks/123?workspace=b")?.item).toBe(global);
+});

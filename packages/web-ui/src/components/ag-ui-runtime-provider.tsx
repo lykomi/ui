@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useRef,
   useLayoutEffect,
   useEffect,
 } from "react";
@@ -115,6 +116,7 @@ export function useIsForegroundChat() {
 let mountedProviders = 0;
 
 export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
+  const adapterCache = useRef(new Map<string, AGUIAdapterSDK>()).current;
   const [freshId, setFreshId] = useState<string>(() => crypto.randomUUID());
   const id = props.threadId ?? freshId;
   // Hosts with stable ids advance the id through the lifecycle callback.
@@ -165,6 +167,7 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
         <AGUIRuntimeInner
           key={session.threadId}
           {...session}
+          adapterCache={adapterCache}
           resetThread={resetThread}
           selectRetainedThread={selectRetainedThread}
         >
@@ -178,6 +181,7 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
 
 function AGUIRuntimeInner({
   children,
+  adapterCache,
   fetchFn,
   threadId,
   urlMatch,
@@ -186,19 +190,19 @@ function AGUIRuntimeInner({
   selectRetainedThread,
   conversationUrl,
 }: AGUIRuntimeProviderProps & {
+  adapterCache: Map<string, AGUIAdapterSDK>;
   resetThread: () => void;
   selectRetainedThread: (threadId: string) => boolean;
 }) {
-  const adapter = useMemo(
-    () =>
-      new AGUIAdapterSDK(
-        "/api/agent",
-        // Only pass options if at least one is set, mirroring the prior
-        // single-arg semantics for the "fresh chat, no overrides" case.
-        fetchFn || threadId ? { fetchFn, threadId, conversationUrl } : undefined,
-      ),
-    [fetchFn, threadId, conversationUrl],
-  );
+  const adapter = useMemo(() => {
+    // Evict expensive React runtimes, not the protocol session: hidden
+    // server messages and compaction state must survive a later revisit.
+    const retained = threadId ? adapterCache.get(threadId) : undefined;
+    if (retained) return retained;
+    const created = new AGUIAdapterSDK("/api/agent", { fetchFn, threadId, conversationUrl });
+    adapterCache.set(created.threadId, created);
+    return created;
+  }, [adapterCache, fetchFn, threadId, conversationUrl]);
 
   // Hosts may register a custom adapter (see ``registerAttachmentAdapter``);
   // the shell's inline-base64 adapter is the default.
