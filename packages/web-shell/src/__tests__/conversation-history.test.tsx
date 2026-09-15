@@ -135,6 +135,7 @@ it("shows workspace recents at a root and only exact entity recents elsewhere", 
   );
   expect(screen.queryByText("Workspace planning")).toBeNull();
   expect(screen.getByText("Task review")).toBeTruthy();
+  expect(screen.queryByText("Last at Task")).toBeNull();
 });
 
 it("shows only the conversations action when an entity has no exact recent chat", () => {

@@ -237,20 +237,22 @@ export function ConversationHistory({
                       )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate">{item.label}</span>{" "}
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {!all &&
-                          typeof item.meta?.previewEntityName === "string" &&
-                          item.meta.previewEntityName
-                            ? `Last at ${item.meta.previewEntityName}`
-                            : !all
-                              ? "Last in this workspace"
-                              : typeof item.meta?.previewSpaceName === "string" &&
-                                  item.meta.previewSpaceName
-                                ? `Last in ${item.meta.previewSpaceName}`
-                                : item.meta?.previewContextUnavailable
-                                  ? "Location unavailable"
-                                  : "Last outside a workspace"}
-                        </span>
+                        {!compact && (
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {!all &&
+                            typeof item.meta?.previewEntityName === "string" &&
+                            item.meta.previewEntityName
+                              ? `Last at ${item.meta.previewEntityName}`
+                              : !all
+                                ? "Last in this workspace"
+                                : typeof item.meta?.previewSpaceName === "string" &&
+                                    item.meta.previewSpaceName
+                                  ? `Last in ${item.meta.previewSpaceName}`
+                                  : item.meta?.previewContextUnavailable
+                                    ? "Location unavailable"
+                                    : "Last outside a workspace"}
+                          </span>
+                        )}
                       </span>
                     </Link>
                     {Boolean(item.actions?.length) && (
