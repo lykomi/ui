@@ -1,16 +1,5 @@
-import { PinStateIcon } from "./pin-state-icon.tsx";
-/**
- * Context badge components for the composer and sent messages.
- *
- * Renders user-selected context items as violet-tinted badges,
- * visually distinct from gray file attachment badges.
- *
- * - ComposerContextBadges: editable badges in the composer (with remove button)
- * - SentContextBadges: read-only badges on sent user messages
- */
-
 import { type FC, createElement } from "react";
-import { TextSelect, X, FileText, Link2, StickyNote, type LucideIcon } from "lucide-react";
+import { TextSelect, FileText, Link2, StickyNote, type LucideIcon } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip.tsx";
 import { useAppStore, type ContextItem, type ContextItemType } from "../lib/app-store.ts";
@@ -33,53 +22,7 @@ function getBadgeTooltip(item: ContextItem): string {
   return `${item.label}\n${source}`;
 }
 
-/** Editable badge in the composer with a remove button. */
-const ComposerBadge: FC<{ item: ContextItem }> = ({ item }) => {
-  const removeItem = useAppStore((s) => s.removeContextItem);
-  const promoteItem = useAppStore((s) => s.promoteContextItem);
-  const isEphemeral = item.persistence === "ephemeral";
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div
-          className={cn(
-            "inline-flex items-center gap-1.5 max-w-70",
-            "rounded-lg bg-primary/5",
-            "px-2 py-1",
-            isEphemeral ? "border border-dashed border-primary/40" : "border border-primary/20",
-          )}
-        >
-          <ContextIcon type={item.type} className="size-3 text-primary shrink-0" />
-          <span className="text-xs text-foreground truncate">{item.label}</span>
-          {isEphemeral && (
-            <button
-              type="button"
-              onClick={() => promoteItem(item.id)}
-              className="p-0.5 rounded hover:bg-primary/10 shrink-0"
-              aria-label="Pin context"
-            >
-              <PinStateIcon pinned={false} className="size-3" />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => removeItem(item.id)}
-            className="p-0.5 rounded hover:bg-primary/10 shrink-0"
-            aria-label="Remove context"
-          >
-            <X className="size-3" />
-          </button>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="whitespace-pre-line">
-        {getBadgeTooltip(item)}
-      </TooltipContent>
-    </Tooltip>
-  );
-};
-
-/** Read-only badge on a sent user message. Mirrors composer context chips. */
+/** Read-only badge on a sent user message. Records the context attached to that turn. */
 const SentBadge: FC<{ item: ContextItem }> = ({ item }) => {
   const isEphemeral = item.persistence === "ephemeral";
 
@@ -102,32 +45,6 @@ const SentBadge: FC<{ item: ContextItem }> = ({ item }) => {
         {getBadgeTooltip(item)}
       </TooltipContent>
     </Tooltip>
-  );
-};
-
-/** Renders ephemeral context badges in the composer (persistent items shown in ContextPins). */
-export const ComposerContextBadges: FC<{
-  hideCurrentPage?: boolean;
-  hiddenPageLabels?: string[];
-}> = ({ hideCurrentPage = false, hiddenPageLabels = [] }) => {
-  const items = useAppStore((s) => s.contextItems);
-  const ephemeral = items.filter(
-    (i) =>
-      i.persistence === "ephemeral" &&
-      !(
-        hideCurrentPage &&
-        (i.payload.kind === "page" || (i.type === "note" && hiddenPageLabels.includes(i.label)))
-      ),
-  );
-
-  if (ephemeral.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {ephemeral.map((item) => (
-        <ComposerBadge key={item.id} item={item} />
-      ))}
-    </div>
   );
 };
 

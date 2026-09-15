@@ -30,9 +30,8 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 import { Button } from "@iloveagents/foundry-web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { userAttachmentComponents, composerAttachmentComponents } from "./chat-attachments.tsx";
-import { SentContextBadges, ComposerContextBadges } from "./context-badges.tsx";
+import { SentContextBadges } from "./context-badges.tsx";
 import { ComposerAddMenu } from "./composer-add-menu.tsx";
-import { ContextPins } from "./context-bar.tsx";
 import { ChatContext } from "./chat-context.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import {
@@ -394,9 +393,6 @@ export interface ChatContentProps {
   composerFooter?: ReactNode;
   /** Compact two-row composer with an auto-growing input. */
   compactComposer?: boolean;
-  hiddenPageLabels?: string[];
-  /** Hide the already-visible navigation page badge, without removing context. */
-  hideCurrentPageBadge?: boolean;
   /** Optional empty conversation presentation; leaves the composer and runtime unchanged. */
   emptyState?: ReactNode;
   /**
@@ -406,17 +402,6 @@ export interface ChatContentProps {
    * workspace-aware list derived from app context.
    */
   starterSuggestions?: string[];
-  /**
-   * Show the page pin button in the composer.
-   *
-   * Defaults to TRUE. It defaulted to false, and nothing in the shell ever
-   * passed it, so the affordance shipped switched off everywhere: on a
-   * document or a view there was no way to put the thing you were looking
-   * at into the conversation. Pinning the current page is the core gesture
-   * of a page-aware chat, not an opt-in extra — an app that genuinely wants
-   * a bare composer opts OUT.
-   */
-  showPinButton?: boolean;
   /**
    * Composer placeholder. Defaults to `DEFAULT_COMPOSER_PLACEHOLDER`.
    */
@@ -439,11 +424,8 @@ export function ChatContent({
   composerIntro,
   composerFooter,
   compactComposer = false,
-  hiddenPageLabels = [],
-  hideCurrentPageBadge = false,
   emptyState,
   starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
-  showPinButton = true,
   placeholder = DEFAULT_COMPOSER_PLACEHOLDER,
 }: ChatContentProps = {}) {
   const ThreadSurface = useChatThreadSurface();
@@ -592,10 +574,6 @@ export function ChatContent({
               )}
             >
               <ComposerSubmitBridge />
-              <ComposerContextBadges
-                hideCurrentPage={hideCurrentPageBadge}
-                hiddenPageLabels={hiddenPageLabels}
-              />
               <ComposerPrimitive.Attachments components={composerAttachmentComponents} />
               {/* One row when there is room, two when there is not — and the
                   wrap does it, not a breakpoint.
@@ -621,10 +599,7 @@ export function ChatContent({
                     compactComposer ? "order-2" : "order-2 @md:order-1",
                   )}
                 >
-                  <ComposerAddMenu showPin={showPinButton} />
-                  {/* Renders only once something is pinned — the affordance
-                      to pin now lives in the menu. */}
-                  <ContextPins allowPageToggle={showPinButton} />
+                  <ComposerAddMenu />
                 </div>
 
                 <ComposerInput

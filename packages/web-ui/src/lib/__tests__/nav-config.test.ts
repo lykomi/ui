@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { findNavItem, DEFAULT_NAV_CONFIG, type NavGroup } from "../nav-config";
 
+it("keeps scoped navigation context with table filters and never matches another scope", () => {
+  const icon = DEFAULT_NAV_CONFIG[0].items[0].icon;
+  const config: NavGroup[] = [
+    {
+      label: "Activity",
+      items: [
+        { to: "/tasks", label: "All activity", icon },
+        { to: "/tasks?workspace=a", label: "Workspace activity", icon, meta: { workspaceId: "a" } },
+      ],
+    },
+  ];
+  expect(findNavItem(config, "/tasks?sort=updated&workspace=a&task=run-1")?.item.meta).toEqual({
+    workspaceId: "a",
+  });
+  expect(findNavItem(config, "/tasks?workspace=b")?.item.label).toBe("All activity");
+  expect(findNavItem(config, "/tasks")?.item.label).toBe("All activity");
+});
+
 describe("findNavItem", () => {
   it("finds item in default config", () => {
     const result = findNavItem(DEFAULT_NAV_CONFIG, "/");

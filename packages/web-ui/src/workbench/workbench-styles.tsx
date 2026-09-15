@@ -259,10 +259,10 @@ export function WorkbenchStyles() {
           padding-top: 0;
         }
         [data-workspace-navigation] [data-nav-group-label="All spaces"] [data-nav-depth="0"] > button {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 600;
-          letter-spacing: -0.015em;
-          line-height: 24px;
+          letter-spacing: normal;
+          line-height: 20px;
         }
         [data-workspace-navigation] [data-nav-group-label="Recent chats"] > :first-child {
           padding-top: 10px;
@@ -273,9 +273,18 @@ export function WorkbenchStyles() {
         .workbench-preview [data-nav-group-label="All spaces"] > div:has(> [data-nav-group-header]) {
           padding-top: 8px;
         }
+        .workbench-preview [data-nav-group-label="All spaces"] [data-nav-group-header] {
+          height: 32px;
+          min-height: 32px;
+          padding-top: 0;
+          padding-bottom: 0;
+        }
+        .workbench-preview [data-nav-group-label="All spaces"] [data-nav-group-items] {
+          animation: none;
+        }
         /* The first utility row shares the heading line in both scopes. */
         .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) nav:has(> [data-nav-group-label="Activity"]:first-child) {
-          padding-top: 10px;
+          padding-top: 8px;
         }
         .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Activity"] [data-nav-depth="0"] {
           padding-left: 12px;
@@ -303,15 +312,20 @@ export function WorkbenchStyles() {
         }
 
         @media (pointer: fine) {
-          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth],
-          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth] > button:not([data-nav-twisty]) {
-            min-height: 28px;
-            padding-top: 2px;
-            padding-bottom: 2px;
-          }
-          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth] {
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth] {
+            height: 32px;
+            min-height: 32px;
             padding-top: 0;
             padding-bottom: 0;
+          }
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth] > button:not([data-nav-twisty]) {
+            height: 30px;
+            min-height: 30px;
+            padding-top: 0;
+            padding-bottom: 0;
+          }
+          .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] > button:not([data-nav-twisty]) {
+            min-height: 30px;
           }
         }
 

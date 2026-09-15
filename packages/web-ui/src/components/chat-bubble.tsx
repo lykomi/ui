@@ -24,8 +24,7 @@ import {
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { Button } from "@iloveagents/foundry-web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
-import { ContextPins } from "./context-bar.tsx";
-import { ComposerContextBadges, SentContextBadges } from "./context-badges.tsx";
+import { SentContextBadges } from "./context-badges.tsx";
 import { ComposerSubmitBridge } from "./composer-submit-bridge.tsx";
 import { ComposerAddMenu } from "./composer-add-menu.tsx";
 import { DEFAULT_COMPOSER_PLACEHOLDER } from "./assistant-chat.tsx";
@@ -378,7 +377,6 @@ export function ChatBubble() {
                       "transition-all duration-200",
                     )}
                   >
-                    <ComposerContextBadges />
                     <div className="flex items-center gap-2">
                       <div className="flex shrink-0 items-center gap-0.5">
                         {/* The bubble is the chat you use WHILE reading a
@@ -386,7 +384,6 @@ export function ChatBubble() {
                         the expanded composer does — it just lives in the
                         menu now rather than owning a permanent icon. */}
                         <ComposerAddMenu compact />
-                        <ContextPins compact />
                       </div>
                       <ComposerInput
                         autoFocus

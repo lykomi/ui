@@ -41,8 +41,8 @@ export type { ToolCallStatus, ToolCallCardProps } from "./components/tool-call-c
 export { ToolFallback } from "./components/tool-fallback.tsx";
 export { ConfirmationCard } from "./components/confirmation-card.tsx";
 export { TooltipIconButton } from "./components/tooltip-icon-button.tsx";
-export { ComposerContextBadges, SentContextBadges } from "./components/context-badges.tsx";
-export { ContextPins, usePagePin } from "./components/context-bar.tsx";
+export { SentContextBadges } from "./components/context-badges.tsx";
+export { usePagePin } from "./components/context-bar.tsx";
 export { SelectionPopover } from "./components/selection-popover.tsx";
 export { GlobalSelectionPopover } from "./components/global-selection-popover.tsx";
 export { LoadingIndicator } from "./components/loading-indicator.tsx";

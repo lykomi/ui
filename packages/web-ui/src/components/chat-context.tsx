@@ -4,6 +4,9 @@ import { useAppStore } from "../lib/app-store.ts";
 import { summarizeChatContext } from "../lib/chat-context-summary.ts";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover.tsx";
 import { ChatContextDetailsSlot } from "./chat-slots.tsx";
+import { ChatContextItems } from "./chat-context-items.tsx";
+import { usePagePin } from "./context-bar.tsx";
+import { PinStateIcon } from "./pin-state-icon.tsx";
 
 function readContext() {
   return summarizeChatContext(useAppStore.getState().getAgentState());
@@ -13,6 +16,11 @@ function readContext() {
 export function ChatContext() {
   const [open, setOpen] = useState(false);
   const [context, setContext] = useState(readContext);
+  const items = useAppStore((s) => s.contextItems);
+  const { isPinned, toggle } = usePagePin();
+  const selection = items.find((item) => item.key && item.persistence === "ephemeral");
+  const detail = context.detail || selection?.label || "";
+  const additionalCount = items.length - (selection && detail === selection.label ? 1 : 0);
   useEffect(() => {
     let frame = 0;
     const refresh = () => {
@@ -83,20 +91,25 @@ export function ChatContext() {
         <button
           type="button"
           data-chat-context
-          aria-label={`Message context: ${context.label}${context.detail ? `, ${context.detail}` : ""}`}
+          aria-label={`Message context: ${context.label}${detail ? `, ${detail}` : ""}${additionalCount ? `, ${additionalCount} more` : ""}`}
           className="mb-2 flex min-h-9 w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary [@media(pointer:coarse)]:min-h-11"
         >
           <Icon className="size-3.5 shrink-0" />
           <span className="min-w-0 flex-1 truncate" aria-live="polite">
             With <span className="font-medium text-foreground">{context.label}</span>
-            {context.detail && (
+            {detail && (
               <>
                 {" "}
                 <span aria-hidden>›</span>{" "}
-                <span className="font-medium text-foreground">{context.detail}</span>
+                <span className="font-medium text-foreground">{detail}</span>
               </>
             )}
           </span>
+          {additionalCount > 0 && (
+            <span className="shrink-0 tabular-nums" aria-hidden>
+              +{additionalCount}
+            </span>
+          )}
           <ChevronDown className="size-3.5 shrink-0" />
         </button>
       </PopoverTrigger>
@@ -111,11 +124,11 @@ export function ChatContext() {
           <h2 className="text-xs font-medium text-muted-foreground">Current context</h2>
           <p className="mt-1 break-words font-medium">
             {context.label}
-            {context.detail && ` › ${context.detail}`}
+            {detail && ` › ${detail}`}
           </p>
         </div>
         <p className="px-2 text-xs leading-relaxed text-muted-foreground">
-          {context.detail
+          {detail
             ? "This selection stays available when you move into chat."
             : "The current page follows your navigation. Select text or a field to work more specifically."}
         </p>
@@ -124,6 +137,18 @@ export function ChatContext() {
             {context.selectedText}
           </blockquote>
         )}
+        {!context.focused && context.label !== "Your spaces" && (
+          <button
+            type="button"
+            aria-pressed={isPinned}
+            onClick={toggle}
+            className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-sm hover:bg-muted"
+          >
+            <PinStateIcon pinned={isPinned} className="size-4 shrink-0 text-muted-foreground" />
+            {isPinned ? "Unpin this page" : "Keep this page in context"}
+          </button>
+        )}
+        <ChatContextItems items={items} onNavigate={() => setOpen(false)} />
         <ChatContextDetailsSlot onDismiss={() => setOpen(false)} />
         {context.references.length > 0 && (
           <div className="border-t border-border px-2 pt-3 text-xs">

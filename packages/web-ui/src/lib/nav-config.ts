@@ -294,16 +294,31 @@ export interface NavMatch {
 }
 
 function findExactNavItem(items: NavItem[], path: string): NavItem | null {
+  const target = new URL(path, "http://navigation.local");
+  let best: NavItem | null = null;
+  let specificity = -1;
   for (const item of items) {
-    if (item.to === path) {
-      return item;
+    const route = new URL(item.to, target.origin);
+    if (
+      route.pathname.replace(/\/+$/, "") === target.pathname.replace(/\/+$/, "") &&
+      [...route.searchParams].every(([key, value]) =>
+        target.searchParams.getAll(key).includes(value),
+      ) &&
+      route.searchParams.size > specificity
+    ) {
+      best = item;
+      specificity = route.searchParams.size;
     }
-    if (item.children) {
-      const nested = findExactNavItem(item.children, path);
-      if (nested) return nested;
+    const nested = item.children && findExactNavItem(item.children, path);
+    if (nested) {
+      const nestedSpecificity = new URL(nested.to, target.origin).searchParams.size;
+      if (nestedSpecificity > specificity) {
+        best = nested;
+        specificity = nestedSpecificity;
+      }
     }
   }
-  return null;
+  return best;
 }
 
 function findBestPrefixNavItem(
@@ -324,19 +339,25 @@ function findBestPrefixNavItem(
 }
 
 export function findNavItem(config: NavGroup[], path: string): NavMatch | null {
-  // Pass 1: exact match on items
+  // Prefer matching scope parameters; unrelated table filters do not change the page.
+  let exact: NavMatch | null = null;
+  let specificity = -1;
   for (const group of config) {
-    const base = {
-      group: group.label,
-      groupMeta: group.meta,
-      groupDescription: group.description,
-      groupInstructions: group.contextInstructions,
-    };
     const match = findExactNavItem(group.items, path);
-    if (match) {
-      return { ...base, item: match };
+    const score = match ? new URL(match.to, "http://navigation.local").searchParams.size : -1;
+    if (match && score > specificity) {
+      specificity = score;
+      exact = {
+        group: group.label,
+        groupMeta: group.meta,
+        groupDescription: group.description,
+        groupInstructions: group.contextInstructions,
+        item: match,
+      };
     }
   }
+  if (exact) return exact;
+  path = new URL(path, "http://navigation.local").pathname;
 
   // Pass 2: group-level `to` match (e.g. /spaces matches Workspaces group)
   for (const group of config) {
