@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.7
+
+### Patch Changes
+
+- Refresh the generated application template to use the latest Foundry runtime packages.
+
 ## 0.8.6
 
 ### Patch Changes
