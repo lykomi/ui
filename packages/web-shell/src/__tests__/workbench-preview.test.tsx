@@ -428,8 +428,8 @@ describe("layout preview", () => {
     state.groups = [activity, workspace, recent];
     const { rerender } = render(<WorkbenchPreview page={<Editor />} />);
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
+      expect.objectContaining({ ...activity, priority: 1100 }),
       expect.objectContaining({ label: "All spaces", items: [{ ...root, children: undefined }] }),
-      expect.objectContaining({ ...activity, priority: 900 }),
       expect.objectContaining({ label: "Content", items: [child] }),
     ]);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);

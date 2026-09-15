@@ -255,7 +255,6 @@ export function WorkbenchStyles() {
           min-height: 32px;
           gap: 8px;
         }
-        [data-workspace-navigation] [data-nav-group-label="All spaces"] > :first-child,
         .workbench-preview [data-sidebar-surface] nav > [data-nav-group-label]:first-child > div:has(> [data-nav-group-header]) {
           padding-top: 0;
         }
@@ -271,24 +270,20 @@ export function WorkbenchStyles() {
         [data-workspace-navigation] [data-nav-group-label="Content"] {
           margin-top: 0;
         }
-        .workbench-preview[data-workspace-navigation] [data-nav-group-label="All spaces"] {
-          padding-top: 0;
+        .workbench-preview [data-nav-group-label="All spaces"] > div:has(> [data-nav-group-header]) {
+          padding-top: 8px;
         }
-        /* Reserve a real navigation row; never overlap it with brand chrome. */
-        .workbench-preview[data-workspace-navigation] [data-navigation-header] {
-          align-items: flex-start;
-          padding-top: 20px;
+        /* The first utility row shares the heading line in both scopes. */
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) nav:has(> [data-nav-group-label="Activity"]:first-child) {
+          padding-top: 10px;
         }
-        .workbench-preview[data-workspace-navigation] [data-nav-group-label="All spaces"] > div:has(> [data-nav-group-header]) {
-          padding: 0;
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Activity"] [data-nav-depth="0"] {
+          padding-left: 12px;
         }
-        .workbench-preview[data-workspace-navigation] [data-nav-group-label="All spaces"] [data-nav-group-header] {
-          min-height: 24px;
-          height: 24px;
-          padding-top: 0;
-          padding-bottom: 0;
+        .workbench-preview [data-nav-group-label="Activity"] [data-nav-twisty-cell]:not(:has([data-nav-twisty])) {
+          display: none;
         }
-        .workbench-preview[data-workspace-navigation] [data-chat-empty-state] {
+        .workbench-preview[data-workspace-navigation]:not(:has([data-page-title-row])) [data-chat-empty-state] {
           padding-top: 28px;
         }
         .workbench-preview[data-workspace-navigation] [data-preview-entity-header] > [data-entity-header-row] {

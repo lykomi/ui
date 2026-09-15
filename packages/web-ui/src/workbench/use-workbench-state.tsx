@@ -41,6 +41,9 @@ function useWorkbenchNavigation() {
       const space = workspaceGroups[0];
       const root = space.items.find((item) => item.to === space.focusOn) ?? space.items[0];
       return [
+        ...navGroups
+          .filter((group) => group.meta?.showInWorkspaceNavigation)
+          .map((group) => ({ ...group, priority: 1100 })),
         {
           ...space,
           label: "All spaces",
@@ -50,9 +53,6 @@ function useWorkbenchNavigation() {
             ? [{ ...root, children: root.childrenHidden ? root.children : undefined }]
             : space.items,
         },
-        ...navGroups
-          .filter((group) => group.meta?.showInWorkspaceNavigation)
-          .map((group) => ({ ...group, priority: 900 })),
         {
           label: "Content",
           tree: true,
