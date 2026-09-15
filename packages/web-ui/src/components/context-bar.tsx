@@ -1,4 +1,3 @@
-import { useLocation } from "react-router";
 import { useAppStore, type ContextItem } from "../lib/app-store.ts";
 
 /** Resolve the URL a context item navigates to when clicked.
@@ -47,12 +46,11 @@ export function getNavigablePath(item: ContextItem): string | null {
  * Pin the current navigation context from the With menu.
  */
 export function usePagePin() {
-  const { pathname, search } = useLocation();
   const items = useAppStore((s) => s.contextItems);
   const removeItem = useAppStore((s) => s.removeContextItem);
   const addContextItem = useAppStore((s) => s.addContextItem);
   const page = useAppStore((s) => s.currentPage);
-  const currentPage = page === pathname ? page + search : page;
+  const currentPage = page;
   const pageLabel = useAppStore((s) => s.navContext.label);
   const navMeta = useAppStore((s) => s.navContext.meta);
 

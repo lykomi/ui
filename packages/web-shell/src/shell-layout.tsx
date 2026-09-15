@@ -90,11 +90,13 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
   const navConfig = useNavStore((s) => s.config);
 
   const previousContextPage = useRef<string | null>(null);
+  const previousContextConfig = useRef<typeof navConfig | null>(null);
   useEffect(() => {
     const found = findNavItem(navConfig, pathname + search);
     const target = found?.item.to;
     const page = target?.split("?")[0] === pathname ? target : pathname;
-    if (previousContextPage.current === page) return;
+    if (previousContextPage.current === page && previousContextConfig.current === navConfig) return;
+    previousContextConfig.current = navConfig;
     previousContextPage.current = page;
     setCurrentPage(page);
     const mergedInstructions = [found?.groupInstructions, found?.item.contextInstructions]

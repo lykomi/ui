@@ -98,6 +98,7 @@ it("updates the With selection and preserves its request and sent-message contex
 });
 
 it("pins the scoped page and keeps it after navigation until removed", () => {
+  useAppStore.setState({ currentPage: "/tasks?workspace=space-a" });
   render();
   openContext();
   click("Keep this page in context");
@@ -109,4 +110,12 @@ it("pins the scoped page and keeps it after navigation until removed", () => {
   expect(useAppStore.getState().contextItems).toHaveLength(1);
   click("Remove Activity");
   expect(useAppStore.getState().contextItems).toHaveLength(0);
+});
+
+it("uses canonical page identity instead of adding URL query parameters", () => {
+  useAppStore.setState({ currentPage: "/tasks" });
+  render();
+  openContext();
+  click("Keep this page in context");
+  expect(useAppStore.getState().contextItems[0].payload).toMatchObject({ path: "/tasks" });
 });
