@@ -237,7 +237,7 @@ export function ConversationHistory({
                       )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate">{item.label}</span>{" "}
-                        {!compact && (
+                        {(!compact || rootContext) && (
                           <span className="block truncate text-xs text-muted-foreground">
                             {!all &&
                             typeof item.meta?.previewEntityName === "string" &&
