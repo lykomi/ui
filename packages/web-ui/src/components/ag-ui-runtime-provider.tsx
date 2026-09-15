@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useLayoutEffect,
+  useEffect,
+} from "react";
 import { AssistantRuntimeProvider, useLocalRuntime } from "@assistant-ui/react";
 import type { ThreadHistoryAdapter } from "@assistant-ui/react";
 import { TooltipProvider } from "../ui/tooltip.tsx";
@@ -33,6 +41,14 @@ export type AGUIHistoryAdapterFactory = (
   args: AGUIChatConversationFactoryArgs,
 ) => ThreadHistoryAdapter;
 
+import {
+  useChatRuns,
+  isChatRunActive,
+  selectChatRun,
+  warnBeforeChatUnload,
+  disposeChatRuns,
+} from "../lib/chat-runs-store.ts";
+
 interface AGUIRuntimeProviderProps {
   children: React.ReactNode;
   /** Custom fetch for agent requests. Handles URL rewriting + auth in production. */
@@ -41,9 +57,8 @@ interface AGUIRuntimeProviderProps {
    * Optional stable thread id for the AG-UI adapter. When set, the
    * agent's POST body carries this id so server-side persistence
    * (Foundry thread, conversation row) targets the same conversation
-   * across reloads / resumes. Changing the id remounts the inner
-   * runtime — past messages from a different thread don't bleed
-   * into the new one.
+   * across reloads / resumes. Changing the id selects an independent
+   * runtime; running conversations remain mounted in the background.
    */
   threadId?: string;
   /**
@@ -85,20 +100,48 @@ export function useAGUIAdapter() {
 }
 
 export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
-  // Splitting render across an outer wrapper + a keyed inner is the
-  // canonical React idiom for "rebuild this stateful subtree when X
-  // changes". assistant-ui's runtime is created inside useLocalRuntime
-  // and tracks its messages internally; swapping threadId or history
-  // mid-life would leave stale state. Keying the inner subtree on
-  // threadId (+ the manual reset counter) guarantees a clean runtime
-  // per conversation, matching the ChatGPT-style "click → fresh chat
-  // backed by past messages" UX.
-  const [resetKey, setResetKey] = useState(0);
-  const resetThread = useCallback(() => setResetKey((p) => p + 1), []);
-
-  const innerKey = `${props.threadId ?? "fresh"}:${resetKey}`;
-
-  return <AGUIRuntimeInner key={innerKey} {...props} resetThread={resetThread} />;
+  const [freshId, setFreshId] = useState(() => crypto.randomUUID());
+  const id = props.threadId ?? freshId;
+  // Hosts with stable ids advance the id through the lifecycle callback.
+  const resetThread = useCallback(() => {
+    if (!props.threadId) setFreshId(crypto.randomUUID());
+  }, [props.threadId]);
+  const [sessions, setSessions] = useState(() => [{ ...props, threadId: id }]);
+  if (!sessions.some((session) => session.threadId === id)) {
+    const runs = useChatRuns.getState().runs;
+    // Keep running runtimes mounted. Limit the cache of idle conversations.
+    const idle = sessions.filter(
+      (session) => !runs[session.threadId] || !isChatRunActive(runs[session.threadId]!),
+    );
+    const retained = new Set(idle.slice(-19).map((session) => session.threadId));
+    setSessions([
+      ...sessions.filter(
+        (session) =>
+          retained.has(session.threadId) ||
+          (runs[session.threadId] && isChatRunActive(runs[session.threadId]!)),
+      ),
+      { ...props, threadId: id },
+    ]);
+  }
+  useLayoutEffect(() => {
+    selectChatRun(id);
+  }, [id]);
+  useEffect(() => {
+    window.addEventListener("beforeunload", warnBeforeChatUnload);
+    return () => {
+      window.removeEventListener("beforeunload", warnBeforeChatUnload);
+      disposeChatRuns();
+    };
+  }, []);
+  return (
+    <>
+      {sessions.map((session) => (
+        <AGUIRuntimeInner key={session.threadId} {...session} resetThread={resetThread}>
+          {session.threadId === id ? props.children : null}
+        </AGUIRuntimeInner>
+      ))}
+    </>
+  );
 }
 
 function AGUIRuntimeInner({
@@ -128,13 +171,9 @@ function AGUIRuntimeInner({
     [registeredAdapter],
   );
 
-  // Build the history adapter ONCE per inner mount, after the AG-UI
-  // adapter exists so we know its thread id. The keyed-remount in the
-  // outer wrapper ensures threadId changes trigger a fresh adapter +
-  // fresh history adapter together, so resumed chats hydrate from the
-  // right conversation and fresh chats persist under their assistant-
-  // ui-minted UUID.
-  const historyAdapter = useMemo<ThreadHistoryAdapter | undefined>(() => {
+  // Each retained runtime owns one history adapter, including after navigation.
+  // Changing the URL must never load persisted messages over an in-flight stream.
+  const [historyAdapter] = useState<ThreadHistoryAdapter | undefined>(() => {
     if (!historyAdapterFactory) return undefined;
     return historyAdapterFactory({
       // ``urlMatch`` is the URL-derived resume signal (undefined for
@@ -145,11 +184,7 @@ function AGUIRuntimeInner({
       urlMatch,
       aguiThreadId: adapter.threadId,
     });
-    // adapter is stable for the life of this inner mount (keyed remount
-    // covers the threadId change case), so it's OK to depend on the
-    // factory + urlMatch here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyAdapterFactory, urlMatch]);
+  });
 
   // Voice is opt-in and host-supplied (see ``registerVoiceAdapter``).
   // Both slots stay absent unless a module registered one, so a runtime
@@ -176,8 +211,8 @@ function AGUIRuntimeInner({
     <AGUIAdapterContext.Provider value={{ adapter, resetThread }}>
       <AssistantRuntimeProvider runtime={runtime}>
         <TooltipProvider>
-          <ShowDocumentToolUI />
-          <ClientToolExecutor />
+          {children && <ShowDocumentToolUI />}
+          {children && <ClientToolExecutor />}
           {children}
         </TooltipProvider>
       </AssistantRuntimeProvider>

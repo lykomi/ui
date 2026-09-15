@@ -26,15 +26,18 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 import type { Context, Message as AGUIMessage } from "@ag-ui/core";
-import {
-  AGUIRunner,
-  agentStateStore,
-  clientToolRegistry,
-  streamingStatusStore,
-} from "@iloveagents/foundry-agent";
+import { AGUIRunner, agentStateStore, clientToolRegistry } from "@iloveagents/foundry-agent";
 import { tokenFetch } from "@iloveagents/foundry-agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
 import { useDevStore } from "./dev-store.ts";
+
+import {
+  beginChatRun,
+  touchChatRun,
+  updateChatRun,
+  isForegroundChat,
+  waitForForegroundChat,
+} from "./chat-runs-store.ts";
 
 interface ToolCallSnapshot {
   id: string;
@@ -87,7 +90,21 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     // Liveness clock for the working indicator: every runner event (incl.
     // server heartbeats) proves the run is alive; the indicator derives
     // elapsed time from runStartedAt and staleness from lastSignalAt.
-    streamingStatusStore.getState().markRunStarted();
+    const stopController = new AbortController();
+    const runSignal = AbortSignal.any([abortSignal, stopController.signal]);
+    beginChatRun({
+      threadId: this.threadId,
+      title:
+        lastUserMsg?.content
+          .filter((p) => p.type === "text")
+          .map((p) => p.text)
+          .join(" ")
+          .slice(0, 120) || "Conversation",
+      pageLabel: useAppStore.getState().navContext.label ?? undefined,
+      contextMeta: { ...useAppStore.getState().navContext.meta },
+      stop: () => stopController.abort(),
+    });
+    const registry = clientToolRegistry.getState();
 
     /**
      * Build a `ChatModelRunResult` from the accumulated state.
@@ -150,11 +167,18 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
         messages: aguiMessages,
         state: appState as unknown as Record<string, unknown>,
         context,
-        registry: clientToolRegistry.getState(),
-        abortSignal,
+        registry: {
+          ...registry,
+          executeTool: async (name, args) => {
+            await waitForForegroundChat(this.threadId, runSignal);
+            runSignal.throwIfAborted();
+            return registry.executeTool(name, args);
+          },
+        },
+        abortSignal: runSignal,
       })) {
         let shouldYield = false;
-        streamingStatusStore.getState().touchSignal();
+        touchChatRun(this.threadId);
 
         switch (event.type) {
           case "heartbeat":
@@ -191,7 +215,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
             break;
 
           case "streaming-status":
-            streamingStatusStore.getState().setStreamingStatus(event.status);
+            touchChatRun(this.threadId, event.status);
             break;
 
           case "text-delta":
@@ -211,7 +235,8 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
           case "agent-state":
             // Publish server state so pages can react to it. Not a chat
             // message, so no yield.
-            agentStateStore.getState().setAgentState(event.state, event.patch);
+            if (isForegroundChat(this.threadId))
+              agentStateStore.getState().setAgentState(event.state, event.patch);
             break;
 
           case "messages-snapshot":
@@ -312,7 +337,9 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       // not a silent empty bubble. We yield the terminal status rather
       // than throwing; an unhandled throw re-introduces the stuck-running
       // bug (the runner generator has already returned here).
-      if (runError !== null) {
+      if (runSignal.aborted) {
+        yield buildResult({ type: "incomplete", reason: "cancelled" });
+      } else if (runError !== null) {
         yield buildResult({
           type: "incomplete",
           reason: "error",
@@ -321,9 +348,18 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       } else {
         yield buildResult({ type: "complete", reason: "stop" });
       }
+    } catch (error) {
+      if (runSignal.aborted) yield buildResult({ type: "incomplete", reason: "cancelled" });
+      else {
+        runError = error instanceof Error ? error.message : String(error);
+        throw error;
+      }
     } finally {
-      streamingStatusStore.getState().setStreamingStatus({ status: "idle" });
-      streamingStatusStore.getState().markRunEnded();
+      updateChatRun(
+        this.threadId,
+        runSignal.aborted ? "cancelled" : runError !== null ? "failed" : "completed",
+        runError ?? undefined,
+      );
     }
   }
 }

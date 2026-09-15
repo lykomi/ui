@@ -255,21 +255,48 @@ export function WorkbenchStyles() {
           min-height: 32px;
           gap: 8px;
         }
-        [data-workspace-navigation] [data-nav-group-label="Spaces"] > :first-child,
+        [data-workspace-navigation] [data-nav-group-label="All spaces"] > :first-child,
         .workbench-preview [data-sidebar-surface] nav > [data-nav-group-label]:first-child > div:has(> [data-nav-group-header]) {
           padding-top: 0;
         }
-        [data-workspace-navigation] [data-nav-group-label="Spaces"] [data-nav-depth="0"] > button {
-          font-size: 15px;
+        [data-workspace-navigation] [data-nav-group-label="All spaces"] [data-nav-depth="0"] > button {
+          font-size: 16px;
           font-weight: 600;
           letter-spacing: -0.015em;
-          line-height: 22px;
+          line-height: 24px;
         }
         [data-workspace-navigation] [data-nav-group-label="Recent chats"] > :first-child {
           padding-top: 10px;
         }
         [data-workspace-navigation] [data-nav-group-label="Content"] {
           margin-top: 0;
+        }
+        .workbench-preview[data-workspace-navigation] [data-nav-group-label="All spaces"] {
+          padding-top: 0;
+        }
+        /* Reserve a real navigation row; never overlap it with brand chrome. */
+        .workbench-preview[data-workspace-navigation] [data-navigation-header] {
+          align-items: flex-start;
+          padding-top: 20px;
+        }
+        .workbench-preview[data-workspace-navigation] [data-nav-group-label="All spaces"] > div:has(> [data-nav-group-header]) {
+          padding: 0;
+        }
+        .workbench-preview[data-workspace-navigation] [data-nav-group-label="All spaces"] [data-nav-group-header] {
+          min-height: 24px;
+          height: 24px;
+          padding-top: 0;
+          padding-bottom: 0;
+        }
+        .workbench-preview[data-workspace-navigation] [data-chat-empty-state] {
+          padding-top: 28px;
+        }
+        .workbench-preview[data-workspace-navigation] [data-preview-entity-header] > [data-entity-header-row] {
+          padding-top: 24px;
+          min-height: 76px;
+        }
+        .workbench-preview[data-workspace-navigation] [data-entity-header-identity]:not(:has([aria-label="Page location"])) {
+          padding-top: 18px;
         }
 
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] button[data-nav-depth],
@@ -278,6 +305,19 @@ export function WorkbenchStyles() {
         }
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] [data-nav-depth] > [data-nav-twisty-cell] {
           left: calc(12px + var(--nav-depth, 0) * 16px);
+        }
+
+        @media (pointer: fine) {
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth],
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth] > button:not([data-nav-twisty]) {
+            min-height: 28px;
+            padding-top: 2px;
+            padding-bottom: 2px;
+          }
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth] {
+            padding-top: 0;
+            padding-bottom: 0;
+          }
         }
 
         @media (pointer: coarse) {

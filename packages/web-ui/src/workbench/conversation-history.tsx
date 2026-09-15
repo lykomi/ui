@@ -4,7 +4,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "../index.ts";
+} from "../ui/dropdown-menu.tsx";
 import { Button, Input } from "@iloveagents/foundry-web-primitives";
 import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -16,9 +16,13 @@ import {
   Loader2,
   ChevronDown,
   Check,
-  History,
+  MessagesSquare,
+  PauseCircle,
+  Copy,
 } from "lucide-react";
-import type { NavGroup, NavItem } from "../index.ts";
+import type { NavGroup, NavItem } from "../lib/nav-config.ts";
+
+import { useChatRuns, isChatRunActive } from "../lib/chat-runs-store.ts";
 
 /** History is a view of existing navigation targets, never a second chat runtime. */
 export function ConversationHistory({
@@ -44,6 +48,7 @@ export function ConversationHistory({
   rootContext?: boolean;
 }) {
   const [loadingTo, setLoadingTo] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [all, setAll] = useState(!workspaceId);
   useEffect(() => setAll(!workspaceId), [workspaceId]);
@@ -56,28 +61,69 @@ export function ConversationHistory({
     groups
       .filter((g) => g.meta?.type === "recent-chats" || g.meta?.type === "pinned-chats")
       .flatMap((g) => g.items);
+  const runs = useChatRuns((s) => s.runs);
+  const runFor = (item: NavItem) => runs[item.to.split("/chat/")[1]?.split(/[?#]/)[0] ?? ""];
   const workspaceItems =
     all || !workspaceId
       ? allItems
       : ((scoped?.meta?.workspaceConversations as NavItem[] | undefined) ?? scoped?.items ?? []);
-  const scopedItems =
-    compact && workspaceId && !rootContext
-      ? workspaceItems.filter(
-          (item) => Boolean(entityId) && item.meta?.previewEntityId === entityId,
-        )
-      : workspaceItems;
-  const items = [...new Map(scopedItems.map((item) => [item.to, item])).values()]
-    .filter((item) => item.meta?.type !== "show-all-chats")
+  // In-memory runs appear immediately, before the server refreshes its nav rows.
+  // A persisted title/actions win, while the live run owns its current location.
+  const merged = new Map(workspaceItems.map((item) => [item.to, item]));
+  for (const run of Object.values(runs)) {
+    const to = `/chat/${encodeURIComponent(run.threadId)}`;
+    const saved = allItems.find((item) => item.to === to);
+    if (saved && !isChatRunActive(run)) continue;
+    if (!all && workspaceId && run.contextMeta?.spacesRootId !== workspaceId) {
+      merged.delete(to);
+      continue;
+    }
+    merged.set(to, {
+      ...saved,
+      to,
+      label: saved?.label ?? run.title,
+      icon: MessageSquare,
+      meta: {
+        ...saved?.meta,
+        previewEntityId: run.contextMeta?.spacesEntityId,
+        previewEntityName: run.pageLabel,
+      },
+    });
+  }
+  const items = [...merged.values()]
+    .filter(
+      (item) =>
+        !(compact && workspaceId && !rootContext) ||
+        (Boolean(entityId) && item.meta?.previewEntityId === entityId),
+    )
+    .filter((item) => !["show-all-chats", "no-chats-placeholder"].includes(String(item.meta?.type)))
     .filter((item) => item.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
-    .sort((a, b) => Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned)));
+    .sort((a, b) => {
+      const active = (item: NavItem) => {
+        const run = runFor(item);
+        return run && isChatRunActive(run) ? 1 : 0;
+      };
+      return (
+        active(b) - active(a) || Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned))
+      );
+    });
   const visibleItems = compact ? items.slice(0, 3) : items;
-  const pinnedItems = visibleItems.filter((item) => item.meta?.pinned);
-  const sections = pinnedItems.length
-    ? [
+  const activeItems = visibleItems.filter((item) => {
+    const run = runFor(item);
+    return run && isChatRunActive(run);
+  });
+  const idleItems = visibleItems.filter((item) => !activeItems.includes(item));
+  const pinnedItems = idleItems.filter((item) => item.meta?.pinned);
+  const sections = compact
+    ? [{ label: "", items: visibleItems }]
+    : [
+        { label: "Running", items: activeItems },
         { label: "Pinned", items: pinnedItems },
-        { label: "Recent chats", items: visibleItems.filter((item) => !item.meta?.pinned) },
-      ]
-    : [{ label: "", items: visibleItems }];
+        {
+          label: activeItems.length || pinnedItems.length ? "Recent chats" : "",
+          items: idleItems.filter((item) => !item.meta?.pinned),
+        },
+      ];
   return (
     <section
       data-conversation-history
@@ -159,6 +205,9 @@ export function ConversationHistory({
           className="mb-3"
         />
       )}
+      <span className="sr-only" role="status">
+        {copiedId ? "Chat ID copied" : ""}
+      </span>
       {loadError && (
         <p role="alert" className="mb-2 text-xs text-destructive">
           {loadError}
@@ -227,6 +276,13 @@ export function ConversationHistory({
                           className="size-4 shrink-0 animate-spin text-muted-foreground"
                           aria-label="Opening chat"
                         />
+                      ) : runFor(item)?.status === "running" ? (
+                        <Loader2
+                          className="size-4 shrink-0 animate-spin text-primary motion-reduce:animate-none"
+                          aria-hidden
+                        />
+                      ) : runFor(item)?.status === "waiting" ? (
+                        <PauseCircle className="size-4 shrink-0 text-primary" aria-hidden />
                       ) : item.meta?.pinned ? (
                         <Pin
                           className="size-4 shrink-0 text-muted-foreground"
@@ -237,25 +293,31 @@ export function ConversationHistory({
                       )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate">{item.label}</span>{" "}
-                        {(!compact || rootContext) && (
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {!all &&
-                            typeof item.meta?.previewEntityName === "string" &&
-                            item.meta.previewEntityName
-                              ? `Last at ${item.meta.previewEntityName}`
-                              : !all
-                                ? "Last in this workspace"
-                                : typeof item.meta?.previewSpaceName === "string" &&
-                                    item.meta.previewSpaceName
-                                  ? `Last in ${item.meta.previewSpaceName}`
-                                  : item.meta?.previewContextUnavailable
-                                    ? "Location unavailable"
-                                    : "Last outside a workspace"}
+                        {runFor(item) && isChatRunActive(runFor(item)!) ? (
+                          <span className="block text-xs text-primary">
+                            {runFor(item)?.status === "waiting" ? "Waiting for you" : "Running"}
                           </span>
+                        ) : (
+                          (!compact || rootContext) && (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {!all &&
+                              typeof item.meta?.previewEntityName === "string" &&
+                              item.meta.previewEntityName
+                                ? `Last at ${item.meta.previewEntityName}`
+                                : !all
+                                  ? "Last in this workspace"
+                                  : typeof item.meta?.previewSpaceName === "string" &&
+                                      item.meta.previewSpaceName
+                                    ? `Last in ${item.meta.previewSpaceName}`
+                                    : item.meta?.previewContextUnavailable
+                                      ? "Location unavailable"
+                                      : "Last outside a workspace"}
+                            </span>
+                          )
                         )}
                       </span>
                     </Link>
-                    {Boolean(item.actions?.length) && (
+                    {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -267,6 +329,28 @@ export function ConversationHistory({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              const id = item.to.split("/chat/")[1]?.split(/[?#]/)[0];
+                              if (!id) return;
+                              void Promise.resolve()
+                                .then(() => navigator.clipboard.writeText(decodeURIComponent(id)))
+                                .then(() => {
+                                  setCopiedId(id);
+                                  setLoadError(null);
+                                })
+                                .catch(() =>
+                                  setLoadError(
+                                    `Could not copy. Chat ID: ${decodeURIComponent(id)}`,
+                                  ),
+                                );
+                            }}
+                          >
+                            <Copy className="size-4" />
+                            Copy chat ID
+                          </DropdownMenuItem>
+                          {Boolean(item.actions?.length) && <DropdownMenuSeparator />}
+
                           {item.actions?.map((action) => (
                             <Fragment key={action.label}>
                               {action.separator && <DropdownMenuSeparator />}
@@ -283,7 +367,7 @@ export function ConversationHistory({
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    )}
+                    }
                   </div>
                 ),
               )}
@@ -302,7 +386,7 @@ export function ConversationHistory({
           onClick={onViewAll}
           className="mt-1 h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
         >
-          <History className="size-4" aria-hidden />
+          <MessagesSquare className="size-4" aria-hidden />
           Conversation history
         </Button>
       )}

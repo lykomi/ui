@@ -420,11 +420,16 @@ describe("layout preview", () => {
       items: [],
       meta: { type: "recent-chats", workspaceId: "w1" },
     };
-    const activity = { label: "Activity", items: [] };
+    const activity = {
+      label: "Activity",
+      items: [{ label: "Activity", to: "/tasks?workspace=w1", icon: Folder }],
+      meta: { showInWorkspaceNavigation: true },
+    };
     state.groups = [activity, workspace, recent];
     const { rerender } = render(<WorkbenchPreview page={<Editor />} />);
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
-      expect.objectContaining({ label: "Spaces", items: [{ ...root, children: undefined }] }),
+      expect.objectContaining({ label: "All spaces", items: [{ ...root, children: undefined }] }),
+      expect.objectContaining({ ...activity, priority: 900 }),
       expect.objectContaining({ label: "Content", items: [child] }),
     ]);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);

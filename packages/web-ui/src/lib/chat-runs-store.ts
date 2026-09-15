@@ -1,0 +1,157 @@
+import { create } from "zustand";
+import { streamingStatusStore, type StreamingStatus } from "@iloveagents/foundry-agent";
+
+export type ChatRunStatus = "running" | "waiting" | "completed" | "failed" | "cancelled";
+export interface ChatRun {
+  threadId: string;
+  title: string;
+  pageLabel?: string;
+  /** Navigation snapshot at run start, interpreted by the owning feature module. */
+  contextMeta?: Record<string, unknown>;
+  status: ChatRunStatus;
+  startedAt: number;
+  finishedAt?: number;
+  error?: string;
+  stop: () => void;
+}
+
+export const isChatRunActive = (run: ChatRun) =>
+  run.status === "running" || run.status === "waiting";
+
+/** Browser-session activity. Message persistence remains owned by the history adapter. */
+export const useChatRuns = create<{
+  foregroundId: string | null;
+  runs: Record<string, ChatRun>;
+}>(() => ({ foregroundId: null, runs: {} }));
+
+const signals = new Map<
+  string,
+  {
+    streamingStatus: StreamingStatus;
+    runStartedAt: number | null;
+    lastSignalAt: number | null;
+  }
+>();
+
+export function isForegroundChat(threadId: string) {
+  const foreground = useChatRuns.getState().foregroundId;
+  return foreground === null || foreground === threadId;
+}
+
+export function selectChatRun(threadId: string) {
+  useChatRuns.setState({ foregroundId: threadId });
+  streamingStatusStore.setState(
+    signals.get(threadId) ?? {
+      streamingStatus: { status: "idle" },
+      runStartedAt: null,
+      lastSignalAt: null,
+    },
+  );
+}
+
+export function beginChatRun(run: Omit<ChatRun, "status" | "startedAt">) {
+  const startedAt = Date.now();
+  useChatRuns.setState((s) => ({
+    runs: {
+      ...s.runs,
+      [run.threadId]: { ...run, status: "running", startedAt },
+    },
+  }));
+  signals.set(run.threadId, {
+    streamingStatus: { status: "thinking" },
+    runStartedAt: startedAt,
+    lastSignalAt: startedAt,
+  });
+  touchChatRun(run.threadId);
+}
+
+export function touchChatRun(threadId: string, status?: StreamingStatus) {
+  const previous = signals.get(threadId);
+  if (!previous) return;
+  const next = {
+    ...previous,
+    lastSignalAt: Date.now(),
+    ...(status ? { streamingStatus: status } : {}),
+  };
+  signals.set(threadId, next);
+  if (isForegroundChat(threadId)) streamingStatusStore.setState(next);
+}
+
+export function updateChatRun(threadId: string, status: ChatRunStatus, error?: string) {
+  useChatRuns.setState((s) => {
+    const run = s.runs[threadId];
+    if (!run) return s;
+    return {
+      runs: {
+        ...s.runs,
+        [threadId]: {
+          ...run,
+          status,
+          ...(error ? { error } : {}),
+          ...(["completed", "failed", "cancelled"].includes(status)
+            ? { finishedAt: Date.now() }
+            : {}),
+        },
+      },
+    };
+  });
+  if (status !== "running" && status !== "waiting") {
+    signals.delete(threadId);
+    if (isForegroundChat(threadId))
+      streamingStatusStore.setState({
+        streamingStatus: { status: "idle" },
+        runStartedAt: null,
+        lastSignalAt: null,
+      });
+  }
+}
+
+/** Browser tools need the conversation in front, so they cannot act on another chat's page. */
+export async function waitForForegroundChat(threadId: string, signal: AbortSignal) {
+  signal.throwIfAborted();
+  if (isForegroundChat(threadId)) return;
+  updateChatRun(threadId, "waiting");
+  await new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      unsubscribe();
+      signal.removeEventListener("abort", aborted);
+    };
+    const aborted = () => {
+      cleanup();
+      reject(signal.reason ?? new DOMException("Stopped", "AbortError"));
+    };
+    const unsubscribe = useChatRuns.subscribe(() => {
+      if (isForegroundChat(threadId)) {
+        cleanup();
+        resolve();
+      }
+    });
+    signal.addEventListener("abort", aborted, { once: true });
+    if (signal.aborted) aborted();
+    else if (isForegroundChat(threadId)) {
+      cleanup();
+      resolve();
+    }
+  });
+  updateChatRun(threadId, "running");
+}
+
+export function warnBeforeChatUnload(event: BeforeUnloadEvent) {
+  if (!Object.values(useChatRuns.getState().runs).some(isChatRunActive)) return;
+  event.preventDefault();
+  event.returnValue = "";
+}
+
+/** Dispose browser-owned runs when the authenticated runtime is torn down. */
+export function disposeChatRuns() {
+  for (const run of Object.values(useChatRuns.getState().runs)) {
+    if (isChatRunActive(run)) run.stop();
+  }
+  signals.clear();
+  useChatRuns.setState({ foregroundId: null, runs: {} });
+  streamingStatusStore.setState({
+    streamingStatus: { status: "idle" },
+    runStartedAt: null,
+    lastSignalAt: null,
+  });
+}

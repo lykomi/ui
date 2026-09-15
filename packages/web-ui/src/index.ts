@@ -301,3 +301,5 @@ export { AuthProvider } from "./lib/auth-provider.tsx";
 // utility — banned per the "no shims" pre-1.0 rule (#90).
 
 export { createUiId } from "./lib/create-ui-id.ts";
+
+export { useChatRuns, isChatRunActive, type ChatRun } from "./lib/chat-runs-store.ts";

@@ -10,7 +10,7 @@ import {
   useNavStore,
   useAppStore,
 } from "../index.ts";
-import { History, Settings, Layers } from "lucide-react";
+import { MessagesSquare, Settings, Layers } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
 import type { NavItem } from "../lib/nav-config.ts";
 
@@ -43,13 +43,16 @@ function useWorkbenchNavigation() {
       return [
         {
           ...space,
-          label: "Spaces",
+          label: "All spaces",
           icon: Layers,
           priority: 1000,
           items: root
             ? [{ ...root, children: root.childrenHidden ? root.children : undefined }]
             : space.items,
         },
+        ...navGroups
+          .filter((group) => group.meta?.showInWorkspaceNavigation)
+          .map((group) => ({ ...group, priority: 900 })),
         {
           label: "Content",
           tree: true,
@@ -65,7 +68,7 @@ function useWorkbenchNavigation() {
         .filter((group) => !["recent-chats", "pinned-chats"].includes(String(group.meta?.type)))
         .map((group) =>
           group.meta?.type === "spaces-workspaces"
-            ? { ...group, label: "Spaces", icon: Layers }
+            ? { ...group, label: "All spaces", icon: Layers }
             : group.label === "Admin"
               ? { ...group, icon: Settings }
               : group.label === "Activity"
@@ -134,7 +137,7 @@ export function useWorkbenchState(chatRoute: boolean) {
       onClick={openHistory}
       className="h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
     >
-      <History className="size-4" aria-hidden />
+      <MessagesSquare className="size-4" aria-hidden />
       Conversation history
     </Button>
   );

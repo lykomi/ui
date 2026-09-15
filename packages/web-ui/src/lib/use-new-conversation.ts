@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
-import { useAui } from "@assistant-ui/react";
 import { useStore } from "zustand";
 import { citationStore } from "@iloveagents/foundry-agent";
 import { useAGUIAdapter } from "../components/ag-ui-runtime-provider.tsx";
@@ -17,7 +16,6 @@ export function useNewConversation(options?: {
   navigateToChat?: boolean;
   preserveNavigation?: boolean;
 }) {
-  const aui = useAui();
   const { resetThread } = useAGUIAdapter();
   const navigate = useNavigate();
   const closePanel = useToolPanelStore((s) => s.closePanel);
@@ -49,7 +47,6 @@ export function useNewConversation(options?: {
     // where there is no ``/`` navigation to clear sticky for us.
     useChatLifecycleStore.getState().startNewConversation();
     resetThread();
-    aui.threads().switchToNewThread();
     if (options?.navigateToChat ?? true) {
       navigate("/");
     }
@@ -60,7 +57,6 @@ export function useNewConversation(options?: {
     closeMobile,
     clearCitations,
     resetThread,
-    aui,
     options?.navigateToChat,
     navigate,
   ]);

@@ -43,6 +43,7 @@ vi.mock("@iloveagents/foundry-agent", () => ({
     }),
   },
   streamingStatusStore: {
+    setState: () => {},
     getState: () => ({
       setStreamingStatus: () => {},
       touchSignal: () => {},
@@ -59,6 +60,7 @@ vi.mock("@iloveagents/foundry-agent/msal", () => ({
 vi.mock("../app-store.ts", () => ({
   useAppStore: {
     getState: () => ({
+      navContext: { label: "Test" },
       markThreadActive: () => {},
       getAgentState: () => appStoreMock.agentState,
       consumeContextForMessage: (messageId: string) => {
@@ -85,7 +87,7 @@ function makeRunInput() {
     messages: [
       { id: "u-1", role: "user" as const, content: [{ type: "text" as const, text: "hi" }] },
     ],
-    abortSignal: undefined as AbortSignal | undefined,
+    abortSignal: new AbortController().signal,
   };
 }
 
@@ -265,7 +267,7 @@ describe("AGUIAdapterSDK", () => {
           ],
         },
       ],
-      abortSignal: undefined,
+      abortSignal: new AbortController().signal,
     } as Parameters<AGUIAdapterSDK["run"]>[0])) {
       // Drain the adapter.
     }

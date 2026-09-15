@@ -126,7 +126,7 @@ describe("useNewConversation", () => {
     });
 
     expect(container.querySelector('[data-testid="location"]')?.textContent).toBe("/");
-    expect(switchToNewThread).toHaveBeenCalledTimes(1);
+    expect(switchToNewThread).not.toHaveBeenCalled();
     expect(resetThread).toHaveBeenCalledTimes(1);
     expect(useToolPanelStore.getState().isOpen).toBe(false);
     expect(useSidebarStore.getState().isMobileOpen).toBe(false);
@@ -158,7 +158,7 @@ describe("useNewConversation", () => {
     });
 
     expect(container.querySelector('[data-testid="location"]')?.textContent).toBe("/spaces/demo");
-    expect(switchToNewThread).toHaveBeenCalledTimes(1);
+    expect(switchToNewThread).not.toHaveBeenCalled();
     expect(resetThread).toHaveBeenCalledTimes(1);
     expect(useAppStore.getState().currentPage).toBe("/spaces/demo");
     expect(useAppStore.getState().navContext.label).toBe("Demo");
