@@ -17,6 +17,7 @@
  * @see https://www.assistant-ui.com/docs/runtimes/custom/local
  */
 
+import { mergeChatState } from "./merge-chat-state.ts";
 import type {
   ChatModelAdapter,
   ChatModelRunOptions,
@@ -50,6 +51,7 @@ interface ToolCallSnapshot {
 
 export class AGUIAdapterSDK implements ChatModelAdapter {
   private readonly runner: AGUIRunner;
+  private previousAppState?: Record<string, unknown>;
   private readonly conversationUrl?: string;
 
   constructor(
@@ -79,6 +81,15 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     // ephemeral context off the last user message.
     useAppStore.getState().markThreadActive();
     const appState = useAppStore.getState().getAgentState();
+    const projection = appState as unknown as Record<string, unknown>;
+    const requestState = mergeChatState(
+      this.runner.state && typeof this.runner.state === "object"
+        ? (this.runner.state as Record<string, unknown>)
+        : {},
+      this.previousAppState,
+      projection,
+    );
+    this.previousAppState = structuredClone(projection);
     const context = buildAGUIContext(appState);
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMsg) {
@@ -174,10 +185,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     try {
       for await (const event of this.runner.run({
         messages: aguiMessages,
-        state: {
-          ...(this.runner.state && typeof this.runner.state === "object" ? this.runner.state : {}),
-          ...appState,
-        } as unknown as Record<string, unknown>,
+        state: requestState,
         context,
         registry: {
           ...registry,
