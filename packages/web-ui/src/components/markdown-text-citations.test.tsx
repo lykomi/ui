@@ -12,28 +12,32 @@ describe("injectCitations", () => {
   beforeEach(() => {
     originalActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT;
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-    citationStore.getState().clear();
+    citationStore.getState().selectThread("test");
+    citationStore.getState().clear("test");
     linkStore.getState().clear();
-    citationStore.getState().setResults([
-      {
-        chunk_id: "chunk-1",
-        entity_id: "entity-1",
-        entity_name: "Document One",
-        content: "One",
-        page_number: 1,
-        bounding_regions: "[]",
-        score: 1,
-      },
-      {
-        chunk_id: "chunk-2",
-        entity_id: "entity-2",
-        entity_name: "Document Two",
-        content: "Two",
-        page_number: 2,
-        bounding_regions: "[]",
-        score: 1,
-      },
-    ]);
+    citationStore.getState().setResults(
+      [
+        {
+          chunk_id: "chunk-1",
+          entity_id: "entity-1",
+          entity_name: "Document One",
+          content: "One",
+          page_number: 1,
+          bounding_regions: "[]",
+          score: 1,
+        },
+        {
+          chunk_id: "chunk-2",
+          entity_id: "entity-2",
+          entity_name: "Document Two",
+          content: "Two",
+          page_number: 2,
+          bounding_regions: "[]",
+          score: 1,
+        },
+      ],
+      "test",
+    );
     citationStore.getState().setHandler({ openCitation: vi.fn() });
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -45,7 +49,8 @@ describe("injectCitations", () => {
       root.unmount();
     });
     container.remove();
-    citationStore.getState().clear();
+    citationStore.getState().selectThread("test");
+    citationStore.getState().clear("test");
     linkStore.getState().clear();
     globalThis.IS_REACT_ACT_ENVIRONMENT = originalActEnvironment;
   });

@@ -18,7 +18,7 @@ it("keeps background search results out of foreground citation links", () => {
   expect(citationStore.getState().results[0]?.entity_id).toBe("source-a");
   citationStore.getState().selectThread("b");
   expect(citationStore.getState().results[0]?.entity_id).toBe("source-b");
-  citationStore.getState().clear();
+  citationStore.getState().clear("b");
   citationStore.getState().selectThread("a");
   expect(citationStore.getState().results[0]?.entity_id).toBe("source-a");
 });

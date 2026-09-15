@@ -14,12 +14,12 @@ const mockResult: CitationResult = {
 
 describe("citationStore", () => {
   beforeEach(() => {
-    citationStore.setState({ results: [], handler: null });
+    citationStore.setState({ results: [], handler: null, threadId: "test", byThread: {} });
   });
 
   describe("setResults", () => {
     it("stores citation results", () => {
-      citationStore.getState().setResults([mockResult]);
+      citationStore.getState().setResults([mockResult], "test");
       expect(citationStore.getState().results).toEqual([mockResult]);
     });
   });
@@ -40,10 +40,10 @@ describe("citationStore", () => {
       // the first new-thread click, since the registration guard
       // suppresses re-binding for the rest of the session.
       const handler: CitationHandler = { openCitation: () => {} };
-      citationStore.getState().setResults([mockResult]);
+      citationStore.getState().setResults([mockResult], "test");
       citationStore.getState().setHandler(handler);
 
-      citationStore.getState().clear();
+      citationStore.getState().clear("test");
 
       expect(citationStore.getState().results).toEqual([]);
       expect(citationStore.getState().handler).toBe(handler);

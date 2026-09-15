@@ -26,7 +26,7 @@ interface CitationState {
   /** Optional handler for opening citations (registered by feature modules) */
   handler: CitationHandler | null;
   /** Store search results for citation resolution */
-  setResults: (results: CitationResult[], threadId?: string) => void;
+  setResults: (results: CitationResult[], threadId: string) => void;
   /** Register a handler for citation click actions */
   setHandler: (handler: CitationHandler) => void;
   /**
@@ -37,7 +37,7 @@ interface CitationState {
    * markers for the rest of the session, since the registration guard
    * (``registerOnce`` in spaces ``use-spaces-init``) suppresses re-binding.
    */
-  clear: (threadId?: string) => void;
+  clear: (threadId: string) => void;
 }
 
 /**
@@ -52,7 +52,7 @@ export const citationStore = createStore<CitationState>((set, get) => ({
   byThread: {},
   selectThread: (threadId) => set({ threadId, results: get().byThread[threadId] ?? [] }),
   handler: null,
-  setResults: (results, threadId = get().threadId ?? undefined) =>
+  setResults: (results, threadId) =>
     set((s) => ({
       ...(threadId ? { byThread: { ...s.byThread, [threadId]: results } } : {}),
       ...(!threadId || s.threadId === threadId ? { results } : {}),
