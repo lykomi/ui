@@ -94,7 +94,8 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
   useEffect(() => {
     const found = findNavItem(navConfig, pathname + search);
     const target = found?.item.to;
-    const page = target?.split("?")[0] === pathname ? target : pathname;
+    const scope = target ? new URL(target, "http://navigation.local").search : "";
+    const page = pathname + scope;
     if (previousContextPage.current === page && previousContextConfig.current === navConfig) return;
     previousContextConfig.current = navConfig;
     previousContextPage.current = page;

@@ -74,6 +74,20 @@ export function selectChatRun(threadId: string) {
   );
 }
 
+/** Call after a successful conversation deletion so session activity cannot restore it. */
+export function removeChatRun(threadId: string) {
+  const run = useChatRuns.getState().runs[threadId];
+  if (run && isChatRunActive(run)) run.stop();
+  useChatRuns.setState((state) => {
+    const runs = { ...state.runs };
+    delete runs[threadId];
+    return { runs };
+  });
+  signals.delete(threadId);
+  agentStates.delete(threadId);
+  appProjections.delete(threadId);
+}
+
 export function beginChatRun(run: Omit<ChatRun, "status" | "startedAt">) {
   const startedAt = Date.now();
   useChatRuns.setState((s) => ({

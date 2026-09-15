@@ -76,7 +76,7 @@ export function ConversationHistory({
   for (const run of Object.values(runs)) {
     const to = run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`;
     const saved = allItems.find((item) => item.to === to);
-    if (!isChatRunActive(run)) continue;
+    if (saved && !isChatRunActive(run)) continue;
     if (!all && workspaceId && !merged.has(to) && run.contextMeta?.spacesRootId !== workspaceId) {
       merged.delete(to);
       continue;

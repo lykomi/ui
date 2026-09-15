@@ -4,7 +4,12 @@ import { MemoryRouter } from "react-router";
 import { MessageSquare } from "lucide-react";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { ConversationHistory } from "./conversation-history.tsx";
-import { beginChatRun, updateChatRun, disposeChatRuns } from "../lib/chat-runs-store.ts";
+import {
+  beginChatRun,
+  updateChatRun,
+  disposeChatRuns,
+  removeChatRun,
+} from "../lib/chat-runs-store.ts";
 import type { NavGroup, NavItem } from "../lib/nav-config.ts";
 let root: Root;
 let host: HTMLDivElement;
@@ -91,10 +96,12 @@ it("keeps the persisted title and location after a run finishes, without duplica
   expect(host.textContent).toContain("Saved saved");
 });
 
-it("does not resurrect a terminal chat absent from persisted history", async () => {
+it("keeps new completions visible but removes successfully deleted chats", async () => {
   begin("deleted", "workspace");
   updateChatRun("deleted", "completed");
   await render(false);
+  expect(host.querySelector('a[href="/chat/deleted"]')).not.toBeNull();
+  await act(async () => removeChatRun("deleted"));
   expect(host.querySelector('a[href="/chat/deleted"]')).toBeNull();
   expect(host.textContent).toContain("Saved saved");
 });

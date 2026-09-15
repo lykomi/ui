@@ -306,4 +306,9 @@ export { AuthProvider } from "./lib/auth-provider.tsx";
 
 export { createUiId } from "./lib/create-ui-id.ts";
 
-export { useChatRuns, isChatRunActive, type ChatRun } from "./lib/chat-runs-store.ts";
+export {
+  useChatRuns,
+  isChatRunActive,
+  removeChatRun,
+  type ChatRun,
+} from "./lib/chat-runs-store.ts";

@@ -10,3 +10,5 @@ Keep running conversations alive when starting or opening another chat, expose t
 Unify composer context in the With menu, including selected items, removable references, and pins. Preserve scoped navigation context when list filters change.
 
 Citation writes and clears now require the emitting conversation ID. The shell retains visited conversation configurations and supports configured conversation URLs.
+
+Conversation deletion handlers should call `removeChatRun(threadId)` after successful deletion to remove retained browser-session activity.
