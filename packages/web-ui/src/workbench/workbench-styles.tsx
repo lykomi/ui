@@ -231,10 +231,10 @@ export function WorkbenchStyles() {
         }
         .workbench-preview [data-conversation-row],
         .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth] {
-          min-height: 36px;
-          padding-top: 6px;
-          padding-bottom: 6px;
-          gap: 10px;
+          min-height: 32px;
+          padding-top: 4px;
+          padding-bottom: 4px;
+          gap: 8px;
           border-radius: 8px;
         }
         .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth="0"] {
@@ -252,8 +252,8 @@ export function WorkbenchStyles() {
         }
         .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] > button:not([data-nav-twisty]) {
           padding-left: 12px;
-          min-height: 36px;
-          gap: 10px;
+          min-height: 32px;
+          gap: 8px;
         }
         [data-workspace-navigation] [data-nav-group-label="Spaces"] > :first-child,
         .workbench-preview [data-sidebar-surface] nav > [data-nav-group-label]:first-child > div:has(> [data-nav-group-header]) {
