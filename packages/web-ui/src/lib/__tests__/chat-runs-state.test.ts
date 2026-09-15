@@ -1,6 +1,11 @@
 import { afterEach, expect, it } from "vitest";
 import { agentStateStore } from "@iloveagents/foundry-agent";
-import { disposeChatRuns, publishChatAgentState, selectChatRun } from "../chat-runs-store.ts";
+import {
+  disposeChatRuns,
+  publishChatAgentState,
+  selectChatRun,
+  removeChatRun,
+} from "../chat-runs-store.ts";
 
 afterEach(() => {
   disposeChatRuns();
@@ -18,5 +23,17 @@ it("restores state received by a background conversation without leaking it into
   expect(agentStateStore.getState().state).toEqual({ value: 3 });
   expect(agentStateStore.getState().lastPatch).toHaveLength(1);
   selectChatRun("fresh");
+  expect(agentStateStore.getState().state).toBeNull();
+});
+
+it("clears a deleted foreground projection but preserves another conversation's state", () => {
+  selectChatRun("a");
+  publishChatAgentState("a", { value: "a" });
+  publishChatAgentState("b", { value: "b" });
+  removeChatRun("b");
+  expect(agentStateStore.getState().state).toEqual({ value: "a" });
+  removeChatRun("a");
+  expect(agentStateStore.getState().state).toBeNull();
+  publishChatAgentState("a", { value: "late" });
   expect(agentStateStore.getState().state).toBeNull();
 });

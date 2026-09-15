@@ -89,6 +89,14 @@ export function removeChatRun(threadId: string) {
   signals.delete(threadId);
   agentStates.delete(threadId);
   appProjections.delete(threadId);
+  if (useChatRuns.getState().foregroundId === threadId) {
+    agentStateStore.getState().reset();
+    streamingStatusStore.setState({
+      streamingStatus: { status: "idle" },
+      runStartedAt: null,
+      lastSignalAt: null,
+    });
+  }
 }
 
 export function beginChatRun(run: Omit<ChatRun, "status" | "startedAt">) {
