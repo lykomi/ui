@@ -285,6 +285,9 @@ export function WorkbenchStyles() {
           .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth] {
             min-height: 44px;
           }
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth] > button:not([data-nav-twisty]) {
+            min-height: 44px;
+          }
         }
       `}</style>
   );

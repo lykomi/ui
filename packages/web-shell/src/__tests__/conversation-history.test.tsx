@@ -121,6 +121,8 @@ it("shows workspace recents at a root and only exact entity recents elsewhere", 
   );
   expect(screen.getByText("Workspace planning")).toBeTruthy();
   expect(screen.getByText("Task review")).toBeTruthy();
+  expect(screen.getByText("Last at Workspace")).toBeTruthy();
+  expect(screen.getByText("Last at Task")).toBeTruthy();
 
   view.rerender(
     <MemoryRouter>
