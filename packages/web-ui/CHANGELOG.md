@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.29.1
+
+### Patch Changes
+
+- f790326: Align compact chat homes with content panels, simplify recent conversations, and tighten desktop navigation trees.
+  - @iloveagents/foundry-agent@0.29.1
+  - @iloveagents/foundry-web-primitives@0.29.1
+
 ## 0.29.0
 
 ### Minor Changes
