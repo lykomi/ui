@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.8
+
+### Patch Changes
+
+- Publish refreshed template pins for Foundry 0.30.0, Graph 0.2.5, and Voice 0.1.10.
+
 ## 0.8.7
 
 ### Patch Changes
