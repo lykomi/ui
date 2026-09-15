@@ -38,6 +38,8 @@ import {
   touchChatRun,
   updateChatRun,
   isForegroundChat,
+  getChatStateSnapshot,
+  retainChatProjection,
   waitForForegroundChat,
 } from "./chat-runs-store.ts";
 
@@ -82,14 +84,17 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     useAppStore.getState().markThreadActive();
     const appState = useAppStore.getState().getAgentState();
     const projection = appState as unknown as Record<string, unknown>;
+    const retained = getChatStateSnapshot(this.threadId);
+    const serverState = retained.state ?? this.runner.state;
     const requestState = mergeChatState(
-      this.runner.state && typeof this.runner.state === "object"
-        ? (this.runner.state as Record<string, unknown>)
+      serverState && typeof serverState === "object"
+        ? (serverState as Record<string, unknown>)
         : {},
-      this.previousAppState,
+      this.previousAppState ?? retained.projection,
       projection,
     );
     this.previousAppState = structuredClone(projection);
+    retainChatProjection(this.threadId, projection);
     const context = buildAGUIContext(appState);
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMsg) {

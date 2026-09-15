@@ -32,6 +32,8 @@ const runnerMock = vi.fn().mockImplementation(() => ({
 }));
 
 vi.mock("@iloveagents/foundry-agent", () => ({
+  agentStateStore: { getState: () => ({ setAgentState: () => {} }) },
+  citationStore: { setState: () => {} },
   AGUIRunner: function AGUIRunnerCtor(...args: unknown[]) {
     return runnerMock(...args);
   },
@@ -81,6 +83,7 @@ vi.mock("../dev-store.ts", () => ({
   },
 }));
 
+import { disposeChatRuns, publishChatAgentState } from "../chat-runs-store.ts";
 import { AGUIAdapterSDK } from "../ag-ui-adapter.ts";
 
 function makeRunInput() {
@@ -94,6 +97,7 @@ function makeRunInput() {
 
 describe("AGUIAdapterSDK", () => {
   beforeEach(() => {
+    disposeChatRuns();
     runMock.mockReset();
     runnerMock.mockClear();
     appStoreMock.agentState = {
@@ -101,6 +105,28 @@ describe("AGUIAdapterSDK", () => {
       navigation: { contextInstructions: null },
     };
     appStoreMock.consumedMessageIds = [];
+  });
+
+  it("restores server state and the UI baseline when a runner is recreated", async () => {
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {
+      yield { type: "run-finished" };
+    });
+    const original = new AGUIAdapterSDK();
+    for await (const result of original.run(makeRunInput())) {
+      void result;
+    }
+    publishChatAgentState("thread-1", {
+      serverOnly: "retained",
+      navigation: { contextInstructions: "server update" },
+    });
+    const recreated = new AGUIAdapterSDK();
+    for await (const result of recreated.run(makeRunInput())) {
+      void result;
+    }
+    expect(runMock.mock.calls.at(-1)?.[0].state).toMatchObject({
+      serverOnly: "retained",
+      navigation: { contextInstructions: "server update" },
+    });
   });
 
   it("yields a terminal complete after a text-only run", async () => {

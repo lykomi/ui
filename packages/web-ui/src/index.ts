@@ -5,7 +5,11 @@ export { ToolPanel } from "./components/tool-panel.tsx";
 export { ToolPanelLayout } from "./components/tool-panel-layout.tsx";
 export { MarkdownText, markdownComponents } from "./components/markdown-text.tsx";
 export { ClientToolExecutor } from "./components/client-tool-executor.tsx";
-export { AGUIRuntimeProvider, useAGUIAdapter } from "./components/ag-ui-runtime-provider.tsx";
+export {
+  AGUIRuntimeProvider,
+  useAGUIAdapter,
+  useIsForegroundChat,
+} from "./components/ag-ui-runtime-provider.tsx";
 export type {
   AGUIChatConversationFactoryArgs,
   AGUIHistoryAdapterFactory,

@@ -18,7 +18,7 @@
 
 import { useEffect, useRef } from "react";
 import { useAuiState } from "@assistant-ui/react";
-import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
+import { useToolPanelStore, useIsForegroundChat } from "@iloveagents/foundry-web-ui";
 import { graphToolBindings } from "./graph-tool-registry.ts";
 import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
 import { mergeIntoOpenGraph } from "./merge-into-panel.ts";
@@ -108,6 +108,7 @@ export function seedableGraphResults(
  * in a reopened thread stays reachable that way.
  */
 export function GraphResultSeeder() {
+  const foreground = useIsForegroundChat();
   const messages = useAuiState((s) => s.thread.messages) as
     | readonly { parts?: readonly ToolishPart[] }[]
     | undefined;
@@ -136,6 +137,16 @@ export function GraphResultSeeder() {
         threadId,
         ids: new Set(seedableGraphResults(messages).map((result) => result.toolCallId)),
       };
+      return;
+    }
+
+    if (!foreground) {
+      // Background results remain available in their tool cards. Never replay
+      // their panel effects into whichever graph happens to be open later.
+      for (const result of seedableGraphResults(messages, current.ids)) {
+        current.ids.add(result.toolCallId);
+      }
+      deferred.current.clear();
       return;
     }
 
@@ -179,7 +190,7 @@ export function GraphResultSeeder() {
       current.ids.add(result.toolCallId);
       mergeIntoOpenGraph(result.payload);
     }
-  }, [messages, threadId, graphPanelOpen]);
+  }, [messages, threadId, graphPanelOpen, foreground]);
 
   return null;
 }

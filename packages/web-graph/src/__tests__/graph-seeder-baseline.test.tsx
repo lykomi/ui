@@ -19,6 +19,12 @@ vi.mock("@assistant-ui/react", async (importOriginal) => ({
   useAuiState: (selector: (s: unknown) => unknown) => selector({ thread }),
 }));
 
+const visibility = vi.hoisted(() => ({ foreground: true }));
+vi.mock("@iloveagents/foundry-web-ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@iloveagents/foundry-web-ui")>()),
+  useIsForegroundChat: () => visibility.foreground,
+}));
+
 const merged = vi.hoisted(() => ({ calls: [] as GraphPayload[] }));
 vi.mock("../assistant-ui/merge-into-panel.ts", () => ({
   mergeIntoOpenGraph: (payload: GraphPayload) => {
@@ -63,6 +69,7 @@ beforeEach(() => {
   document.body.appendChild(container);
   root = createRoot(container);
   merged.calls = [];
+  visibility.foreground = true;
   thread.messages = [];
   thread.threadId = "t1";
   // A merge needs somewhere to merge INTO, and that somewhere has to be a
@@ -90,6 +97,18 @@ afterEach(() => {
 });
 
 describe("GraphResultSeeder", () => {
+  it("never applies background results to the foreground graph, including after return", () => {
+    thread.messages = [{ parts: [] }];
+    render();
+    visibility.foreground = false;
+    thread.messages = [call("background", "a")];
+    render();
+    expect(merged.calls).toHaveLength(0);
+    visibility.foreground = true;
+    render();
+    expect(merged.calls).toHaveLength(0);
+  });
+
   it("holds a result back while the panel is closed, and applies it on reopen", () => {
     // Ask for an expansion, close the panel before the tool returns, reopen:
     // the merge had nothing to merge into, and marking the call handled anyway

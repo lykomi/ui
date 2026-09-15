@@ -103,6 +103,15 @@ export function useAGUIAdapter() {
   return context;
 }
 
+/** Whether this runtime owns visible UI effects; standalone consumers remain active. */
+export function useIsForegroundChat() {
+  const context = useContext(AGUIAdapterContext);
+  return useChatRuns(
+    (state) =>
+      !context || state.foregroundId === null || state.foregroundId === context.adapter.threadId,
+  );
+}
+
 let mountedProviders = 0;
 
 export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {

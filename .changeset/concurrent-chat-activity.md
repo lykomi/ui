@@ -1,5 +1,6 @@
 ---
 "@iloveagents/foundry-web-ui": minor
+"@iloveagents/foundry-web-graph": patch
 "@iloveagents/foundry-agent": minor
 "@iloveagents/foundry-web-shell": minor
 ---

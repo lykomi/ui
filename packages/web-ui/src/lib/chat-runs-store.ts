@@ -32,6 +32,14 @@ export const useChatRuns = create<{
 
 const agentStates = new Map<string, { state: unknown; patch?: unknown[] }>();
 
+const appProjections = new Map<string, Record<string, unknown>>();
+export function getChatStateSnapshot(threadId: string) {
+  return { state: agentStates.get(threadId)?.state, projection: appProjections.get(threadId) };
+}
+export function retainChatProjection(threadId: string, projection: Record<string, unknown>) {
+  appProjections.set(threadId, structuredClone(projection));
+}
+
 export function publishChatAgentState(threadId: string, state: unknown, patch?: unknown[]) {
   agentStates.set(threadId, { state, patch });
   if (isForegroundChat(threadId)) agentStateStore.getState().setAgentState(state, patch);
@@ -166,6 +174,7 @@ export function disposeChatRuns() {
   }
   signals.clear();
   agentStates.clear();
+  appProjections.clear();
   citationStore.setState({ results: [], byThread: {}, threadId: null });
   useChatRuns.setState({ foregroundId: null, runs: {} });
   streamingStatusStore.setState({
