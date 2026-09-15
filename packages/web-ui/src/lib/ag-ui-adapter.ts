@@ -123,6 +123,8 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       stop: () => stopController.abort(),
     });
     const registry = clientToolRegistry.getState();
+    const pageOwners = new Map(registry.listPageTools().map((tool) => [tool.name, tool]));
+    const ownerLocation = typeof window === "undefined" ? "" : window.location.href;
     const schemas = registry.getActiveSchemas();
     const advertised = new Set(schemas.map((tool) => tool.name));
 
@@ -194,32 +196,21 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
           executeTool: async (name, args) => {
             await waitForForegroundChat(this.threadId, runSignal);
             runSignal.throwIfAborted();
-            if (!clientToolRegistry.getState().isRegistered(name)) {
-              updateChatRun(this.threadId, "waiting");
-              await new Promise<void>((resolve, reject) => {
-                const cleanup = () => {
-                  unsubscribe();
-                  runSignal.removeEventListener("abort", aborted);
-                };
-                const aborted = () => {
-                  cleanup();
-                  reject(runSignal.reason);
-                };
-                const unsubscribe = clientToolRegistry.subscribe(() => {
-                  if (clientToolRegistry.getState().isRegistered(name)) {
-                    cleanup();
-                    resolve();
-                  }
+            const owner = pageOwners.get(name);
+            if (owner) {
+              const current = clientToolRegistry
+                .getState()
+                .listPageTools()
+                .find((tool) => tool.name === name);
+              if (
+                current !== owner ||
+                (typeof window !== "undefined" && window.location.href !== ownerLocation)
+              ) {
+                return JSON.stringify({
+                  error:
+                    "The page changed since this action was requested. Open the original page and request the action again.",
                 });
-                runSignal.addEventListener("abort", aborted, { once: true });
-                if (runSignal.aborted) aborted();
-                else if (clientToolRegistry.getState().isRegistered(name)) {
-                  cleanup();
-                  resolve();
-                }
-              });
-              await waitForForegroundChat(this.threadId, runSignal);
-              updateChatRun(this.threadId, "running");
+              }
             }
             return clientToolRegistry.getState().executeTool(name, args);
           },

@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
 } from "../ui/dropdown-menu.tsx";
 
-export function RunningChatsMenu() {
+export function RunningChatsMenu({ onOpen }: { onOpen?: () => void } = {}) {
   const runs = useChatRuns((s) => s.runs);
   const navigate = useNavigate();
   const active = Object.values(runs).filter(isChatRunActive);
@@ -31,9 +31,10 @@ export function RunningChatsMenu() {
         {active.map((run) => (
           <DropdownMenuItem
             key={run.threadId}
-            onSelect={() =>
-              navigate(run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`)
-            }
+            onSelect={() => {
+              navigate(run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`);
+              onOpen?.();
+            }}
           >
             {run.status === "waiting" ? (
               <PauseCircle className="size-4 shrink-0" />

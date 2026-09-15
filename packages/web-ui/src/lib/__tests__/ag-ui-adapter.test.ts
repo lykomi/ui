@@ -39,6 +39,7 @@ vi.mock("@iloveagents/foundry-agent", () => ({
     getState: () => ({
       isRegistered: (name: string) => name.startsWith("ui_"),
       executeTool: async () => "{}",
+      listPageTools: () => [],
       getActiveSchemas: () => [],
     }),
   },
