@@ -967,11 +967,23 @@ function matchesNavLocation(currentPage: string, target: string): boolean {
   );
 }
 
+function hasMoreSpecificNavMatch(currentPage: string, target: string): boolean {
+  const count = new URL(target, "http://navigation.local").searchParams.size;
+  const walk = (items: NavItem[]): boolean =>
+    items.some(
+      (item) =>
+        (matchesNavLocation(currentPage, item.to) &&
+          new URL(item.to, "http://navigation.local").searchParams.size > count) ||
+        walk(item.children ?? []),
+    );
+  return useNavStore.getState().config.some((group) => walk(group.items));
+}
+
 /** A list owns the sidebar selection of descendants it deliberately does not draw.
  * The route lookup still resolves the actual descendant for chat and page actions. */
 function isSelectedNavItem(currentPage: string, item: NavItem): boolean {
   return (
-    matchesNavLocation(currentPage, item.to) ||
+    (matchesNavLocation(currentPage, item.to) && !hasMoreSpecificNavMatch(currentPage, item.to)) ||
     Boolean(item.childrenHidden && isInSubtree(currentPage, item))
   );
 }
@@ -1328,7 +1340,7 @@ function CollapsibleNavItem({
       data-nav-depth={0}
       to={item.to}
       onClick={(event) => {
-        if (!isActive) return;
+        if (!isActive || !matchesNavLocation(currentPath, item.to)) return;
         event.preventDefault();
         useSidebarStore.getState().closeMobile();
       }}
@@ -2067,7 +2079,7 @@ function SidebarContent({
                         to: it.to,
                         label: it.label,
                         icon: it.icon,
-                        isActive: matchesNavLocation(currentPage, it.to),
+                        isActive: isSelectedNavItem(currentPage, it),
                       }));
                   return { group, groupIndex, items };
                 })

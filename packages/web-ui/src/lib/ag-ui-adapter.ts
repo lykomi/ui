@@ -174,7 +174,10 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     try {
       for await (const event of this.runner.run({
         messages: aguiMessages,
-        state: appState as unknown as Record<string, unknown>,
+        state: {
+          ...(this.runner.state && typeof this.runner.state === "object" ? this.runner.state : {}),
+          ...appState,
+        } as unknown as Record<string, unknown>,
         context,
         registry: {
           ...registry,

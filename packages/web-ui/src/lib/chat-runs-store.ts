@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   agentStateStore,
+  citationStore,
   streamingStatusStore,
   type StreamingStatus,
 } from "@iloveagents/foundry-agent";
@@ -52,6 +53,7 @@ export function isForegroundChat(threadId: string) {
 
 export function selectChatRun(threadId: string) {
   useChatRuns.setState({ foregroundId: threadId });
+  citationStore.getState().selectThread(threadId);
   const stored = agentStates.get(threadId);
   if (stored) agentStateStore.getState().setAgentState(stored.state, stored.patch);
   else agentStateStore.getState().reset();
@@ -164,6 +166,7 @@ export function disposeChatRuns() {
   }
   signals.clear();
   agentStates.clear();
+  citationStore.setState({ results: [], byThread: {}, threadId: null });
   useChatRuns.setState({ foregroundId: null, runs: {} });
   streamingStatusStore.setState({
     streamingStatus: { status: "idle" },

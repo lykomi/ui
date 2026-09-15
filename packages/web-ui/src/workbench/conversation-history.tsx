@@ -334,10 +334,16 @@ export function ConversationHistory({
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onSelect={() => {
-                              const id = item.to.split("/chat/")[1]?.split(/[?#]/)[0];
-                              if (!id) return;
+                              const rawId =
+                                runFor(item)?.threadId ??
+                                item.meta?.conversationId ??
+                                item.to.split("/chat/")[1]?.split(/[?#]/)[0];
+                              if (typeof rawId !== "string" || !rawId) return;
+                              const id = rawId;
                               void Promise.resolve()
-                                .then(() => navigator.clipboard.writeText(decodeURIComponent(id)))
+                                .then(() =>
+                                  navigator.clipboard.writeText(decodeURIComponent(String(id))),
+                                )
                                 .then(() => {
                                   setCopiedId(id);
                                   setLoadError(null);

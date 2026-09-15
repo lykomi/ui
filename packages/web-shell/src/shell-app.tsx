@@ -1,5 +1,5 @@
 import { useFreshConversationId } from "./use-fresh-conversation-id.ts";
-import { type ReactNode, Suspense, useCallback, useEffect, useMemo } from "react";
+import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { AGUIRuntimeProvider } from "@iloveagents/foundry-web-ui";
 import type {
@@ -181,6 +181,9 @@ function ChatConversationAwareRuntime({
     return { config: configs[0], urlMatch: undefined as string | undefined };
   }, [pathname, configs]);
 
+  const [visited, setVisited] = useState(() => new Set(config ? [config] : []));
+  if (config && !visited.has(config)) setVisited(new Set([...visited, config]));
+
   if (!config) {
     // No chatConversation configs registered → legacy in-memory
     // runtime, no history / no sticky concerns.
@@ -195,21 +198,24 @@ function ChatConversationAwareRuntime({
   // remain in separate keyed components, without tearing down active runs.
   return (
     <>
-      {configs.map((entry, index) => {
-        const common = {
-          config: entry,
-          active: entry === config,
-          urlMatch: entry === config ? urlMatch : undefined,
-          fetchFn,
-          toolUIs,
-          children,
-        };
-        return entry.useStickyConversationId ? (
-          <StickyAwareRuntime key={index} {...common} useSticky={entry.useStickyConversationId} />
-        ) : (
-          <UrlOnlyRuntime key={index} {...common} />
-        );
-      })}
+      {configs
+        .filter((entry) => visited.has(entry) || entry === config)
+        .map((entry) => {
+          const index = configs.indexOf(entry);
+          const common = {
+            config: entry,
+            active: entry === config,
+            urlMatch: entry === config ? urlMatch : undefined,
+            fetchFn,
+            toolUIs,
+            children,
+          };
+          return entry.useStickyConversationId ? (
+            <StickyAwareRuntime key={index} {...common} useSticky={entry.useStickyConversationId} />
+          ) : (
+            <UrlOnlyRuntime key={index} {...common} />
+          );
+        })}
     </>
   );
 }
@@ -328,7 +334,10 @@ function RuntimeBody({
   //      sticky and no URL match. Pre-minted so the runtime's
   //      ``threadId`` is defined from the first render (no
   //      ``undefined → defined`` remount of assistant-ui).
-  const effectiveThreadId: string = urlMatch ?? sticky ?? freshId;
+  const selectedThreadId = urlMatch ?? sticky ?? freshId;
+  const retainedThread = useRef(selectedThreadId);
+  if (active) retainedThread.current = selectedThreadId;
+  const effectiveThreadId = retainedThread.current;
 
   const historyAdapterFactory = useCallback<AGUIHistoryAdapterFactory>(
     (args: AGUIChatConversationFactoryArgs) =>
