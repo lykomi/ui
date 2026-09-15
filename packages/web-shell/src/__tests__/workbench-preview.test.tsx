@@ -15,6 +15,9 @@ const state = vi.hoisted(() => ({
   navContext: { label: "Document", meta: {} as Record<string, unknown> },
   sidebar: vi.fn(),
 }));
+vi.mock("../../../web-ui/dist/components/ag-ui-runtime-provider.js", () => ({
+  useAGUIAdapter: () => ({ selectRetainedThread: () => false }),
+}));
 vi.mock("@assistant-ui/react", () => ({
   useAuiState: (select: (s: unknown) => unknown) =>
     select({

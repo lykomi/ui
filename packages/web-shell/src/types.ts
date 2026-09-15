@@ -38,7 +38,9 @@ export interface ChatConversationFactoryArgs {
 export interface ChatConversationConfig {
   /**
    * Regex with exactly one capture group that yields the conversation
-   * id from ``window.location.pathname``. Example:
+   * id from ``window.location.pathname``. IDs are global AG-UI thread identities
+   * within a shell, including across modules; independent conversations must
+   * use distinct IDs (for example UUIDs), not module-local sequence numbers. Example:
    * ``/^\/chat\/([^/]+)$/``.
    */
   pathPattern: RegExp;

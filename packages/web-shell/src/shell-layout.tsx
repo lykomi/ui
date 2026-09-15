@@ -1,4 +1,4 @@
-import { type ReactNode, lazy, Suspense, useEffect, useState } from "react";
+import { type ReactNode, lazy, Suspense, useEffect, useState, useRef } from "react";
 import { Outlet, useLocation } from "react-router";
 import {
   Sidebar,
@@ -89,10 +89,14 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navConfig = useNavStore((s) => s.config);
 
+  const previousContextPage = useRef<string | null>(null);
   useEffect(() => {
     const found = findNavItem(navConfig, pathname + search);
     const target = found?.item.to;
-    setCurrentPage(target?.split("?")[0] === pathname ? target : pathname);
+    const page = target?.split("?")[0] === pathname ? target : pathname;
+    if (previousContextPage.current === page) return;
+    previousContextPage.current = page;
+    setCurrentPage(page);
     const mergedInstructions = [found?.groupInstructions, found?.item.contextInstructions]
       .filter(Boolean)
       .join("\n");

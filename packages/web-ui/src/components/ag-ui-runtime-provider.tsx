@@ -90,6 +90,7 @@ interface AGUIRuntimeProviderProps {
 interface AGUIContextValue {
   adapter: AGUIAdapterSDK;
   resetThread: () => void;
+  selectRetainedThread: (threadId: string) => boolean;
 }
 
 const AGUIAdapterContext = createContext<AGUIContextValue | null>(null);
@@ -102,13 +103,20 @@ export function useAGUIAdapter() {
   return context;
 }
 
+let mountedProviders = 0;
+
 export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
-  const [freshId, setFreshId] = useState(() => crypto.randomUUID());
+  const [freshId, setFreshId] = useState<string>(() => crypto.randomUUID());
   const id = props.threadId ?? freshId;
   // Hosts with stable ids advance the id through the lifecycle callback.
   const resetThread = useCallback(() => {
     if (!props.threadId) setFreshId(crypto.randomUUID());
   }, [props.threadId]);
+  const selectRetainedThread = (threadId: string) => {
+    if (props.threadId) return false;
+    setFreshId(threadId);
+    return true;
+  };
   const [sessions, setSessions] = useState(() => [{ ...props, threadId: id }]);
   if (!sessions.some((session) => session.threadId === id)) {
     const runs = useChatRuns.getState().runs;
@@ -130,16 +138,25 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
     if (props.active !== false) selectChatRun(id);
   }, [id, props.active]);
   useEffect(() => {
+    mountedProviders++;
     window.addEventListener("beforeunload", warnBeforeChatUnload);
     return () => {
       window.removeEventListener("beforeunload", warnBeforeChatUnload);
-      disposeChatRuns();
+      mountedProviders--;
+      queueMicrotask(() => {
+        if (mountedProviders === 0) disposeChatRuns();
+      });
     };
   }, []);
   return (
     <>
       {sessions.map((session) => (
-        <AGUIRuntimeInner key={session.threadId} {...session} resetThread={resetThread}>
+        <AGUIRuntimeInner
+          key={session.threadId}
+          {...session}
+          resetThread={resetThread}
+          selectRetainedThread={selectRetainedThread}
+        >
           {session.headlessChildren}
           {props.active !== false && session.threadId === id ? props.children : null}
         </AGUIRuntimeInner>
@@ -155,8 +172,12 @@ function AGUIRuntimeInner({
   urlMatch,
   historyAdapterFactory,
   resetThread,
+  selectRetainedThread,
   conversationUrl,
-}: AGUIRuntimeProviderProps & { resetThread: () => void }) {
+}: AGUIRuntimeProviderProps & {
+  resetThread: () => void;
+  selectRetainedThread: (threadId: string) => boolean;
+}) {
   const adapter = useMemo(
     () =>
       new AGUIAdapterSDK(
@@ -213,7 +234,7 @@ function AGUIRuntimeInner({
   });
 
   return (
-    <AGUIAdapterContext.Provider value={{ adapter, resetThread }}>
+    <AGUIAdapterContext.Provider value={{ adapter, resetThread, selectRetainedThread }}>
       <AssistantRuntimeProvider runtime={runtime}>
         <TooltipProvider>
           {children && <ShowDocumentToolUI />}

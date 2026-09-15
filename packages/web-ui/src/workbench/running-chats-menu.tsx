@@ -1,3 +1,4 @@
+import { useAGUIAdapter } from "../components/ag-ui-runtime-provider.tsx";
 import { useNavigate } from "react-router";
 import { LoaderCircle, MessageSquare, PauseCircle } from "lucide-react";
 import { useChatRuns, isChatRunActive } from "../lib/chat-runs-store.ts";
@@ -12,6 +13,7 @@ import {
 export function RunningChatsMenu({ onOpen }: { onOpen?: () => void } = {}) {
   const runs = useChatRuns((s) => s.runs);
   const navigate = useNavigate();
+  const { selectRetainedThread } = useAGUIAdapter();
   const active = Object.values(runs).filter(isChatRunActive);
   if (!active.length) return null;
   return (
@@ -32,7 +34,9 @@ export function RunningChatsMenu({ onOpen }: { onOpen?: () => void } = {}) {
           <DropdownMenuItem
             key={run.threadId}
             onSelect={() => {
-              navigate(run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`);
+              if (!selectRetainedThread(run.threadId)) {
+                navigate(run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`);
+              }
               onOpen?.();
             }}
           >
