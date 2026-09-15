@@ -62,7 +62,10 @@ export function ConversationHistory({
       .filter((g) => g.meta?.type === "recent-chats" || g.meta?.type === "pinned-chats")
       .flatMap((g) => g.items);
   const runs = useChatRuns((s) => s.runs);
-  const runFor = (item: NavItem) => runs[item.to.split("/chat/")[1]?.split(/[?#]/)[0] ?? ""];
+  const runFor = (item: NavItem) =>
+    Object.values(runs).find(
+      (run) => (run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`) === item.to,
+    );
   const workspaceItems =
     all || !workspaceId
       ? allItems
@@ -71,10 +74,10 @@ export function ConversationHistory({
   // A persisted title/actions win, while the live run owns its current location.
   const merged = new Map(workspaceItems.map((item) => [item.to, item]));
   for (const run of Object.values(runs)) {
-    const to = `/chat/${encodeURIComponent(run.threadId)}`;
+    const to = run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`;
     const saved = allItems.find((item) => item.to === to);
     if (saved && !isChatRunActive(run)) continue;
-    if (!all && workspaceId && run.contextMeta?.spacesRootId !== workspaceId) {
+    if (!all && workspaceId && !merged.has(to) && run.contextMeta?.spacesRootId !== workspaceId) {
       merged.delete(to);
       continue;
     }
@@ -85,8 +88,8 @@ export function ConversationHistory({
       icon: MessageSquare,
       meta: {
         ...saved?.meta,
-        previewEntityId: run.contextMeta?.spacesEntityId,
-        previewEntityName: run.pageLabel,
+        previewEntityId: run.contextMeta?.spacesEntityId ?? saved?.meta?.previewEntityId,
+        previewEntityName: run.pageLabel ?? saved?.meta?.previewEntityName,
       },
     });
   }

@@ -896,7 +896,7 @@ function SubNavItems({
   const currentPath = location.pathname + location.search;
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
-  const isOnParent = currentPath === parentPath;
+  const isOnParent = matchesNavLocation(currentPath, parentPath);
   const [activeLabel, setActiveLabel] = useState(items[0]?.label ?? "");
 
   // Children with unique paths (e.g., SPACES documents) use URL matching;

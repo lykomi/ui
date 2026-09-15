@@ -26,12 +26,13 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 import type { Context, Message as AGUIMessage } from "@ag-ui/core";
-import { AGUIRunner, agentStateStore, clientToolRegistry } from "@iloveagents/foundry-agent";
+import { AGUIRunner, clientToolRegistry } from "@iloveagents/foundry-agent";
 import { tokenFetch } from "@iloveagents/foundry-agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
 import { useDevStore } from "./dev-store.ts";
 
 import {
+  publishChatAgentState,
   beginChatRun,
   touchChatRun,
   updateChatRun,
@@ -49,8 +50,13 @@ interface ToolCallSnapshot {
 
 export class AGUIAdapterSDK implements ChatModelAdapter {
   private readonly runner: AGUIRunner;
+  private readonly conversationUrl?: string;
 
-  constructor(url: string = "/api/agent", options?: { threadId?: string; fetchFn?: typeof fetch }) {
+  constructor(
+    url: string = "/api/agent",
+    options?: { threadId?: string; fetchFn?: typeof fetch; conversationUrl?: string },
+  ) {
+    this.conversationUrl = options?.conversationUrl;
     this.runner = new AGUIRunner({
       url,
       threadId: options?.threadId,
@@ -94,6 +100,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     const runSignal = AbortSignal.any([abortSignal, stopController.signal]);
     beginChatRun({
       threadId: this.threadId,
+      conversationUrl: this.conversationUrl,
       title:
         lastUserMsg?.content
           .filter((p) => p.type === "text")
@@ -105,6 +112,8 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       stop: () => stopController.abort(),
     });
     const registry = clientToolRegistry.getState();
+    const schemas = registry.getActiveSchemas();
+    const advertised = new Set(schemas.map((tool) => tool.name));
 
     /**
      * Build a `ChatModelRunResult` from the accumulated state.
@@ -169,10 +178,39 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
         context,
         registry: {
           ...registry,
+          getActiveSchemas: () => schemas,
+          isRegistered: (name) => advertised.has(name),
           executeTool: async (name, args) => {
             await waitForForegroundChat(this.threadId, runSignal);
             runSignal.throwIfAborted();
-            return registry.executeTool(name, args);
+            if (!clientToolRegistry.getState().isRegistered(name)) {
+              updateChatRun(this.threadId, "waiting");
+              await new Promise<void>((resolve, reject) => {
+                const cleanup = () => {
+                  unsubscribe();
+                  runSignal.removeEventListener("abort", aborted);
+                };
+                const aborted = () => {
+                  cleanup();
+                  reject(runSignal.reason);
+                };
+                const unsubscribe = clientToolRegistry.subscribe(() => {
+                  if (clientToolRegistry.getState().isRegistered(name)) {
+                    cleanup();
+                    resolve();
+                  }
+                });
+                runSignal.addEventListener("abort", aborted, { once: true });
+                if (runSignal.aborted) aborted();
+                else if (clientToolRegistry.getState().isRegistered(name)) {
+                  cleanup();
+                  resolve();
+                }
+              });
+              await waitForForegroundChat(this.threadId, runSignal);
+              updateChatRun(this.threadId, "running");
+            }
+            return clientToolRegistry.getState().executeTool(name, args);
           },
         },
         abortSignal: runSignal,
@@ -235,8 +273,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
           case "agent-state":
             // Publish server state so pages can react to it. Not a chat
             // message, so no yield.
-            if (isForegroundChat(this.threadId))
-              agentStateStore.getState().setAgentState(event.state, event.patch);
+            publishChatAgentState(this.threadId, event.state, event.patch);
             break;
 
           case "messages-snapshot":

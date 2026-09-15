@@ -1,9 +1,14 @@
 import { create } from "zustand";
-import { streamingStatusStore, type StreamingStatus } from "@iloveagents/foundry-agent";
+import {
+  agentStateStore,
+  streamingStatusStore,
+  type StreamingStatus,
+} from "@iloveagents/foundry-agent";
 
 export type ChatRunStatus = "running" | "waiting" | "completed" | "failed" | "cancelled";
 export interface ChatRun {
   threadId: string;
+  conversationUrl?: string;
   title: string;
   pageLabel?: string;
   /** Navigation snapshot at run start, interpreted by the owning feature module. */
@@ -24,6 +29,13 @@ export const useChatRuns = create<{
   runs: Record<string, ChatRun>;
 }>(() => ({ foregroundId: null, runs: {} }));
 
+const agentStates = new Map<string, { state: unknown; patch?: unknown[] }>();
+
+export function publishChatAgentState(threadId: string, state: unknown, patch?: unknown[]) {
+  agentStates.set(threadId, { state, patch });
+  if (isForegroundChat(threadId)) agentStateStore.getState().setAgentState(state, patch);
+}
+
 const signals = new Map<
   string,
   {
@@ -40,6 +52,9 @@ export function isForegroundChat(threadId: string) {
 
 export function selectChatRun(threadId: string) {
   useChatRuns.setState({ foregroundId: threadId });
+  const stored = agentStates.get(threadId);
+  if (stored) agentStateStore.getState().setAgentState(stored.state, stored.patch);
+  else agentStateStore.getState().reset();
   streamingStatusStore.setState(
     signals.get(threadId) ?? {
       streamingStatus: { status: "idle" },
@@ -148,6 +163,7 @@ export function disposeChatRuns() {
     if (isChatRunActive(run)) run.stop();
   }
   signals.clear();
+  agentStates.clear();
   useChatRuns.setState({ foregroundId: null, runs: {} });
   streamingStatusStore.setState({
     streamingStatus: { status: "idle" },

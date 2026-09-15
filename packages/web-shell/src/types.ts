@@ -42,6 +42,8 @@ export interface ChatConversationConfig {
    * ``/^\/chat\/([^/]+)$/``.
    */
   pathPattern: RegExp;
+  /** Build the host conversation URL for running-chat navigation. Defaults to /chat/:id. */
+  conversationUrl?: (threadId: string) => string;
   /**
    * Optional hook giving the module's view of "what conversation is
    * the user currently engaged with" — separate from the URL.

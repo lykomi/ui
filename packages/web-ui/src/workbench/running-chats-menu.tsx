@@ -31,7 +31,9 @@ export function RunningChatsMenu() {
         {active.map((run) => (
           <DropdownMenuItem
             key={run.threadId}
-            onSelect={() => navigate(`/chat/${encodeURIComponent(run.threadId)}`)}
+            onSelect={() =>
+              navigate(run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`)
+            }
           >
             {run.status === "waiting" ? (
               <PauseCircle className="size-4 shrink-0" />

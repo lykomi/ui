@@ -51,6 +51,9 @@ import {
 
 interface AGUIRuntimeProviderProps {
   children: React.ReactNode;
+  headlessChildren?: React.ReactNode;
+  active?: boolean;
+  conversationUrl?: string;
   /** Custom fetch for agent requests. Handles URL rewriting + auth in production. */
   fetchFn?: typeof fetch;
   /**
@@ -124,8 +127,8 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
     ]);
   }
   useLayoutEffect(() => {
-    selectChatRun(id);
-  }, [id]);
+    if (props.active !== false) selectChatRun(id);
+  }, [id, props.active]);
   useEffect(() => {
     window.addEventListener("beforeunload", warnBeforeChatUnload);
     return () => {
@@ -137,7 +140,8 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
     <>
       {sessions.map((session) => (
         <AGUIRuntimeInner key={session.threadId} {...session} resetThread={resetThread}>
-          {session.threadId === id ? props.children : null}
+          {session.headlessChildren}
+          {props.active !== false && session.threadId === id ? props.children : null}
         </AGUIRuntimeInner>
       ))}
     </>
@@ -151,6 +155,7 @@ function AGUIRuntimeInner({
   urlMatch,
   historyAdapterFactory,
   resetThread,
+  conversationUrl,
 }: AGUIRuntimeProviderProps & { resetThread: () => void }) {
   const adapter = useMemo(
     () =>
@@ -158,9 +163,9 @@ function AGUIRuntimeInner({
         "/api/agent",
         // Only pass options if at least one is set, mirroring the prior
         // single-arg semantics for the "fresh chat, no overrides" case.
-        fetchFn || threadId ? { fetchFn, threadId } : undefined,
+        fetchFn || threadId ? { fetchFn, threadId, conversationUrl } : undefined,
       ),
-    [fetchFn, threadId],
+    [fetchFn, threadId, conversationUrl],
   );
 
   // Hosts may register a custom adapter (see ``registerAttachmentAdapter``);
