@@ -1,5 +1,22 @@
 # @iloveagents/foundry-web-graph
 
+## 0.2.5
+
+### Patch Changes
+
+- a8f766d: Keep running conversations alive when starting or opening another chat, expose their status in conversation history, and warn before leaving during active work. Add support ID copying and refine compact navigation spacing.
+
+  Unify composer context in the With menu, including selected items, removable references, and pins. Preserve scoped navigation context when list filters change.
+
+  Citation writes and clears now require the emitting conversation ID. The shell retains visited conversation configurations and supports configured conversation URLs.
+
+  Conversation deletion handlers should call `removeChatRun(threadId)` after successful deletion to remove retained browser-session activity.
+
+- Updated dependencies [a8f766d]
+  - @iloveagents/foundry-web-ui@0.30.0
+  - @iloveagents/foundry-agent@0.30.0
+  - @iloveagents/foundry-web-primitives@0.30.0
+
 ## 0.2.4
 
 ### Patch Changes
