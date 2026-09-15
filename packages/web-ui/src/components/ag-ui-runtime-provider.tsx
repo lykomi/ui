@@ -141,10 +141,12 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
     mountedProviders++;
     window.addEventListener("beforeunload", warnBeforeChatUnload);
     return () => {
-      window.removeEventListener("beforeunload", warnBeforeChatUnload);
       mountedProviders--;
       queueMicrotask(() => {
-        if (mountedProviders === 0) disposeChatRuns();
+        if (mountedProviders === 0) {
+          window.removeEventListener("beforeunload", warnBeforeChatUnload);
+          disposeChatRuns();
+        }
       });
     };
   }, []);
