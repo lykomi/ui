@@ -33,7 +33,7 @@ const runnerMock = vi.fn().mockImplementation(() => ({
 
 vi.mock("@iloveagents/foundry-agent", () => ({
   agentStateStore: { getState: () => ({ setAgentState: () => {} }) },
-  citationStore: { setState: () => {} },
+  citationStore: { setState: () => {}, getState: () => ({ clear: () => {} }) },
   AGUIRunner: function AGUIRunnerCtor(...args: unknown[]) {
     return runnerMock(...args);
   },
@@ -83,7 +83,7 @@ vi.mock("../dev-store.ts", () => ({
   },
 }));
 
-import { disposeChatRuns, publishChatAgentState } from "../chat-runs-store.ts";
+import { disposeChatRuns, publishChatAgentState, removeChatRun } from "../chat-runs-store.ts";
 import { AGUIAdapterSDK } from "../ag-ui-adapter.ts";
 
 function makeRunInput() {
@@ -105,6 +105,13 @@ describe("AGUIAdapterSDK", () => {
       navigation: { contextInstructions: null },
     };
     appStoreMock.consumedMessageIds = [];
+  });
+
+  it("refuses to send from a deleted conversation even if its adapter is retained", async () => {
+    const adapter = new AGUIAdapterSDK();
+    removeChatRun(adapter.threadId);
+    await expect(adapter.run(makeRunInput()).next()).rejects.toThrow("conversation was deleted");
+    expect(runMock).not.toHaveBeenCalled();
   });
 
   it("restores server state and the UI baseline when a runner is recreated", async () => {

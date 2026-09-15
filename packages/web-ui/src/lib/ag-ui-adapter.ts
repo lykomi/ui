@@ -39,6 +39,7 @@ import {
   updateChatRun,
   isForegroundChat,
   getChatStateSnapshot,
+  useChatRuns,
   retainChatProjection,
   waitForForegroundChat,
 } from "./chat-runs-store.ts";
@@ -77,6 +78,9 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
   }
 
   async *run({ messages, abortSignal }: ChatModelRunOptions): AsyncGenerator<ChatModelRunResult> {
+    if (useChatRuns.getState().deletedThreads[this.threadId]) {
+      throw new Error("This conversation was deleted. Start a new chat to continue.");
+    }
     const aguiMessages = convertMessagesToAGUI(messages);
 
     // App-level lifecycle: mark thread active, snapshot context, consume

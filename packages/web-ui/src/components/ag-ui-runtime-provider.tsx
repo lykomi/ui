@@ -116,7 +116,9 @@ export function useIsForegroundChat() {
 let mountedProviders = 0;
 
 export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
+  const deletedThreads = useChatRuns((state) => state.deletedThreads);
   const adapterCache = useRef(new Map<string, AGUIAdapterSDK>()).current;
+  for (const threadId of Object.keys(deletedThreads)) adapterCache.delete(threadId);
   const [freshId, setFreshId] = useState<string>(() => crypto.randomUUID());
   const id = props.threadId ?? freshId;
   // Hosts with stable ids advance the id through the lifecycle callback.
@@ -163,18 +165,21 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
   }, []);
   return (
     <>
-      {sessions.map((session) => (
-        <AGUIRuntimeInner
-          key={session.threadId}
-          {...session}
-          adapterCache={adapterCache}
-          resetThread={resetThread}
-          selectRetainedThread={selectRetainedThread}
-        >
-          {session.headlessChildren}
-          {props.active !== false && session.threadId === id ? props.children : null}
-        </AGUIRuntimeInner>
-      ))}
+      {sessions
+        .filter((session) => !deletedThreads[session.threadId] || session.threadId === id)
+        .map((session) => (
+          <AGUIRuntimeInner
+            key={`${session.threadId}:${deletedThreads[session.threadId] ? "deleted" : "live"}`}
+            {...session}
+            deleted={Boolean(deletedThreads[session.threadId])}
+            adapterCache={adapterCache}
+            resetThread={resetThread}
+            selectRetainedThread={selectRetainedThread}
+          >
+            {session.headlessChildren}
+            {props.active !== false && session.threadId === id ? props.children : null}
+          </AGUIRuntimeInner>
+        ))}
     </>
   );
 }
@@ -182,6 +187,7 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
 function AGUIRuntimeInner({
   children,
   adapterCache,
+  deleted,
   fetchFn,
   threadId,
   urlMatch,
@@ -191,6 +197,7 @@ function AGUIRuntimeInner({
   conversationUrl,
 }: AGUIRuntimeProviderProps & {
   adapterCache: Map<string, AGUIAdapterSDK>;
+  deleted: boolean;
   resetThread: () => void;
   selectRetainedThread: (threadId: string) => boolean;
 }) {
@@ -200,9 +207,9 @@ function AGUIRuntimeInner({
     const retained = threadId ? adapterCache.get(threadId) : undefined;
     if (retained) return retained;
     const created = new AGUIAdapterSDK("/api/agent", { fetchFn, threadId, conversationUrl });
-    adapterCache.set(created.threadId, created);
+    if (!deleted) adapterCache.set(created.threadId, created);
     return created;
-  }, [adapterCache, fetchFn, threadId, conversationUrl]);
+  }, [adapterCache, fetchFn, threadId, conversationUrl, deleted]);
 
   // Hosts may register a custom adapter (see ``registerAttachmentAdapter``);
   // the shell's inline-base64 adapter is the default.
@@ -215,7 +222,7 @@ function AGUIRuntimeInner({
   // Each retained runtime owns one history adapter, including after navigation.
   // Changing the URL must never load persisted messages over an in-flight stream.
   const [historyAdapter] = useState<ThreadHistoryAdapter | undefined>(() => {
-    if (!historyAdapterFactory) return undefined;
+    if (deleted || !historyAdapterFactory) return undefined;
     return historyAdapterFactory({
       // ``urlMatch`` is the URL-derived resume signal (undefined for
       // fresh chats). ``aguiThreadId`` is always defined — the AG-UI

@@ -28,7 +28,8 @@ export const isChatRunActive = (run: ChatRun) =>
 export const useChatRuns = create<{
   foregroundId: string | null;
   runs: Record<string, ChatRun>;
-}>(() => ({ foregroundId: null, runs: {} }));
+  deletedThreads: Record<string, true>;
+}>(() => ({ foregroundId: null, runs: {}, deletedThreads: {} }));
 
 const agentStates = new Map<string, { state: unknown; patch?: unknown[] }>();
 
@@ -41,6 +42,7 @@ export function retainChatProjection(threadId: string, projection: Record<string
 }
 
 export function publishChatAgentState(threadId: string, state: unknown, patch?: unknown[]) {
+  if (useChatRuns.getState().deletedThreads[threadId]) return;
   agentStates.set(threadId, { state, patch });
   if (isForegroundChat(threadId)) agentStateStore.getState().setAgentState(state, patch);
 }
@@ -81,8 +83,9 @@ export function removeChatRun(threadId: string) {
   useChatRuns.setState((state) => {
     const runs = { ...state.runs };
     delete runs[threadId];
-    return { runs };
+    return { runs, deletedThreads: { ...state.deletedThreads, [threadId]: true as const } };
   });
+  citationStore.getState().clear(threadId);
   signals.delete(threadId);
   agentStates.delete(threadId);
   appProjections.delete(threadId);
@@ -190,7 +193,7 @@ export function disposeChatRuns() {
   agentStates.clear();
   appProjections.clear();
   citationStore.setState({ results: [], byThread: {}, threadId: null });
-  useChatRuns.setState({ foregroundId: null, runs: {} });
+  useChatRuns.setState({ foregroundId: null, runs: {}, deletedThreads: {} });
   streamingStatusStore.setState({
     streamingStatus: { status: "idle" },
     runStartedAt: null,
