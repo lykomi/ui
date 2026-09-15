@@ -1,7 +1,5 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
-import { useAui } from "@assistant-ui/react";
-import { useStore } from "zustand";
 import { citationStore } from "@iloveagents/foundry-agent";
 import { useAGUIAdapter } from "../components/ag-ui-runtime-provider.tsx";
 import { useToolPanelStore } from "./tool-panel-store.ts";
@@ -17,13 +15,11 @@ export function useNewConversation(options?: {
   navigateToChat?: boolean;
   preserveNavigation?: boolean;
 }) {
-  const aui = useAui();
   const { resetThread } = useAGUIAdapter();
   const navigate = useNavigate();
   const closePanel = useToolPanelStore((s) => s.closePanel);
   const resetApp = useAppStore((s) => s.resetAll);
   const closeMobile = useSidebarStore((s) => s.closeMobile);
-  const clearCitations = useStore(citationStore, (s) => s.clear);
 
   return useCallback(() => {
     const preserved = options?.preserveNavigation
@@ -33,12 +29,15 @@ export function useNewConversation(options?: {
         }
       : null;
     closePanel();
+    const sentContext = useAppStore.getState().sentContext;
     resetApp();
+    useAppStore.setState({ sentContext });
     if (preserved) {
       useAppStore.setState(preserved);
     }
     closeMobile();
-    clearCitations();
+    // Clear only the foreground projection; retained transcripts keep their sources.
+    citationStore.setState({ threadId: null, results: [] });
     // Notify the host app that a new thread is starting. Spaces wires
     // this to clear its active-chat sticky id so the AGUIRuntimeProvider's
     // ``effectiveThreadId`` advances to a freshly-minted UUID instead of
@@ -49,7 +48,6 @@ export function useNewConversation(options?: {
     // where there is no ``/`` navigation to clear sticky for us.
     useChatLifecycleStore.getState().startNewConversation();
     resetThread();
-    aui.threads().switchToNewThread();
     if (options?.navigateToChat ?? true) {
       navigate("/");
     }
@@ -58,9 +56,7 @@ export function useNewConversation(options?: {
     resetApp,
     options?.preserveNavigation,
     closeMobile,
-    clearCitations,
     resetThread,
-    aui,
     options?.navigateToChat,
     navigate,
   ]);

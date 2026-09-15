@@ -32,7 +32,6 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ThemeScope: ({ children }: { children: ReactNode }) => <>{children}</>,
   ThemeDocumentMetadata: () => null,
   GlobalSelectionPopover: () => null,
-  ContextPins: () => null,
   TooltipIconButton: ({ children }: { children: ReactNode }) => <>{children}</>,
   findNavItem: () => undefined,
   useAppStore: (selector: (s: any) => unknown) =>

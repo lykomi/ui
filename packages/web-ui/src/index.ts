@@ -5,7 +5,11 @@ export { ToolPanel } from "./components/tool-panel.tsx";
 export { ToolPanelLayout } from "./components/tool-panel-layout.tsx";
 export { MarkdownText, markdownComponents } from "./components/markdown-text.tsx";
 export { ClientToolExecutor } from "./components/client-tool-executor.tsx";
-export { AGUIRuntimeProvider, useAGUIAdapter } from "./components/ag-ui-runtime-provider.tsx";
+export {
+  AGUIRuntimeProvider,
+  useAGUIAdapter,
+  useIsForegroundChat,
+} from "./components/ag-ui-runtime-provider.tsx";
 export type {
   AGUIChatConversationFactoryArgs,
   AGUIHistoryAdapterFactory,
@@ -41,8 +45,8 @@ export type { ToolCallStatus, ToolCallCardProps } from "./components/tool-call-c
 export { ToolFallback } from "./components/tool-fallback.tsx";
 export { ConfirmationCard } from "./components/confirmation-card.tsx";
 export { TooltipIconButton } from "./components/tooltip-icon-button.tsx";
-export { ComposerContextBadges, SentContextBadges } from "./components/context-badges.tsx";
-export { ContextPins, usePagePin } from "./components/context-bar.tsx";
+export { SentContextBadges } from "./components/context-badges.tsx";
+export { usePagePin } from "./components/context-bar.tsx";
 export { SelectionPopover } from "./components/selection-popover.tsx";
 export { GlobalSelectionPopover } from "./components/global-selection-popover.tsx";
 export { LoadingIndicator } from "./components/loading-indicator.tsx";
@@ -301,3 +305,10 @@ export { AuthProvider } from "./lib/auth-provider.tsx";
 // utility — banned per the "no shims" pre-1.0 rule (#90).
 
 export { createUiId } from "./lib/create-ui-id.ts";
+
+export {
+  useChatRuns,
+  isChatRunActive,
+  removeChatRun,
+  type ChatRun,
+} from "./lib/chat-runs-store.ts";

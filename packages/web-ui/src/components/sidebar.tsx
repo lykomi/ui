@@ -892,10 +892,11 @@ function SubNavItems({
   depth?: number;
 }) {
   const navigate = useNavigate();
-  const currentPath = useLocation().pathname;
+  const location = useLocation();
+  const currentPath = location.pathname + location.search;
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
-  const isOnParent = currentPath === parentPath;
+  const isOnParent = matchesNavLocation(currentPath, parentPath);
   const [activeLabel, setActiveLabel] = useState(items[0]?.label ?? "");
 
   // Children with unique paths (e.g., SPACES documents) use URL matching;
@@ -948,20 +949,50 @@ function SubNavItems({
 
 /** Check if current page is inside a nav item's subtree. */
 function isInSubtree(currentPage: string, item: NavItem): boolean {
-  if (currentPage === item.to) return true;
+  if (matchesNavLocation(currentPage, item.to)) return true;
   return item.children?.some((c) => isInSubtree(currentPage, c)) ?? false;
+}
+
+/** A navigation target may declare stable scope parameters while the page
+ * adds transient state such as a selected row or table sort. */
+function matchesNavLocation(currentPage: string, target: string): boolean {
+  const current = new URL(currentPage, "http://navigation.local");
+  const destination = new URL(target, current.origin);
+  if (current.pathname.replace(/\/+$/, "") !== destination.pathname.replace(/\/+$/, "")) {
+    return false;
+  }
+  if (destination.searchParams.size === 0) return true;
+  return [...destination.searchParams].every(([key, value]) =>
+    current.searchParams.getAll(key).includes(value),
+  );
+}
+
+function hasMoreSpecificNavMatch(currentPage: string, target: string): boolean {
+  const count = new URL(target, "http://navigation.local").searchParams.size;
+  const walk = (items: NavItem[]): boolean =>
+    items.some(
+      (item) =>
+        (matchesNavLocation(currentPage, item.to) &&
+          new URL(item.to, "http://navigation.local").searchParams.size > count) ||
+        walk(item.children ?? []),
+    );
+  return useNavStore.getState().config.some((group) => walk(group.items));
 }
 
 /** A list owns the sidebar selection of descendants it deliberately does not draw.
  * The route lookup still resolves the actual descendant for chat and page actions. */
 function isSelectedNavItem(currentPage: string, item: NavItem): boolean {
-  return currentPage === item.to || Boolean(item.childrenHidden && isInSubtree(currentPage, item));
+  return (
+    (matchesNavLocation(currentPage, item.to) && !hasMoreSpecificNavMatch(currentPage, item.to)) ||
+    Boolean(item.childrenHidden && isInSubtree(currentPage, item))
+  );
 }
 
 /** Nested folder with collapsible children (used inside SubNavItems). */
 function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const navigate = useNavigate();
-  const currentPath = useLocation().pathname;
+  const location = useLocation();
+  const currentPath = location.pathname + location.search;
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
   const isInsideSubtree = isInSubtree(currentPath, item);
@@ -1132,7 +1163,8 @@ function CollapsibleNavItem({
   underHeader?: boolean;
 }) {
   const navigate = useNavigate();
-  const currentPath = useLocation().pathname;
+  const location = useLocation();
+  const currentPath = location.pathname + location.search;
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navContext = useAppStore((s) => s.navContext);
   const isInsideSubtree = isInSubtree(currentPath, item);
@@ -1307,6 +1339,11 @@ function CollapsibleNavItem({
       data-active-nav-row={isActive ? "true" : undefined}
       data-nav-depth={0}
       to={item.to}
+      onClick={(event) => {
+        if (!isActive || !matchesNavLocation(currentPath, item.to)) return;
+        event.preventDefault();
+        useSidebarStore.getState().closeMobile();
+      }}
       {...draggableProps}
       {...dropTargetProps}
       className={() =>
@@ -1824,6 +1861,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
       )}
       {!collapsed && (
         <div
+          data-nav-group-items
           key={focusKey}
           className={cn(
             animateRows &&
@@ -1936,7 +1974,8 @@ function SidebarContent({
     (group) => group.label === "Workspaces" || group.meta?.type === "spaces-workspaces",
   );
   const showNavSkeleton = navLoading && !hasWorkspacesGroup;
-  const currentPage = useLocation().pathname;
+  const location = useLocation();
+  const currentPage = location.pathname + location.search;
   const navContext = useAppStore((s) => s.navContext);
   useScrollActiveNavRow(currentPage, navConfig, collapsed);
 
@@ -2040,7 +2079,7 @@ function SidebarContent({
                         to: it.to,
                         label: it.label,
                         icon: it.icon,
-                        isActive: currentPage === it.to,
+                        isActive: isSelectedNavItem(currentPage, it),
                       }));
                   return { group, groupIndex, items };
                 })

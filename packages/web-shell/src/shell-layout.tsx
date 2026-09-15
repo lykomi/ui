@@ -1,4 +1,4 @@
-import { type ReactNode, lazy, Suspense, useEffect, useState } from "react";
+import { type ReactNode, lazy, Suspense, useEffect, useState, useRef } from "react";
 import { Outlet, useLocation } from "react-router";
 import {
   Sidebar,
@@ -10,7 +10,6 @@ import {
   ThemeScope,
   GlobalSelectionPopover,
   ChatContent,
-  ContextPins,
   TooltipIconButton,
   useAppStore,
   useNavStore,
@@ -66,7 +65,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
   const themeLayers = [...baseThemeLayers, ...moduleLayers];
 
   const themeMode = useThemeStore((s) => s.mode);
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [preview] = useState(isWorkbenchPreviewEnabled);
   const isChatRoute =
     pathname === "/" ||
@@ -90,9 +89,17 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
   const setNavContext = useAppStore((s) => s.setNavContext);
   const navConfig = useNavStore((s) => s.config);
 
+  const previousContextPage = useRef<string | null>(null);
+  const previousContextConfig = useRef<typeof navConfig | null>(null);
   useEffect(() => {
-    setCurrentPage(pathname);
-    const found = findNavItem(navConfig, pathname);
+    const found = findNavItem(navConfig, pathname + search);
+    const target = found?.item.to;
+    const scope = target ? new URL(target, "http://navigation.local").search : "";
+    const page = pathname + scope;
+    if (previousContextPage.current === page && previousContextConfig.current === navConfig) return;
+    previousContextConfig.current = navConfig;
+    previousContextPage.current = page;
+    setCurrentPage(page);
     const mergedInstructions = [found?.groupInstructions, found?.item.contextInstructions]
       .filter(Boolean)
       .join("\n");
@@ -106,7 +113,7 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
       meta: found?.item.meta ?? {},
       contextInstructions: mergedInstructions || null,
     });
-  }, [pathname, navConfig, setCurrentPage, setNavContext]);
+  }, [pathname, search, navConfig, setCurrentPage, setNavContext]);
 
   // Page content (Outlet) — always rendered to keep page tools and context alive.
   const page = <Outlet />;
@@ -252,10 +259,6 @@ function PagePanelActions() {
   return (
     <div className="shrink-0 flex items-center justify-end px-4 py-3 border-b border-border">
       <div className="flex items-center gap-0.5">
-        {/* This bar sits directly above the document or view in the page
-            panel — the one place the user is unambiguously looking at the
-            thing they might want to pin. */}
-        <ContextPins compact flyoutDirection="down" showPinButton />
         <TooltipIconButton tooltip="Close panel" size="icon" onClick={togglePagePanel}>
           <X className="size-4" />
         </TooltipIconButton>

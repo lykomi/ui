@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { findNavItem, DEFAULT_NAV_CONFIG, type NavGroup } from "../nav-config";
 
+it("keeps scoped navigation context with table filters and never matches another scope", () => {
+  const icon = DEFAULT_NAV_CONFIG[0].items[0].icon;
+  const config: NavGroup[] = [
+    {
+      label: "Activity",
+      items: [
+        { to: "/tasks", label: "All activity", icon },
+        { to: "/tasks?workspace=a", label: "Workspace activity", icon, meta: { workspaceId: "a" } },
+      ],
+    },
+  ];
+  expect(findNavItem(config, "/tasks?sort=updated&workspace=a&task=run-1")?.item.meta).toEqual({
+    workspaceId: "a",
+  });
+  expect(findNavItem(config, "/tasks?workspace=b")?.item.label).toBe("All activity");
+  expect(findNavItem(config, "/tasks")?.item.label).toBe("All activity");
+});
+
 describe("findNavItem", () => {
   it("finds item in default config", () => {
     const result = findNavItem(DEFAULT_NAV_CONFIG, "/");
@@ -157,4 +175,16 @@ it("resolves a record's identity while its list represents it in the sidebar", (
   ];
   expect(findNavItem(config, record.to)?.item).toBe(record);
   expect(findNavItem(config, "/s/space/tasks")?.item.label).toBe("Tasks");
+});
+
+it("preserves workspace scope for descendant routes without leaking across scopes", () => {
+  const icon = DEFAULT_NAV_CONFIG[0].items[0].icon;
+  const global = { to: "/tasks", label: "Global", icon };
+  const scoped = { to: "/tasks?workspace=a", label: "Scoped", icon };
+  const config = [
+    { label: "Global", items: [global] },
+    { label: "Workspace", items: [scoped] },
+  ];
+  expect(findNavItem(config, "/tasks/123?workspace=a&filter=running")?.item).toBe(scoped);
+  expect(findNavItem(config, "/tasks/123?workspace=b")?.item).toBe(global);
 });

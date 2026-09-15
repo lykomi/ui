@@ -16,7 +16,18 @@ import { defineChatModule, type ChatModule, type ShellPage } from "../types.ts";
 // + ShellLayout import directly.
 vi.mock("@iloveagents/foundry-web-ui", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
-  AGUIRuntimeProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  AGUIRuntimeProvider: ({
+    children,
+    headlessChildren,
+  }: {
+    children: ReactNode;
+    headlessChildren?: ReactNode;
+  }) => (
+    <>
+      {headlessChildren}
+      {children}
+    </>
+  ),
   Sidebar: () => <div data-testid="sidebar" />,
   ChatHeader: () => <div data-testid="chat-header" />,
   ChatBubble: () => <div data-testid="chat-bubble" />,
@@ -26,7 +37,6 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ThemeScope: ({ children }: { children: ReactNode }) => <>{children}</>,
   ThemeDocumentMetadata: () => null,
   GlobalSelectionPopover: () => null,
-  ContextPins: () => null,
   TooltipIconButton: ({ children }: { children: ReactNode }) => <>{children}</>,
   findNavItem: () => undefined,
   useAppStore: (selector: (s: any) => unknown) =>

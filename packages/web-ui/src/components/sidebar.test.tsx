@@ -175,6 +175,37 @@ describe("Sidebar active state", () => {
     });
   };
 
+  it("keeps scoped active navigation selected without re-navigating", async () => {
+    const { Sidebar } = await import("./sidebar.tsx");
+    useNavStore.getState().setConfig([
+      {
+        label: "Pages",
+        hideLabel: true,
+        items: [
+          {
+            to: "/tasks?workspace=space-a",
+            label: "Activity",
+            icon: MessageSquare,
+          },
+        ],
+      },
+    ]);
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={["/tasks?workspace=space-a&task=run-1"]}>
+          <TooltipProvider>
+            <Sidebar />
+          </TooltipProvider>
+        </MemoryRouter>,
+      );
+    });
+
+    const row = navRow(container, "Activity");
+    expect(row?.dataset.activeNavRow).toBe("true");
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    expect(row?.dispatchEvent(click)).toBe(false);
+  });
+
   it.each([false, true])(
     "keeps a hidden list selected without rendering its records (nested=%s)",
     async (nested) => {

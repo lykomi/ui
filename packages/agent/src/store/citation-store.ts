@@ -20,10 +20,13 @@ export interface CitationHandler {
 interface CitationState {
   /** Current search results (from the most recent search tool call) */
   results: CitationResult[];
+  threadId: string | null;
+  byThread: Record<string, CitationResult[]>;
+  selectThread: (threadId: string) => void;
   /** Optional handler for opening citations (registered by feature modules) */
   handler: CitationHandler | null;
   /** Store search results for citation resolution */
-  setResults: (results: CitationResult[]) => void;
+  setResults: (results: CitationResult[], threadId: string) => void;
   /** Register a handler for citation click actions */
   setHandler: (handler: CitationHandler) => void;
   /**
@@ -34,7 +37,7 @@ interface CitationState {
    * markers for the rest of the session, since the registration guard
    * (``registerOnce`` in spaces ``use-spaces-init``) suppresses re-binding.
    */
-  clear: () => void;
+  clear: (threadId: string) => void;
 }
 
 /**
@@ -43,10 +46,17 @@ interface CitationState {
  * markdown renderer looks them up by index. A `CitationHandler` (registered
  * by feature modules) handles the click action.
  */
-export const citationStore = createStore<CitationState>((set) => ({
+export const citationStore = createStore<CitationState>((set, get) => ({
   results: [],
+  threadId: null,
+  byThread: {},
+  selectThread: (threadId) => set({ threadId, results: get().byThread[threadId] ?? [] }),
   handler: null,
-  setResults: (results) => set({ results }),
+  setResults: (results, threadId) =>
+    set((s) => ({
+      ...(threadId ? { byThread: { ...s.byThread, [threadId]: results } } : {}),
+      ...(!threadId || s.threadId === threadId ? { results } : {}),
+    })),
   setHandler: (handler) => set({ handler }),
-  clear: () => set({ results: [] }),
+  clear: (threadId) => get().setResults([], threadId),
 }));

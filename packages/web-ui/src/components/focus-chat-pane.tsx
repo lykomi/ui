@@ -79,8 +79,6 @@ export function FocusChatPane({
         <ChatContent
           emptyState={<ChatEmptyState pageLabel={pageLabel} homeStarterPriority={20} />}
           compactComposer
-          showPinButton={false}
-          hideCurrentPageBadge
           starterSuggestions={[]}
         />
       )}

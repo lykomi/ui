@@ -1,19 +1,3 @@
-import { PinStateIcon } from "./pin-state-icon.tsx";
-/**
- * The composer's leading "+" — one affordance for everything you can add to
- * a turn.
- *
- * It replaces a row of single-purpose icons (paperclip, pin, and whatever
- * came next). That row grows every time the product learns a new trick, and
- * each icon costs the user a guess about what it does; a labelled menu costs
- * one click and reads itself. Pinning in particular is a power feature that
- * does not deserve permanent residency next to the text field.
- *
- * Attaching still goes through `ComposerPrimitive.AddAttachment`, so the
- * file picker keeps whatever `accept` filter the registered attachment
- * adapter declares — reimplementing the picker here would drift from it.
- */
-
 import type { FC } from "react";
 import { ComposerPrimitive } from "@assistant-ui/react";
 import { Paperclip, Plus } from "lucide-react";
@@ -24,20 +8,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu.tsx";
-import { usePagePin } from "./context-bar.tsx";
 
 export interface ComposerAddMenuProps {
   /** Bubble-composer sizing. */
   compact?: boolean;
-  /**
-   * Offer "Pin this page". A bare composer with no page behind it (or a host
-   * that does not use page context) opts out.
-   */
-  showPin?: boolean;
 }
 
-export const ComposerAddMenu: FC<ComposerAddMenuProps> = ({ compact = false, showPin = true }) => {
-  const { isPinned, toggle } = usePagePin();
+export const ComposerAddMenu: FC<ComposerAddMenuProps> = ({ compact = false }) => {
   const icon = compact ? "size-3.5" : "size-4";
 
   return (
@@ -65,20 +42,6 @@ export const ComposerAddMenu: FC<ComposerAddMenuProps> = ({ compact = false, sho
             Attach file
           </DropdownMenuItem>
         </ComposerPrimitive.AddAttachment>
-
-        {showPin && (
-          <DropdownMenuItem
-            onSelect={(event) => {
-              // Keep the menu anchored while the pin badge appears, so the
-              // user sees the result of what they just clicked.
-              event.preventDefault();
-              toggle();
-            }}
-          >
-            <PinStateIcon pinned={isPinned} className={icon} />
-            {isPinned ? "Unpin this page" : "Pin this page"}
-          </DropdownMenuItem>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

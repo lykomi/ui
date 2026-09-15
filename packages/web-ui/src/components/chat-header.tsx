@@ -1,3 +1,4 @@
+import { RunningChatsMenu } from "../workbench/running-chats-menu.tsx";
 import { type FC } from "react";
 import { Link } from "react-router";
 import { SquarePen, Menu } from "lucide-react";
@@ -41,6 +42,7 @@ export const ChatHeader: FC = () => {
           </Link>
         </div>
         <div className="flex items-center gap-1">
+          <RunningChatsMenu />
           <ThemeToggle />
           <TooltipIconButton tooltip="New Thread" size="icon" onClick={handleNewConversation}>
             <SquarePen className="size-4 text-primary" />

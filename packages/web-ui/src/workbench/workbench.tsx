@@ -197,8 +197,6 @@ export function WorkbenchPreview({
                   ) : undefined
                 }
                 compactComposer={!spaciousChat}
-                hideCurrentPageBadge
-                showPinButton={false}
                 starterSuggestions={[]}
                 emptyState={
                   <ChatEmptyState pageLabel={pageLabel} showHomeStarters={!spaciousChat}>

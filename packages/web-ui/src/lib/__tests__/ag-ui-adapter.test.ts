@@ -32,6 +32,8 @@ const runnerMock = vi.fn().mockImplementation(() => ({
 }));
 
 vi.mock("@iloveagents/foundry-agent", () => ({
+  agentStateStore: { getState: () => ({ setAgentState: () => {}, reset: () => {} }) },
+  citationStore: { setState: () => {}, getState: () => ({ clear: () => {} }) },
   AGUIRunner: function AGUIRunnerCtor(...args: unknown[]) {
     return runnerMock(...args);
   },
@@ -39,10 +41,12 @@ vi.mock("@iloveagents/foundry-agent", () => ({
     getState: () => ({
       isRegistered: (name: string) => name.startsWith("ui_"),
       executeTool: async () => "{}",
+      listPageTools: () => [],
       getActiveSchemas: () => [],
     }),
   },
   streamingStatusStore: {
+    setState: () => {},
     getState: () => ({
       setStreamingStatus: () => {},
       touchSignal: () => {},
@@ -59,6 +63,7 @@ vi.mock("@iloveagents/foundry-agent/msal", () => ({
 vi.mock("../app-store.ts", () => ({
   useAppStore: {
     getState: () => ({
+      navContext: { label: "Test" },
       markThreadActive: () => {},
       getAgentState: () => appStoreMock.agentState,
       consumeContextForMessage: (messageId: string) => {
@@ -78,6 +83,7 @@ vi.mock("../dev-store.ts", () => ({
   },
 }));
 
+import { disposeChatRuns, publishChatAgentState, removeChatRun } from "../chat-runs-store.ts";
 import { AGUIAdapterSDK } from "../ag-ui-adapter.ts";
 
 function makeRunInput() {
@@ -85,12 +91,13 @@ function makeRunInput() {
     messages: [
       { id: "u-1", role: "user" as const, content: [{ type: "text" as const, text: "hi" }] },
     ],
-    abortSignal: undefined as AbortSignal | undefined,
+    abortSignal: new AbortController().signal,
   };
 }
 
 describe("AGUIAdapterSDK", () => {
   beforeEach(() => {
+    disposeChatRuns();
     runMock.mockReset();
     runnerMock.mockClear();
     appStoreMock.agentState = {
@@ -98,6 +105,35 @@ describe("AGUIAdapterSDK", () => {
       navigation: { contextInstructions: null },
     };
     appStoreMock.consumedMessageIds = [];
+  });
+
+  it("refuses to send from a deleted conversation even if its adapter is retained", async () => {
+    const adapter = new AGUIAdapterSDK();
+    removeChatRun(adapter.threadId);
+    await expect(adapter.run(makeRunInput()).next()).rejects.toThrow("conversation was deleted");
+    expect(runMock).not.toHaveBeenCalled();
+  });
+
+  it("restores server state and the UI baseline when a runner is recreated", async () => {
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {
+      yield { type: "run-finished" };
+    });
+    const original = new AGUIAdapterSDK();
+    for await (const result of original.run(makeRunInput())) {
+      void result;
+    }
+    publishChatAgentState("thread-1", {
+      serverOnly: "retained",
+      navigation: { contextInstructions: "server update" },
+    });
+    const recreated = new AGUIAdapterSDK();
+    for await (const result of recreated.run(makeRunInput())) {
+      void result;
+    }
+    expect(runMock.mock.calls.at(-1)?.[0].state).toMatchObject({
+      serverOnly: "retained",
+      navigation: { contextInstructions: "server update" },
+    });
   });
 
   it("yields a terminal complete after a text-only run", async () => {
@@ -265,7 +301,7 @@ describe("AGUIAdapterSDK", () => {
           ],
         },
       ],
-      abortSignal: undefined,
+      abortSignal: new AbortController().signal,
     } as Parameters<AGUIAdapterSDK["run"]>[0])) {
       // Drain the adapter.
     }

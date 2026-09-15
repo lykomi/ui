@@ -36,9 +36,9 @@ export function WelcomeIntro({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 gap-2 px-3 text-xs font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
+                  className="h-9 gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
                 >
-                  <Layers className="size-3.5" aria-hidden="true" />
+                  <Layers className="size-4" aria-hidden="true" />
                   Create a space
                 </Button>
               </DropdownMenuTrigger>

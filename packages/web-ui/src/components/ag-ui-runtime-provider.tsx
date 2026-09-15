@@ -1,4 +1,13 @@
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+  useEffect,
+} from "react";
 import { AssistantRuntimeProvider, useLocalRuntime } from "@assistant-ui/react";
 import type { ThreadHistoryAdapter } from "@assistant-ui/react";
 import { TooltipProvider } from "../ui/tooltip.tsx";
@@ -33,17 +42,27 @@ export type AGUIHistoryAdapterFactory = (
   args: AGUIChatConversationFactoryArgs,
 ) => ThreadHistoryAdapter;
 
+import {
+  useChatRuns,
+  isChatRunActive,
+  selectChatRun,
+  warnBeforeChatUnload,
+  disposeChatRuns,
+} from "../lib/chat-runs-store.ts";
+
 interface AGUIRuntimeProviderProps {
   children: React.ReactNode;
+  headlessChildren?: React.ReactNode;
+  active?: boolean;
+  conversationUrl?: string;
   /** Custom fetch for agent requests. Handles URL rewriting + auth in production. */
   fetchFn?: typeof fetch;
   /**
    * Optional stable thread id for the AG-UI adapter. When set, the
    * agent's POST body carries this id so server-side persistence
    * (Foundry thread, conversation row) targets the same conversation
-   * across reloads / resumes. Changing the id remounts the inner
-   * runtime — past messages from a different thread don't bleed
-   * into the new one.
+   * across reloads / resumes. Changing the id selects an independent
+   * runtime; running conversations remain mounted in the background.
    */
   threadId?: string;
   /**
@@ -72,6 +91,7 @@ interface AGUIRuntimeProviderProps {
 interface AGUIContextValue {
   adapter: AGUIAdapterSDK;
   resetThread: () => void;
+  selectRetainedThread: (threadId: string) => boolean;
 }
 
 const AGUIAdapterContext = createContext<AGUIContextValue | null>(null);
@@ -84,41 +104,112 @@ export function useAGUIAdapter() {
   return context;
 }
 
+/** Whether this runtime owns visible UI effects; standalone consumers remain active. */
+export function useIsForegroundChat() {
+  const context = useContext(AGUIAdapterContext);
+  return useChatRuns(
+    (state) =>
+      !context || state.foregroundId === null || state.foregroundId === context.adapter.threadId,
+  );
+}
+
+let mountedProviders = 0;
+
 export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
-  // Splitting render across an outer wrapper + a keyed inner is the
-  // canonical React idiom for "rebuild this stateful subtree when X
-  // changes". assistant-ui's runtime is created inside useLocalRuntime
-  // and tracks its messages internally; swapping threadId or history
-  // mid-life would leave stale state. Keying the inner subtree on
-  // threadId (+ the manual reset counter) guarantees a clean runtime
-  // per conversation, matching the ChatGPT-style "click → fresh chat
-  // backed by past messages" UX.
-  const [resetKey, setResetKey] = useState(0);
-  const resetThread = useCallback(() => setResetKey((p) => p + 1), []);
-
-  const innerKey = `${props.threadId ?? "fresh"}:${resetKey}`;
-
-  return <AGUIRuntimeInner key={innerKey} {...props} resetThread={resetThread} />;
+  const deletedThreads = useChatRuns((state) => state.deletedThreads);
+  const adapterCache = useRef(new Map<string, AGUIAdapterSDK>()).current;
+  for (const threadId of Object.keys(deletedThreads)) adapterCache.delete(threadId);
+  const [freshId, setFreshId] = useState<string>(() => crypto.randomUUID());
+  const id = props.threadId ?? freshId;
+  // Hosts with stable ids advance the id through the lifecycle callback.
+  const resetThread = useCallback(() => {
+    if (!props.threadId) setFreshId(crypto.randomUUID());
+  }, [props.threadId]);
+  const selectRetainedThread = (threadId: string) => {
+    if (props.threadId) return false;
+    setFreshId(threadId);
+    return true;
+  };
+  const [sessions, setSessions] = useState(() => [{ ...props, threadId: id }]);
+  if (!sessions.some((session) => session.threadId === id)) {
+    const runs = useChatRuns.getState().runs;
+    // Keep running runtimes mounted. Limit the cache of idle conversations.
+    const idle = sessions.filter(
+      (session) => !runs[session.threadId] || !isChatRunActive(runs[session.threadId]!),
+    );
+    const retained = new Set(idle.slice(-19).map((session) => session.threadId));
+    setSessions([
+      ...sessions.filter(
+        (session) =>
+          retained.has(session.threadId) ||
+          (runs[session.threadId] && isChatRunActive(runs[session.threadId]!)),
+      ),
+      { ...props, threadId: id },
+    ]);
+  }
+  useLayoutEffect(() => {
+    if (props.active !== false) selectChatRun(id);
+  }, [id, props.active]);
+  useEffect(() => {
+    mountedProviders++;
+    window.addEventListener("beforeunload", warnBeforeChatUnload);
+    return () => {
+      mountedProviders--;
+      queueMicrotask(() => {
+        if (mountedProviders === 0) {
+          window.removeEventListener("beforeunload", warnBeforeChatUnload);
+          disposeChatRuns();
+        }
+      });
+    };
+  }, []);
+  return (
+    <>
+      {sessions
+        .filter((session) => !deletedThreads[session.threadId] || session.threadId === id)
+        .map((session) => (
+          <AGUIRuntimeInner
+            key={`${session.threadId}:${deletedThreads[session.threadId] ? "deleted" : "live"}`}
+            {...session}
+            deleted={Boolean(deletedThreads[session.threadId])}
+            adapterCache={adapterCache}
+            resetThread={resetThread}
+            selectRetainedThread={selectRetainedThread}
+          >
+            {session.headlessChildren}
+            {props.active !== false && session.threadId === id ? props.children : null}
+          </AGUIRuntimeInner>
+        ))}
+    </>
+  );
 }
 
 function AGUIRuntimeInner({
   children,
+  adapterCache,
+  deleted,
   fetchFn,
   threadId,
   urlMatch,
   historyAdapterFactory,
   resetThread,
-}: AGUIRuntimeProviderProps & { resetThread: () => void }) {
-  const adapter = useMemo(
-    () =>
-      new AGUIAdapterSDK(
-        "/api/agent",
-        // Only pass options if at least one is set, mirroring the prior
-        // single-arg semantics for the "fresh chat, no overrides" case.
-        fetchFn || threadId ? { fetchFn, threadId } : undefined,
-      ),
-    [fetchFn, threadId],
-  );
+  selectRetainedThread,
+  conversationUrl,
+}: AGUIRuntimeProviderProps & {
+  adapterCache: Map<string, AGUIAdapterSDK>;
+  deleted: boolean;
+  resetThread: () => void;
+  selectRetainedThread: (threadId: string) => boolean;
+}) {
+  const adapter = useMemo(() => {
+    // Evict expensive React runtimes, not the protocol session: hidden
+    // server messages and compaction state must survive a later revisit.
+    const retained = threadId ? adapterCache.get(threadId) : undefined;
+    if (retained) return retained;
+    const created = new AGUIAdapterSDK("/api/agent", { fetchFn, threadId, conversationUrl });
+    if (!deleted) adapterCache.set(created.threadId, created);
+    return created;
+  }, [adapterCache, fetchFn, threadId, conversationUrl, deleted]);
 
   // Hosts may register a custom adapter (see ``registerAttachmentAdapter``);
   // the shell's inline-base64 adapter is the default.
@@ -128,14 +219,10 @@ function AGUIRuntimeInner({
     [registeredAdapter],
   );
 
-  // Build the history adapter ONCE per inner mount, after the AG-UI
-  // adapter exists so we know its thread id. The keyed-remount in the
-  // outer wrapper ensures threadId changes trigger a fresh adapter +
-  // fresh history adapter together, so resumed chats hydrate from the
-  // right conversation and fresh chats persist under their assistant-
-  // ui-minted UUID.
-  const historyAdapter = useMemo<ThreadHistoryAdapter | undefined>(() => {
-    if (!historyAdapterFactory) return undefined;
+  // Each retained runtime owns one history adapter, including after navigation.
+  // Changing the URL must never load persisted messages over an in-flight stream.
+  const [historyAdapter] = useState<ThreadHistoryAdapter | undefined>(() => {
+    if (deleted || !historyAdapterFactory) return undefined;
     return historyAdapterFactory({
       // ``urlMatch`` is the URL-derived resume signal (undefined for
       // fresh chats). ``aguiThreadId`` is always defined — the AG-UI
@@ -145,11 +232,7 @@ function AGUIRuntimeInner({
       urlMatch,
       aguiThreadId: adapter.threadId,
     });
-    // adapter is stable for the life of this inner mount (keyed remount
-    // covers the threadId change case), so it's OK to depend on the
-    // factory + urlMatch here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyAdapterFactory, urlMatch]);
+  });
 
   // Voice is opt-in and host-supplied (see ``registerVoiceAdapter``).
   // Both slots stay absent unless a module registered one, so a runtime
@@ -173,11 +256,11 @@ function AGUIRuntimeInner({
   });
 
   return (
-    <AGUIAdapterContext.Provider value={{ adapter, resetThread }}>
+    <AGUIAdapterContext.Provider value={{ adapter, resetThread, selectRetainedThread }}>
       <AssistantRuntimeProvider runtime={runtime}>
         <TooltipProvider>
-          <ShowDocumentToolUI />
-          <ClientToolExecutor />
+          {children && <ShowDocumentToolUI />}
+          {children && <ClientToolExecutor />}
           {children}
         </TooltipProvider>
       </AssistantRuntimeProvider>

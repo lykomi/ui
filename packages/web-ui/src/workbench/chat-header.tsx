@@ -1,6 +1,14 @@
 import { TooltipIconButton } from "../index.ts";
-import { SquarePen, PanelLeft, MessageSquare, Menu, History, LoaderCircle } from "lucide-react";
+import {
+  SquarePen,
+  PanelLeft,
+  MessageSquare,
+  Menu,
+  MessagesSquare,
+  LoaderCircle,
+} from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
+import { RunningChatsMenu } from "./running-chats-menu.tsx";
 export function WorkbenchChatHeader({
   collapsed,
   running,
@@ -65,6 +73,7 @@ export function WorkbenchChatHeader({
             <div className="min-w-0 flex-1 px-2 py-2">
               <div className="text-sm font-semibold">{showHistory ? "Conversations" : "Chat"}</div>
             </div>
+            <RunningChatsMenu onOpen={returnToChat} />
             <TooltipIconButton
               tooltip="New chat"
               className={buttonClass}
@@ -80,7 +89,7 @@ export function WorkbenchChatHeader({
               aria-expanded={showHistory}
               onClick={() => (showHistory ? returnToChat() : openHistory())}
             >
-              <History size={18} />
+              <MessagesSquare size={18} />
             </TooltipIconButton>
             <TooltipIconButton
               tooltip="Collapse chat"
@@ -116,7 +125,7 @@ export function WorkbenchChatHeader({
               openHistory();
             }}
           >
-            <History size={18} />
+            <MessagesSquare size={18} />
           </TooltipIconButton>
         </div>
       )}

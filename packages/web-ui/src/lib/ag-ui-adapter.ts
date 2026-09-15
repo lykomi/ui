@@ -17,6 +17,7 @@
  * @see https://www.assistant-ui.com/docs/runtimes/custom/local
  */
 
+import { mergeChatState } from "./merge-chat-state.ts";
 import type {
   ChatModelAdapter,
   ChatModelRunOptions,
@@ -26,15 +27,22 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 import type { Context, Message as AGUIMessage } from "@ag-ui/core";
-import {
-  AGUIRunner,
-  agentStateStore,
-  clientToolRegistry,
-  streamingStatusStore,
-} from "@iloveagents/foundry-agent";
+import { AGUIRunner, clientToolRegistry } from "@iloveagents/foundry-agent";
 import { tokenFetch } from "@iloveagents/foundry-agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
 import { useDevStore } from "./dev-store.ts";
+
+import {
+  publishChatAgentState,
+  beginChatRun,
+  touchChatRun,
+  updateChatRun,
+  isForegroundChat,
+  getChatStateSnapshot,
+  useChatRuns,
+  retainChatProjection,
+  waitForForegroundChat,
+} from "./chat-runs-store.ts";
 
 interface ToolCallSnapshot {
   id: string;
@@ -46,8 +54,14 @@ interface ToolCallSnapshot {
 
 export class AGUIAdapterSDK implements ChatModelAdapter {
   private readonly runner: AGUIRunner;
+  private previousAppState?: Record<string, unknown>;
+  private readonly conversationUrl?: string;
 
-  constructor(url: string = "/api/agent", options?: { threadId?: string; fetchFn?: typeof fetch }) {
+  constructor(
+    url: string = "/api/agent",
+    options?: { threadId?: string; fetchFn?: typeof fetch; conversationUrl?: string },
+  ) {
+    this.conversationUrl = options?.conversationUrl;
     this.runner = new AGUIRunner({
       url,
       threadId: options?.threadId,
@@ -64,12 +78,27 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
   }
 
   async *run({ messages, abortSignal }: ChatModelRunOptions): AsyncGenerator<ChatModelRunResult> {
+    if (useChatRuns.getState().deletedThreads[this.threadId]) {
+      throw new Error("This conversation was deleted. Start a new chat to continue.");
+    }
     const aguiMessages = convertMessagesToAGUI(messages);
 
     // App-level lifecycle: mark thread active, snapshot context, consume
     // ephemeral context off the last user message.
     useAppStore.getState().markThreadActive();
     const appState = useAppStore.getState().getAgentState();
+    const projection = appState as unknown as Record<string, unknown>;
+    const retained = getChatStateSnapshot(this.threadId);
+    const serverState = retained.state ?? this.runner.state;
+    const requestState = mergeChatState(
+      serverState && typeof serverState === "object"
+        ? (serverState as Record<string, unknown>)
+        : {},
+      this.previousAppState ?? retained.projection,
+      projection,
+    );
+    this.previousAppState = structuredClone(projection);
+    retainChatProjection(this.threadId, projection);
     const context = buildAGUIContext(appState);
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMsg) {
@@ -87,7 +116,26 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     // Liveness clock for the working indicator: every runner event (incl.
     // server heartbeats) proves the run is alive; the indicator derives
     // elapsed time from runStartedAt and staleness from lastSignalAt.
-    streamingStatusStore.getState().markRunStarted();
+    const stopController = new AbortController();
+    const runSignal = AbortSignal.any([abortSignal, stopController.signal]);
+    beginChatRun({
+      threadId: this.threadId,
+      conversationUrl: this.conversationUrl,
+      title:
+        lastUserMsg?.content
+          .filter((p) => p.type === "text")
+          .map((p) => p.text)
+          .join(" ")
+          .slice(0, 120) || "Conversation",
+      pageLabel: useAppStore.getState().navContext.label ?? undefined,
+      contextMeta: { ...useAppStore.getState().navContext.meta },
+      stop: () => stopController.abort(),
+    });
+    const registry = clientToolRegistry.getState();
+    const pageOwners = new Map(registry.listPageTools().map((tool) => [tool.name, tool]));
+    const ownerLocation = typeof window === "undefined" ? "" : window.location.href;
+    const schemas = registry.getActiveSchemas();
+    const advertised = new Set(schemas.map((tool) => tool.name));
 
     /**
      * Build a `ChatModelRunResult` from the accumulated state.
@@ -148,13 +196,38 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
     try {
       for await (const event of this.runner.run({
         messages: aguiMessages,
-        state: appState as unknown as Record<string, unknown>,
+        state: requestState,
         context,
-        registry: clientToolRegistry.getState(),
-        abortSignal,
+        registry: {
+          ...registry,
+          getActiveSchemas: () => schemas,
+          isRegistered: (name) => advertised.has(name),
+          executeTool: async (name, args) => {
+            await waitForForegroundChat(this.threadId, runSignal);
+            runSignal.throwIfAborted();
+            const owner = pageOwners.get(name);
+            if (owner) {
+              const current = clientToolRegistry
+                .getState()
+                .listPageTools()
+                .find((tool) => tool.name === name);
+              if (
+                current !== owner ||
+                (typeof window !== "undefined" && window.location.href !== ownerLocation)
+              ) {
+                return JSON.stringify({
+                  error:
+                    "The page changed since this action was requested. Open the original page and request the action again.",
+                });
+              }
+            }
+            return clientToolRegistry.getState().executeTool(name, args);
+          },
+        },
+        abortSignal: runSignal,
       })) {
         let shouldYield = false;
-        streamingStatusStore.getState().touchSignal();
+        touchChatRun(this.threadId);
 
         switch (event.type) {
           case "heartbeat":
@@ -191,7 +264,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
             break;
 
           case "streaming-status":
-            streamingStatusStore.getState().setStreamingStatus(event.status);
+            touchChatRun(this.threadId, event.status);
             break;
 
           case "text-delta":
@@ -211,7 +284,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
           case "agent-state":
             // Publish server state so pages can react to it. Not a chat
             // message, so no yield.
-            agentStateStore.getState().setAgentState(event.state, event.patch);
+            publishChatAgentState(this.threadId, event.state, event.patch);
             break;
 
           case "messages-snapshot":
@@ -312,7 +385,9 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       // not a silent empty bubble. We yield the terminal status rather
       // than throwing; an unhandled throw re-introduces the stuck-running
       // bug (the runner generator has already returned here).
-      if (runError !== null) {
+      if (runSignal.aborted) {
+        yield buildResult({ type: "incomplete", reason: "cancelled" });
+      } else if (runError !== null) {
         yield buildResult({
           type: "incomplete",
           reason: "error",
@@ -321,9 +396,18 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       } else {
         yield buildResult({ type: "complete", reason: "stop" });
       }
+    } catch (error) {
+      if (runSignal.aborted) yield buildResult({ type: "incomplete", reason: "cancelled" });
+      else {
+        runError = error instanceof Error ? error.message : String(error);
+        throw error;
+      }
     } finally {
-      streamingStatusStore.getState().setStreamingStatus({ status: "idle" });
-      streamingStatusStore.getState().markRunEnded();
+      updateChatRun(
+        this.threadId,
+        runSignal.aborted ? "cancelled" : runError !== null ? "failed" : "completed",
+        runError ?? undefined,
+      );
     }
   }
 }

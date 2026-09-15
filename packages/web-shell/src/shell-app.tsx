@@ -1,5 +1,5 @@
 import { useFreshConversationId } from "./use-fresh-conversation-id.ts";
-import { type ReactNode, Suspense, useCallback, useEffect, useMemo } from "react";
+import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import { AGUIRuntimeProvider } from "@iloveagents/foundry-web-ui";
 import type {
@@ -181,56 +181,47 @@ function ChatConversationAwareRuntime({
     return { config: configs[0], urlMatch: undefined as string | undefined };
   }, [pathname, configs]);
 
+  const [visited, setVisited] = useState(() => new Set(config ? [config] : []));
+  if (config && !visited.has(config)) setVisited(new Set([...visited, config]));
+
   if (!config) {
     // No chatConversation configs registered → legacy in-memory
     // runtime, no history / no sticky concerns.
     return (
-      <AGUIRuntimeProvider fetchFn={fetchFn}>
-        {toolUIs}
+      <AGUIRuntimeProvider fetchFn={fetchFn} headlessChildren={toolUIs}>
         {children}
       </AGUIRuntimeProvider>
     );
   }
 
-  // Per-config child component, KEYED by config identity. Why a
-  // key/child split: ``config.useStickyConversationId`` is optional.
-  // Calling it inline with the optional chain ``config?.useSticky?.()``
-  // would be a Rules-of-Hooks violation the moment a second
-  // ChatConversationConfig registers with different hook-shape — URL
-  // navigation flips which cfg matches, the hook count flips, React
-  // crashes. The key makes a config swap a full remount, which is a
-  // legitimate way to change the hook lineage without violating the
-  // rules. ``configIndex`` is stable per config because ``configs`` is
-  // memoised in ShellApp.
-  const configIndex = configs.indexOf(config);
-  if (config.useStickyConversationId) {
-    return (
-      <StickyAwareRuntime
-        key={`sticky:${configIndex}`}
-        config={config}
-        useSticky={config.useStickyConversationId}
-        urlMatch={urlMatch}
-        fetchFn={fetchFn}
-        toolUIs={toolUIs}
-      >
-        {children}
-      </StickyAwareRuntime>
-    );
-  }
+  // Retain each config's session manager across route switches. Optional hooks
+  // remain in separate keyed components, without tearing down active runs.
   return (
-    <UrlOnlyRuntime
-      key={`url:${configIndex}`}
-      config={config}
-      urlMatch={urlMatch}
-      fetchFn={fetchFn}
-      toolUIs={toolUIs}
-    >
-      {children}
-    </UrlOnlyRuntime>
+    <>
+      {configs
+        .filter((entry) => visited.has(entry) || entry === config)
+        .map((entry) => {
+          const index = configs.indexOf(entry);
+          const common = {
+            config: entry,
+            active: entry === config,
+            urlMatch: entry === config ? urlMatch : undefined,
+            fetchFn,
+            toolUIs,
+            children,
+          };
+          return entry.useStickyConversationId ? (
+            <StickyAwareRuntime key={index} {...common} useSticky={entry.useStickyConversationId} />
+          ) : (
+            <UrlOnlyRuntime key={index} {...common} />
+          );
+        })}
+    </>
   );
 }
 
 interface ChildRuntimeProps {
+  active: boolean;
   config: ChatConversationConfig;
   urlMatch: string | undefined;
   fetchFn: typeof fetch;
@@ -245,6 +236,7 @@ interface ChildRuntimeProps {
  */
 function StickyAwareRuntime({
   config,
+  active,
   useSticky,
   urlMatch,
   fetchFn,
@@ -255,6 +247,7 @@ function StickyAwareRuntime({
   return (
     <RuntimeBody
       config={config}
+      active={active}
       sticky={sticky}
       urlMatch={urlMatch}
       fetchFn={fetchFn}
@@ -270,10 +263,18 @@ function StickyAwareRuntime({
  * No hook is ever called for sticky state — the runtime threadId
  * follows URL match and the shell-minted fresh UUID only.
  */
-function UrlOnlyRuntime({ config, urlMatch, fetchFn, toolUIs, children }: ChildRuntimeProps) {
+function UrlOnlyRuntime({
+  config,
+  active,
+  urlMatch,
+  fetchFn,
+  toolUIs,
+  children,
+}: ChildRuntimeProps) {
   return (
     <RuntimeBody
       config={config}
+      active={active}
       sticky={null}
       urlMatch={urlMatch}
       fetchFn={fetchFn}
@@ -291,6 +292,7 @@ function UrlOnlyRuntime({ config, urlMatch, fetchFn, toolUIs, children }: ChildR
  */
 function RuntimeBody({
   config,
+  active,
   sticky,
   urlMatch,
   fetchFn,
@@ -332,7 +334,10 @@ function RuntimeBody({
   //      sticky and no URL match. Pre-minted so the runtime's
   //      ``threadId`` is defined from the first render (no
   //      ``undefined → defined`` remount of assistant-ui).
-  const effectiveThreadId: string = urlMatch ?? sticky ?? freshId;
+  const selectedThreadId = urlMatch ?? sticky ?? freshId;
+  const retainedThread = useRef(selectedThreadId);
+  if (active) retainedThread.current = selectedThreadId;
+  const effectiveThreadId = retainedThread.current;
 
   const historyAdapterFactory = useCallback<AGUIHistoryAdapterFactory>(
     (args: AGUIChatConversationFactoryArgs) =>
@@ -347,6 +352,9 @@ function RuntimeBody({
     <AGUIRuntimeProvider
       fetchFn={fetchFn}
       threadId={effectiveThreadId}
+      active={active}
+      headlessChildren={toolUIs}
+      conversationUrl={config.conversationUrl?.(effectiveThreadId)}
       // ``urlMatch`` carries the URL-derived resume signal verbatim.
       // ``effectiveThreadId`` is always defined (sticky / urlMatch /
       // freshly minted UUID) so passing it in place of ``urlMatch``
@@ -355,7 +363,6 @@ function RuntimeBody({
       urlMatch={urlMatch}
       historyAdapterFactory={historyAdapterFactory}
     >
-      {toolUIs}
       {children}
     </AGUIRuntimeProvider>
   );

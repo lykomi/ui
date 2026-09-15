@@ -10,23 +10,14 @@ import {
   useNavStore,
   useAppStore,
 } from "../index.ts";
-import { History, Settings, Layers } from "lucide-react";
+import { MessagesSquare, Settings, Layers } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
-import type { NavItem } from "../lib/nav-config.ts";
+import { findNavItem } from "../lib/nav-config.ts";
 
 export function normalizeWorkbenchPath(path: string) {
   return path === "/" ? path : path.replace(/\/+$/, "");
 }
 
-function findExactWorkbenchItem(items: NavItem[], pathname: string): NavItem | undefined {
-  const target = normalizeWorkbenchPath(pathname);
-  for (const item of items) {
-    if (normalizeWorkbenchPath(item.to) === target) return item;
-    const nested = item.children && findExactWorkbenchItem(item.children, pathname);
-    if (nested) return nested;
-  }
-  return undefined;
-}
 function useWorkbenchNavigation() {
   const navGroups = useNavStore((s) => s.config);
   const workspaceGroups = useMemo(() => {
@@ -41,9 +32,12 @@ function useWorkbenchNavigation() {
       const space = workspaceGroups[0];
       const root = space.items.find((item) => item.to === space.focusOn) ?? space.items[0];
       return [
+        ...navGroups
+          .filter((group) => group.meta?.showInWorkspaceNavigation)
+          .map((group) => ({ ...group, priority: 1100 })),
         {
           ...space,
-          label: "Spaces",
+          label: "All spaces",
           icon: Layers,
           priority: 1000,
           items: root
@@ -65,7 +59,7 @@ function useWorkbenchNavigation() {
         .filter((group) => !["recent-chats", "pinned-chats"].includes(String(group.meta?.type)))
         .map((group) =>
           group.meta?.type === "spaces-workspaces"
-            ? { ...group, label: "Spaces", icon: Layers }
+            ? { ...group, label: "All spaces", icon: Layers, createActions: undefined }
             : group.label === "Admin"
               ? { ...group, icon: Settings }
               : group.label === "Activity"
@@ -86,13 +80,13 @@ export function useWorkbenchState(chatRoute: boolean) {
   const chatOnly = chatRoute && !panelOpen;
   const location = useLocation();
   const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
-  const routeItem = useMemo(
-    () =>
-      navGroups
-        .map((group) => findExactWorkbenchItem(group.items, location.pathname))
-        .find((item) => item !== undefined),
-    [location.pathname, navGroups],
-  );
+  const routeItem = useMemo(() => {
+    const item = findNavItem(navGroups, location.pathname + location.search)?.item;
+    return item &&
+      normalizeWorkbenchPath(item.to.split("?")[0]) === normalizeWorkbenchPath(location.pathname)
+      ? item
+      : undefined;
+  }, [location.pathname, location.search, navGroups]);
   const pageLabel = useAppStore((s) => s.navContext.label);
   const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();
@@ -134,7 +128,7 @@ export function useWorkbenchState(chatRoute: boolean) {
       onClick={openHistory}
       className="h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
     >
-      <History className="size-4" aria-hidden />
+      <MessagesSquare className="size-4" aria-hidden />
       Conversation history
     </Button>
   );

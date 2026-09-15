@@ -15,6 +15,9 @@ const state = vi.hoisted(() => ({
   navContext: { label: "Document", meta: {} as Record<string, unknown> },
   sidebar: vi.fn(),
 }));
+vi.mock("../../../web-ui/dist/components/ag-ui-runtime-provider.js", () => ({
+  useAGUIAdapter: () => ({ selectRetainedThread: () => false }),
+}));
 vi.mock("@assistant-ui/react", () => ({
   useAuiState: (select: (s: unknown) => unknown) =>
     select({
@@ -420,11 +423,16 @@ describe("layout preview", () => {
       items: [],
       meta: { type: "recent-chats", workspaceId: "w1" },
     };
-    const activity = { label: "Activity", items: [] };
+    const activity = {
+      label: "Activity",
+      items: [{ label: "Activity", to: "/tasks?workspace=w1", icon: Folder }],
+      meta: { showInWorkspaceNavigation: true },
+    };
     state.groups = [activity, workspace, recent];
     const { rerender } = render(<WorkbenchPreview page={<Editor />} />);
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
-      expect.objectContaining({ label: "Spaces", items: [{ ...root, children: undefined }] }),
+      expect.objectContaining({ ...activity, priority: 1100 }),
+      expect.objectContaining({ label: "All spaces", items: [{ ...root, children: undefined }] }),
       expect.objectContaining({ label: "Content", items: [child] }),
     ]);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);
