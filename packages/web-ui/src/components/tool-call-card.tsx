@@ -95,8 +95,7 @@ export function ToolCallCard({
                   onClick={action.onClick}
                   disabled={action.disabled}
                   className={cn(
-                    "h-6 px-2.5 text-xs font-medium rounded-md",
-                    "border border-primary/30 text-primary",
+                    "min-h-6 px-1.5 text-xs font-medium rounded-md text-primary",
                     "hover:bg-primary/10 transition-colors",
                     "disabled:opacity-50 disabled:pointer-events-none",
                   )}
