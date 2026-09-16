@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.9
+
+### Patch Changes
+
+- fa447e0: Publish the scaffold templates with the current browser icon and package version support.
+
 ## 0.8.8
 
 ### Patch Changes

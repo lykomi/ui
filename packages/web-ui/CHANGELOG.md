@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.32.0
+
+### Minor Changes
+
+- e4ee172: Let themes set browser favicons and mobile bookmark icons, with dark-mode favicon variants and compact-icon fallback.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.32.0
+- @iloveagents/foundry-web-primitives@0.32.0
+
 ## 0.31.0
 
 ### Minor Changes
