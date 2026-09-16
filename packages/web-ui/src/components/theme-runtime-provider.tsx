@@ -248,6 +248,11 @@ export function ThemeScope({
 
 export function ThemeDocumentMetadata() {
   const runtime = useThemeRuntime();
+  const { faviconUrl, darkFaviconUrl, iconUrl, darkIconUrl, touchIconUrl } = runtime.branding;
+  const favicon =
+    runtime.mode === "dark"
+      ? darkFaviconUrl || faviconUrl || darkIconUrl || iconUrl
+      : faviconUrl || darkFaviconUrl || iconUrl || darkIconUrl;
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -256,17 +261,21 @@ export function ThemeDocumentMetadata() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const branding = runtime.branding;
-    const favicon =
-      runtime.mode === "dark"
-        ? branding.darkFaviconUrl || branding.faviconUrl || branding.darkIconUrl || branding.iconUrl
-        : branding.faviconUrl ||
-          branding.darkFaviconUrl ||
-          branding.iconUrl ||
-          branding.darkIconUrl;
     const managed: HTMLLinkElement[] = [];
     const addIcon = (rel: string, href: string | undefined) => {
-      if (!href || !/^(https?:\/\/|\/|data:image\/)/i.test(href)) return;
+      if (!href) return;
+      let resolved: URL;
+      try {
+        resolved = new URL(href, document.baseURI);
+      } catch {
+        return;
+      }
+      if (
+        resolved.protocol !== "http:" &&
+        resolved.protocol !== "https:" &&
+        !(resolved.protocol === "data:" && /^data:image\//i.test(href))
+      )
+        return;
       const link = document.createElement("link");
       link.rel = rel;
       link.href = href;
@@ -275,9 +284,9 @@ export function ThemeDocumentMetadata() {
       managed.push(link);
     };
     addIcon("icon", favicon);
-    addIcon("apple-touch-icon", branding.touchIconUrl);
+    addIcon("apple-touch-icon", touchIconUrl);
     return () => managed.forEach((link) => link.remove());
-  }, [runtime.branding, runtime.mode]);
+  }, [favicon, touchIconUrl]);
 
   return null;
 }

@@ -14,7 +14,11 @@ const root = createRoot(host);
 
 beforeAll(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener() {},
+    removeEventListener() {},
+  }));
 });
 
 afterEach(async () => {
@@ -71,7 +75,7 @@ describe("theme document icons", () => {
           layers={[
             {
               definition: {
-                branding: { iconUrl: "/mark.svg", touchIconUrl: "javascript:alert(1)" },
+                branding: { iconUrl: "mark.svg", touchIconUrl: "javascript:alert(1)" },
               },
             },
           ]}
@@ -83,9 +87,26 @@ describe("theme document icons", () => {
     );
     expect(
       document.querySelector('link[data-theme-icon="true"][rel="icon"]')?.getAttribute("href"),
-    ).toBe("/mark.svg");
+    ).toBe("mark.svg");
     expect(
       document.querySelector('link[data-theme-icon="true"][rel="apple-touch-icon"]'),
     ).toBeNull();
+  });
+
+  it("keeps icon links mounted when equivalent theme layers rerender", async () => {
+    const render = () =>
+      root.render(
+        <ThemeRuntimeProvider
+          layers={[{ definition: { branding: { faviconUrl: "icons/mark.svg" } } }]}
+          mode="light"
+        >
+          <ThemeDocumentMetadata />
+        </ThemeRuntimeProvider>,
+      );
+    await act(async () => render());
+    const first = document.querySelector('link[data-theme-icon="true"][rel="icon"]');
+    expect(first?.getAttribute("href")).toBe("icons/mark.svg");
+    await act(async () => render());
+    expect(document.querySelector('link[data-theme-icon="true"][rel="icon"]')).toBe(first);
   });
 });
