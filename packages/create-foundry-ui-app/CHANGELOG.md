@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.11
+
+### Patch Changes
+
+- e90828f: Publish the starter template with the updated Foundry Web UI and Voice package pins.
+
 ## 0.8.10
 
 ### Patch Changes
