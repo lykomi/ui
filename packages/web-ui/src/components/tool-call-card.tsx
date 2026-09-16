@@ -126,8 +126,10 @@ export function ToolCallCard({
 
           {description && (
             <div
-              className={cn("text-xs mt-0.5", isError ? "text-destructive" : "text-primary")}
-              style={{ overflowWrap: "anywhere" }}
+              className={cn(
+                "text-xs mt-0.5 wrap-anywhere",
+                isError ? "text-destructive" : "text-primary",
+              )}
             >
               {description}
             </div>
