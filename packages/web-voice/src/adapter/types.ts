@@ -41,9 +41,33 @@ export interface VoiceTranscript {
   isFinal: boolean;
 }
 
+export interface RelayActivity {
+  toolName: string;
+  completed: boolean;
+  args?: Readonly<Record<string, unknown>>;
+}
+
 export interface VoiceConfig {
   /** @default "relay" */
   mode?: VoiceMode;
+
+  /**
+   * Spoken progress when the app's agent takes longer to answer.
+   * Relay only: Voice Live cannot observe tools running in the app's agent.
+   * Uses the normal speech queue, never adds a message to conversation history.
+   * Cancelled on the first answer text, interruption, run end or disconnect.
+   */
+  relayInterimResponse?: {
+    text: string;
+    /** @default 15000 */
+    delayMs?: number;
+    /** Suppress opening-turn filler; described tool work can still receive updates. */
+    skipInitialResponse?: boolean;
+    /** Describe observed tool activity without speaking raw arguments or reasoning. */
+    describeActivity?: (activity: RelayActivity) => string | null;
+    /** Minimum spacing for changed activity updates; at most three updates per run. */
+    intervalMs?: number;
+  };
 
   /**
    * How to reach Voice Live. In production this is `{ proxyUrl }`: a

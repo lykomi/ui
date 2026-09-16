@@ -38,7 +38,7 @@ import { VoiceStage } from "./voice-stage.tsx";
 import { needsAudioOnlySink } from "./audio-ownership.ts";
 import { VoiceAudioSink } from "./voice-audio-sink.tsx";
 import { useDirectAudioOutput } from "./use-direct-audio-output.ts";
-import { resetVoiceSessionState, useVoiceUiStore } from "./voice-ui-store.ts";
+import { resetVoiceSessionState, updateVoiceCaption, useVoiceUiStore } from "./voice-ui-store.ts";
 
 export interface VoiceSurfaceProps {
   bridge: VoiceBridge;
@@ -73,11 +73,7 @@ export function VoiceSurface({ bridge, config, avatar = true, stage = true }: Vo
   const onTranscript = useCallback(
     (role: "user" | "assistant", text: string, isFinal: boolean) => {
       bridge.handleTranscript(role, text, isFinal);
-      // The stage shows what is being said right now; a final empty string
-      // is a VAD misfire and would blank the line for no reason.
-      if (text.trim() || !isFinal) {
-        useVoiceUiStore.setState(role === "user" ? { userText: text } : { assistantText: text });
-      }
+      updateVoiceCaption(role, text);
     },
     [bridge],
   );

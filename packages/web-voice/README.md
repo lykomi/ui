@@ -43,6 +43,23 @@ retrieval surface, and the reply is spoken back in the Azure voice you configure
 that is `turn_detection.create_response: false` plus `pre_generated_assistant_message` — both
 documented Voice Live features, not tricks.
 
+For slow app-agent runs, opt into `relayInterimResponse: { text: "One moment, please.",
+delayMs: 15000, skipInitialResponse: true }`. The relay speaks it once while waiting
+for answer text, through the same serialized speech queue. `skipInitialResponse`
+lets the first reply of each call open the conversation without an acknowledgement.
+Answer text (including a buffered short reply), interruption, run completion and
+disconnect cancel a pending acknowledgement. It is presentation feedback, so it
+does not add a message to the persisted conversation. Native Voice Live interim
+responses cannot observe tools executing in the app's separate agent.
+
+Optionally provide `describeActivity({ toolName, completed, args })` to return a
+short description of observed tool work, or `null` for unknown activity. The
+watcher reports only tools from the current user turn, preferring pending calls.
+With `intervalMs` (default 18000), changed descriptions can be spoken occasionally,
+never repeating a phrase and capped at three updates per run. Described tool work
+can receive an update during the opening turn; the generic fallback remains
+suppressed there. Curate descriptions rather than speaking raw arguments or results.
+
 **`realtime`** hands the conversation to the Voice Live model for the lowest possible latency. It
 can still call your client-side tools: the schemas in `clientToolRegistry` are sent with the
 session, and a call is dispatched through the same registry the typed chat uses, so `ui_navigate`

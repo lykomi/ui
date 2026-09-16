@@ -44,6 +44,7 @@ describe("chat slots", () => {
       launcherBadge: null,
       composerActions: null,
       threadSurface: null,
+      threadSurfaceHidesComposer: false,
     });
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -107,6 +108,17 @@ describe("chat slots", () => {
     expect(
       container.querySelector('[data-testid="primary-host"] [data-testid="starter"]'),
     ).not.toBeNull();
+  });
+
+  it("does not transfer composer takeover to a replacement surface", () => {
+    registerChatSlots({ threadSurface: Banner, threadSurfaceHidesComposer: true });
+    registerChatSlots({ launcherBadge: Badge });
+    expect(useChatSlotsStore.getState().threadSurfaceHidesComposer).toBe(true);
+    registerChatSlots({ threadSurface: Actions });
+    expect(useChatSlotsStore.getState().threadSurfaceHidesComposer).toBe(false);
+    registerChatSlots({ threadSurface: Banner, threadSurfaceHidesComposer: true });
+    registerChatSlots({ threadSurface: null });
+    expect(useChatSlotsStore.getState().threadSurfaceHidesComposer).toBe(false);
   });
 
   it("renders nothing while unregistered", () => {

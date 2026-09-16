@@ -42,6 +42,7 @@ export function VoiceStage(props: VoiceStageProps = {}) {
   const connectionState = useVoiceUiStore((s) => s.connectionState);
   const userText = useVoiceUiStore((s) => s.userText);
   const assistantText = useVoiceUiStore((s) => s.assistantText);
+  const transcriptRole = useVoiceUiStore((s) => s.transcriptRole);
   const chromaKey = useVoiceUiStore((s) => s.chromaKey);
 
   const connecting = !voice || voice.status.type === "starting";
@@ -59,9 +60,8 @@ export function VoiceStage(props: VoiceStageProps = {}) {
             ? "Speaking"
             : "Listening";
 
-  // While the assistant talks the visualiser is showing its voice, so the
-  // caption should be its words; otherwise show what was just heard.
-  const caption = sessionState === "speaking" ? assistantText : userText;
+  // Pauses in playback do not change who last spoke.
+  const caption = transcriptRole === "assistant" ? assistantText : userText;
 
   return (
     <div className="relative flex h-full min-h-full flex-col">

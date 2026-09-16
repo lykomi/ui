@@ -31,7 +31,7 @@ import type {
   SessionState,
 } from "@iloveagents/foundry-voice-live-react";
 import { SentenceStream, SpeechQueue, toSpeakableText } from "./speech-queue.ts";
-import type { VoiceConfig, VoiceMode, VoiceTranscript } from "./types.ts";
+import type { RelayActivity, VoiceConfig, VoiceMode, VoiceTranscript } from "./types.ts";
 
 /** What the bridge needs from the live session; supplied by the React host. */
 export interface VoiceTransportControls {
@@ -98,6 +98,13 @@ export class VoiceBridge {
    * stream, and speak the whole reply again. Forever.
    */
   private answerDone = false;
+  private hasSpokenAnswer = false;
+  private relayRunId: string | null = null;
+  private interimTimer: ReturnType<typeof setTimeout> | null = null;
+  private interimActivity: RelayActivity | null = null;
+  private interimSuppressed = false;
+  private interimCount = 0;
+  private interimTexts = new Set<string>();
   /** The response currently being spoken, once the service has named it. */
   private activeResponseId: string | null = null;
   /**
@@ -320,6 +327,8 @@ export class VoiceBridge {
   handleServerEvent(event: VoiceLiveServerEvent): void {
     switch (event.type) {
       case "input_audio_buffer.speech_started":
+        this.interimSuppressed = true;
+        this.clearInterim();
         // Barge-in. Drop everything still queued to be spoken; the wire's
         // in-flight response is cancelled by the service (`interrupt_response`),
         // and cancelling locally flushes playback that is already buffered.
@@ -427,6 +436,8 @@ export class VoiceBridge {
    * is exactly the pair of routes on which the transport dies mid-utterance.
    */
   private endCall(): void {
+    this.clearInterim();
+    this.relayRunId = null;
     this.connected = false;
     // Cleared here rather than on each exit path: the cancellation branch left
     // it set, and a later `handleClosed()` would then act on the controls of a
@@ -442,6 +453,7 @@ export class VoiceBridge {
     this.sentences.reset();
     this.answerId = null;
     this.answerDone = false;
+    this.hasSpokenAnswer = false;
   }
 
   // ---- relay: speak the agent's answer --------------------------------------
@@ -463,11 +475,84 @@ export class VoiceBridge {
     this.skipAnswerId = messageId;
   }
 
+  /** A stable user-turn id while the agent runs; null on completion/cancellation. */
+  trackRelayRun(runId: string | null): void {
+    if (runId === this.relayRunId) return;
+    this.clearInterim();
+    this.relayRunId = runId;
+    this.interimActivity = null;
+    this.interimSuppressed = false;
+    this.interimCount = 0;
+    this.interimTexts.clear();
+    const interim = this.config.relayInterimResponse;
+    if (!runId || !interim?.text.trim() || this.mode !== "relay" || !this.isLive) return;
+    if (interim.skipInitialResponse && !this.hasSpokenAnswer) return;
+    this.scheduleInterim(interim.delayMs ?? 15000);
+  }
+
+  trackRelayActivity(activity: RelayActivity | null): void {
+    this.interimActivity = activity;
+    const config = this.config.relayInterimResponse;
+    if (
+      activity &&
+      config?.describeActivity &&
+      this.interimTimer === null &&
+      this.interimCount === 0 &&
+      this.relayRunId &&
+      !this.interimSuppressed &&
+      this.isLive &&
+      this.mode === "relay"
+    ) {
+      // Real tool work can merit an update even in the opening turn; greetings cannot.
+      if (config.describeActivity(activity)?.trim()) this.scheduleInterim(config.delayMs ?? 15000);
+    }
+  }
+
+  private scheduleInterim(delay: number): void {
+    if (!Number.isFinite(delay) || delay < 0) return;
+    this.interimTimer = setTimeout(() => {
+      this.interimTimer = null;
+      const config = this.config.relayInterimResponse;
+      if (!config || !this.isLive || !this.relayRunId || this.interimSuppressed) return;
+      const activityText = this.interimActivity
+        ? config.describeActivity?.(this.interimActivity)
+        : null;
+      const text =
+        activityText?.trim() ||
+        (this.interimCount === 0 && !(config.skipInitialResponse && !this.hasSpokenAnswer)
+          ? config.text.trim()
+          : "");
+      if (
+        text &&
+        !this.interimTexts.has(text) &&
+        !this.speech.isSpeaking &&
+        this.speech.pendingCount === 0
+      ) {
+        this.interimTexts.add(text);
+        this.interimCount++;
+        this.speech.enqueue(text);
+      }
+      if (config.describeActivity && this.interimCount < 3)
+        this.scheduleInterim(Math.max(10000, config.intervalMs ?? 18000));
+    }, delay);
+  }
+
+  private clearInterim(): void {
+    if (this.interimTimer !== null) clearTimeout(this.interimTimer);
+    this.interimTimer = null;
+  }
+
   trackAnswer(messageId: string, text: string, isComplete: boolean): void {
     // The watcher is mounted for the whole app lifetime, but an answer is
     // only spoken while a voice session is actually live — otherwise every
     // typed conversation would queue speech at a disconnected transport.
     if (this.mode !== "relay" || !this.isLive) return;
+    // Short replies are buffered until their sentence/turn completes. Once
+    // answer text is arriving, a waiting message must not jump ahead of it.
+    if (text.trim()) {
+      this.interimSuppressed = true;
+      this.clearInterim();
+    }
     if (messageId === this.skipAnswerId) return;
 
     if (this.answerId !== messageId) {
@@ -483,11 +568,15 @@ export class VoiceBridge {
     // bracket, so it must not be held back — holding it at that point drops
     // it, since `flush()` sees only what was pushed.
     const speakable = toSpeakableText(text, { final: isComplete });
-    for (const utterance of this.sentences.push(speakable)) this.speech.enqueue(utterance);
+    const utterances = this.sentences.push(speakable);
 
     if (isComplete) {
-      for (const utterance of this.sentences.flush()) this.speech.enqueue(utterance);
+      utterances.push(...this.sentences.flush());
       this.answerDone = true;
+    }
+    for (const utterance of utterances) {
+      this.hasSpokenAnswer = true;
+      this.speech.enqueue(utterance);
     }
   }
 
@@ -501,6 +590,7 @@ export class VoiceBridge {
    * response gate as every other turn.
    */
   private sendSpokenText(text: string): void {
+    this.clearInterim();
     this.controls?.sendEvent({
       type: "response.create",
       response: {
