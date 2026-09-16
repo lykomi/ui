@@ -793,39 +793,67 @@ export function getThemePreset(name?: string | null): ThemeDefinition {
 function deriveSurfaceColors(
   resolved: ThemeColorSlots,
   explicit: ThemeColorSlots | undefined,
-): ThemeColorSlots {
+): { colors: ThemeColorSlots; changed: Set<keyof ThemeColorSlots> } {
   // The preset remains the safe fallback for an entirely unthemed product.
-  // Once an author supplies any surface colour, related values follow those
-  // high-impact choices unless the author deliberately overrides them.
-  if (!explicit || Object.keys(explicit).length === 0) return resolved;
+  // Only values depending on an authored colour should move. A sparse edit
+  // to an unrelated slot must not repaint preset surfaces.
+  const changed = new Set<keyof ThemeColorSlots>(
+    (Object.keys(explicit ?? {}) as (keyof ThemeColorSlots)[]).filter((key) =>
+      Boolean(explicit?.[key]),
+    ),
+  );
+  if (!explicit || changed.size === 0) return { colors: resolved, changed };
   const next = { ...resolved, ...explicit };
-  const setDerived = (key: keyof ThemeColorSlots, value: string | undefined) => {
-    if (!explicit[key] && value) next[key] = value;
+  const setDerived = (
+    key: keyof ThemeColorSlots,
+    value: string | undefined,
+    sources: (keyof ThemeColorSlots)[],
+  ) => {
+    if (!explicit[key] && value && sources.some((source) => changed.has(source))) {
+      next[key] = value;
+      changed.add(key);
+    }
   };
-  setDerived("heading", next.foreground);
-  setDerived("contentHeading1", next.heading);
-  setDerived("contentHeading2", `color-mix(in srgb, ${next.heading} 78%, ${next.foreground} 22%)`);
-  setDerived("contentHeading3", next.foreground);
-  setDerived("contentHeading4", next.foreground);
-  setDerived("contentHeading5", next.foreground);
-  setDerived("contentHeading6", next.foreground);
-  setDerived("card", next.background);
-  setDerived("cardForeground", next.foreground);
-  setDerived("popover", next.card);
-  setDerived("popoverForeground", next.foreground);
-  setDerived("secondary", `color-mix(in srgb, ${next.background} 94%, ${next.primary} 6%)`);
-  setDerived("secondaryForeground", next.foreground);
-  setDerived("muted", `color-mix(in srgb, ${next.background} 97%, ${next.foreground} 3%)`);
+  setDerived("heading", next.foreground, ["foreground"]);
+  setDerived("contentHeading1", next.heading, ["heading"]);
+  setDerived("contentHeading2", `color-mix(in srgb, ${next.heading} 78%, ${next.foreground} 22%)`, [
+    "heading",
+    "foreground",
+  ]);
+  setDerived("contentHeading3", next.foreground, ["foreground"]);
+  setDerived("contentHeading4", next.foreground, ["foreground"]);
+  setDerived("contentHeading5", next.foreground, ["foreground"]);
+  setDerived("contentHeading6", next.foreground, ["foreground"]);
+  setDerived("card", next.background, ["background"]);
+  setDerived("cardForeground", next.foreground, ["foreground"]);
+  setDerived("popover", next.card, ["card"]);
+  setDerived("popoverForeground", next.foreground, ["foreground"]);
+  setDerived("secondary", `color-mix(in srgb, ${next.background} 94%, ${next.primary} 6%)`, [
+    "background",
+    "primary",
+  ]);
+  setDerived("secondaryForeground", next.foreground, ["foreground"]);
+  setDerived("muted", `color-mix(in srgb, ${next.background} 97%, ${next.foreground} 3%)`, [
+    "background",
+    "foreground",
+  ]);
   setDerived(
     "mutedForeground",
     `color-mix(in srgb, ${next.foreground} 62%, ${next.background} 38%)`,
+    ["foreground", "background"],
   );
-  setDerived("accent", `color-mix(in srgb, ${next.background} 90%, ${next.primary} 10%)`);
-  setDerived("accentForeground", next.foreground);
-  setDerived("border", `color-mix(in srgb, ${next.foreground} 14%, ${next.background} 86%)`);
-  setDerived("input", next.border);
-  setDerived("ring", next.primary);
-  return next;
+  setDerived("accent", `color-mix(in srgb, ${next.background} 90%, ${next.primary} 10%)`, [
+    "background",
+    "primary",
+  ]);
+  setDerived("accentForeground", next.foreground, ["foreground"]);
+  setDerived("border", `color-mix(in srgb, ${next.foreground} 14%, ${next.background} 86%)`, [
+    "foreground",
+    "background",
+  ]);
+  setDerived("input", next.border, ["border"]);
+  setDerived("ring", next.primary, ["primary"]);
+  return { colors: next, changed };
 }
 
 export function resolveThemeRuntime(layers: ThemeLayer[], mode: ThemeMode): ResolvedThemeRuntime {
@@ -836,7 +864,7 @@ export function resolveThemeRuntime(layers: ThemeLayer[], mode: ThemeMode): Reso
   const customDefinition = mergeThemeDefinitions(...layers.map((layer) => layer.definition));
   const definitions = [getThemePreset(basePreset), customDefinition];
   const definition = mergeThemeDefinitions(...definitions);
-  const colors = deriveSurfaceColors(
+  const { colors, changed } = deriveSurfaceColors(
     { ...(effectiveMode === "dark" ? definition.dark : definition.light) },
     effectiveMode === "dark" ? customDefinition.dark : customDefinition.light,
   );
@@ -846,13 +874,28 @@ export function resolveThemeRuntime(layers: ThemeLayer[], mode: ThemeMode): Reso
     effectiveMode === "dark"
       ? getThemePreset(basePreset).sidebar?.dark
       : getThemePreset(basePreset).sidebar?.light;
-  const hasCustomPalette = Boolean(
-    Object.keys((effectiveMode === "dark" ? customDefinition.dark : customDefinition.light) ?? {})
-      .length || Object.keys(explicitSidebar ?? {}).length,
-  );
+  const sidebarSources: Record<keyof ThemeSidebarSlots, keyof ThemeColorSlots | null> = {
+    sidebar: "secondary",
+    sidebarForeground: "foreground",
+    sidebarPrimary: "primary",
+    sidebarPrimaryForeground: "primaryForeground",
+    sidebarAccent: "accent",
+    sidebarAccentForeground: "accentForeground",
+    sidebarSelected: "muted",
+    sidebarSelectedForeground: "foreground",
+    sidebarIcon: null,
+    sidebarBorder: "border",
+    sidebarRing: "ring",
+  };
+  const derivedSidebar = defaultSidebar(colors);
   const sidebar = {
-    ...defaultSidebar(colors),
-    ...(hasCustomPalette ? {} : presetSidebar),
+    ...derivedSidebar,
+    ...presetSidebar,
+    ...Object.fromEntries(
+      (Object.keys(sidebarSources) as (keyof ThemeSidebarSlots)[])
+        .filter((key) => sidebarSources[key] && changed.has(sidebarSources[key]!))
+        .map((key) => [key, derivedSidebar[key]]),
+    ),
     ...explicitSidebar,
   } as ThemeSidebarSlots;
   const status = {

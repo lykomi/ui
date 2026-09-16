@@ -197,8 +197,8 @@ describe("theme runtime", () => {
     const src = readFileSync(join(import.meta.dirname!, "../components/sidebar.tsx"), "utf-8");
     // The collapsed "New Thread" button.
     expect(src).toContain('<SquarePen className="size-4 text-sidebar-icon" />');
-    // The collapsed nav shortcuts: active keeps `primary`, idle takes the slot.
-    expect(src).toContain('isActive ? "text-primary" : "text-sidebar-icon"');
+    // The collapsed nav shortcuts use selected text when active, idle takes the icon slot.
+    expect(src).toContain('isActive ? "text-sidebar-selected-foreground" : "text-sidebar-icon"');
     // And nothing anywhere still hardcodes the tint the slot replaced.
     expect(src).not.toContain("text-sidebar-foreground/60");
   });

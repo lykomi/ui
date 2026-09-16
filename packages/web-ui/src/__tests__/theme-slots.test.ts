@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { THEME_SLOTS, resolveThemeRuntime, type ThemeDefinition } from "../lib/theme-runtime";
 
 describe("theme slot contract", () => {
@@ -73,5 +75,36 @@ describe("theme slot contract", () => {
       "--content-heading-1": "#112233",
       "--content-heading-2": "#334455",
     });
+  });
+
+  it("keeps preset surfaces when a sparse edit changes an unrelated colour", () => {
+    const baseline = resolveThemeRuntime([], "light").variables;
+    const result = resolveThemeRuntime(
+      [{ definition: { light: { destructive: "#aabbcc" } } }],
+      "light",
+    ).variables;
+    for (const key of ["--card", "--secondary", "--muted", "--accent", "--border", "--sidebar"]) {
+      expect(result[key], key).toBe(baseline[key]);
+    }
+    expect(result["--destructive"]).toBe("#aabbcc");
+  });
+
+  it("keeps preset navigation when only selected text is authored", () => {
+    const baseline = resolveThemeRuntime([], "light").variables;
+    const result = resolveThemeRuntime(
+      [{ definition: { sidebar: { light: { sidebarSelectedForeground: "#123456" } } } }],
+      "light",
+    ).variables;
+    for (const key of ["--sidebar", "--sidebar-accent", "--sidebar-border", "--sidebar-ring"]) {
+      expect(result[key], key).toBe(baseline[key]);
+    }
+    expect(result["--sidebar-selected-foreground"]).toBe("#123456");
+  });
+
+  it("uses selected foreground for the active chevron, dot, and collapsed shortcut", () => {
+    const source = readFileSync(join(import.meta.dirname!, "../components/sidebar.tsx"), "utf8");
+    expect(source).toContain('isActive ? "bg-sidebar-selected-foreground/70"');
+    expect(source).toContain('isActive ? "text-sidebar-selected-foreground"');
+    expect(source).toContain("bg-sidebar-selected text-sidebar-selected-foreground");
   });
 });

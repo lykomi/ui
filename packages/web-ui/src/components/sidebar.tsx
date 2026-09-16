@@ -611,7 +611,7 @@ function NavTwisty({
             data-nav-leaf-dot
             className={cn(
               "block size-1 shrink-0 rounded-full",
-              isActive ? "bg-primary/70" : "bg-sidebar-foreground/30",
+              isActive ? "bg-sidebar-selected-foreground/70" : "bg-sidebar-foreground/30",
             )}
           />
         )}
@@ -634,7 +634,9 @@ function NavTwisty({
         className={cn(
           "flex items-center justify-center rounded",
           NAV_TWISTY_HIT_CLASS,
-          isActive ? "text-primary" : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
+          isActive
+            ? "text-sidebar-selected-foreground"
+            : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
         )}
       >
         <ChevronRight
@@ -1185,7 +1187,8 @@ function CollapsibleNavItem({
       ? NAV_FLAT_BODY_CLASS
       : getNavDepthOffsets(0).body;
   const headingClass =
-    heading && !isDisabled &&
+    heading &&
+    !isDisabled &&
     `font-semibold ${isActive ? "text-sidebar-selected-foreground" : "text-heading"}`;
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const rendersRow = Boolean(hasChildren || hasActions);
@@ -1516,10 +1519,16 @@ function CollapsedNavShortcut({
         tooltip={label}
         side="right"
         className={cn(
-          isActive && "border border-transparent bg-sidebar-selected text-sidebar-foreground",
+          isActive &&
+            "border border-transparent bg-sidebar-selected text-sidebar-selected-foreground",
         )}
       >
-        <Icon className={cn("size-4", isActive ? "text-primary" : "text-sidebar-icon")} />
+        <Icon
+          className={cn(
+            "size-4",
+            isActive ? "text-sidebar-selected-foreground" : "text-sidebar-icon",
+          )}
+        />
       </TooltipIconButton>
     </NavLink>
   );
