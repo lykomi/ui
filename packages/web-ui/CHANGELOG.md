@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.31.0
+
+### Minor Changes
+
+- 46fe6c1: Expose a complete authoring catalogue for supported theme slots, add a semantic heading colour, and derive workflow glow colours from the active palette.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.31.0
+- @iloveagents/foundry-web-primitives@0.31.0
+
 ## 0.30.0
 
 ### Minor Changes
