@@ -22,7 +22,7 @@ export {
 } from "./react/install.tsx";
 
 // --- configuration ---
-export type { VoiceConfig, VoiceMode, VoiceTranscript } from "./adapter/types.ts";
+export type { RelayActivity, VoiceConfig, VoiceMode, VoiceTranscript } from "./adapter/types.ts";
 
 // --- chrome (place these yourself with `chrome: false`) ---
 export { VoiceMicButton } from "./react/voice-mic-button.tsx";

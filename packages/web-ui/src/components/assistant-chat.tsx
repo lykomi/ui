@@ -39,6 +39,7 @@ import {
   ChatComposerBannerSlot,
   ChatHomeStartersSlot,
   useChatThreadSurface,
+  useChatSlotsStore,
   useComposerActionsOwnSend,
 } from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
@@ -429,6 +430,7 @@ export function ChatContent({
   placeholder = DEFAULT_COMPOSER_PLACEHOLDER,
 }: ChatContentProps = {}) {
   const ThreadSurface = useChatThreadSurface();
+  const hideComposer = useChatSlotsStore((s) => !!s.threadSurface && s.threadSurfaceHidesComposer);
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const collapseChat = useChatBubbleStore((s) => s.collapse);
   const showPagePanel = useChatBubbleStore((s) => s.showPagePanel);
@@ -464,7 +466,7 @@ export function ChatContent({
           </div>
         </div>
       )}
-      <DropZone centered={centerComposer}>
+      <DropZone centered={centerComposer && !ThreadSurface}>
         <div
           className="relative flex-1 overflow-hidden"
           style={centerComposer && !ThreadSurface ? { display: "none" } : undefined}
@@ -546,8 +548,10 @@ export function ChatContent({
           )}
         </div>
 
-        <div className="shrink-0 bg-background">
-          {composerIntro && <div className="mx-auto max-w-3xl px-4 pt-4">{composerIntro}</div>}
+        <div className="shrink-0 bg-background" hidden={hideComposer}>
+          {composerIntro && !ThreadSurface && (
+            <div className="mx-auto max-w-3xl px-4 pt-4">{composerIntro}</div>
+          )}
           <ChatComposerBannerSlot />
           <ThreadPrimitive.If running={false}>
             <div data-chat-composer-divider className="border-t border-border" />

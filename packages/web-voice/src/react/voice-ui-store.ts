@@ -37,6 +37,8 @@ interface VoiceUiState {
    */
   userText: string;
   assistantText: string;
+  /** Latest non-empty transcript's speaker; independent of playback pauses. */
+  transcriptRole: "user" | "assistant" | null;
   /** Avatar streams, when the session was configured with one. */
   videoStream: MediaStream | null;
   audioStream: MediaStream | null;
@@ -62,6 +64,7 @@ export const useVoiceUiStore = create<VoiceUiState>(() => ({
   analyser: null,
   userText: "",
   assistantText: "",
+  transcriptRole: null,
   videoStream: null,
   audioStream: null,
   chromaKey: null,
@@ -77,9 +80,19 @@ export function resetVoiceSessionState(): void {
   useVoiceUiStore.setState({
     userText: "",
     assistantText: "",
+    transcriptRole: null,
     analyser: null,
     videoStream: null,
     audioStream: null,
+  });
+}
+
+/** Keep the last caption until somebody actually says something new. */
+export function updateVoiceCaption(role: "user" | "assistant", text: string): void {
+  if (!text.trim()) return;
+  useVoiceUiStore.setState({
+    transcriptRole: role,
+    ...(role === "user" ? { userText: text } : { assistantText: text }),
   });
 }
 

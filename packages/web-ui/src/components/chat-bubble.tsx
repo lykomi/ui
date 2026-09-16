@@ -34,6 +34,7 @@ import {
   ChatHomeStartersSlot,
   ChatLauncherBadgeSlot,
   useChatThreadSurface,
+  useChatSlotsStore,
   useComposerActionsOwnSend,
 } from "./chat-slots.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
@@ -124,6 +125,7 @@ function BubbleScrollToBottomButton() {
 
 export function ChatBubble() {
   const ThreadSurface = useChatThreadSurface();
+  const hideComposer = useChatSlotsStore((s) => !!s.threadSurface && s.threadSurfaceHidesComposer);
   const isOpen = useChatBubbleStore((s) => s.isOpen);
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
   const openBubble = useChatBubbleStore((s) => s.open);
@@ -359,7 +361,7 @@ export function ChatBubble() {
               </div>
 
               {/* Composer — same pattern as full chat: attachment + input + send */}
-              <div className="shrink-0 border-t border-border">
+              <div className="shrink-0 border-t border-border" hidden={hideComposer}>
                 <ChatComposerBannerSlot />
                 <div className="px-3 py-3">
                   <ChatContext />

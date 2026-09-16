@@ -15,6 +15,7 @@ import { useEffect, useRef } from "react";
 import { useAuiState, useVoiceState } from "@assistant-ui/react";
 import type { ThreadMessage } from "@assistant-ui/react";
 import type { VoiceBridge } from "../adapter/voice-bridge.ts";
+import { currentRelayActivity } from "../adapter/relay-activity.ts";
 
 export function RelayAnswerWatcher({ bridge }: { bridge: VoiceBridge }) {
   // The array identity changes on every streamed token, which is exactly
@@ -22,6 +23,8 @@ export function RelayAnswerWatcher({ bridge }: { bridge: VoiceBridge }) {
   // re-render costs a comparison and a `useEffect`.
   const messages = useAuiState((s) => s.thread.messages) as readonly ThreadMessage[];
   const status = useVoiceState()?.status.type;
+  const running = useAuiState((s) => s.thread.isRunning);
+  const userTurnId = [...messages].reverse().find((m) => m.role === "user")?.id ?? null;
 
   // Whatever is on screen when the session goes live was answered before the
   // user asked for voice. Reading it back at them is not a greeting, it is a
@@ -33,6 +36,17 @@ export function RelayAnswerWatcher({ bridge }: { bridge: VoiceBridge }) {
     const lastAssistant = [...latest.current].reverse().find((m) => m.role === "assistant");
     bridge.primeAnswer(lastAssistant?.id ?? null);
   }, [bridge, status]);
+
+  useEffect(() => {
+    bridge.trackRelayRun(status === "running" && running ? userTurnId : null);
+    return () => bridge.trackRelayRun(null);
+  }, [bridge, status, running, userTurnId]);
+
+  useEffect(() => {
+    bridge.trackRelayActivity(
+      status === "running" && running ? currentRelayActivity(messages) : null,
+    );
+  }, [bridge, messages, status, running]);
 
   useEffect(() => {
     const last = messages[messages.length - 1];

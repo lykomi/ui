@@ -60,6 +60,8 @@ interface ChatSlotsState {
   composerActionsReplaceSend: boolean;
   /** Replaces the message viewport entirely while set. */
   threadSurface: ComponentType | null;
+  /** The surface supplies its own controls. Hide (but retain) the text composer. */
+  threadSurfaceHidesComposer: boolean;
 }
 
 export const useChatSlotsStore = create<ChatSlotsState>(() => ({
@@ -70,6 +72,7 @@ export const useChatSlotsStore = create<ChatSlotsState>(() => ({
   composerActions: null,
   composerActionsReplaceSend: false,
   threadSurface: null,
+  threadSurfaceHidesComposer: false,
 }));
 
 const homeStarterHosts = new Map<symbol, { priority: number; order: number }>();
@@ -110,6 +113,9 @@ export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
     next.composerActionsReplaceSend = slots.composerActionsReplaceSend;
   }
   if (slots.threadSurface !== undefined) next.threadSurface = slots.threadSurface;
+  if (slots.threadSurfaceHidesComposer !== undefined) {
+    next.threadSurfaceHidesComposer = slots.threadSurfaceHidesComposer;
+  }
   useChatSlotsStore.setState(next);
 }
 

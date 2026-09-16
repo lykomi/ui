@@ -81,6 +81,182 @@ beforeEach(() => {
   vi.useRealTimers();
 });
 
+describe("relay waiting acknowledgement", () => {
+  it("describes current work, spaces changed updates, and stops when the answer arrives", async () => {
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(
+      relay({
+        relayInterimResponse: {
+          text: "One moment.",
+          delayMs: 8000,
+          intervalMs: 18000,
+          skipInitialResponse: true,
+          describeActivity: ({ toolName, completed }) =>
+            `${completed ? "Reviewing" : "Running"} ${toolName}.`,
+        },
+      }),
+    );
+    const { session } = await connect(bridge, controls);
+    vi.useFakeTimers();
+    bridge.trackRelayRun("question");
+    bridge.trackRelayActivity({ toolName: "workspace lookup", completed: false });
+    await vi.advanceTimersByTimeAsync(7999);
+    expect(controls.sent).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(controls.sent.map(spokenText)).toEqual(["Running workspace lookup."]);
+    bridge.handleServerEvent(responseDone);
+    await vi.advanceTimersByTimeAsync(18000);
+    expect(controls.sent).toHaveLength(1); // No repeated filler for unchanged activity.
+    bridge.trackRelayActivity({ toolName: "document search", completed: true });
+    await vi.advanceTimersByTimeAsync(17999);
+    expect(controls.sent).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(controls.sent.map(spokenText)).toEqual([
+      "Running workspace lookup.",
+      "Reviewing document search.",
+    ]);
+    bridge.handleServerEvent(responseDone);
+    bridge.trackAnswer("answer", "Here is", false);
+    bridge.trackRelayActivity({ toolName: "another lookup", completed: false });
+    await vi.advanceTimersByTimeAsync(40000);
+    expect(controls.sent).toHaveLength(2);
+    session.disconnect();
+    vi.useRealTimers();
+  });
+
+  it("does not restart activity updates after an interruption", async () => {
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(
+      relay({
+        relayInterimResponse: {
+          text: "One moment.",
+          delayMs: 8000,
+          describeActivity: () => "Searching your workspace.",
+        },
+      }),
+    );
+    const { session } = await connect(bridge, controls);
+    vi.useFakeTimers();
+    bridge.trackRelayRun("question");
+    bridge.trackRelayActivity({ toolName: "search", completed: false });
+    bridge.handleServerEvent(speechStarted);
+    bridge.trackRelayActivity({ toolName: "search", completed: true });
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(controls.sent).toHaveLength(0);
+    session.disconnect();
+    vi.useRealTimers();
+  });
+
+  it("lets the opening reply speak first and waits 15 seconds on subsequent turns", async () => {
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(
+      relay({ relayInterimResponse: { text: "One moment.", skipInitialResponse: true } }),
+    );
+    const { session } = await connect(bridge, controls);
+    vi.useFakeTimers();
+    bridge.trackRelayRun("greeting");
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(controls.sent).toHaveLength(0);
+    bridge.trackAnswer("hello", "Hello! How can I help?", true);
+    bridge.handleServerEvent(responseDone);
+    bridge.trackRelayRun(null);
+    bridge.trackRelayRun("question");
+    await vi.advanceTimersByTimeAsync(14999);
+    expect(controls.sent.map(spokenText)).toEqual(["Hello! How can I help?"]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(controls.sent.map(spokenText)).toEqual(["Hello! How can I help?", "One moment."]);
+    session.disconnect();
+    vi.useRealTimers();
+
+    const secondCall = await connect(bridge, controls);
+    vi.useFakeTimers();
+    bridge.trackRelayRun("new-call-greeting");
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(controls.sent).toHaveLength(2);
+    secondCall.session.disconnect();
+    vi.useRealTimers();
+  });
+
+  it("does not put a waiting message ahead of a buffered short answer", async () => {
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(relay({ relayInterimResponse: { text: "One moment." } }));
+    const { session } = await connect(bridge, controls);
+    vi.useFakeTimers();
+    bridge.trackRelayRun("question");
+    await vi.advanceTimersByTimeAsync(14000);
+    bridge.trackAnswer("answer", "Hello!", false);
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(controls.sent).toHaveLength(0);
+    bridge.trackAnswer("answer", "Hello! How can I help?", true);
+    expect(controls.sent.map(spokenText)).toEqual(["Hello! How can I help?"]);
+    session.disconnect();
+    vi.useRealTimers();
+  });
+
+  it("speaks once during a slow run and queues the real answer without losing it", async () => {
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(
+      relay({ relayInterimResponse: { text: "One moment.", delayMs: 6500 } }),
+    );
+    const { session } = await connect(bridge, controls);
+    vi.useFakeTimers();
+    bridge.trackRelayRun("question");
+    await vi.advanceTimersByTimeAsync(6000);
+    bridge.trackRelayRun("question"); // Streaming tool updates must not restart the delay.
+    expect(controls.sent).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(controls.sent.map(spokenText)).toEqual(["One moment."]);
+    bridge.trackAnswer("answer", "Here is the result.", true);
+    expect(controls.sent).toHaveLength(1);
+    bridge.handleServerEvent(responseDone);
+    expect(controls.sent.map(spokenText)).toEqual(["One moment.", "Here is the result."]);
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(controls.sent).toHaveLength(2);
+    session.disconnect();
+    vi.useRealTimers();
+  });
+
+  it.each(["answer", "completed", "interrupted", "disconnected"] as const)(
+    "cancels a pending acknowledgement when %s",
+    async (reason) => {
+      const controls = fakeControls();
+      const bridge = new VoiceBridge(
+        relay({ relayInterimResponse: { text: "One moment.", delayMs: 6500 } }),
+      );
+      const { session } = await connect(bridge, controls);
+      vi.useFakeTimers();
+      bridge.trackRelayRun("question");
+      await vi.advanceTimersByTimeAsync(6000);
+      if (reason === "answer") bridge.trackAnswer("answer", "The answer.", true);
+      if (reason === "completed") bridge.trackRelayRun(null);
+      if (reason === "interrupted") bridge.handleServerEvent(speechStarted);
+      if (reason === "disconnected") session.disconnect();
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(controls.sent.map(spokenText)).toEqual(reason === "answer" ? ["The answer."] : []);
+      session.disconnect();
+      vi.useRealTimers();
+    },
+  );
+
+  it("allows a new acknowledgement for the next user turn", async () => {
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(
+      relay({ relayInterimResponse: { text: "One moment.", delayMs: 6500 } }),
+    );
+    const { session } = await connect(bridge, controls);
+    vi.useFakeTimers();
+    bridge.trackRelayRun("first");
+    await vi.advanceTimersByTimeAsync(6500);
+    bridge.handleServerEvent(responseDone);
+    bridge.trackRelayRun(null);
+    bridge.trackRelayRun("second");
+    await vi.advanceTimersByTimeAsync(6500);
+    expect(controls.sent.map(spokenText)).toEqual(["One moment.", "One moment."]);
+    session.disconnect();
+    vi.useRealTimers();
+  });
+});
+
 describe("connect", () => {
   it("reaches running once the host's transport is up", async () => {
     const controls = fakeControls();
