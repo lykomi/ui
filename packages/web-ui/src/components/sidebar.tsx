@@ -51,9 +51,10 @@ import {
 } from "../ui/dropdown-menu.tsx";
 import { AppBrand } from "./app-brand.tsx";
 
-const ACTIVE_NAV_ROW_CLASS = "border border-transparent bg-sidebar-selected shadow-none";
-const ACTIVE_NAV_TEXT_CLASS = "font-semibold text-sidebar-foreground";
-const ACTIVE_NAV_ICON_CLASS = "text-primary";
+const ACTIVE_NAV_ROW_CLASS =
+  "border border-transparent bg-sidebar-selected text-sidebar-selected-foreground shadow-none";
+const ACTIVE_NAV_TEXT_CLASS = "font-semibold text-sidebar-selected-foreground";
+const ACTIVE_NAV_ICON_CLASS = "text-sidebar-selected-foreground";
 const ACTIVE_NAV_BADGE_CLASS =
   "border border-sidebar-border bg-background/60 text-sidebar-foreground";
 // Indent ladder for the nav tree, indexed by depth (0 = top-level item).
@@ -1183,7 +1184,9 @@ function CollapsibleNavItem({
     : heading || !underHeader
       ? NAV_FLAT_BODY_CLASS
       : getNavDepthOffsets(0).body;
-  const headingClass = heading && !isDisabled && "font-semibold text-sidebar-foreground";
+  const headingClass =
+    heading && !isDisabled &&
+    `font-semibold ${isActive ? "text-sidebar-selected-foreground" : "text-heading"}`;
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const rendersRow = Boolean(hasChildren || hasActions);
   const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);

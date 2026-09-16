@@ -76,7 +76,6 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
       .workbench-preview [data-sidebar-surface="desktop"] nav { padding-right: 16px; }
       .workbench-preview [data-sidebar-surface="desktop"] { border-right-color: transparent; }
       [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"] {
-        background: var(--background);
         border-color: transparent; border-top-right-radius: 0; border-bottom-right-radius: 0;
       }
     `}</style>
@@ -89,15 +88,9 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
           viewBox={`0 0 ${anchor.width + anchor.surfaceWidth} ${anchor.navHeight}`}
         >
           <path
-            fill="var(--background)"
-            d={`M ${anchor.width},${anchor.top - 7} Q ${anchor.width},${anchor.top} ${anchor.width - 8},${anchor.top}
-          H ${anchor.rowRight} V ${anchor.top + anchor.height} H ${anchor.width - 8}
-          Q ${anchor.width},${anchor.top + anchor.height} ${anchor.width},${anchor.top + anchor.height + 7} Z`}
-          />
-          <path
             fill="none"
             stroke="var(--sidebar-ring)"
-            strokeOpacity={0.28}
+            strokeOpacity={0.6}
             strokeWidth={1}
             d={`M ${anchor.width + 12},0.5
           H ${anchor.width + anchor.surfaceWidth - 12}

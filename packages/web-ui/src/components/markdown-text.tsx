@@ -223,24 +223,34 @@ function extractCodeInfo(children: React.ReactNode): { language?: string; code: 
  */
 export const markdownComponents: Components = {
   h1: ({ children, ...props }) => (
-    <h1 className="text-2xl font-bold mt-6 mb-4 text-foreground" {...props}>
+    <h1 className="text-2xl font-bold mt-6 mb-4 text-content-heading-1" {...props}>
       {children}
     </h1>
   ),
   h2: ({ children, ...props }) => (
-    <h2 className="text-xl font-bold mt-5 mb-3 text-foreground" {...props}>
+    <h2 className="text-xl font-bold mt-5 mb-3 text-content-heading-2" {...props}>
       {children}
     </h2>
   ),
   h3: ({ children, ...props }) => (
-    <h3 className="text-lg font-semibold mt-4 mb-2 text-foreground" {...props}>
+    <h3 className="text-lg font-semibold mt-4 mb-2 text-content-heading-3" {...props}>
       {children}
     </h3>
   ),
   h4: ({ children, ...props }) => (
-    <h4 className="text-base font-semibold mt-3 mb-1.5 text-foreground" {...props}>
+    <h4 className="text-base font-semibold mt-3 mb-1.5 text-content-heading-4" {...props}>
       {children}
     </h4>
+  ),
+  h5: ({ children, ...props }) => (
+    <h5 className="mt-3 mb-1.5 text-sm font-semibold text-content-heading-5" {...props}>
+      {children}
+    </h5>
+  ),
+  h6: ({ children, ...props }) => (
+    <h6 className="mt-3 mb-1.5 text-xs font-semibold text-content-heading-6" {...props}>
+      {children}
+    </h6>
   ),
   p: ({ children, ...props }) => (
     <p className="mb-2 leading-relaxed text-foreground" {...props}>

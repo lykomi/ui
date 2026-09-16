@@ -101,7 +101,6 @@ export function WorkbenchStyles() {
         }
         .workbench-preview {
           --workbench-header-height: 60px;
-          --sidebar: color-mix(in srgb, var(--background) 98.5%, var(--foreground) 1.5%);
           background: var(--sidebar);
           --workbench-outline: color-mix(in srgb, var(--sidebar-ring) 28%, transparent);
           padding: 8px 8px 8px 0;

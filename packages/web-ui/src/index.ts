@@ -241,12 +241,14 @@ export {
 export { useThemeStore } from "./lib/theme-store.ts";
 export type { ThemeMode } from "./lib/theme-store.ts";
 export {
+  THEME_SLOTS,
   mergeThemeDefinitions,
   resolveThemeRuntime,
   getEffectiveThemeMode,
   getThemePreset,
 } from "./lib/theme-runtime.ts";
 export type {
+  ThemeSlot,
   ThemeDefinition,
   ThemeLayer,
   ResolvedThemeRuntime,
