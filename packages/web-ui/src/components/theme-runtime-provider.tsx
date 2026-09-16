@@ -248,11 +248,45 @@ export function ThemeScope({
 
 export function ThemeDocumentMetadata() {
   const runtime = useThemeRuntime();
+  const { faviconUrl, darkFaviconUrl, iconUrl, darkIconUrl, touchIconUrl } = runtime.branding;
+  const favicon =
+    runtime.mode === "dark"
+      ? darkFaviconUrl || faviconUrl || darkIconUrl || iconUrl
+      : faviconUrl || darkFaviconUrl || iconUrl || darkIconUrl;
 
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.title = runtime.branding.appTitle || runtime.branding.appName || "Foundry UI";
   }, [runtime.branding.appName, runtime.branding.appTitle]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const managed: HTMLLinkElement[] = [];
+    const addIcon = (rel: string, href: string | undefined) => {
+      if (!href) return;
+      let resolved: URL;
+      try {
+        resolved = new URL(href, document.baseURI);
+      } catch {
+        return;
+      }
+      if (
+        resolved.protocol !== "http:" &&
+        resolved.protocol !== "https:" &&
+        !(resolved.protocol === "data:" && /^data:image\//i.test(href))
+      )
+        return;
+      const link = document.createElement("link");
+      link.rel = rel;
+      link.href = href;
+      link.dataset.themeIcon = "true";
+      document.head.appendChild(link);
+      managed.push(link);
+    };
+    addIcon("icon", favicon);
+    addIcon("apple-touch-icon", touchIconUrl);
+    return () => managed.forEach((link) => link.remove());
+  }, [favicon, touchIconUrl]);
 
   return null;
 }

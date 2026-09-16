@@ -126,6 +126,11 @@ export interface ThemeBranding {
    */
   iconUrl?: string;
   darkIconUrl?: string;
+  /** Browser tab icon; falls back to the compact brand icon when unset. */
+  faviconUrl?: string;
+  darkFaviconUrl?: string;
+  /** Square PNG recommended for mobile home-screen bookmarks. */
+  touchIconUrl?: string;
   /**
    * Rendered height of the mark, as a CSS length (`"2rem"`, `"32px"`).
    * Defaults to the 20px lockup height when unset.
@@ -283,6 +288,9 @@ const BRANDING_KEYS = [
   "darkLogoUrl",
   "iconUrl",
   "darkIconUrl",
+  "faviconUrl",
+  "darkFaviconUrl",
+  "touchIconUrl",
   "logoHeight",
 ] as const satisfies readonly (keyof ThemeBranding)[];
 
