@@ -51,9 +51,10 @@ import {
 } from "../ui/dropdown-menu.tsx";
 import { AppBrand } from "./app-brand.tsx";
 
-const ACTIVE_NAV_ROW_CLASS = "border border-transparent bg-sidebar-selected shadow-none";
-const ACTIVE_NAV_TEXT_CLASS = "font-semibold text-sidebar-foreground";
-const ACTIVE_NAV_ICON_CLASS = "text-primary";
+const ACTIVE_NAV_ROW_CLASS =
+  "border border-transparent bg-sidebar-selected text-sidebar-selected-foreground shadow-none";
+const ACTIVE_NAV_TEXT_CLASS = "font-semibold text-sidebar-selected-foreground";
+const ACTIVE_NAV_ICON_CLASS = "text-sidebar-selected-foreground";
 const ACTIVE_NAV_BADGE_CLASS =
   "border border-sidebar-border bg-background/60 text-sidebar-foreground";
 // Indent ladder for the nav tree, indexed by depth (0 = top-level item).
@@ -610,7 +611,7 @@ function NavTwisty({
             data-nav-leaf-dot
             className={cn(
               "block size-1 shrink-0 rounded-full",
-              isActive ? "bg-primary/70" : "bg-sidebar-foreground/30",
+              isActive ? "bg-sidebar-selected-foreground/70" : "bg-sidebar-foreground/30",
             )}
           />
         )}
@@ -633,7 +634,9 @@ function NavTwisty({
         className={cn(
           "flex items-center justify-center rounded",
           NAV_TWISTY_HIT_CLASS,
-          isActive ? "text-primary" : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
+          isActive
+            ? "text-sidebar-selected-foreground"
+            : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
         )}
       >
         <ChevronRight
@@ -1183,7 +1186,10 @@ function CollapsibleNavItem({
     : heading || !underHeader
       ? NAV_FLAT_BODY_CLASS
       : getNavDepthOffsets(0).body;
-  const headingClass = heading && !isDisabled && "font-semibold text-sidebar-foreground";
+  const headingClass =
+    heading &&
+    !isDisabled &&
+    `font-semibold ${isActive ? "text-sidebar-selected-foreground" : "text-sidebar-primary"}`;
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const rendersRow = Boolean(hasChildren || hasActions);
   const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);
@@ -1513,10 +1519,16 @@ function CollapsedNavShortcut({
         tooltip={label}
         side="right"
         className={cn(
-          isActive && "border border-transparent bg-sidebar-selected text-sidebar-foreground",
+          isActive &&
+            "border border-transparent bg-sidebar-selected text-sidebar-selected-foreground",
         )}
       >
-        <Icon className={cn("size-4", isActive ? "text-primary" : "text-sidebar-icon")} />
+        <Icon
+          className={cn(
+            "size-4",
+            isActive ? "text-sidebar-selected-foreground" : "text-sidebar-icon",
+          )}
+        />
       </TooltipIconButton>
     </NavLink>
   );

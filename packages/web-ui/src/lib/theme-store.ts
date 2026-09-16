@@ -11,7 +11,7 @@ export type ThemeMode = "light" | "dark" | "system";
 
 interface ThemeState {
   mode: ThemeMode;
-  setMode: (mode: ThemeMode) => void;
+  setMode: (mode: ThemeMode, options?: { persist?: boolean }) => void;
   /** Cycle through light -> dark -> system. */
   cycle: () => void;
 }
@@ -51,8 +51,8 @@ export const useThemeStore = create<ThemeState>((set, get) => {
   return {
     mode: initial,
 
-    setMode: (mode) => {
-      localStorage.setItem(STORAGE_KEY, mode);
+    setMode: (mode, options) => {
+      if (options?.persist !== false) localStorage.setItem(STORAGE_KEY, mode);
       applyTheme(mode);
       set({ mode });
     },

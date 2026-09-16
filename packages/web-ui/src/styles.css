@@ -1,4 +1,11 @@
 @theme inline {
+  --color-heading: var(--heading, var(--foreground));
+  --color-content-heading-1: var(--content-heading-1, var(--heading, var(--foreground)));
+  --color-content-heading-2: var(--content-heading-2, var(--heading, var(--foreground)));
+  --color-content-heading-3: var(--content-heading-3, var(--foreground));
+  --color-content-heading-4: var(--content-heading-4, var(--foreground));
+  --color-content-heading-5: var(--content-heading-5, var(--foreground));
+  --color-content-heading-6: var(--content-heading-6, var(--foreground));
   --radius-xs: calc(var(--radius) - 6px);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -254,4 +261,11 @@ tr[data-state="selected"] > [data-pinned="cell"] {
 }
 tr[data-active] > [data-pinned="cell"] {
   background-color: color-mix(in srgb, var(--primary) 8%, var(--pinned-surface));
+}
+
+@layer base {
+  :where(h1, h2, h3, h4, h5, h6) {
+    color: var(--heading, var(--foreground));
+    font-family: var(--font-heading, inherit);
+  }
 }

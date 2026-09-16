@@ -4,6 +4,15 @@ import type { ThemeMode } from "./theme-store.ts";
 export interface ThemeColorSlots {
   background?: string;
   foreground?: string;
+  /** Page and document headings, independent of body text and action colours. */
+  heading?: string;
+  /** Heading colours inside authored content, independent of application chrome. */
+  contentHeading1?: string;
+  contentHeading2?: string;
+  contentHeading3?: string;
+  contentHeading4?: string;
+  contentHeading5?: string;
+  contentHeading6?: string;
   card?: string;
   cardForeground?: string;
   popover?: string;
@@ -174,37 +183,44 @@ export interface ResolvedThemeRuntime {
 }
 
 const COLOR_KEYS = [
-  "background",
-  "foreground",
-  "card",
-  "cardForeground",
-  "popover",
-  "popoverForeground",
   "primary",
   "primaryForeground",
-  "secondary",
-  "secondaryForeground",
-  "muted",
-  "mutedForeground",
+  "heading",
+  "contentHeading1",
+  "contentHeading2",
+  "contentHeading3",
+  "contentHeading4",
+  "contentHeading5",
+  "contentHeading6",
+  "background",
+  "foreground",
   "accent",
   "accentForeground",
+  "card",
+  "cardForeground",
+  "border",
+  "ring",
+  "input",
+  "muted",
+  "mutedForeground",
+  "secondary",
+  "secondaryForeground",
+  "popover",
+  "popoverForeground",
   "destructive",
   "destructiveForeground",
-  "border",
-  "input",
-  "ring",
 ] as const satisfies readonly (keyof ThemeColorSlots)[];
 
 const SIDEBAR_KEYS = [
+  "sidebarSelected",
+  "sidebarSelectedForeground",
   "sidebar",
   "sidebarForeground",
   "sidebarPrimary",
   "sidebarPrimaryForeground",
+  "sidebarIcon",
   "sidebarAccent",
   "sidebarAccentForeground",
-  "sidebarSelected",
-  "sidebarSelectedForeground",
-  "sidebarIcon",
   "sidebarBorder",
   "sidebarRing",
 ] as const satisfies readonly (keyof ThemeSidebarSlots)[];
@@ -269,6 +285,128 @@ const BRANDING_KEYS = [
   "darkIconUrl",
   "logoHeight",
 ] as const satisfies readonly (keyof ThemeBranding)[];
+
+export interface ThemeSlot {
+  path: readonly string[];
+  label: string;
+  group: string;
+  kind: "color" | "font" | "length" | "text" | "image";
+  cssVariable?: string;
+  mode?: "light" | "dark";
+  /** Lower values appear first in authoring tools. */
+  impact: number;
+  /** Human-readable source used when this value is not explicitly set. */
+  derivedFrom?: string;
+}
+
+const SURFACE_IMPACT: Record<(typeof COLOR_KEYS)[number], number> = Object.fromEntries(
+  COLOR_KEYS.map((key, index) => [key, index]),
+) as Record<(typeof COLOR_KEYS)[number], number>;
+
+const SURFACE_DERIVATIONS: Partial<Record<(typeof COLOR_KEYS)[number], string>> = {
+  heading: "foreground",
+  contentHeading1: "interface heading",
+  contentHeading2: "interface heading + foreground",
+  contentHeading3: "foreground",
+  contentHeading4: "foreground",
+  contentHeading5: "foreground",
+  contentHeading6: "foreground",
+  card: "background",
+  cardForeground: "foreground",
+  popover: "card",
+  popoverForeground: "foreground",
+  secondary: "background + primary",
+  secondaryForeground: "foreground",
+  muted: "background + foreground",
+  mutedForeground: "foreground + background",
+  accent: "background + primary",
+  accentForeground: "foreground",
+  border: "foreground + background",
+  input: "border",
+  ring: "primary",
+};
+
+const cssName = (key: string) =>
+  `--${key.replace(/[A-Z0-9]/g, (part) => `-${part.toLowerCase()}`)}`;
+const slotLabel = (key: string) =>
+  (
+    ({
+      heading: "Interface headings",
+      contentHeading1: "H1",
+      contentHeading2: "H2",
+      contentHeading3: "H3",
+      contentHeading4: "H4",
+      contentHeading5: "H5",
+      contentHeading6: "H6",
+      sidebarSelected: "Selected background",
+      sidebarSelectedForeground: "Selected text",
+    }) as Record<string, string>
+  )[key] ?? key.replace(/([a-z])([A-Z0-9])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+
+/** The same allowlists power sanitization and authoring: supported slots cannot disappear from editors. */
+export const THEME_SLOTS: readonly ThemeSlot[] = [
+  ...(["light", "dark"] as const).flatMap((mode): ThemeSlot[] => [
+    ...COLOR_KEYS.map((key) => ({
+      path: [mode, key],
+      label: slotLabel(key),
+      group: key.startsWith("contentHeading") ? "Content" : "Surfaces",
+      kind: "color" as const,
+      cssVariable: cssName(key),
+      mode,
+      impact: SURFACE_IMPACT[key],
+      derivedFrom: SURFACE_DERIVATIONS[key],
+    })),
+    ...(
+      [
+        ["sidebar", SIDEBAR_KEYS, "Navigation"],
+        ["status", STATUS_KEYS, "Signals"],
+        ["charts", CHART_KEYS, "Charts"],
+        ["app", APP_KEYS, "Code & workflows"],
+      ] as const
+    ).flatMap(([section, keys, group]) =>
+      keys.map((key, impact) => ({
+        path: [section, mode, key],
+        label: slotLabel(key),
+        group,
+        kind: "color" as const,
+        cssVariable: cssName(key),
+        mode,
+        impact,
+        derivedFrom:
+          group === "Navigation"
+            ? "page colours"
+            : group === "Signals" && String(key).startsWith("info")
+              ? "primary action"
+              : group === "Code & workflows"
+                ? "page and signal colours"
+                : undefined,
+      })),
+    ),
+  ]),
+  ...TYPOGRAPHY_KEYS.map((key): ThemeSlot => ({
+    path: ["typography", key],
+    label: slotLabel(key),
+    group: "Typography & shape",
+    kind: "font",
+    cssVariable: `--font-${key.replace("Font", "")}`,
+    impact: key === "headingFont" ? 0 : key === "bodyFont" ? 1 : 3,
+  })),
+  ...RADIUS_KEYS.map((key): ThemeSlot => ({
+    path: ["radius", key],
+    label: "Corner radius",
+    group: "Typography & shape",
+    kind: "length",
+    cssVariable: cssName(key),
+    impact: 2,
+  })),
+  ...BRANDING_KEYS.map((key): ThemeSlot => ({
+    path: ["branding", key],
+    label: slotLabel(key),
+    group: "Brand",
+    kind: key.endsWith("Url") ? "image" : key === "logoHeight" ? "length" : "text",
+    impact: BRANDING_KEYS.indexOf(key),
+  })),
+];
 
 function cleanObject<T extends object>(
   value: unknown,
@@ -365,6 +503,13 @@ function toCssVars(
   return {
     ["--background" as string]: colors.background,
     ["--foreground" as string]: colors.foreground,
+    ["--heading" as string]: colors.heading ?? colors.foreground,
+    ["--content-heading-1" as string]: colors.contentHeading1,
+    ["--content-heading-2" as string]: colors.contentHeading2,
+    ["--content-heading-3" as string]: colors.contentHeading3,
+    ["--content-heading-4" as string]: colors.contentHeading4,
+    ["--content-heading-5" as string]: colors.contentHeading5,
+    ["--content-heading-6" as string]: colors.contentHeading6,
     ["--card" as string]: colors.card,
     ["--card-foreground" as string]: colors.cardForeground,
     ["--popover" as string]: colors.popover,
@@ -452,7 +597,7 @@ function defaultSidebar(colors: ThemeColorSlots): ThemeSidebarSlots {
     sidebarAccentForeground: colors.accentForeground!,
     sidebarSelected: colors.muted!,
     sidebarSelectedForeground: colors.foreground!,
-    sidebarIcon: `color-mix(in srgb, ${colors.foreground!} 60%, transparent)`,
+    sidebarIcon: "color-mix(in srgb, var(--sidebar-foreground) 60%, transparent)",
     sidebarBorder: colors.border!,
     sidebarRing: colors.ring!,
   };
@@ -527,8 +672,8 @@ function defaultApp(mode: "light" | "dark", colors: ThemeColorSlots): ThemeAppSl
       workflowDiagramSkippedFill: "color-mix(in srgb, var(--muted) 80%, var(--background) 20%)",
       workflowDiagramSkippedStroke: "color-mix(in srgb, var(--muted-foreground) 36%, transparent)",
       workflowDiagramSkippedText: colors.mutedForeground!,
-      workflowDiagramGlow: "rgba(182, 148, 255, 0.18)",
-      workflowDiagramShell: "rgba(182, 148, 255, 0.06)",
+      workflowDiagramGlow: "color-mix(in srgb, var(--primary) 18%, transparent)",
+      workflowDiagramShell: "color-mix(in srgb, var(--primary) 6%, transparent)",
     };
   }
   return {
@@ -549,8 +694,8 @@ function defaultApp(mode: "light" | "dark", colors: ThemeColorSlots): ThemeAppSl
     workflowDiagramSkippedFill: "color-mix(in srgb, var(--muted) 65%, var(--background) 35%)",
     workflowDiagramSkippedStroke: "color-mix(in srgb, var(--muted-foreground) 22%, transparent)",
     workflowDiagramSkippedText: colors.mutedForeground!,
-    workflowDiagramGlow: "rgba(124, 58, 237, 0.18)",
-    workflowDiagramShell: "rgba(124, 58, 237, 0.04)",
+    workflowDiagramGlow: "color-mix(in srgb, var(--primary) 18%, transparent)",
+    workflowDiagramShell: "color-mix(in srgb, var(--primary) 4%, transparent)",
   };
 }
 
@@ -645,43 +790,137 @@ export function getThemePreset(name?: string | null): ThemeDefinition {
   return FOUNDRY_VIOLET_THEME;
 }
 
+function deriveSurfaceColors(
+  resolved: ThemeColorSlots,
+  explicit: ThemeColorSlots | undefined,
+): { colors: ThemeColorSlots; changed: Set<keyof ThemeColorSlots> } {
+  // The preset remains the safe fallback for an entirely unthemed product.
+  // Only values depending on an authored colour should move. A sparse edit
+  // to an unrelated slot must not repaint preset surfaces.
+  const changed = new Set<keyof ThemeColorSlots>(
+    (Object.keys(explicit ?? {}) as (keyof ThemeColorSlots)[]).filter((key) =>
+      Boolean(explicit?.[key]),
+    ),
+  );
+  if (!explicit || changed.size === 0) return { colors: resolved, changed };
+  const next = { ...resolved, ...explicit };
+  const setDerived = (
+    key: keyof ThemeColorSlots,
+    value: string | undefined,
+    sources: (keyof ThemeColorSlots)[],
+  ) => {
+    if (!explicit[key] && value && sources.some((source) => changed.has(source))) {
+      next[key] = value;
+      changed.add(key);
+    }
+  };
+  setDerived("heading", next.foreground, ["foreground"]);
+  setDerived("contentHeading1", next.heading, ["heading"]);
+  setDerived("contentHeading2", `color-mix(in srgb, ${next.heading} 78%, ${next.foreground} 22%)`, [
+    "heading",
+    "foreground",
+  ]);
+  setDerived("contentHeading3", next.foreground, ["foreground"]);
+  setDerived("contentHeading4", next.foreground, ["foreground"]);
+  setDerived("contentHeading5", next.foreground, ["foreground"]);
+  setDerived("contentHeading6", next.foreground, ["foreground"]);
+  setDerived("card", next.background, ["background"]);
+  setDerived("cardForeground", next.foreground, ["foreground"]);
+  setDerived("popover", next.card, ["card"]);
+  setDerived("popoverForeground", next.foreground, ["foreground"]);
+  setDerived("secondary", `color-mix(in srgb, ${next.background} 94%, ${next.primary} 6%)`, [
+    "background",
+    "primary",
+  ]);
+  setDerived("secondaryForeground", next.foreground, ["foreground"]);
+  setDerived("muted", `color-mix(in srgb, ${next.background} 97%, ${next.foreground} 3%)`, [
+    "background",
+    "foreground",
+  ]);
+  setDerived(
+    "mutedForeground",
+    `color-mix(in srgb, ${next.foreground} 62%, ${next.background} 38%)`,
+    ["foreground", "background"],
+  );
+  setDerived("accent", `color-mix(in srgb, ${next.background} 90%, ${next.primary} 10%)`, [
+    "background",
+    "primary",
+  ]);
+  setDerived("accentForeground", next.foreground, ["foreground"]);
+  setDerived("border", `color-mix(in srgb, ${next.foreground} 14%, ${next.background} 86%)`, [
+    "foreground",
+    "background",
+  ]);
+  setDerived("input", next.border, ["border"]);
+  setDerived("ring", next.primary, ["primary"]);
+  return { colors: next, changed };
+}
+
 export function resolveThemeRuntime(layers: ThemeLayer[], mode: ThemeMode): ResolvedThemeRuntime {
   const effectiveMode = getEffectiveThemeMode(mode);
   const basePreset =
     layers.find((layer) => layer.basePreset && layer.basePreset.trim())?.basePreset ??
     "foundry-violet";
-  const definitions = [getThemePreset(basePreset), ...layers.map((layer) => layer.definition)];
+  const customDefinition = mergeThemeDefinitions(...layers.map((layer) => layer.definition));
+  const definitions = [getThemePreset(basePreset), customDefinition];
   const definition = mergeThemeDefinitions(...definitions);
-  const colors = {
-    ...(effectiveMode === "dark" ? definition.dark : definition.light),
-  } as ThemeColorSlots;
+  const { colors, changed } = deriveSurfaceColors(
+    { ...(effectiveMode === "dark" ? definition.dark : definition.light) },
+    effectiveMode === "dark" ? customDefinition.dark : customDefinition.light,
+  );
+  const explicitSidebar =
+    effectiveMode === "dark" ? customDefinition.sidebar?.dark : customDefinition.sidebar?.light;
+  const presetSidebar =
+    effectiveMode === "dark"
+      ? getThemePreset(basePreset).sidebar?.dark
+      : getThemePreset(basePreset).sidebar?.light;
+  const sidebarSources: Record<keyof ThemeSidebarSlots, keyof ThemeColorSlots | null> = {
+    sidebar: "secondary",
+    sidebarForeground: "foreground",
+    sidebarPrimary: "primary",
+    sidebarPrimaryForeground: "primaryForeground",
+    sidebarAccent: "accent",
+    sidebarAccentForeground: "accentForeground",
+    sidebarSelected: "muted",
+    sidebarSelectedForeground: "foreground",
+    sidebarIcon: null,
+    sidebarBorder: "border",
+    sidebarRing: "ring",
+  };
+  const derivedSidebar = defaultSidebar(colors);
   const sidebar = {
-    ...defaultSidebar(colors),
-    ...(effectiveMode === "dark" ? definition.sidebar?.dark : definition.sidebar?.light),
+    ...derivedSidebar,
+    ...presetSidebar,
+    ...Object.fromEntries(
+      (Object.keys(sidebarSources) as (keyof ThemeSidebarSlots)[])
+        .filter((key) => sidebarSources[key] && changed.has(sidebarSources[key]!))
+        .map((key) => [key, derivedSidebar[key]]),
+    ),
+    ...explicitSidebar,
   } as ThemeSidebarSlots;
   const status = {
     ...defaultStatus(effectiveMode, colors),
-    ...(effectiveMode === "dark" ? definition.status?.dark : definition.status?.light),
+    ...(effectiveMode === "dark" ? customDefinition.status?.dark : customDefinition.status?.light),
   } as ThemeStatusSlots;
   const charts = {
     ...defaultCharts(effectiveMode),
-    ...(effectiveMode === "dark" ? definition.charts?.dark : definition.charts?.light),
+    ...(effectiveMode === "dark" ? customDefinition.charts?.dark : customDefinition.charts?.light),
   } as ThemeChartSlots;
   const typography = {
     ...FOUNDRY_VIOLET_THEME.typography,
-    ...definition.typography,
+    ...customDefinition.typography,
   } as ThemeTypographySlots;
   const radius = {
     ...FOUNDRY_VIOLET_THEME.radius,
-    ...definition.radius,
+    ...customDefinition.radius,
   } as ThemeRadiusSlots;
   const app = {
     ...defaultApp(effectiveMode, colors),
-    ...(effectiveMode === "dark" ? definition.app?.dark : definition.app?.light),
+    ...(effectiveMode === "dark" ? customDefinition.app?.dark : customDefinition.app?.light),
   } as ThemeAppSlots;
   const branding = {
     ...FOUNDRY_VIOLET_THEME.branding,
-    ...definition.branding,
+    ...customDefinition.branding,
   } as ThemeBranding;
 
   return {

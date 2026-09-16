@@ -494,7 +494,7 @@ export function ChatContent({
                   className={cn("flex min-h-full flex-col", "items-center justify-center", "px-4")}
                 >
                   <Bot className="size-16 mb-6 text-primary/70" />
-                  <h1 className="text-[2rem] font-normal text-foreground text-center mb-6">
+                  <h1 className="text-[2rem] font-normal text-heading text-center mb-6">
                     How can I help you today?
                   </h1>
                   <ChatHomeStartersSlot />

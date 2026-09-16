@@ -73,7 +73,7 @@ export const AuthProvider: FC<PropsWithChildren<AuthProviderProps>> = ({ config,
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background px-6 text-center">
         <div className="max-w-md rounded-2xl border border-border bg-card px-6 py-5 shadow-sm">
-          <h1 className="text-lg font-semibold text-foreground">Authentication unavailable</h1>
+          <h1 className="text-lg font-semibold text-heading">Authentication unavailable</h1>
           <p className="mt-2 text-sm text-muted-foreground">{initError}</p>
         </div>
       </div>

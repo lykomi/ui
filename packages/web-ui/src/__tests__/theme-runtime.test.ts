@@ -75,6 +75,53 @@ describe("theme runtime", () => {
     expect(runtime.variables["--success" as keyof typeof runtime.variables]).toBeTruthy();
   });
 
+  it("derives secondary surfaces from the high-impact palette", () => {
+    const runtime = resolveThemeRuntime(
+      [
+        {
+          definition: {
+            light: {
+              background: "#ffffff",
+              foreground: "#101828",
+              primary: "#045cac",
+            },
+          },
+        },
+      ],
+      "light",
+    );
+    const variables = runtime.variables as Record<string, string>;
+
+    expect(variables["--heading"]).toBe("#101828");
+    expect(variables["--card"]).toBe("#ffffff");
+    expect(variables["--accent"]).toBe("color-mix(in srgb, #ffffff 90%, #045cac 10%)");
+    expect(variables["--ring"]).toBe("#045cac");
+    expect(variables["--sidebar-primary"]).toBe("#045cac");
+  });
+
+  it("keeps explicit secondary surfaces over their derived values", () => {
+    const runtime = resolveThemeRuntime(
+      [
+        {
+          definition: {
+            light: {
+              background: "#ffffff",
+              foreground: "#101828",
+              primary: "#045cac",
+              accent: "#f0f000",
+            },
+            sidebar: { light: { sidebarSelected: "#00f000" } },
+          },
+        },
+      ],
+      "light",
+    );
+    const variables = runtime.variables as Record<string, string>;
+
+    expect(variables["--accent"]).toBe("#f0f000");
+    expect(variables["--sidebar-selected"]).toBe("#00f000");
+  });
+
   it("lets a theme colour the sidebar icons without dragging the labels", () => {
     // A brand whose mark is a colour wants the icons in it and the labels
     // still readable. Before `sidebarIcon` the only lever was
@@ -150,8 +197,8 @@ describe("theme runtime", () => {
     const src = readFileSync(join(import.meta.dirname!, "../components/sidebar.tsx"), "utf-8");
     // The collapsed "New Thread" button.
     expect(src).toContain('<SquarePen className="size-4 text-sidebar-icon" />');
-    // The collapsed nav shortcuts: active keeps `primary`, idle takes the slot.
-    expect(src).toContain('isActive ? "text-primary" : "text-sidebar-icon"');
+    // The collapsed nav shortcuts use selected text when active, idle takes the icon slot.
+    expect(src).toContain('isActive ? "text-sidebar-selected-foreground" : "text-sidebar-icon"');
     // And nothing anywhere still hardcodes the tint the slot replaced.
     expect(src).not.toContain("text-sidebar-foreground/60");
   });

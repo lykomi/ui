@@ -313,7 +313,7 @@ describe("Sidebar active state", () => {
     expect(cell?.querySelector("[data-nav-leaf-dot]")).toBeNull();
   });
 
-  it("uses the neutral selected-row styling for the current nav item", async () => {
+  it("uses the selected theme colors for the current nav item", async () => {
     const { Sidebar } = await import("./sidebar.tsx");
 
     await act(async () => {
@@ -334,6 +334,7 @@ describe("Sidebar active state", () => {
 
     expect(activeRow).toBeTruthy();
     expect(activeRow?.className).toContain("bg-sidebar-selected");
+    expect(activeRow?.className).toContain("text-sidebar-selected-foreground");
     expect(activeRow?.className).not.toContain("bg-sidebar-primary/10");
   });
 
