@@ -547,13 +547,13 @@ export class VoiceBridge {
     // only spoken while a voice session is actually live — otherwise every
     // typed conversation would queue speech at a disconnected transport.
     if (this.mode !== "relay" || !this.isLive) return;
-    if (messageId === this.skipAnswerId) return;
     // Short replies are buffered until their sentence/turn completes. Once
     // answer text is arriving, a waiting message must not jump ahead of it.
     if (text.trim()) {
       this.interimSuppressed = true;
       this.clearInterim();
     }
+    if (messageId === this.skipAnswerId) return;
 
     if (this.answerId !== messageId) {
       this.answerId = messageId;

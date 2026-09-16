@@ -112,7 +112,11 @@ export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
   if (slots.composerActionsReplaceSend !== undefined) {
     next.composerActionsReplaceSend = slots.composerActionsReplaceSend;
   }
-  if (slots.threadSurface !== undefined) next.threadSurface = slots.threadSurface;
+  if (slots.threadSurface !== undefined) {
+    next.threadSurface = slots.threadSurface;
+    // Composer ownership belongs to this surface, never to the next module.
+    next.threadSurfaceHidesComposer = slots.threadSurfaceHidesComposer ?? false;
+  }
   if (slots.threadSurfaceHidesComposer !== undefined) {
     next.threadSurfaceHidesComposer = slots.threadSurfaceHidesComposer;
   }

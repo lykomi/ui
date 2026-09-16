@@ -82,6 +82,22 @@ beforeEach(() => {
 });
 
 describe("relay waiting acknowledgement", () => {
+  it("suppresses progress when a primed answer is already streaming", async () => {
+    const controls = fakeControls();
+    const bridge = new VoiceBridge(
+      relay({ relayInterimResponse: { text: "One moment.", delayMs: 9000 } }),
+    );
+    const { session } = await connect(bridge, controls);
+    vi.useFakeTimers();
+    bridge.primeAnswer("existing-answer");
+    bridge.trackRelayRun("existing-question");
+    bridge.trackAnswer("existing-answer", "The answer is arriving", false);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(controls.sent).toHaveLength(0);
+    session.disconnect();
+    vi.useRealTimers();
+  });
+
   it("describes current work, spaces changed updates, and stops when the answer arrives", async () => {
     const controls = fakeControls();
     const bridge = new VoiceBridge(
