@@ -254,5 +254,30 @@ export function ThemeDocumentMetadata() {
     document.title = runtime.branding.appTitle || runtime.branding.appName || "Foundry UI";
   }, [runtime.branding.appName, runtime.branding.appTitle]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const branding = runtime.branding;
+    const favicon =
+      runtime.mode === "dark"
+        ? branding.darkFaviconUrl || branding.faviconUrl || branding.darkIconUrl || branding.iconUrl
+        : branding.faviconUrl ||
+          branding.darkFaviconUrl ||
+          branding.iconUrl ||
+          branding.darkIconUrl;
+    const managed: HTMLLinkElement[] = [];
+    const addIcon = (rel: string, href: string | undefined) => {
+      if (!href || !/^(https?:\/\/|\/|data:image\/)/i.test(href)) return;
+      const link = document.createElement("link");
+      link.rel = rel;
+      link.href = href;
+      link.dataset.themeIcon = "true";
+      document.head.appendChild(link);
+      managed.push(link);
+    };
+    addIcon("icon", favicon);
+    addIcon("apple-touch-icon", branding.touchIconUrl);
+    return () => managed.forEach((link) => link.remove());
+  }, [runtime.branding, runtime.mode]);
+
   return null;
 }
