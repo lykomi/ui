@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.10
+
+### Patch Changes
+
+- 03a831f: Publish the scaffold template with the updated Foundry 0.32.1 package pins.
+
 ## 0.8.9
 
 ### Patch Changes

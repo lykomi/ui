@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.32.1
+
+### Patch Changes
+
+- 8a65702: Wrap long tool-card descriptions within narrow chat panes, including unbroken error details.
+  - @iloveagents/foundry-agent@0.32.1
+  - @iloveagents/foundry-web-primitives@0.32.1
+
 ## 0.32.0
 
 ### Minor Changes

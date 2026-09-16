@@ -1,5 +1,14 @@
 # @iloveagents/foundry-web-shell
 
+## 0.32.1
+
+### Patch Changes
+
+- Updated dependencies [8a65702]
+  - @iloveagents/foundry-web-ui@0.32.1
+  - @iloveagents/foundry-agent@0.32.1
+  - @iloveagents/foundry-web-primitives@0.32.1
+
 ## 0.32.0
 
 ### Patch Changes
