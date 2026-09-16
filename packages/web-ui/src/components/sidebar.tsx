@@ -1189,7 +1189,7 @@ function CollapsibleNavItem({
   const headingClass =
     heading &&
     !isDisabled &&
-    `font-semibold ${isActive ? "text-sidebar-selected-foreground" : "text-heading"}`;
+    `font-semibold ${isActive ? "text-sidebar-selected-foreground" : "text-sidebar-primary"}`;
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const rendersRow = Boolean(hasChildren || hasActions);
   const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);

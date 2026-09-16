@@ -106,5 +106,8 @@ describe("theme slot contract", () => {
     expect(source).toContain('isActive ? "bg-sidebar-selected-foreground/70"');
     expect(source).toContain('isActive ? "text-sidebar-selected-foreground"');
     expect(source).toContain("bg-sidebar-selected text-sidebar-selected-foreground");
+    expect(source).toContain(
+      'isActive ? "text-sidebar-selected-foreground" : "text-sidebar-primary"',
+    );
   });
 });
