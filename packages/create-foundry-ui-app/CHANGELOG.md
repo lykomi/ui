@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.12
+
+### Patch Changes
+
+- ef5c55d: Publish the starter template with the updated Foundry Web UI package pin.
+
 ## 0.8.11
 
 ### Patch Changes

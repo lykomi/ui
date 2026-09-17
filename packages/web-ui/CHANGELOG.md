@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.32.3
+
+### Patch Changes
+
+- a531c39: Keep the chat and content divider visible when a custom thread surface, such as a live voice stage, covers the chat viewport.
+  - @iloveagents/foundry-agent@0.32.3
+  - @iloveagents/foundry-web-primitives@0.32.3
+
 ## 0.32.2
 
 ### Patch Changes
