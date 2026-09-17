@@ -127,6 +127,7 @@ export function WorkbenchStyles() {
           top: 0;
           bottom: 0;
           width: 1px;
+          z-index: 20;
           pointer-events: none;
           background: color-mix(in srgb, var(--border) 55%, transparent);
         }
