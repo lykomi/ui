@@ -24,11 +24,19 @@ const VALID: readonly string[] = ["low", "medium", "high", "xhigh"];
  * shells inject their own via the same `agentFetch` seam as the rest of the
  * shell.
  */
+let latestRequest = 0;
+
 export async function loadChatConfig(
   fetchImpl: typeof fetch,
   params?: Record<string, string>,
 ): Promise<void> {
+  // The boot load and context refreshes can overlap, and responses can
+  // arrive out of order. Only the latest request may write: an older one
+  // describes a context the user has already left.
+  const request = ++latestRequest;
+  const isCurrent = () => request === latestRequest;
   const reset = () => {
+    if (!isCurrent()) return;
     reasoningDefaultStore.getState().setResolved(null);
     contextUsageStore.getState().setWindow(null);
   };
@@ -43,6 +51,7 @@ export async function loadChatConfig(
       reasoning?: { defaultEffort?: unknown; scope?: unknown };
       context?: { windowTokens?: unknown };
     };
+    if (!isCurrent()) return;
     // How much a chat can hold, if the backend says. Anything else leaves
     // the context indicator hidden rather than drawn against a guess.
     const windowTokens = body?.context?.windowTokens;

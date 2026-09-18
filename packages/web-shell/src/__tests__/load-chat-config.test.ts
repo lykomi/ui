@@ -96,4 +96,47 @@ describe("refreshChatConfig", () => {
     expect(fetchImpl).toHaveBeenCalledWith("/api/chat/config?entityId=e-3");
     expect(setResolved).toHaveBeenCalledWith("high", "for this workspace");
   });
+
+  it("lets only the latest request write when responses arrive out of order", async () => {
+    let releaseSlow: (value: unknown) => void = () => {};
+    const slow = new Promise((resolve) => (releaseSlow = resolve));
+    const slowFetch = vi.fn(async () => {
+      await slow;
+      return {
+        ok: true,
+        json: async () => ({
+          reasoning: { defaultEffort: "low" },
+          context: { windowTokens: 32_000 },
+        }),
+      };
+    }) as unknown as typeof fetch;
+
+    const stale = loadChatConfig(slowFetch, { entity: "old" });
+    await loadChatConfig(
+      fetchReturning({ reasoning: { defaultEffort: "high" }, context: { windowTokens: 128_000 } }),
+      { entity: "current" },
+    );
+    releaseSlow(undefined);
+    await stale;
+
+    expect(setWindow).toHaveBeenLastCalledWith(128_000);
+    expect(setResolved).toHaveBeenLastCalledWith("high", null);
+  });
+
+  it("does not let a stale failure clear the current values", async () => {
+    let releaseSlow: (value: unknown) => void = () => {};
+    const slow = new Promise((resolve) => (releaseSlow = resolve));
+    const failingSlowFetch = vi.fn(async () => {
+      await slow;
+      throw new Error("network");
+    }) as unknown as typeof fetch;
+
+    const stale = loadChatConfig(failingSlowFetch);
+    await loadChatConfig(fetchReturning({ context: { windowTokens: 128_000 } }));
+    setWindow.mockClear();
+    releaseSlow(undefined);
+    await stale;
+
+    expect(setWindow).not.toHaveBeenCalled();
+  });
 });
