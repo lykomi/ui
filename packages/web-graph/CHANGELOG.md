@@ -1,5 +1,15 @@
 # @iloveagents/foundry-web-graph
 
+## 0.2.8
+
+### Patch Changes
+
+- Updated dependencies [f81e285]
+- Updated dependencies [d25c6e3]
+  - @iloveagents/foundry-web-ui@0.33.0
+  - @iloveagents/foundry-agent@0.33.0
+  - @iloveagents/foundry-web-primitives@0.33.0
+
 ## 0.2.7
 
 ### Patch Changes
