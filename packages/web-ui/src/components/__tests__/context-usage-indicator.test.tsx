@@ -67,31 +67,37 @@ describe("ContextUsageIndicator", () => {
     expect(ring()).toBeNull();
   });
 
-  it("states how full the chat is", () => {
+  it("stays hidden while the chat is far from its ceiling", () => {
     set(128_000, 32_000);
     render();
-    expect(ring()?.dataset.contextUsage).toBe("ok");
-    expect(ring()?.getAttribute("aria-label")).toBe("Context 25% used (32k of 128k tokens).");
+    expect(ring()).toBeNull();
+  });
+
+  it("appears muted as the chat nears its ceiling", () => {
+    set(128_000, 100_000);
+    render();
+    expect(ring()?.dataset.contextUsage).toBe("near");
+    expect(ring()?.getAttribute("aria-label")).toContain("Context 78% used (100k of 128k tokens).");
   });
 
   it("prefers the server's own fill and ceiling over the model's raw count", () => {
-    // 33k real input tokens on a first "hello" is mostly system prompt and
-    // tool declarations; the conversation itself is small.
-    setPair(33_000, 1_200, 128_000);
+    // 150k raw input tokens is mostly system prompt and tool declarations;
+    // the conversation itself is small, so nothing shows.
+    setPair(150_000, 1_200, 128_000);
     render();
-    expect(ring()?.dataset.contextUsage).toBe("ok");
-    expect(ring()?.getAttribute("aria-label")).toBe("Context 1% used (1.2k of 128k tokens).");
-  });
+    expect(ring()).toBeNull();
 
-  it("warns near the ceiling and says what happens beyond it", () => {
-    set(128_000, 110_000);
+    setPair(150_000, 120_000, 128_000);
     render();
     expect(ring()?.dataset.contextUsage).toBe("warn");
-    expect(ring()?.getAttribute("aria-label")).toContain("will soon be shortened");
+  });
 
+  it("warns, without alarm, once older content is being shortened", () => {
     set(128_000, 200_000);
     render();
-    expect(ring()?.dataset.contextUsage).toBe("full");
+    expect(ring()?.dataset.contextUsage).toBe("warn");
+    expect(ring()?.className).toContain("text-warning");
+    expect(ring()?.className).not.toContain("destructive");
     expect(ring()?.getAttribute("aria-label")).toContain("Context 100% used (128k of 128k");
   });
 });

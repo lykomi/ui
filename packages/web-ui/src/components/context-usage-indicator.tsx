@@ -4,11 +4,17 @@ import { cn } from "@iloveagents/foundry-web-primitives";
 
 import { useCurrentThreadId } from "./ag-ui-adapter-context.ts";
 
-/** From here the ring warns: the chat is close to where older content gets shortened. */
-const WARN_AT = 0.8;
-const FULL_AT = 0.95;
-const SIZE = 16;
-const STROKE = 2;
+/**
+ * Quiet until it matters. Most chats never come near the ceiling, and a
+ * permanent gauge beside Send reads as a control (or a record button) and
+ * competes with the composer for no reason. It appears muted at SHOW_AT and
+ * takes the warning colour at WARN_AT — never destructive: nothing has
+ * failed, older content is just being shortened.
+ */
+const SHOW_AT = 0.7;
+const WARN_AT = 0.9;
+const SIZE = 14;
+const STROKE = 1.5;
 
 function formatTokens(n: number): string {
   if (n >= 10_000) return `${Math.round(n / 1000)}k`;
@@ -40,14 +46,13 @@ export function ContextUsageIndicator({ className }: { className?: string }) {
   if (!limit) return null;
 
   const ratio = Math.min(used / limit, 1);
+  if (ratio < SHOW_AT) return null;
   const percent = Math.round(ratio * 100);
-  const state = ratio >= FULL_AT ? "full" : ratio >= WARN_AT ? "warn" : "ok";
+  const state = ratio >= WARN_AT ? "warn" : "near";
   const detail =
-    state === "ok"
-      ? ""
-      : state === "warn"
-        ? " Older parts of this chat will soon be shortened; a new chat keeps answers sharp."
-        : " Older parts of this chat are being shortened to fit. Start a new chat for a fresh topic.";
+    state === "near"
+      ? " Older parts will be shortened once it fills; a new chat keeps answers sharp."
+      : " Older parts of this chat are being shortened to fit. Start a new chat for a fresh topic.";
   const label = `Context ${percent}% used (${formatTokens(Math.min(used, limit))} of ${formatTokens(limit)} tokens).${detail}`;
 
   const radius = (SIZE - STROKE) / 2;
@@ -61,9 +66,8 @@ export function ContextUsageIndicator({ className }: { className?: string }) {
       data-context-usage={state}
       className={cn(
         "flex items-center rounded-md px-1 py-1",
-        state === "ok" && "text-muted-foreground",
+        state === "near" && "text-muted-foreground/70",
         state === "warn" && "text-warning",
-        state === "full" && "text-destructive",
         className,
       )}
     >
@@ -74,7 +78,7 @@ export function ContextUsageIndicator({ className }: { className?: string }) {
           r={radius}
           fill="none"
           stroke="currentColor"
-          strokeOpacity={0.25}
+          strokeOpacity={0.2}
           strokeWidth={STROKE}
         />
         <circle
