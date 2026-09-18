@@ -38,7 +38,7 @@ import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import {
   beginNavDrag,
   subscribeNavDrag,
-  isNavDragActive,
+  getNavDragKind,
   getContainerDropZoneLabel,
   hasAnyDropTarget,
   hasExternalFilesData,
@@ -363,9 +363,6 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       if (!hasMatchingDragData(e)) return;
       e.preventDefault();
       e.stopPropagation();
-      // A drag from the desktop has no `dragstart` in this document, so the
-      // first nav element to see it opens the same flag.
-      if (hasExternalFiles(e)) beginNavDrag();
       dragCounter.current++;
       setIsDragOver(true);
       if (isFileDropTarget && hasExternalFiles(e)) {
@@ -478,27 +475,42 @@ function useNavItemDnd(dnd?: NavItemDnd) {
 
 /** Drop zone rendered inside expanded containers so users can move items back to the container root.
  *
- * It grows OUT OF FLOW. The strip keeps a constant 4px in the layout and
- * the interactive band is absolutely positioned over it, expanding about
- * its own centre — because a drop zone that grows in flow pushes every row
- * beneath it down by 24px at the exact moment the pointer passes over it,
- * which is the moment the user is aiming at one of those rows.
+ * The strip stays IN FLOW and reserves its full height for the whole drag:
+ * 4px at rest, 28px from the moment a drag begins until it ends, with the
+ * band filling exactly what was reserved. Growing on hover instead — the
+ * obvious design — fails in both of its available shapes:
  *
- * That is not a theoretical nit. Dragging a file from a nested folder down
- * to a sibling folder crosses one of these strips per open container, so
- * the destination row walks away from the cursor mid-drag (measured: 28px
- * per crossing) and the drop lands on whatever slid underneath — a
- * different row, or the gap between two. From the user's seat the gesture
- * simply does nothing, with no request made and nothing to read anywhere.
+ *  - in flow, every row beneath jumps 24px at the exact moment the pointer
+ *    crosses the strip, which is the moment the user is aiming at one of
+ *    those rows. Dragging a file from a nested folder down to a sibling
+ *    crosses one strip per open container, so the destination walks away
+ *    from the cursor mid-drag (measured: 28px per crossing) and the drop
+ *    lands on whatever slid underneath. From the user's seat the gesture
+ *    simply does nothing, with no request made and nothing to read.
+ *  - out of flow, nothing moves, but the expanded band overlaps ~12px of
+ *    the rows on either side and, being positioned, takes their drops — a
+ *    moving target traded for a wrong one.
+ *
+ * Reserving for the whole drag settles the layout once, before the user has
+ * aimed at anything. The opening is deliberately NOT animated: a 150ms
+ * height transition is a moving target for 150ms, which is inside the time
+ * a short drag to a nearby row takes. Only the collapse animates, and by
+ * then nothing is being aimed at.
  *
  * Exported for its test only — it is not in the package barrel, and the
- * invariant (the band grows, the strip does not) is one jsdom can check
- * from the class names but nothing can check from the outside.
+ * invariants (in flow, reserved by the drag rather than the pointer, band
+ * == strip) are ones jsdom can check from the class names and nothing can
+ * check from the outside.
  */
 export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isFileDragOver, setIsFileDragOver] = useState(false);
-  const dragActive = useSyncExternalStore(subscribeNavDrag, isNavDragActive, () => false);
+  // The KIND rides with the flag, not with this zone's hover state: the zone
+  // is open before the pointer reaches it, so reading "external" off hover
+  // would leave every zone promising "Move to root" for the whole approach
+  // of a file drag.
+  const dragKind = useSyncExternalStore(subscribeNavDrag, getNavDragKind, () => null);
+  const dragActive = dragKind !== null;
+  const filesInFlight = dragKind === "external";
   const dragCounter = useRef(0);
   const acceptsFiles = dnd.canDropFiles?.() ?? false;
   const acceptsEntities = dnd.canDrop();
@@ -514,28 +526,30 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   return (
     <div
       className={cn(
-        "relative mx-2 transition-[height,margin] duration-150",
+        "relative mx-2",
         // Reserved for the whole drag, so the rows below settle once —
         // before the user has aimed — and never while they are aiming.
-        dragActive ? "mt-0 h-7" : "-mt-1 h-1",
+        // The transition rides on the RESTING class, so the reservation
+        // opens instantly and only the collapse animates: an animated
+        // opening is a moving target for as long as it runs.
+        dragActive ? "mt-0 h-7" : "-mt-1 h-1 transition-[height,margin] duration-150",
       )}
     >
       <div
         onDragEnter={(e) => {
           if (!hasMatchingDragData(e)) return;
           e.preventDefault();
-          // A desktop drag has no `dragstart` in this document; whichever
-          // nav element sees it first opens the flag. That can be this zone.
-          if (hasExternalFiles(e)) beginNavDrag();
+          // A desktop drag opens the reservation from the window-level
+          // watcher in `nav-dnd`, which sees it as it crosses the window
+          // edge. Doing it here instead meant the target row opened the
+          // reservation and then slid out from under a stationary pointer.
           dragCounter.current++;
-          setIsFileDragOver(hasExternalFiles(e));
           setIsDragOver(true);
         }}
         onDragLeave={() => {
           dragCounter.current--;
           if (dragCounter.current <= 0) {
             dragCounter.current = 0;
-            setIsFileDragOver(false);
             setIsDragOver(false);
           }
         }}
@@ -553,7 +567,6 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
           e.preventDefault();
           e.stopPropagation();
           dragCounter.current = 0;
-          setIsFileDragOver(false);
           setIsDragOver(false);
           if (hasFiles) {
             await dnd.onFileDrop!(files);
@@ -567,21 +580,21 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
           "h-full w-full rounded-md overflow-hidden",
           dragActive && "flex items-center justify-center gap-1",
           isDragOver &&
-            (isFileDragOver
+            (filesInFlight
               ? "bg-primary/10 border border-dashed border-primary"
               : "bg-primary/10 border border-dashed border-primary/30"),
         )}
       >
         {dragActive && (
           <>
-            {isFileDragOver && <Upload className="size-3 text-primary" />}
+            {filesInFlight && <Upload className="size-3 text-primary" />}
             <span
               className={cn(
                 "text-[10px] transition-colors",
                 isDragOver ? "text-primary/70" : "text-sidebar-foreground/35",
               )}
             >
-              {getContainerDropZoneLabel(isFileDragOver)}
+              {getContainerDropZoneLabel(filesInFlight)}
             </span>
           </>
         )}

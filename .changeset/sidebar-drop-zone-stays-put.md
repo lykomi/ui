@@ -13,10 +13,25 @@ destination walked away from the cursor and the drop landed on whatever had
 slid underneath. Out of flow, nothing moves, but the expanded band covers
 about 12px of the rows on either side and takes their drops instead.
 
-So the space is reserved for the whole drag rather than on hover: it opens on
-`dragstart` — before the user has aimed at anything — and closes when the drag
-ends. The zone stays in flow, and the band fills exactly the strip it reserved,
-so what is painted is what accepts.
+So the space is reserved for the whole drag rather than on hover. The zone
+stays in flow, and the band fills exactly the strip it reserved, so what is
+painted is what accepts.
 
-A drag from the desktop has no `dragstart` in the document, so the first nav
-element to see `Files` on a `dragenter` opens the same reservation.
+"For the whole drag" has to mean it, so:
+
+- the reservation opens instantly and only the collapse animates — an
+  animated opening is a moving target for as long as it runs, and 150ms is
+  inside the time a short drag to a nearby row takes;
+- a drag from the desktop has no `dragstart` in the document, so a
+  window-level watcher opens the reservation on the first `dragenter`
+  anywhere — as the pointer crosses the window edge, not when it has already
+  arrived over the row it was aimed at;
+- a drag dragged out of the window and back keeps its reservation. That exit
+  looks the same for both kinds of drag, and it ends only the kind that
+  cannot report its own end; an in-page drag has a `dragend`, and collapsing
+  on the exit made the root it was aimed at vanish for the rest of the
+  gesture.
+
+The zone's label now follows the drag rather than the zone's own hover, since
+the zone is open before the pointer reaches it: a file drag reads "Upload to
+root" on approach instead of promising a move.
