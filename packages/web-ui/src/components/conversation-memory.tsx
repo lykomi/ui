@@ -1,6 +1,9 @@
 import { useStore } from "zustand";
 import { contextUsageStore } from "@iloveagents/foundry-agent";
+import { Info } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.tsx";
 
 import { useCurrentThreadId } from "./ag-ui-adapter-context.ts";
 
@@ -48,17 +51,44 @@ export function useConversationMemory(): ConversationMemoryUsage | null {
   };
 }
 
+function explanation(usage: ConversationMemoryUsage): string {
+  if (usage.full)
+    return "This chat is full. It will be compacted with your next message: earlier parts are summarized to make room.";
+  if (usage.nearlyFull)
+    return "This chat is nearly full. When it fills, earlier parts are summarized to make room; for a fresh topic, start a new chat.";
+  return "When this fills, the chat is compacted: earlier parts are summarized to make room.";
+}
+
 /** The "Conversation memory" section of the context card. */
 export function ConversationMemory({ usage }: { usage: ConversationMemoryUsage }) {
   const percent = Math.round(usage.ratio * 100);
+  const about = explanation(usage);
   return (
     <section
       aria-label="Conversation memory"
       data-conversation-memory={usage.full ? "full" : usage.nearlyFull ? "nearly-full" : "ok"}
       className="border-t border-border px-2 pt-3 text-xs"
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-medium">Conversation memory</h3>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <h3 className="font-medium">Conversation memory</h3>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={about}
+                  className="inline-flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Info className="size-3" aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-60 leading-relaxed">
+                {about}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <span className="tabular-nums text-muted-foreground">
           {formatTokens(usage.used)} of {formatTokens(usage.limit)}
         </span>
@@ -79,13 +109,6 @@ export function ConversationMemory({ usage }: { usage: ConversationMemoryUsage }
           style={{ width: `${percent}%` }}
         />
       </div>
-      <p className="mt-2 leading-relaxed text-muted-foreground">
-        {usage.full
-          ? "This chat is full. It will be compacted with your next message: earlier parts are summarized to make room. Your messages and answers are kept."
-          : usage.nearlyFull
-            ? "This chat is nearly full. When it fills, earlier parts are summarized to make room; for a fresh topic, start a new chat."
-            : "When this fills, the chat is compacted: earlier parts are summarized to make room. Your messages and answers are always kept."}
-      </p>
     </section>
   );
 }

@@ -44,6 +44,8 @@ afterEach(() => {
 });
 const render = () => act(() => root.render(<Probe />));
 const section = () => container.querySelector<HTMLElement>("[data-conversation-memory]");
+const about = () =>
+  container.querySelector<HTMLElement>("section button")?.getAttribute("aria-label") ?? "";
 const bar = () => container.querySelector<HTMLElement>("[role=progressbar]");
 
 describe("ConversationMemory", () => {
@@ -61,12 +63,19 @@ describe("ConversationMemory", () => {
     expect(bar()?.getAttribute("aria-valuenow")).toBe("1");
   });
 
+  it("keeps the explanation behind the info button, not on the card", () => {
+    usage(33_000, 1_200, 128_000);
+    render();
+    expect(section()?.querySelector("p")).toBeNull();
+    expect(about()).toContain("summarized to make room");
+  });
+
   it("says plainly what happens as it fills, and when it is nearly full", () => {
     usage(150_000, 120_000, 128_000);
     render();
     expect(section()?.dataset.conversationMemory).toBe("nearly-full");
-    expect(section()?.textContent).toContain("nearly full");
-    expect(section()?.textContent).toContain("start a new chat");
+    expect(about()).toContain("nearly full");
+    expect(about()).toContain("start a new chat");
     expect(bar()?.firstElementChild?.className).toContain("bg-warning");
   });
 
@@ -74,7 +83,7 @@ describe("ConversationMemory", () => {
     usage(150_000, 128_000, 128_000);
     render();
     expect(section()?.dataset.conversationMemory).toBe("full");
-    expect(section()?.textContent).toContain("compacted with your next message");
+    expect(about()).toContain("compacted with your next message");
     expect(bar()?.firstElementChild?.className).toContain("bg-destructive");
   });
 
