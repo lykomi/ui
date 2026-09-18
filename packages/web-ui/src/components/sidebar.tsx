@@ -467,8 +467,26 @@ function useNavItemDnd(dnd?: NavItemDnd) {
   };
 }
 
-/** Drop zone rendered inside expanded containers so users can move items back to the container root. */
-function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
+/** Drop zone rendered inside expanded containers so users can move items back to the container root.
+ *
+ * It grows OUT OF FLOW. The strip keeps a constant 4px in the layout and
+ * the interactive band is absolutely positioned over it, expanding about
+ * its own centre — because a drop zone that grows in flow pushes every row
+ * beneath it down by 24px at the exact moment the pointer passes over it,
+ * which is the moment the user is aiming at one of those rows.
+ *
+ * That is not a theoretical nit. Dragging a file from a nested folder down
+ * to a sibling folder crosses one of these strips per open container, so
+ * the destination row walks away from the cursor mid-drag (measured: 28px
+ * per crossing) and the drop lands on whatever slid underneath — a
+ * different row, or the gap between two. From the user's seat the gesture
+ * simply does nothing, with no request made and nothing to read anywhere.
+ *
+ * Exported for its test only — it is not in the package barrel, and the
+ * invariant (the band grows, the strip does not) is one jsdom can check
+ * from the class names but nothing can check from the outside.
+ */
+export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isFileDragOver, setIsFileDragOver] = useState(false);
   const dragCounter = useRef(0);
@@ -484,64 +502,70 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
     );
 
   return (
-    <div
-      onDragEnter={(e) => {
-        if (!hasMatchingDragData(e)) return;
-        e.preventDefault();
-        dragCounter.current++;
-        setIsFileDragOver(hasExternalFiles(e));
-        setIsDragOver(true);
-      }}
-      onDragLeave={() => {
-        dragCounter.current--;
-        if (dragCounter.current <= 0) {
+    <div className="relative mx-2 -mt-1 h-1">
+      <div
+        onDragEnter={(e) => {
+          if (!hasMatchingDragData(e)) return;
+          e.preventDefault();
+          dragCounter.current++;
+          setIsFileDragOver(hasExternalFiles(e));
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => {
+          dragCounter.current--;
+          if (dragCounter.current <= 0) {
+            dragCounter.current = 0;
+            setIsFileDragOver(false);
+            setIsDragOver(false);
+          }
+        }}
+        onDragOver={(e) => {
+          if (!hasMatchingDragData(e)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = hasExternalFiles(e) ? "copy" : "move";
+        }}
+        onDrop={async (e) => {
+          const files = Array.from(e.dataTransfer.files ?? []);
+          const draggedData = acceptsEntities ? e.dataTransfer.getData(dnd.type) : "";
+          const hasFiles = acceptsFiles && files.length > 0 && dnd.onFileDrop;
+          const hasEntityDrop = Boolean(acceptsEntities && draggedData);
+          if (!hasFiles && !hasEntityDrop) return;
+          e.preventDefault();
+          e.stopPropagation();
           dragCounter.current = 0;
           setIsFileDragOver(false);
           setIsDragOver(false);
-        }
-      }}
-      onDragOver={(e) => {
-        if (!hasMatchingDragData(e)) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = hasExternalFiles(e) ? "copy" : "move";
-      }}
-      onDrop={async (e) => {
-        const files = Array.from(e.dataTransfer.files ?? []);
-        const draggedData = acceptsEntities ? e.dataTransfer.getData(dnd.type) : "";
-        const hasFiles = acceptsFiles && files.length > 0 && dnd.onFileDrop;
-        const hasEntityDrop = Boolean(acceptsEntities && draggedData);
-        if (!hasFiles && !hasEntityDrop) return;
-        e.preventDefault();
-        e.stopPropagation();
-        dragCounter.current = 0;
-        setIsFileDragOver(false);
-        setIsDragOver(false);
-        if (hasFiles) {
-          await dnd.onFileDrop!(files);
-          return;
-        }
-        await dnd.onDrop(draggedData);
-      }}
-      className={cn(
-        "relative mx-2 rounded-md overflow-hidden",
-        isDragOver
-          ? cn(
-              "h-7 flex items-center justify-center gap-1",
-              isFileDragOver
-                ? "bg-primary/10 border border-dashed border-primary"
-                : "bg-primary/10 border border-dashed border-primary/30",
-            )
-          : "-mt-1 h-1",
-      )}
-    >
-      {isDragOver && (
-        <>
-          {isFileDragOver && <Upload className="size-3 text-primary" />}
-          <span className="text-[10px] text-primary/70">
-            {getContainerDropZoneLabel(isFileDragOver)}
-          </span>
-        </>
-      )}
+          if (hasFiles) {
+            await dnd.onFileDrop!(files);
+            return;
+          }
+          await dnd.onDrop(draggedData);
+        }}
+        className={cn(
+          // Centred on the 4px strip, so the band grows symmetrically over
+          // its neighbours instead of displacing them. `z-10` keeps it above
+          // the rows that follow it in DOM order, which would otherwise take
+          // both the paint and the hit test in the overlap.
+          "absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 rounded-md overflow-hidden",
+          isDragOver
+            ? cn(
+                "h-7 flex items-center justify-center gap-1",
+                isFileDragOver
+                  ? "bg-primary/10 border border-dashed border-primary"
+                  : "bg-primary/10 border border-dashed border-primary/30",
+              )
+            : "h-1",
+        )}
+      >
+        {isDragOver && (
+          <>
+            {isFileDragOver && <Upload className="size-3 text-primary" />}
+            <span className="text-[10px] text-primary/70">
+              {getContainerDropZoneLabel(isFileDragOver)}
+            </span>
+          </>
+        )}
+      </div>
     </div>
   );
 }
