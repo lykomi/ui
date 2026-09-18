@@ -32,6 +32,7 @@ export function ConversationHistory({
   showBack = true,
   welcome = false,
   compact = false,
+  home = false,
   onViewAll,
   entityId,
   rootContext = false,
@@ -42,6 +43,8 @@ export function ConversationHistory({
   showBack?: boolean;
   welcome?: boolean;
   compact?: boolean;
+  /** The global start page shows the three newest chats below the composer. */
+  home?: boolean;
   onViewAll?: () => void;
   /** Current content entity. Compact homes show only an exact match unless this is the workspace root. */
   entityId?: unknown;
@@ -106,9 +109,10 @@ export function ConversationHistory({
         const run = runFor(item);
         return run && isChatRunActive(run) ? 1 : 0;
       };
-      return (
-        active(b) - active(a) || Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned))
-      );
+      return home
+        ? 0
+        : active(b) - active(a) ||
+            Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned));
     });
   const visibleItems = compact ? items.slice(0, 3) : items;
   const activeItems = visibleItems.filter((item) => {
@@ -152,14 +156,29 @@ export function ConversationHistory({
         </button>
       )}
       {(!compact || items.length > 0) && (
-        <div className="mb-2 mt-2 flex items-center justify-between">
+        <div
+          className={
+            home
+              ? "mb-2 mt-5 flex items-center justify-between px-1"
+              : "mb-2 mt-2 flex items-center justify-between"
+          }
+        >
           <h2
             className={
               compact ? "text-xs font-medium text-muted-foreground" : "text-base font-semibold"
             }
           >
-            {compact ? "Recent conversations" : "Conversation history"}
+            {home ? "Recent chats" : compact ? "Recent conversations" : "Conversation history"}
           </h2>
+          {home && onViewAll && (
+            <button
+              type="button"
+              onClick={onViewAll}
+              className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              View all
+            </button>
+          )}
         </div>
       )}
       {Boolean(workspaceId) && !compact && (
@@ -239,7 +258,14 @@ export function ConversationHistory({
                     {item.label}
                   </p>
                 ) : (
-                  <div key={item.to} className="group flex items-center rounded-lg hover:bg-muted">
+                  <div
+                    key={item.to}
+                    className={
+                      home
+                        ? "group mb-1 flex items-center rounded-xl border border-border/70 bg-muted/20 transition-colors hover:border-primary/30 hover:bg-muted/50"
+                        : "group flex items-center rounded-lg hover:bg-muted"
+                    }
+                  >
                     <Link
                       to={item.to}
                       onClick={(event) => {
@@ -272,7 +298,11 @@ export function ConversationHistory({
                         onClose();
                       }}
                       data-conversation-row
-                      className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+                      className={
+                        home
+                          ? "flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-sm focus-visible:outline-2 focus-visible:outline-primary"
+                          : "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+                      }
                     >
                       {loadingTo === item.to ? (
                         <Loader2
@@ -388,7 +418,7 @@ export function ConversationHistory({
           </p>
         )}
       </div>
-      {compact && onViewAll && (
+      {compact && onViewAll && !home && (
         <Button
           variant="ghost"
           size="sm"

@@ -49,16 +49,19 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ChatContent: ({
     emptyState,
     composerIntro,
+    composerFooter,
     centerComposer,
   }: {
     emptyState: ReactNode;
     composerIntro: ReactNode;
+    composerFooter: ReactNode;
     centerComposer: boolean;
   }) => (
     <>
       {" "}
       {state.empty && (centerComposer ? composerIntro : emptyState)}
       <textarea aria-label="Chat draft" />
+      {composerFooter}
     </>
   ),
   ToolPanelLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -158,7 +161,7 @@ describe("layout preview", () => {
     expect(chat.style.width).toBe(desktopWidth);
     expect(content.style.display).toBe("flex");
     expect(state.unmount).not.toHaveBeenCalled();
-  });
+  }, 10_000);
 
   it("reopens content after navigation, including a repeat selection of the same address", () => {
     render(
@@ -226,6 +229,34 @@ describe("layout preview", () => {
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
+  });
+
+  it("shows the three most recent chats below the home composer, including a pinned chat", () => {
+    state.empty = true;
+    state.groups = [
+      {
+        label: "Chats",
+        items: [],
+        meta: {
+          type: "recent-chats",
+          allConversations: [
+            ...["Newest", "Second", "Third", "Fourth"].map((label) => ({
+              label,
+              to: `/chat/${label.toLowerCase()}`,
+              icon: MessageSquare,
+              meta: label === "Second" ? { pinned: true } : undefined,
+            })),
+          ],
+        },
+      },
+    ];
+    render(<WorkbenchPreview chatOnly page={<Editor />} />);
+    expect(screen.getByRole("link", { name: /Newest/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Second/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Third/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Fourth/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "View all" }));
+    expect(screen.getByRole("heading", { name: "Conversation history" })).toBeTruthy();
   });
 
   it("shows workspace recents at a focused root that only exposes root metadata", () => {

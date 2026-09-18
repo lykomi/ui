@@ -13,7 +13,7 @@ function readContext() {
 }
 
 /** The displayed context and the agent request use the same projection. */
-export function ChatContext() {
+export function ChatContext({ centered = false }: { centered?: boolean }) {
   const [open, setOpen] = useState(false);
   const [context, setContext] = useState(readContext);
   const items = useAppStore((s) => s.contextItems);
@@ -92,7 +92,7 @@ export function ChatContext() {
           type="button"
           data-chat-context
           aria-label={`Message context: ${context.label}${detail ? `, ${detail}` : ""}${additionalCount ? `, ${additionalCount} more` : ""}`}
-          className="mb-2 flex min-h-9 w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary [@media(pointer:coarse)]:min-h-11"
+          className={`mb-2 flex min-h-9 min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary [@media(pointer:coarse)]:min-h-11 ${centered ? "mx-auto w-fit max-w-full" : "w-full"}`}
         >
           <Icon className="size-3.5 shrink-0" />
           <span className="min-w-0 flex-1 truncate" aria-live="polite">
@@ -114,7 +114,7 @@ export function ChatContext() {
         </button>
       </PopoverTrigger>
       <PopoverContent
-        align="start"
+        align={centered ? "center" : "start"}
         side="top"
         collisionPadding={12}
         aria-label="Context and actions"
