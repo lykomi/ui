@@ -34,6 +34,9 @@ const runnerMock = vi.fn().mockImplementation(() => ({
 vi.mock("@iloveagents/foundry-agent", () => ({
   agentStateStore: { getState: () => ({ setAgentState: () => {}, reset: () => {} }) },
   citationStore: { setState: () => {}, getState: () => ({ clear: () => {} }) },
+  contextUsageStore: {
+    getState: () => ({ record: () => {}, forget: () => {}, clear: () => {} }),
+  },
   AGUIRunner: function AGUIRunnerCtor(...args: unknown[]) {
     return runnerMock(...args);
   },

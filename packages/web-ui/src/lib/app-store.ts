@@ -373,10 +373,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         : item.label;
 
     set({
-      contextItems: [
-        ...contextItems,
-        { ...item, label, id: createUiId(), createdAt: Date.now() },
-      ],
+      contextItems: [...contextItems, { ...item, label, id: createUiId(), createdAt: Date.now() }],
     });
   },
 

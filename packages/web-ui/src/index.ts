@@ -10,6 +10,7 @@ export {
   useAGUIAdapter,
   useIsForegroundChat,
 } from "./components/ag-ui-runtime-provider.tsx";
+export { useCurrentThreadId } from "./components/ag-ui-adapter-context.ts";
 export type {
   AGUIChatConversationFactoryArgs,
   AGUIHistoryAdapterFactory,
@@ -295,6 +296,11 @@ export {
 } from "./lib/voice-adapter-registry.ts";
 export { ReasoningPart, ReasoningMessagePartComponent } from "./components/reasoning-part.tsx";
 export { ReasoningEffortPicker } from "./components/reasoning-effort-picker.tsx";
+export {
+  ConversationMemory,
+  useConversationMemory,
+  type ConversationMemoryUsage,
+} from "./components/conversation-memory.tsx";
 
 // --- Auth ---
 // `AuthProvider` is the React MSAL bootstrap (uses `@azure/msal-react`).

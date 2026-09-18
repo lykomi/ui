@@ -380,6 +380,44 @@ export class AGUIRunner {
             push({ type: "raw", event: event.event, source: event.source });
           },
           onCustomEvent: ({ event }) => {
+            // Token usage of a model call (Agent Framework emits one per
+            // response). Only well-formed counts pass; the event is ignored
+            // otherwise rather than reported as zero.
+            if (event.name === "usage") {
+              const value = event.value as Record<string, unknown> | null | undefined;
+              const input = value?.input_token_count;
+              const output = value?.output_token_count;
+              const used = value?.context_used_tokens;
+              const limit = value?.context_limit_tokens;
+              const count = (n: unknown): n is number =>
+                typeof n === "number" && Number.isFinite(n) && n >= 0;
+              if (count(input)) {
+                push({
+                  type: "usage",
+                  inputTokens: input,
+                  ...(count(output) ? { outputTokens: output } : {}),
+                  // Only as a pair: a fill without its ceiling means nothing.
+                  ...(count(used) && count(limit) && limit > 0
+                    ? { contextUsed: used, contextLimit: limit }
+                    : {}),
+                });
+              }
+              return;
+            }
+            // Server-reported activity between model calls ("Compacting
+            // chat…"); a null label means it finished and the run is back to
+            // thinking until the next event says otherwise.
+            if (event.name === "activity") {
+              const label = (event.value as { label?: unknown } | null | undefined)?.label;
+              push({
+                type: "streaming-status",
+                status:
+                  typeof label === "string" && label
+                    ? { status: "working", label: label.slice(0, 80) }
+                    : { status: "thinking" },
+              });
+              return;
+            }
             // Server heartbeat: liveness proof during long tool calls /
             // thinking phases (also keeps intermediary idle-timeouts at bay
             // server-side). Not a UI-visible event.

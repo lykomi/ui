@@ -35,6 +35,8 @@ export function LoadingIndicator() {
     label = `Running ${formatToolName(streaming.toolName)}`;
   } else if (streaming.status === "streaming") {
     label = "Generating response";
+  } else if (streaming.status === "working" && streaming.label) {
+    label = streaming.label;
   }
 
   return (

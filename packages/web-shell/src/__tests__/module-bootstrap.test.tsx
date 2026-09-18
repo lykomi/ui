@@ -63,6 +63,7 @@ vi.mock("@iloveagents/foundry-agent", () => ({
   // load-chat-config imports this on shell boot; a set-only stub keeps the
   // mock honest without pulling zustand into the test graph.
   reasoningDefaultStore: { getState: () => ({ setResolved: () => {} }) },
+  contextUsageStore: { getState: () => ({ setWindow: () => {} }) },
 }));
 
 vi.mock("@iloveagents/foundry-agent/msal", () => ({

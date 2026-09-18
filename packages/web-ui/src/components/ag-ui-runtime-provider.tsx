@@ -1,5 +1,4 @@
 import {
-  createContext,
   useContext,
   useState,
   useCallback,
@@ -15,6 +14,7 @@ import { AGUIAdapterSDK } from "../lib/ag-ui-adapter.ts";
 import { FileAttachmentAdapter } from "../lib/attachment-adapter.ts";
 import { useAttachmentAdapterStore } from "../lib/attachment-registry.ts";
 import { useVoiceAdapterStore } from "../lib/voice-adapter-registry.ts";
+import { AGUIAdapterContext } from "./ag-ui-adapter-context.ts";
 import { ShowDocumentToolUI } from "./show-document-tool-ui.tsx";
 import { ClientToolExecutor } from "./client-tool-executor.tsx";
 
@@ -87,14 +87,6 @@ interface AGUIRuntimeProviderProps {
    */
   historyAdapterFactory?: AGUIHistoryAdapterFactory;
 }
-
-interface AGUIContextValue {
-  adapter: AGUIAdapterSDK;
-  resetThread: () => void;
-  selectRetainedThread: (threadId: string) => boolean;
-}
-
-const AGUIAdapterContext = createContext<AGUIContextValue | null>(null);
 
 export function useAGUIAdapter() {
   const context = useContext(AGUIAdapterContext);

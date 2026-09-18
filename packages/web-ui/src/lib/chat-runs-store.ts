@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   agentStateStore,
   citationStore,
+  contextUsageStore,
   streamingStatusStore,
   type StreamingStatus,
 } from "@iloveagents/foundry-agent";
@@ -86,6 +87,7 @@ export function removeChatRun(threadId: string) {
     return { runs, deletedThreads: { ...state.deletedThreads, [threadId]: true as const } };
   });
   citationStore.getState().clear(threadId);
+  contextUsageStore.getState().forget(threadId);
   signals.delete(threadId);
   agentStates.delete(threadId);
   appProjections.delete(threadId);
@@ -201,6 +203,7 @@ export function disposeChatRuns() {
   agentStates.clear();
   appProjections.clear();
   citationStore.setState({ results: [], byThread: {}, threadId: null });
+  contextUsageStore.getState().clear();
   useChatRuns.setState({ foregroundId: null, runs: {}, deletedThreads: {} });
   streamingStatusStore.setState({
     streamingStatus: { status: "idle" },

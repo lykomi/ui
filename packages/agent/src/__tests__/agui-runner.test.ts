@@ -502,6 +502,79 @@ describe("stream integrity", () => {
     expect(beats[0].elapsedMs).toBe(1234);
   });
 
+  it("turns server activity into a labelled working status, and back", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onCustomEvent?.({
+          event: {
+            type: "CUSTOM",
+            name: "activity",
+            value: { label: "Compacting chat…" },
+          } as never,
+        } as never);
+        await s.onCustomEvent?.({
+          event: { type: "CUSTOM", name: "activity", value: { label: null } } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const statuses = events
+      .filter(
+        (e): e is Extract<RunnerEvent, { type: "streaming-status" }> =>
+          e.type === "streaming-status",
+      )
+      .map((e) => e.status);
+    expect(statuses).toContainEqual({ status: "working", label: "Compacting chat…" });
+    const i = statuses.findIndex((st) => st.status === "working");
+    expect(statuses[i + 1]).toEqual({ status: "thinking" });
+  });
+
+  it("forwards the server's usage CUSTOM events as usage runner events", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onCustomEvent?.({
+          event: {
+            type: "CUSTOM",
+            name: "usage",
+            value: {
+              input_token_count: 41_200,
+              output_token_count: 900,
+              context_used_tokens: 12_000,
+              context_limit_tokens: 128_000,
+            },
+          } as never,
+        } as never);
+        // Malformed counts are ignored rather than reported as zero.
+        await s.onCustomEvent?.({
+          event: { type: "CUSTOM", name: "usage", value: { input_token_count: "many" } } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const usage = events.filter(
+      (e): e is Extract<RunnerEvent, { type: "usage" }> => e.type === "usage",
+    );
+    expect(usage).toEqual([
+      {
+        type: "usage",
+        inputTokens: 41_200,
+        outputTokens: 900,
+        contextUsed: 12_000,
+        contextLimit: 128_000,
+      },
+    ]);
+  });
+
   it("does not duplicate a tool call the AG-UI client already recorded", async () => {
     // The real AbstractAgent folds the streamed assistant message — tool calls
     // included — into `agent.messages` while the run is applied. The runner
