@@ -380,6 +380,24 @@ export class AGUIRunner {
             push({ type: "raw", event: event.event, source: event.source });
           },
           onCustomEvent: ({ event }) => {
+            // Token usage of a model call (Agent Framework emits one per
+            // response). Only well-formed counts pass; the event is ignored
+            // otherwise rather than reported as zero.
+            if (event.name === "usage") {
+              const value = event.value as Record<string, unknown> | null | undefined;
+              const input = value?.input_token_count;
+              const output = value?.output_token_count;
+              if (typeof input === "number" && Number.isFinite(input) && input >= 0) {
+                push({
+                  type: "usage",
+                  inputTokens: input,
+                  ...(typeof output === "number" && Number.isFinite(output)
+                    ? { outputTokens: output }
+                    : {}),
+                });
+              }
+              return;
+            }
             // Server heartbeat: liveness proof during long tool calls /
             // thinking phases (also keeps intermediary idle-timeouts at bay
             // server-side). Not a UI-visible event.

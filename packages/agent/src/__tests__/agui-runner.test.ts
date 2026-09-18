@@ -502,6 +502,34 @@ describe("stream integrity", () => {
     expect(beats[0].elapsedMs).toBe(1234);
   });
 
+  it("forwards the server's usage CUSTOM events as usage runner events", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onCustomEvent?.({
+          event: {
+            type: "CUSTOM",
+            name: "usage",
+            value: { input_token_count: 41_200, output_token_count: 900 },
+          } as never,
+        } as never);
+        // Malformed counts are ignored rather than reported as zero.
+        await s.onCustomEvent?.({
+          event: { type: "CUSTOM", name: "usage", value: { input_token_count: "many" } } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const usage = events.filter(
+      (e): e is Extract<RunnerEvent, { type: "usage" }> => e.type === "usage",
+    );
+    expect(usage).toEqual([{ type: "usage", inputTokens: 41_200, outputTokens: 900 }]);
+  });
+
   it("does not duplicate a tool call the AG-UI client already recorded", async () => {
     // The real AbstractAgent folds the streamed assistant message — tool calls
     // included — into `agent.messages` while the run is applied. The runner

@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const setResolved = vi.fn();
+const setWindow = vi.fn();
 
 vi.mock("@iloveagents/foundry-agent", () => ({
   reasoningDefaultStore: { getState: () => ({ setResolved }) },
+  contextUsageStore: { getState: () => ({ setWindow }) },
 }));
 
 import { _setChatConfigFetch, loadChatConfig, refreshChatConfig } from "../load-chat-config.ts";
@@ -17,11 +19,25 @@ function fetchReturning(body: unknown, ok = true): typeof fetch {
 
 beforeEach(() => {
   setResolved.mockClear();
+  setWindow.mockClear();
   // reset the module-level boot fetch between tests
   _setChatConfigFetch(undefined as unknown as typeof fetch);
 });
 
 describe("loadChatConfig", () => {
+  it("passes the context window the backend states", async () => {
+    await loadChatConfig(fetchReturning({ context: { windowTokens: 128_000 } }));
+    expect(setWindow).toHaveBeenCalledWith(128_000);
+  });
+
+  it("clears the window when the backend states none, or the load fails", async () => {
+    await loadChatConfig(fetchReturning({ reasoning: { defaultEffort: "medium" } }));
+    expect(setWindow).toHaveBeenLastCalledWith(null);
+    setWindow.mockClear();
+    await loadChatConfig(fetchReturning({}, false));
+    expect(setWindow).toHaveBeenLastCalledWith(null);
+  });
+
   it("passes opaque params as a query string", async () => {
     const fetchImpl = fetchReturning({ reasoning: { defaultEffort: "medium" } });
     await loadChatConfig(fetchImpl, { entityId: "e-1" });

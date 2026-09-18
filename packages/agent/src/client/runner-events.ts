@@ -80,4 +80,9 @@ export type RunnerEvent =
    * distinguishable from a dead pipe). Carries the server-side elapsed run
    * time when provided. Consumers refresh their liveness clock; no UI yield.
    */
-  | { type: "heartbeat"; elapsedMs?: number };
+  | { type: "heartbeat"; elapsedMs?: number }
+  /**
+   * Token usage of one model call, as the server reported it. The input
+   * count is how large the conversation was on that call.
+   */
+  | { type: "usage"; inputTokens: number; outputTokens?: number };

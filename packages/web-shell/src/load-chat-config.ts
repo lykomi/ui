@@ -1,4 +1,8 @@
-import { reasoningDefaultStore, type ResolvedReasoningEffort } from "@iloveagents/foundry-agent";
+import {
+  contextUsageStore,
+  reasoningDefaultStore,
+  type ResolvedReasoningEffort,
+} from "@iloveagents/foundry-agent";
 
 const VALID: readonly string[] = ["low", "medium", "high", "xhigh"];
 
@@ -24,7 +28,10 @@ export async function loadChatConfig(
   fetchImpl: typeof fetch,
   params?: Record<string, string>,
 ): Promise<void> {
-  const reset = () => reasoningDefaultStore.getState().setResolved(null);
+  const reset = () => {
+    reasoningDefaultStore.getState().setResolved(null);
+    contextUsageStore.getState().setWindow(null);
+  };
   try {
     const query = params && Object.keys(params).length > 0 ? `?${new URLSearchParams(params)}` : "";
     const response = await fetchImpl(`/api/chat/config${query}`);
@@ -34,7 +41,12 @@ export async function loadChatConfig(
     }
     const body = (await response.json()) as {
       reasoning?: { defaultEffort?: unknown; scope?: unknown };
+      context?: { windowTokens?: unknown };
     };
+    // How much a chat can hold, if the backend says. Anything else leaves
+    // the context indicator hidden rather than drawn against a guess.
+    const windowTokens = body?.context?.windowTokens;
+    contextUsageStore.getState().setWindow(typeof windowTokens === "number" ? windowTokens : null);
     const effort = body?.reasoning?.defaultEffort;
     const scope = body?.reasoning?.scope;
     // `null` is meaningful (reasoning switched off) and anything unrecognised

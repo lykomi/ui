@@ -27,7 +27,7 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 import type { Context, Message as AGUIMessage } from "@ag-ui/core";
-import { AGUIRunner, clientToolRegistry } from "@iloveagents/foundry-agent";
+import { AGUIRunner, clientToolRegistry, contextUsageStore } from "@iloveagents/foundry-agent";
 import { tokenFetch } from "@iloveagents/foundry-agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
 import { useDevStore } from "./dev-store.ts";
@@ -232,6 +232,13 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
         switch (event.type) {
           case "heartbeat":
             // Server liveness ping — already recorded via touchSignal above.
+            break;
+
+          case "usage":
+            contextUsageStore.getState().record(this.threadId, {
+              inputTokens: event.inputTokens,
+              outputTokens: event.outputTokens ?? null,
+            });
             break;
 
           case "request-sent":

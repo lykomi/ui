@@ -295,6 +295,7 @@ export {
 } from "./lib/voice-adapter-registry.ts";
 export { ReasoningPart, ReasoningMessagePartComponent } from "./components/reasoning-part.tsx";
 export { ReasoningEffortPicker } from "./components/reasoning-effort-picker.tsx";
+export { ContextUsageIndicator } from "./components/context-usage-indicator.tsx";
 
 // --- Auth ---
 // `AuthProvider` is the React MSAL bootstrap (uses `@azure/msal-react`).

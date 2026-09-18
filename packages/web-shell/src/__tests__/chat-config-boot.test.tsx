@@ -56,6 +56,7 @@ vi.mock("@iloveagents/foundry-web-primitives", () => ({
 vi.mock("@iloveagents/foundry-agent", () => ({
   createServiceFetch: () => fetch,
   reasoningDefaultStore: { getState: () => ({ setResolved: () => {} }) },
+  contextUsageStore: { getState: () => ({ setWindow: () => {} }) },
 }));
 
 vi.mock("@iloveagents/foundry-agent/msal", () => ({
