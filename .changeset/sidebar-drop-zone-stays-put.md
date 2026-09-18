@@ -32,6 +32,11 @@ painted is what accepts.
   on the exit made the root it was aimed at vanish for the rest of the
   gesture.
 
-The zone's label now follows the drag rather than the zone's own hover, since
-the zone is open before the pointer reaches it: a file drag reads "Upload to
-root" on approach instead of promising a move.
+Because the zone is open before the pointer reaches it, nothing about the drag
+can be read off the zone's own hover state any more, so the drag publishes what
+it is — its source and the MIME type it carries. The label follows that (a file
+drag reads "Upload to root" on approach instead of promising a move), and so
+does whether a zone opens at all: reserving space and painting a label is a
+promise that a drop will land, so a container that takes entity moves but not
+files stays shut for a file drag, and a module's zones no longer open for
+another module's `dnd.type`.

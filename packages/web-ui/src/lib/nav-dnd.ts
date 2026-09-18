@@ -45,15 +45,24 @@ export function getContainerDropZoneLabel(hasExternalFiles: boolean): string {
 type NavDragListener = () => void;
 const navDragListeners = new Set<NavDragListener>();
 let navDragActive = false;
-/** Where the live drag came from — it decides which endings apply. */
-let navDragSource: "internal" | "external" | null = null;
+/**
+ * The live drag, as one string: `"external:Files"`, or `"internal:<mime>"`
+ * for the MIME type the source wrote.
+ *
+ * A string rather than an object because `useSyncExternalStore` compares
+ * snapshots by identity, and it carries the MIME type because "some drag is
+ * happening" is not enough to decide anything: a zone that takes entity
+ * moves but no files, or one belonging to a module with a different
+ * `dnd.type`, must not reserve space or offer a label for a drag it would
+ * refuse.
+ */
+let navDragSignature: string | null = null;
 let navDragWatchBound = false;
 
-function publishNavDrag(active: boolean, source: "internal" | "external" | null): void {
-  const next = active ? source : null;
-  if (navDragActive === active && navDragSource === next) return;
-  navDragActive = active;
-  navDragSource = next;
+function publishNavDrag(signature: string | null): void {
+  if (navDragSignature === signature) return;
+  navDragSignature = signature;
+  navDragActive = signature !== null;
   for (const listener of navDragListeners) listener();
 }
 
@@ -64,7 +73,7 @@ function publishNavDrag(active: boolean, source: "internal" | "external" | null)
 function bindNavDragWatch(): void {
   if (navDragWatchBound || typeof window === "undefined") return;
   navDragWatchBound = true;
-  const end = () => publishNavDrag(false, null);
+  const end = () => publishNavDrag(null);
 
   // A desktop drag, as early as this document can see it. Capture phase, so
   // it runs before the handler of whatever element the pointer entered.
@@ -72,7 +81,7 @@ function bindNavDragWatch(): void {
     "dragenter",
     (event) => {
       const transfer = (event as DragEvent).dataTransfer;
-      if (transfer && hasExternalFilesData(transfer)) publishNavDrag(true, "external");
+      if (transfer && hasExternalFilesData(transfer)) publishNavDrag(EXTERNAL_SIGNATURE);
     },
     true,
   );
@@ -94,21 +103,27 @@ function bindNavDragWatch(): void {
     "dragleave",
     (event) => {
       if ((event as DragEvent).relatedTarget) return;
-      if (navDragSource === "internal") return;
+      if (navDragSignature?.startsWith("internal:")) return;
       end();
     },
     true,
   );
 }
 
-/** Called from `dragstart` on a nav row — an in-page drag. */
-export function beginNavDrag(): void {
+/** The one signature an external drag can have — its only "type" is `Files`. */
+const EXTERNAL_SIGNATURE = "external:Files";
+
+/**
+ * Called from `dragstart` on a nav row — an in-page drag carrying `type`,
+ * the MIME type the source wrote its payload under.
+ */
+export function beginNavDrag(type: string): void {
   bindNavDragWatch();
-  publishNavDrag(true, "internal");
+  publishNavDrag(`internal:${type}`);
 }
 
 export function endNavDrag(): void {
-  publishNavDrag(false, null);
+  publishNavDrag(null);
 }
 
 export function subscribeNavDrag(listener: NavDragListener): () => void {
@@ -122,20 +137,44 @@ export function isNavDragActive(): boolean {
 }
 
 /**
- * What KIND of drag is in flight, or null if none is.
+ * The live drag's signature, or null if none is in flight.
  *
- * A zone is now open before the pointer reaches it, so its label can no
- * longer be read off its own hover state: during a desktop file drag every
- * zone would sit there reading "Move to root" until entered, and promise
- * the wrong thing about the drop for the whole approach. The kind belongs
- * to the drag, so it is published with it.
+ * A zone is open before the pointer reaches it, so nothing about the drag
+ * can be read off the zone's own hover state any more — during a desktop
+ * file drag every zone would sit reading "Move to root" until entered, and
+ * promise the wrong thing about the drop for the whole approach. What the
+ * drag is belongs to the drag, so it is published with it.
  */
-export function getNavDragKind(): "internal" | "external" | null {
-  return navDragSource;
+export function getNavDragSignature(): string | null {
+  return navDragSignature;
+}
+
+/**
+ * Would a zone with these capabilities accept the live drag?
+ *
+ * Reserving space and showing a label is a promise that a drop will land,
+ * so only a zone that would actually take this drag may do either. The
+ * global flag alone was not enough: a container that accepts entity moves
+ * but not files advertised "Upload to root" at a desktop file it would
+ * refuse, and two modules with different `dnd.type`s opened each other's
+ * zones. The MIME type in the signature is what settles both.
+ */
+export function navDragAccepts(
+  signature: string | null,
+  zone: { type: string; acceptsEntities: boolean; acceptsFiles: boolean },
+): boolean {
+  if (signature === null) return false;
+  if (signature === EXTERNAL_SIGNATURE) return zone.acceptsFiles;
+  return zone.acceptsEntities && signature === `internal:${zone.type}`;
+}
+
+/** Is the live drag carrying files from outside the document? */
+export function isNavDragExternal(signature: string | null): boolean {
+  return signature === EXTERNAL_SIGNATURE;
 }
 
 /** Test seam — a module-level flag outlives a test file otherwise. */
 export function __resetNavDragForTest(): void {
   navDragActive = false;
-  navDragSource = null;
+  navDragSignature = null;
 }

@@ -38,7 +38,9 @@ import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import {
   beginNavDrag,
   subscribeNavDrag,
-  getNavDragKind,
+  getNavDragSignature,
+  navDragAccepts,
+  isNavDragExternal,
   getContainerDropZoneLabel,
   hasAnyDropTarget,
   hasExternalFilesData,
@@ -352,8 +354,9 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       e.dataTransfer.setData(dnd.type, data);
       e.dataTransfer.effectAllowed = "move";
       // Container drop zones reserve their space for the whole drag rather
-      // than growing under the pointer — see `beginNavDrag`.
-      beginNavDrag();
+      // than growing under the pointer — see `beginNavDrag`. The MIME type
+      // goes with it so only zones that would take THIS drag open.
+      beginNavDrag(dnd.type);
     },
     [dnd],
   );
@@ -504,16 +507,22 @@ function useNavItemDnd(dnd?: NavItemDnd) {
  */
 export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   const [isDragOver, setIsDragOver] = useState(false);
-  // The KIND rides with the flag, not with this zone's hover state: the zone
-  // is open before the pointer reaches it, so reading "external" off hover
-  // would leave every zone promising "Move to root" for the whole approach
-  // of a file drag.
-  const dragKind = useSyncExternalStore(subscribeNavDrag, getNavDragKind, () => null);
-  const dragActive = dragKind !== null;
-  const filesInFlight = dragKind === "external";
   const dragCounter = useRef(0);
   const acceptsFiles = dnd.canDropFiles?.() ?? false;
   const acceptsEntities = dnd.canDrop();
+  // What the drag IS rides with the flag, not with this zone's hover state:
+  // the zone is open before the pointer reaches it, so nothing about the
+  // drag can be read from hover any more. And reserving space and showing a
+  // label is a promise that a drop will land here — so a zone opens only
+  // for a drag it would actually accept, which is what the MIME type in the
+  // signature decides.
+  const dragSignature = useSyncExternalStore(subscribeNavDrag, getNavDragSignature, () => null);
+  const filesInFlight = isNavDragExternal(dragSignature);
+  const dragActive = navDragAccepts(dragSignature, {
+    type: dnd.type,
+    acceptsEntities,
+    acceptsFiles,
+  });
 
   const hasExternalFiles = (e: React.DragEvent) => hasExternalFilesData(e.dataTransfer);
 

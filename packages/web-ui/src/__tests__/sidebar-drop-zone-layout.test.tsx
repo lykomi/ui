@@ -58,11 +58,11 @@ afterEach(async () => {
   __resetNavDragForTest();
 });
 
-async function mount() {
+async function mount(zone: NavItemDnd = dnd) {
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
-  await act(async () => root!.render(<ContainerDropZone dnd={dnd} />));
+  await act(async () => root!.render(<ContainerDropZone dnd={zone} />));
   const strip = host.firstElementChild as HTMLElement;
   return { strip, band: strip.firstElementChild as HTMLElement };
 }
@@ -99,7 +99,7 @@ it("opens without animating, so the reservation is not itself a moving target", 
   // A 150ms height transition on the way OPEN pushes the destination down
   // for 150ms — which is inside the time a short drag to a nearby row
   // takes, so the target walks away exactly as it did before.
-  await act(async () => beginNavDrag());
+  await act(async () => beginNavDrag(dnd.type));
   expect(strip.className).not.toContain("transition");
 
   // Closing may animate: nothing is being aimed at by then.
@@ -117,7 +117,7 @@ it("reserves its space when the drag starts, not when the pointer arrives", asyn
   expect(strip.className).toBe(atRest);
 
   // The drag beginning is what makes room — before the user has aimed.
-  await act(async () => beginNavDrag());
+  await act(async () => beginNavDrag(dnd.type));
   expect(strip.className).toContain("h-7");
   expect(strip.className).not.toContain("h-1");
   expect(host!.textContent).toContain("Move to root");
@@ -147,7 +147,7 @@ it("opens for a drag from the desktop before it reaches a row", async () => {
 
 it("holds the reservation when an in-page drag leaves the window and returns", async () => {
   const { strip } = await mount();
-  await act(async () => beginNavDrag());
+  await act(async () => beginNavDrag(dnd.type));
   expect(strip.className).toContain("h-7");
 
   // A drag dragged out of the window fires a `dragleave` with no
@@ -173,4 +173,30 @@ it("still ends a desktop drag that is dragged back out of the window", async () 
   // `dragleave` is the only ending it will ever get.
   await act(async () => leaveWindow());
   expect(strip.className).toContain("h-1");
+});
+
+it("stays shut for a file drag it would refuse", async () => {
+  // Reserving space and painting "Upload to root" is a promise that a drop
+  // will land. A container that takes entity moves but no files must not
+  // make it: `hasMatchingDragData` refuses the file, so the drop would do
+  // nothing and the user would have aimed at a lie.
+  const entitiesOnly: NavItemDnd = { ...dnd, canDropFiles: () => false };
+  const { strip } = await mount(entitiesOnly);
+
+  await act(async () => dragEnter(document.documentElement, true));
+  expect(strip.className).toContain("h-1");
+  expect(host!.textContent).not.toContain("Upload to root");
+});
+
+it("stays shut for another module's entity drag", async () => {
+  // Two modules, two `dnd.type`s. "Some drag is in flight" opened both
+  // sides' zones; only the one that can read this payload may open.
+  const { strip } = await mount();
+
+  await act(async () => beginNavDrag("application/x-other-module"));
+  expect(strip.className).toContain("h-1");
+
+  // And its own type still opens it, so the gate is not simply shut.
+  await act(async () => beginNavDrag(dnd.type));
+  expect(strip.className).toContain("h-7");
 });
