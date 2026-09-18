@@ -151,6 +151,7 @@ describe("toAgentData", () => {
       bytes: new Uint8Array([1, 2]),
       point: new Point(1),
       handle: new Point(2, () => {}),
+      failure: new Error("x", { cause: { retry: () => {} } }),
     });
 
     expect(() => structuredClone(out)).not.toThrow();

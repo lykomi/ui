@@ -19,7 +19,10 @@
 
 const OMIT: unique symbol = Symbol("omit");
 
-/** Built-ins `structuredClone` copies natively (typed arrays via `isView`). */
+/**
+ * Built-ins `structuredClone` copies natively (typed arrays via `isView`).
+ * Not `Error`: a clone copies its `cause`, which can hold anything.
+ */
 const CLONEABLE_TAGS = new Set([
   "[object Date]",
   "[object RegExp]",
@@ -28,7 +31,6 @@ const CLONEABLE_TAGS = new Set([
   "[object File]",
   "[object FileList]",
   "[object ImageData]",
-  "[object Error]",
   "[object Boolean]",
   "[object Number]",
   "[object String]",
