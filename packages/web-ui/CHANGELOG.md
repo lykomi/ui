@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.32.4
+
+### Patch Changes
+
+- 58f5850: Show recent and pinned chats in separate responsive columns below the start-page composer, make the composer and create action easier to spot, and center the context control in the empty full chat view. Use "chat" consistently in visible history and navigation labels.
+  - @iloveagents/foundry-agent@0.32.4
+  - @iloveagents/foundry-web-primitives@0.32.4
+
 ## 0.32.3
 
 ### Patch Changes

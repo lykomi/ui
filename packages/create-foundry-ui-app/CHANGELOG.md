@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.13
+
+### Patch Changes
+
+- 0a5e31f: Release the starter template with the updated Foundry 0.32.4 package pins.
+
 ## 0.8.12
 
 ### Patch Changes
