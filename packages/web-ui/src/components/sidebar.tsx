@@ -36,6 +36,9 @@ import { useNavStore } from "../lib/nav-store.ts";
 import { useAppStore } from "../lib/app-store.ts";
 import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import {
+  beginNavDrag,
+  subscribeNavDrag,
+  isNavDragActive,
   getContainerDropZoneLabel,
   hasAnyDropTarget,
   hasExternalFilesData,
@@ -348,6 +351,9 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       if (!data) return;
       e.dataTransfer.setData(dnd.type, data);
       e.dataTransfer.effectAllowed = "move";
+      // Container drop zones reserve their space for the whole drag rather
+      // than growing under the pointer — see `beginNavDrag`.
+      beginNavDrag();
     },
     [dnd],
   );
@@ -357,6 +363,9 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       if (!hasMatchingDragData(e)) return;
       e.preventDefault();
       e.stopPropagation();
+      // A drag from the desktop has no `dragstart` in this document, so the
+      // first nav element to see it opens the same flag.
+      if (hasExternalFiles(e)) beginNavDrag();
       dragCounter.current++;
       setIsDragOver(true);
       if (isFileDropTarget && hasExternalFiles(e)) {
@@ -489,6 +498,7 @@ function useNavItemDnd(dnd?: NavItemDnd) {
 export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isFileDragOver, setIsFileDragOver] = useState(false);
+  const dragActive = useSyncExternalStore(subscribeNavDrag, isNavDragActive, () => false);
   const dragCounter = useRef(0);
   const acceptsFiles = dnd.canDropFiles?.() ?? false;
   const acceptsEntities = dnd.canDrop();
@@ -502,11 +512,21 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
     );
 
   return (
-    <div className="relative mx-2 -mt-1 h-1">
+    <div
+      className={cn(
+        "relative mx-2 transition-[height,margin] duration-150",
+        // Reserved for the whole drag, so the rows below settle once —
+        // before the user has aimed — and never while they are aiming.
+        dragActive ? "mt-0 h-7" : "-mt-1 h-1",
+      )}
+    >
       <div
         onDragEnter={(e) => {
           if (!hasMatchingDragData(e)) return;
           e.preventDefault();
+          // A desktop drag has no `dragstart` in this document; whichever
+          // nav element sees it first opens the flag. That can be this zone.
+          if (hasExternalFiles(e)) beginNavDrag();
           dragCounter.current++;
           setIsFileDragOver(hasExternalFiles(e));
           setIsDragOver(true);
@@ -542,25 +562,25 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
           await dnd.onDrop(draggedData);
         }}
         className={cn(
-          // Centred on the 4px strip, so the band grows symmetrically over
-          // its neighbours instead of displacing them. `z-10` keeps it above
-          // the rows that follow it in DOM order, which would otherwise take
-          // both the paint and the hit test in the overlap.
-          "absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 rounded-md overflow-hidden",
-          isDragOver
-            ? cn(
-                "h-7 flex items-center justify-center gap-1",
-                isFileDragOver
-                  ? "bg-primary/10 border border-dashed border-primary"
-                  : "bg-primary/10 border border-dashed border-primary/30",
-              )
-            : "h-1",
+          // Fills the reserved strip exactly: what is painted is what
+          // accepts a drop, and nothing extends over a neighbouring row.
+          "h-full w-full rounded-md overflow-hidden",
+          dragActive && "flex items-center justify-center gap-1",
+          isDragOver &&
+            (isFileDragOver
+              ? "bg-primary/10 border border-dashed border-primary"
+              : "bg-primary/10 border border-dashed border-primary/30"),
         )}
       >
-        {isDragOver && (
+        {dragActive && (
           <>
             {isFileDragOver && <Upload className="size-3 text-primary" />}
-            <span className="text-[10px] text-primary/70">
+            <span
+              className={cn(
+                "text-[10px] transition-colors",
+                isDragOver ? "text-primary/70" : "text-sidebar-foreground/35",
+              )}
+            >
               {getContainerDropZoneLabel(isFileDragOver)}
             </span>
           </>
