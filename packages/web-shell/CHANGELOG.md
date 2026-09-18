@@ -1,5 +1,14 @@
 # @iloveagents/foundry-web-shell
 
+## 0.33.1
+
+### Patch Changes
+
+- c377be9: Chat config: only the latest request may write. The boot load and context refreshes can overlap, and an older, slower response used to overwrite the current context's reasoning level and context window, or clear them on failure.
+  - @iloveagents/foundry-agent@0.33.1
+  - @iloveagents/foundry-web-primitives@0.33.1
+  - @iloveagents/foundry-web-ui@0.33.1
+
 ## 0.33.0
 
 ### Minor Changes

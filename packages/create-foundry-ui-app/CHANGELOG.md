@@ -1,5 +1,11 @@
 # create-foundry-ui-app
 
+## 0.8.14
+
+### Patch Changes
+
+- 558a00e: Release the starter with the Foundry 0.33 package pins. From now on, the version step releases the starter automatically whenever it moves a pin.
+
 ## 0.8.13
 
 ### Patch Changes
