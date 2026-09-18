@@ -259,5 +259,3 @@ function AGUIRuntimeInner({
     </AGUIAdapterContext.Provider>
   );
 }
-
-export { useCurrentThreadId } from "./ag-ui-adapter-context.ts";

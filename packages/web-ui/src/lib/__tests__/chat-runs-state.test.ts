@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { agentStateStore } from "@iloveagents/foundry-agent";
+import { agentStateStore, contextUsageStore } from "@iloveagents/foundry-agent";
 import {
   disposeChatRuns,
   publishChatAgentState,
@@ -36,4 +36,13 @@ it("clears a deleted foreground projection but preserves another conversation's 
   expect(agentStateStore.getState().state).toBeNull();
   publishChatAgentState("a", { value: "late" });
   expect(agentStateStore.getState().state).toBeNull();
+});
+
+it("forgets a deleted conversation's memory fill, and all of it on teardown", () => {
+  contextUsageStore.getState().record("gone", { inputTokens: 90_000 });
+  contextUsageStore.getState().record("kept", { inputTokens: 10 });
+  removeChatRun("gone");
+  expect(Object.keys(contextUsageStore.getState().byThread)).toEqual(["kept"]);
+  disposeChatRuns();
+  expect(contextUsageStore.getState().byThread).toEqual({});
 });

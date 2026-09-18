@@ -20,6 +20,17 @@ describe("contextUsageStore", () => {
     });
   });
 
+  it("forgets a deleted thread, and everything on teardown", () => {
+    contextUsageStore.getState().record("t1", { inputTokens: 10 });
+    contextUsageStore.getState().record("t2", { inputTokens: 20 });
+
+    contextUsageStore.getState().forget("t1");
+    expect(Object.keys(contextUsageStore.getState().byThread)).toEqual(["t2"]);
+
+    contextUsageStore.getState().clear();
+    expect(contextUsageStore.getState().byThread).toEqual({});
+  });
+
   it("accepts only a positive finite window", () => {
     for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, null]) {
       contextUsageStore.getState().setWindow(bad);

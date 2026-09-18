@@ -5,7 +5,10 @@ export interface ContextUsage {
   /** Tokens the model received on its latest call — the conversation's current size. */
   inputTokens: number;
   outputTokens: number | null;
-  /** The server's fill and ceiling in its own units, when it states them. */
+  /**
+   * The server's fill and ceiling in its own units, when it states them.
+   * Stating them is the server's promise that it compacts at that ceiling.
+   */
   contextUsed: number | null;
   contextLimit: number | null;
   /** When it was recorded (epoch ms). */
@@ -24,6 +27,10 @@ interface ContextUsageState {
   /** Latest usage per thread id. */
   byThread: Record<string, ContextUsage>;
   setWindow: (windowTokens: number | null) => void;
+  /** Drop a thread's usage — after the conversation is deleted. */
+  forget: (threadId: string) => void;
+  /** Drop every thread's usage — when the chat runtime is torn down. */
+  clear: () => void;
   record: (
     threadId: string,
     usage: {
@@ -53,6 +60,14 @@ export const contextUsageStore = createStore<ContextUsageState>()((set) => ({
           ? windowTokens
           : null,
     }),
+  forget: (threadId) =>
+    set((state) => {
+      if (!(threadId in state.byThread)) return state;
+      const byThread = { ...state.byThread };
+      delete byThread[threadId];
+      return { byThread };
+    }),
+  clear: () => set({ byThread: {} }),
   record: (threadId, usage) =>
     set((state) => ({
       byThread: {

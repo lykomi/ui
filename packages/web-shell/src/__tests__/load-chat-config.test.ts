@@ -26,8 +26,10 @@ beforeEach(() => {
 
 describe("loadChatConfig", () => {
   it("passes the context window the backend states", async () => {
+    // A response with no reasoning level still keeps the window it states.
     await loadChatConfig(fetchReturning({ context: { windowTokens: 128_000 } }));
-    expect(setWindow).toHaveBeenCalledWith(128_000);
+    expect(setWindow).toHaveBeenLastCalledWith(128_000);
+    expect(setResolved).toHaveBeenLastCalledWith(null);
   });
 
   it("clears the window when the backend states none, or the load fails", async () => {

@@ -53,6 +53,8 @@ export async function loadChatConfig(
     // is treated the same as unknown — neither is coerced into a level. The
     // scope is the backend's phrase for WHERE the level came from ("for this
     // workspace"); non-string scopes are dropped, never rendered.
+    // Each value stands on its own: a response without a usable effort
+    // must not also clear the window it did state.
     if (typeof effort === "string" && VALID.includes(effort)) {
       reasoningDefaultStore
         .getState()
@@ -61,7 +63,7 @@ export async function loadChatConfig(
           typeof scope === "string" && scope ? scope : null,
         );
     } else {
-      reset();
+      reasoningDefaultStore.getState().setResolved(null);
     }
   } catch {
     reset();

@@ -10,6 +10,7 @@ export {
   useAGUIAdapter,
   useIsForegroundChat,
 } from "./components/ag-ui-runtime-provider.tsx";
+export { useCurrentThreadId } from "./components/ag-ui-adapter-context.ts";
 export type {
   AGUIChatConversationFactoryArgs,
   AGUIHistoryAdapterFactory,

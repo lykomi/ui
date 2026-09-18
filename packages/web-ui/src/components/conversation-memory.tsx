@@ -18,6 +18,12 @@ export interface ConversationMemoryUsage {
   ratio: number;
   nearlyFull: boolean;
   full: boolean;
+  /**
+   * Whether the server compacts at this ceiling. Only a server that states
+   * its own fill and ceiling with each call does; a window the host merely
+   * stated says how much fits, not what happens when it is full.
+   */
+  compacts: boolean;
 }
 
 function formatTokens(n: number): string {
@@ -38,7 +44,11 @@ export function useConversationMemory(): ConversationMemoryUsage | null {
   const windowTokens = useStore(contextUsageStore, (s) => s.windowTokens);
   const usage = useStore(contextUsageStore, (s) => (threadId ? s.byThread[threadId] : undefined));
   if (!usage) return null;
-  const used = usage.contextLimit ? (usage.contextUsed ?? 0) : usage.inputTokens;
+  // Without the server's own figure: what the model was sent plus what it
+  // answered, which is now part of the conversation too.
+  const used = usage.contextLimit
+    ? (usage.contextUsed ?? 0)
+    : usage.inputTokens + (usage.outputTokens ?? 0);
   const limit = usage.contextLimit ?? windowTokens;
   if (!limit) return null;
   const ratio = Math.min(used / limit, 1);
@@ -48,10 +58,15 @@ export function useConversationMemory(): ConversationMemoryUsage | null {
     ratio,
     nearlyFull: ratio >= NEARLY_FULL,
     full: ratio >= FULL,
+    compacts: usage.contextLimit != null,
   };
 }
 
 function explanation(usage: ConversationMemoryUsage): string {
+  if (!usage.compacts)
+    return usage.full
+      ? "This chat is full: the model cannot take in more of it. Start a new chat to continue."
+      : "How much of what the model can take in this chat uses. For a fresh topic, start a new chat.";
   if (usage.full)
     return "This chat is full. It will be compacted with your next message: earlier parts are summarized to make room.";
   if (usage.nearlyFull)

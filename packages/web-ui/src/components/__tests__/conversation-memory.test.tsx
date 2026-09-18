@@ -93,7 +93,7 @@ describe("ConversationMemory", () => {
       byThread: {
         t1: {
           inputTokens: 50_000,
-          outputTokens: null,
+          outputTokens: 10_000, // the answer is part of the conversation now
           contextUsed: null,
           contextLimit: null,
           at: 0,
@@ -101,6 +101,8 @@ describe("ConversationMemory", () => {
       },
     });
     render();
-    expect(section()?.textContent).toContain("50k of 200k");
+    expect(section()?.textContent).toContain("60k of 200k");
+    // A window says how much fits, not that the server compacts.
+    expect(about()).not.toContain("summarized");
   });
 });
