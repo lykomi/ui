@@ -355,8 +355,10 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       e.dataTransfer.effectAllowed = "move";
       // Container drop zones reserve their space for the whole drag rather
       // than growing under the pointer — see `beginNavDrag`. The MIME type
-      // goes with it so only zones that would take THIS drag open.
-      beginNavDrag(dnd.type);
+      // goes with it so only zones that would take THIS drag open, and the
+      // source element so its `dragend` is still heard if a nav refresh
+      // detaches this row mid-drag.
+      beginNavDrag(dnd.type, e.currentTarget);
     },
     [dnd],
   );
