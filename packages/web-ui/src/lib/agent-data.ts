@@ -11,13 +11,29 @@
  * The rule: a value that would make the clone throw marks the object holding
  * it as UI, and that object is left out whole — except the projected record
  * itself, a container, which only loses those entries. A half-stripped nav item
- * (a label with its icon and actions removed) would still tell the agent
+ * (a label with its icon and click handler removed) would still tell the agent
  * something the author never meant it to hear. Everything a clone already
  * accepted passes through unchanged, so no projection that works today
  * changes shape.
  */
 
 const OMIT: unique symbol = Symbol("omit");
+
+/** Built-ins `structuredClone` copies natively (typed arrays via `isView`). */
+const CLONEABLE_TAGS = new Set([
+  "[object Date]",
+  "[object RegExp]",
+  "[object ArrayBuffer]",
+  "[object Blob]",
+  "[object File]",
+  "[object FileList]",
+  "[object ImageData]",
+  "[object Error]",
+  "[object Boolean]",
+  "[object Number]",
+  "[object String]",
+  "[object BigInt]",
+]);
 
 function isUiValue(value: unknown): boolean {
   if (typeof value === "function" || typeof value === "symbol") return true;
@@ -57,9 +73,15 @@ function project(value: unknown, depth: number, seen: WeakSet<object>): unknown 
       }
       return value.size > 0 && out.size === 0 ? OMIT : out;
     }
-    // Other built-ins a clone copies natively (Date, RegExp, typed arrays…)
-    // keep doing so; arrays and records are walked.
-    if (!Array.isArray(value) && !isRecord(value)) return value;
+    if (!Array.isArray(value) && !isRecord(value)) {
+      // Built-ins a clone copies natively keep doing so. Anything else that
+      // is not a plain object by tag — a DOM node held by a ref, a WeakMap, a
+      // Promise — makes the clone throw. A class instance tags as a plain
+      // object, and a clone copies its own fields, so it is walked like one.
+      const tag = Object.prototype.toString.call(value);
+      if (CLONEABLE_TAGS.has(tag) || ArrayBuffer.isView(value)) return value;
+      if (tag !== "[object Object]") return OMIT;
+    }
     if (Array.isArray(value)) {
       const out = value.map((item) => project(item, depth + 1, seen)).filter((v) => v !== OMIT);
       return value.length > 0 && out.length === 0 ? OMIT : out;

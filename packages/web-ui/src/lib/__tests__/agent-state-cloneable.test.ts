@@ -134,4 +134,31 @@ describe("toAgentData", () => {
     expect(out.byId).toEqual(new Map([["a", { id: "a" }]]));
     expect(out.tags).toEqual(new Set(["x"]));
   });
+
+  it("leaves out objects a clone rejects, and walks class instances like records", () => {
+    class Point {
+      constructor(
+        public x: number,
+        public onMove?: () => void,
+      ) {}
+    }
+    const node = document.createElement("div");
+    const out = toAgentData({
+      ref: { current: node },
+      cache: new WeakMap(),
+      pending: Promise.resolve(1),
+      at: new Date(0),
+      bytes: new Uint8Array([1, 2]),
+      point: new Point(1),
+      handle: new Point(2, () => {}),
+    });
+
+    expect(() => structuredClone(out)).not.toThrow();
+    expect(out).toEqual({
+      ref: {},
+      at: new Date(0),
+      bytes: new Uint8Array([1, 2]),
+      point: { x: 1, onMove: undefined },
+    });
+  });
 });
