@@ -30,7 +30,7 @@ export function ChatEmptyState({
         )}
       </p>
       <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-        Your conversation continues as you browse. Select text or a field to work more specifically.
+        Your chat continues as you browse. Select text or a field to work more specifically.
       </p>
       {showHomeStarters && <ChatHomeStartersSlot priority={homeStarterPriority} />}
       {children}

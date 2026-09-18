@@ -353,7 +353,7 @@ const DropZone: FC<{ children: React.ReactNode; centered?: boolean }> = ({
     <div
       className={cn(
         "relative flex flex-col flex-1",
-        centered ? "justify-center overflow-y-auto" : "overflow-hidden",
+        centered ? "overflow-y-auto" : "overflow-hidden",
       )}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -548,7 +548,10 @@ export function ChatContent({
           )}
         </div>
 
-        <div className="shrink-0 bg-background" hidden={hideComposer}>
+        <div
+          className={cn("shrink-0 bg-background", centerComposer && !ThreadSurface && "my-auto")}
+          hidden={hideComposer}
+        >
           {composerIntro && !ThreadSurface && (
             <div className="mx-auto max-w-3xl px-4 pt-4">{composerIntro}</div>
           )}
@@ -561,7 +564,7 @@ export function ChatContent({
           </ThreadPrimitive.If>
 
           <div className="mx-auto max-w-3xl px-4 py-4">
-            <ChatContext />
+            <ChatContext centered={centerComposer && !ThreadSurface} />
             <ComposerPrimitive.Root
               style={compactComposer ? { borderRadius: 16 } : undefined}
               className={cn(
@@ -574,6 +577,7 @@ export function ChatContent({
                 "bg-background shadow-sm",
                 "px-4 py-2",
                 "focus-within:border-primary/50 focus-within:shadow-md",
+                centerComposer && "shadow-md",
                 "transition-all duration-300",
               )}
             >
@@ -632,7 +636,7 @@ export function ChatContent({
                 </div>
               </div>
             </ComposerPrimitive.Root>
-            {composerFooter}
+            {!ThreadSurface && composerFooter}
           </div>
         </div>
       </DropZone>

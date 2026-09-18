@@ -129,7 +129,7 @@ export function useWorkbenchState(chatRoute: boolean) {
       className="h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
     >
       <MessagesSquare className="size-4" aria-hidden />
-      Conversation history
+      Chat history
     </Button>
   );
   const toggleNavigation = useSidebarStore((s) => s.toggleMobile);

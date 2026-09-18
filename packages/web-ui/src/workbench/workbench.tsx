@@ -70,6 +70,17 @@ export function WorkbenchPreview({
     />
   );
   const emptyChatFooter = workspaceId ? conversationHome : historyShortcut;
+  const homeRecents = !workspaceId ? (
+    <ConversationHistory
+      groups={navGroups}
+      workspaceId={undefined}
+      onClose={returnToChat}
+      onViewAll={openHistory}
+      showBack={false}
+      compact
+      home
+    />
+  ) : undefined;
   const buttonClass =
     "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary";
   return (
@@ -193,7 +204,15 @@ export function WorkbenchPreview({
                 centerComposer={spaciousChat && emptyChat && !historyOpen}
                 composerIntro={
                   spaciousChat && emptyChat ? (
-                    <WelcomeIntro navGroups={navGroups} historyShortcut={emptyChatFooter} />
+                    <WelcomeIntro
+                      navGroups={navGroups}
+                      historyShortcut={workspaceId ? emptyChatFooter : null}
+                    />
+                  ) : undefined
+                }
+                composerFooter={
+                  spaciousChat && emptyChat && !historyOpen && homeRecents ? (
+                    <div className="w-full">{homeRecents}</div>
                   ) : undefined
                 }
                 compactComposer={!spaciousChat}

@@ -105,3 +105,46 @@ it("keeps new completions visible but removes successfully deleted chats", async
   expect(host.querySelector('a[href="/chat/deleted"]')).toBeNull();
   expect(host.textContent).toContain("Saved saved");
 });
+
+it("keeps active and just-finished chats visible among the three home recents", async () => {
+  const previousUpdate = new Date(Date.now() - 20_000).toISOString();
+  const homeItems = ["one", "two", "three", "four"].map((id) => ({
+    ...item(id, "entity"),
+    meta: { updatedAt: previousUpdate },
+  }));
+  const renderHome = async (items: NavItem[]) => {
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <ConversationHistory
+            groups={[
+              {
+                label: "Recent",
+                items,
+                meta: { type: "recent-chats", allConversations: items },
+              },
+            ]}
+            workspaceId={undefined}
+            home
+            onClose={vi.fn()}
+          />
+        </MemoryRouter>,
+      );
+    });
+  };
+  begin("four", "workspace");
+  await renderHome(homeItems);
+  const recents = host.querySelector('section[aria-label="Recent"]');
+  expect(recents?.querySelectorAll("a")).toHaveLength(3);
+  expect(recents?.querySelector('a[href="/chat/four"]')).not.toBeNull();
+  expect(recents?.querySelector('a[href="/chat/three"]')).toBeNull();
+  await act(async () => updateChatRun("four", "completed"));
+  expect(recents?.querySelector('a[href="/chat/four"]')).not.toBeNull();
+  const newerItems = ["new-a", "new-b", "new-c"].map((id, index) => ({
+    ...item(id, "entity"),
+    meta: { updatedAt: new Date(Date.now() + (3 - index) * 1_000).toISOString() },
+  }));
+  await renderHome([...newerItems, ...homeItems]);
+  expect(recents?.querySelector('a[href="/chat/four"]')).toBeNull();
+  expect(recents?.querySelectorAll("a")).toHaveLength(3);
+});

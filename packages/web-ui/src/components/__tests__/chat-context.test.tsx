@@ -30,17 +30,22 @@ afterEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
 });
 
-function render() {
+function render(centered = false) {
   act(() =>
     root.render(
       <MemoryRouter initialEntries={["/tasks?workspace=space-a"]}>
         <TooltipProvider>
-          <ChatContext />
+          <ChatContext centered={centered} />
         </TooltipProvider>
       </MemoryRouter>,
     ),
   );
 }
+
+it("centers the context control in the empty full chat view", () => {
+  render(true);
+  expect(container.querySelector("[data-chat-context]")?.className).toContain("mx-auto");
+});
 function click(label: string) {
   const button = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
     (item) => item.getAttribute("aria-label") === label || item.textContent === label,

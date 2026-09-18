@@ -79,7 +79,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
 
   async *run({ messages, abortSignal }: ChatModelRunOptions): AsyncGenerator<ChatModelRunResult> {
     if (useChatRuns.getState().deletedThreads[this.threadId]) {
-      throw new Error("This conversation was deleted. Start a new chat to continue.");
+      throw new Error("This chat was deleted. Start a new chat to continue.");
     }
     const aguiMessages = convertMessagesToAGUI(messages);
 
@@ -126,7 +126,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
           .filter((p) => p.type === "text")
           .map((p) => p.text)
           .join(" ")
-          .slice(0, 120) || "Conversation",
+          .slice(0, 120) || "Chat",
       pageLabel: useAppStore.getState().navContext.label ?? undefined,
       contextMeta: { ...useAppStore.getState().navContext.meta },
       stop: () => stopController.abort(),

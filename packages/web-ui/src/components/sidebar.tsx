@@ -1958,7 +1958,7 @@ function SidebarContent({
   hideNewConversation,
   collapsedGroupsOnly,
   newConversationAfterGroup,
-  newConversationLabel = "New Thread",
+  newConversationLabel = "New chat",
 }: SidebarViewProps & { collapsed: boolean }) {
   const toggle = useSidebarStore((s) => s.toggle);
   const defaultNewConversation = useNewConversation();
