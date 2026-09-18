@@ -10,23 +10,24 @@
 // Wired into `pnpm changeset:version` so the Version Packages PR carries the
 // template bump; `pnpm pack:check` fails the build if the two ever diverge.
 //
-// One thing this script cannot do for you: rewriting a pin does not release the
-// CLI. The pins are exact by design, so a scaffold built from an OLDER
-// create-foundry-ui-app keeps pointing at whatever version it shipped with —
-// and if that version was broken or yanked, `npx create-foundry-ui-app` stays
-// broken no matter what has been published since. Whenever a pinned package
-// gets a new version, create-foundry-ui-app needs a changeset of its own so it
-// is re-released carrying it. This has bitten once, when web-voice 0.1.0 was
-// superseded by 0.1.1 and the CLI still pinned 0.1.0.
+// Rewriting a pin does not by itself release the CLI, and the pins only reach
+// users in a released create-foundry-ui-app: a scaffold always uses the pins
+// its CLI version shipped with. So when this script moves a pin, it also gives
+// the CLI a patch release in the same Version Packages PR — unless a changeset
+// already bumped it. Leaving that to a hand-written changeset failed twice
+// (web-voice 0.1.1 while the CLI still pinned 0.1.0; foundry 0.33.0 while
+// `npx create-foundry-ui-app` still scaffolded 0.32.4).
 
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { foundryWorkspaceVersions, scaffoldPinSources } from "./scaffold-pins.mjs";
+import { CLI_ROOT, foundryWorkspaceVersions, scaffoldPinSources } from "./scaffold-pins.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const versions = foundryWorkspaceVersions();
 let changed = false;
+const moved = [];
 
 for (const { file, fields, label } of scaffoldPinSources({ existsSync, readdirSync })) {
   const json = readJson(file);
@@ -48,10 +49,51 @@ for (const { file, fields, label } of scaffoldPinSources({ existsSync, readdirSy
 
   if (changes.length > 0) {
     changed = true;
+    moved.push(...changes);
     writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`);
     console.log(`updated ${label} (${file}):`);
     for (const change of changes) console.log(`  ${change}`);
   }
 }
 
-if (!changed) console.log("scaffold pins already in sync");
+if (!changed) {
+  console.log("scaffold pins already in sync");
+} else {
+  releaseCli(moved);
+}
+
+/**
+ * Give create-foundry-ui-app a patch release carrying the moved pins, unless
+ * a changeset already bumped it in this version run. "Already bumped" is
+ * measured against the committed package.json: `changeset version` edits the
+ * working tree, so a version that differs from HEAD was bumped by this run.
+ */
+function releaseCli(pinChanges) {
+  const packageFile = join(CLI_ROOT, "package.json");
+  const pkg = readJson(packageFile);
+  const committed = JSON.parse(
+    execFileSync("git", ["show", `HEAD:${packageFile}`], { encoding: "utf8" }),
+  ).version;
+  if (pkg.version !== committed) {
+    console.log(`${pkg.name} already bumped to ${pkg.version} by a changeset`);
+    return;
+  }
+  const [major, minor, patch] = pkg.version.split(".").map(Number);
+  pkg.version = `${major}.${minor}.${patch + 1}`;
+  writeFileSync(packageFile, `${JSON.stringify(pkg, null, 2)}\n`);
+
+  const changelogFile = join(CLI_ROOT, "CHANGELOG.md");
+  const changelog = readFileSync(changelogFile, "utf8");
+  const heading = `# ${pkg.name}\n\n`;
+  const pins = [...new Set(pinChanges)].map((change) => `  - ${change}`).join("\n");
+  const entry =
+    `## ${pkg.version}\n\n### Patch Changes\n\n` +
+    `- Release the starter with the updated Foundry package pins:\n\n${pins}\n\n`;
+  writeFileSync(
+    changelogFile,
+    changelog.startsWith(heading)
+      ? heading + entry + changelog.slice(heading.length)
+      : heading + entry + changelog,
+  );
+  console.log(`released ${pkg.name} ${pkg.version} with the new pins`);
+}

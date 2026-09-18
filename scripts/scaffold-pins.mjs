@@ -23,7 +23,7 @@ const RUNTIME_PACKAGE_DIRS = [
   "packages/web-voice",
 ];
 
-const CLI_ROOT = "packages/create-foundry-ui-app";
+export const CLI_ROOT = "packages/create-foundry-ui-app";
 export const TEMPLATE_PACKAGE_JSON = join(CLI_ROOT, "template/package.json");
 const PRESETS_DIR = join(CLI_ROOT, "presets");
 
