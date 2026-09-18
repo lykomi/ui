@@ -38,7 +38,7 @@ import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import {
   beginNavDrag,
   subscribeNavDrag,
-  getNavDragSignature,
+  getNavDragVersion,
   navDragAccepts,
   isNavDragExternal,
   getContainerDropZoneLabel,
@@ -514,15 +514,14 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   // the zone is open before the pointer reaches it, so nothing about the
   // drag can be read from hover any more. And reserving space and showing a
   // label is a promise that a drop will land here — so a zone opens only
-  // for a drag it would actually accept, which is what the MIME type in the
-  // signature decides.
-  const dragSignature = useSyncExternalStore(subscribeNavDrag, getNavDragSignature, () => null);
-  const filesInFlight = isNavDragExternal(dragSignature);
-  const dragActive = navDragAccepts(dragSignature, {
-    type: dnd.type,
-    acceptsEntities,
-    acceptsFiles,
-  });
+  // for a drag it would actually accept, which the drag's MIME types decide.
+  //
+  // The subscribed snapshot is a VERSION, not the types themselves: a MIME
+  // token may legally contain whatever character one joins them with, and a
+  // split on it turns one type into two. The predicates read the set.
+  useSyncExternalStore(subscribeNavDrag, getNavDragVersion, () => 0);
+  const filesInFlight = isNavDragExternal();
+  const dragActive = navDragAccepts({ type: dnd.type, acceptsEntities, acceptsFiles });
 
   const hasExternalFiles = (e: React.DragEvent) => hasExternalFilesData(e.dataTransfer);
 

@@ -242,3 +242,37 @@ it("stays shut for another module's entity drag", async () => {
   await act(async () => beginNavDrag(dnd.type));
   expect(strip.className).toContain("h-7");
 });
+
+it("keeps a MIME type whole when it contains a separator", async () => {
+  // `|` is not one of RFC 2045's tspecials, so it is legal in a MIME token.
+  // While the type set was published as a joined string, such a type split
+  // into two: the zone that owns it stayed shut, and a zone matching a
+  // fragment would open for data it cannot read.
+  const piped: NavItemDnd = { ...dnd, type: "application/x-entity|v2" };
+  const { strip } = await mount(piped);
+
+  // A different type that happens to be one of its fragments must not open it.
+  await act(async () => beginNavDrag("application/x-entity"));
+  expect(strip.className).toContain("h-1");
+
+  await act(async () => endNavDrag());
+  await act(async () => beginNavDrag(piped.type));
+  expect(strip.className).toContain("h-7");
+});
+
+it("ends the drag when a nav refresh detaches the row it started from", async () => {
+  const { strip } = await mount();
+  // A source removed mid-drag still receives its own `dragend`, but a
+  // detached node's event reaches no window listener — and the
+  // relatedTarget-less `dragleave` deliberately ignores an in-page drag. So
+  // the reservation stayed open, every zone expanded, until the next drag
+  // that happened to finish somewhere else.
+  const source = document.createElement("div");
+  document.body.append(source);
+  await act(async () => beginNavDrag(dnd.type, source));
+  expect(strip.className).toContain("h-7");
+
+  source.remove();
+  await act(async () => source.dispatchEvent(new Event("dragend", { bubbles: true })));
+  expect(strip.className).toContain("h-1");
+});

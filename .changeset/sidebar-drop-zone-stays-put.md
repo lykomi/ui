@@ -48,3 +48,15 @@ whichever ran last and leave zones matching the child's payload shut. And a
 drag entering from another window of the same app carries its own custom
 types, which are adopted exactly as `Files` is, so the root target no longer
 stays an unlabelled strip for a gesture its own `onDrop` would have accepted.
+
+The set is read directly and never serialised: a MIME token may legally
+contain any separator one might join them with (`|` is not one of RFC 2045's
+tspecials), and a split on it turns one type into two — the zone that owns
+it staying shut while a zone matching a fragment opens for data it cannot
+read. What components subscribe to is a version counter instead.
+
+A drag also ends when a nav refresh removes the row it started from. Such a
+source still receives its own `dragend`, but a detached node's event reaches
+no window listener, and the relatedTarget-less `dragleave` deliberately
+ignores an in-page drag — so the reservation would otherwise stay open, every
+zone expanded, until some later drag happened to finish elsewhere.
