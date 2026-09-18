@@ -387,12 +387,18 @@ export class AGUIRunner {
               const value = event.value as Record<string, unknown> | null | undefined;
               const input = value?.input_token_count;
               const output = value?.output_token_count;
-              if (typeof input === "number" && Number.isFinite(input) && input >= 0) {
+              const used = value?.context_used_tokens;
+              const limit = value?.context_limit_tokens;
+              const count = (n: unknown): n is number =>
+                typeof n === "number" && Number.isFinite(n) && n >= 0;
+              if (count(input)) {
                 push({
                   type: "usage",
                   inputTokens: input,
-                  ...(typeof output === "number" && Number.isFinite(output)
-                    ? { outputTokens: output }
+                  ...(count(output) ? { outputTokens: output } : {}),
+                  // Only as a pair: a fill without its ceiling means nothing.
+                  ...(count(used) && count(limit) && limit > 0
+                    ? { contextUsed: used, contextLimit: limit }
                     : {}),
                 });
               }

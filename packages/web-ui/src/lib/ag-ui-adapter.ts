@@ -238,6 +238,8 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
             contextUsageStore.getState().record(this.threadId, {
               inputTokens: event.inputTokens,
               outputTokens: event.outputTokens ?? null,
+              contextUsed: event.contextUsed ?? null,
+              contextLimit: event.contextLimit ?? null,
             });
             break;
 

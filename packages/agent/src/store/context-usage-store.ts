@@ -5,6 +5,9 @@ export interface ContextUsage {
   /** Tokens the model received on its latest call — the conversation's current size. */
   inputTokens: number;
   outputTokens: number | null;
+  /** The server's fill and ceiling in its own units, when it states them. */
+  contextUsed: number | null;
+  contextLimit: number | null;
   /** When it was recorded (epoch ms). */
   at: number;
 }
@@ -21,7 +24,15 @@ interface ContextUsageState {
   /** Latest usage per thread id. */
   byThread: Record<string, ContextUsage>;
   setWindow: (windowTokens: number | null) => void;
-  record: (threadId: string, usage: { inputTokens: number; outputTokens?: number | null }) => void;
+  record: (
+    threadId: string,
+    usage: {
+      inputTokens: number;
+      outputTokens?: number | null;
+      contextUsed?: number | null;
+      contextLimit?: number | null;
+    },
+  ) => void;
 }
 
 /**
@@ -49,6 +60,8 @@ export const contextUsageStore = createStore<ContextUsageState>()((set) => ({
         [threadId]: {
           inputTokens: usage.inputTokens,
           outputTokens: usage.outputTokens ?? null,
+          contextUsed: usage.contextUsed ?? null,
+          contextLimit: usage.contextLimit ?? null,
           at: Date.now(),
         },
       },

@@ -12,7 +12,12 @@ describe("contextUsageStore", () => {
 
     const { byThread } = contextUsageStore.getState();
     expect(byThread.t1).toMatchObject({ inputTokens: 20, outputTokens: 5 });
-    expect(byThread.t2).toMatchObject({ inputTokens: 7, outputTokens: null });
+    expect(byThread.t2).toMatchObject({
+      inputTokens: 7,
+      outputTokens: null,
+      contextUsed: null,
+      contextLimit: null,
+    });
   });
 
   it("accepts only a positive finite window", () => {

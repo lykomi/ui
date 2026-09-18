@@ -10,7 +10,7 @@ vi.mock("@iloveagents/foundry-agent", async () => {
   const { createStore } = await import("zustand/vanilla");
   const contextUsageStore = createStore<{
     windowTokens: number | null;
-    byThread: Record<string, { inputTokens: number; outputTokens: number | null; at: number }>;
+    byThread: Record<string, unknown>;
   }>()(() => ({ windowTokens: null, byThread: {} }));
   store.ref = contextUsageStore;
   return { contextUsageStore };
@@ -21,15 +21,20 @@ vi.mock("../ag-ui-adapter-context.ts", () => ({ useCurrentThreadId: () => "t1" }
 import { ContextUsageIndicator } from "../context-usage-indicator.tsx";
 
 type Store = {
-  setState: (s: {
-    windowTokens?: number | null;
-    byThread?: Record<string, { inputTokens: number; outputTokens: number | null; at: number }>;
-  }) => void;
+  setState: (s: { windowTokens?: number | null; byThread?: Record<string, unknown> }) => void;
 };
 const set = (windowTokens: number | null, inputTokens?: number) =>
   (store.ref as Store).setState({
     windowTokens,
-    byThread: inputTokens === undefined ? {} : { t1: { inputTokens, outputTokens: null, at: 0 } },
+    byThread:
+      inputTokens === undefined
+        ? {}
+        : { t1: { inputTokens, outputTokens: null, contextUsed: null, contextLimit: null, at: 0 } },
+  });
+const setPair = (inputTokens: number, contextUsed: number, contextLimit: number) =>
+  (store.ref as Store).setState({
+    windowTokens: null,
+    byThread: { t1: { inputTokens, outputTokens: null, contextUsed, contextLimit, at: 0 } },
   });
 
 let container: HTMLDivElement;
@@ -69,6 +74,15 @@ describe("ContextUsageIndicator", () => {
     expect(ring()?.getAttribute("aria-label")).toBe("Context 25% used (32k of 128k tokens).");
   });
 
+  it("prefers the server's own fill and ceiling over the model's raw count", () => {
+    // 33k real input tokens on a first "hello" is mostly system prompt and
+    // tool declarations; the conversation itself is small.
+    setPair(33_000, 1_200, 128_000);
+    render();
+    expect(ring()?.dataset.contextUsage).toBe("ok");
+    expect(ring()?.getAttribute("aria-label")).toBe("Context 1% used (1.2k of 128k tokens).");
+  });
+
   it("warns near the ceiling and says what happens beyond it", () => {
     set(128_000, 110_000);
     render();
@@ -78,6 +92,6 @@ describe("ContextUsageIndicator", () => {
     set(128_000, 200_000);
     render();
     expect(ring()?.dataset.contextUsage).toBe("full");
-    expect(ring()?.getAttribute("aria-label")).toContain("Context 100% used");
+    expect(ring()?.getAttribute("aria-label")).toContain("Context 100% used (128k of 128k");
   });
 });

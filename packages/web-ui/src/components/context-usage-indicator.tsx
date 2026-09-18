@@ -21,19 +21,25 @@ function formatTokens(n: number): string {
  * settings — the same cue other assistants give before a long chat starts
  * to lose its beginning.
  *
- * Drawn only when both facts are known: the size of the latest model call
- * (reported by the server for every call) and how much the chat can hold
- * (stated by the backend). Missing either, it renders nothing — a ring
- * against a guessed ceiling looks exact and is not.
+ * Drawn only when both a fill and its ceiling are known, in the same units:
+ * preferably as the server states them with each model call's usage, else
+ * the model's input count against a window the host stated. Missing either,
+ * it renders nothing — a ring against a guessed ceiling looks exact and is
+ * not.
  */
 export function ContextUsageIndicator({ className }: { className?: string }) {
   const threadId = useCurrentThreadId();
   const windowTokens = useStore(contextUsageStore, (s) => s.windowTokens);
   const usage = useStore(contextUsageStore, (s) => (threadId ? s.byThread[threadId] : undefined));
 
-  if (!windowTokens || !usage) return null;
+  if (!usage) return null;
+  // The server's own fill and ceiling when it states them (same units);
+  // otherwise the model's input count against a window the host stated.
+  const used = usage.contextLimit ? (usage.contextUsed ?? 0) : usage.inputTokens;
+  const limit = usage.contextLimit ?? windowTokens;
+  if (!limit) return null;
 
-  const ratio = Math.min(usage.inputTokens / windowTokens, 1);
+  const ratio = Math.min(used / limit, 1);
   const percent = Math.round(ratio * 100);
   const state = ratio >= FULL_AT ? "full" : ratio >= WARN_AT ? "warn" : "ok";
   const detail =
@@ -42,7 +48,7 @@ export function ContextUsageIndicator({ className }: { className?: string }) {
       : state === "warn"
         ? " Older parts of this chat will soon be shortened; a new chat keeps answers sharp."
         : " Older parts of this chat are being shortened to fit. Start a new chat for a fresh topic.";
-  const label = `Context ${percent}% used (${formatTokens(usage.inputTokens)} of ${formatTokens(windowTokens)} tokens).${detail}`;
+  const label = `Context ${percent}% used (${formatTokens(Math.min(used, limit))} of ${formatTokens(limit)} tokens).${detail}`;
 
   const radius = (SIZE - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;

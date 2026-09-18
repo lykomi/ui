@@ -85,4 +85,17 @@ export type RunnerEvent =
    * Token usage of one model call, as the server reported it. The input
    * count is how large the conversation was on that call.
    */
-  | { type: "usage"; inputTokens: number; outputTokens?: number };
+  | {
+      type: "usage";
+      inputTokens: number;
+      outputTokens?: number;
+      /**
+       * How full the conversation is and how much it can hold, when the
+       * server states both in the same units. Preferred over `inputTokens`
+       * against a host-stated window: the model's count includes the system
+       * prompt and every tool declaration, which a conversation budget does
+       * not.
+       */
+      contextUsed?: number;
+      contextLimit?: number;
+    };

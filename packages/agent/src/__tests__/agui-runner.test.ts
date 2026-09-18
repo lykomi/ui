@@ -510,7 +510,12 @@ describe("stream integrity", () => {
           event: {
             type: "CUSTOM",
             name: "usage",
-            value: { input_token_count: 41_200, output_token_count: 900 },
+            value: {
+              input_token_count: 41_200,
+              output_token_count: 900,
+              context_used_tokens: 12_000,
+              context_limit_tokens: 128_000,
+            },
           } as never,
         } as never);
         // Malformed counts are ignored rather than reported as zero.
@@ -527,7 +532,15 @@ describe("stream integrity", () => {
     const usage = events.filter(
       (e): e is Extract<RunnerEvent, { type: "usage" }> => e.type === "usage",
     );
-    expect(usage).toEqual([{ type: "usage", inputTokens: 41_200, outputTokens: 900 }]);
+    expect(usage).toEqual([
+      {
+        type: "usage",
+        inputTokens: 41_200,
+        outputTokens: 900,
+        contextUsed: 12_000,
+        contextLimit: 128_000,
+      },
+    ]);
   });
 
   it("does not duplicate a tool call the AG-UI client already recorded", async () => {
