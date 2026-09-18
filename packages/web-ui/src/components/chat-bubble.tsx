@@ -38,7 +38,6 @@ import {
   useComposerActionsOwnSend,
 } from "./chat-slots.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
-import { ContextUsageIndicator } from "./context-usage-indicator.tsx";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
 import { LoadingIndicator } from "./loading-indicator.tsx";
 import { MessageTimestamp } from "./message-timestamp.tsx";
@@ -403,7 +402,6 @@ export function ChatBubble() {
                       {/* Right-hand slot, mirroring the expanded composer:
                       settings sit beside Send, not among the attachment
                       icons. Hidden while running, like the expanded one. */}
-                      <ContextUsageIndicator />
                       <ThreadPrimitive.If running={false}>
                         <ReasoningEffortPicker />
                       </ThreadPrimitive.If>

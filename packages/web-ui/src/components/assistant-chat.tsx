@@ -43,7 +43,6 @@ import {
   useComposerActionsOwnSend,
 } from "./chat-slots.tsx";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
-import { ContextUsageIndicator } from "./context-usage-indicator.tsx";
 import { ReasoningEffortPicker } from "./reasoning-effort-picker.tsx";
 import { ChatMessageParts } from "./chat-message-parts.tsx";
 import { LoadingIndicator, LoadingBar } from "./loading-indicator.tsx";
@@ -219,7 +218,6 @@ const ComposerActionButton: FC = () => {
   const actionsOwnSend = useComposerActionsOwnSend();
   return (
     <>
-      <ContextUsageIndicator />
       <ThreadPrimitive.If running={false}>
         <ReasoningEffortPicker />
       </ThreadPrimitive.If>

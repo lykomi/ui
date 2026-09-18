@@ -391,29 +391,35 @@ export const THEME_SLOTS: readonly ThemeSlot[] = [
       })),
     ),
   ]),
-  ...TYPOGRAPHY_KEYS.map((key): ThemeSlot => ({
-    path: ["typography", key],
-    label: slotLabel(key),
-    group: "Typography & shape",
-    kind: "font",
-    cssVariable: `--font-${key.replace("Font", "")}`,
-    impact: key === "headingFont" ? 0 : key === "bodyFont" ? 1 : 3,
-  })),
-  ...RADIUS_KEYS.map((key): ThemeSlot => ({
-    path: ["radius", key],
-    label: "Corner radius",
-    group: "Typography & shape",
-    kind: "length",
-    cssVariable: cssName(key),
-    impact: 2,
-  })),
-  ...BRANDING_KEYS.map((key): ThemeSlot => ({
-    path: ["branding", key],
-    label: slotLabel(key),
-    group: "Brand",
-    kind: key.endsWith("Url") ? "image" : key === "logoHeight" ? "length" : "text",
-    impact: BRANDING_KEYS.indexOf(key),
-  })),
+  ...TYPOGRAPHY_KEYS.map(
+    (key): ThemeSlot => ({
+      path: ["typography", key],
+      label: slotLabel(key),
+      group: "Typography & shape",
+      kind: "font",
+      cssVariable: `--font-${key.replace("Font", "")}`,
+      impact: key === "headingFont" ? 0 : key === "bodyFont" ? 1 : 3,
+    }),
+  ),
+  ...RADIUS_KEYS.map(
+    (key): ThemeSlot => ({
+      path: ["radius", key],
+      label: "Corner radius",
+      group: "Typography & shape",
+      kind: "length",
+      cssVariable: cssName(key),
+      impact: 2,
+    }),
+  ),
+  ...BRANDING_KEYS.map(
+    (key): ThemeSlot => ({
+      path: ["branding", key],
+      label: slotLabel(key),
+      group: "Brand",
+      kind: key.endsWith("Url") ? "image" : key === "logoHeight" ? "length" : "text",
+      impact: BRANDING_KEYS.indexOf(key),
+    }),
+  ),
 ];
 
 function cleanObject<T extends object>(

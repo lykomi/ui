@@ -5,6 +5,7 @@ import { summarizeChatContext } from "../lib/chat-context-summary.ts";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover.tsx";
 import { ChatContextDetailsSlot } from "./chat-slots.tsx";
 import { ChatContextItems } from "./chat-context-items.tsx";
+import { ConversationMemory, useConversationMemory } from "./conversation-memory.tsx";
 import { usePagePin } from "./context-bar.tsx";
 import { PinStateIcon } from "./pin-state-icon.tsx";
 
@@ -15,6 +16,7 @@ function readContext() {
 /** The displayed context and the agent request use the same projection. */
 export function ChatContext({ centered = false }: { centered?: boolean }) {
   const [open, setOpen] = useState(false);
+  const memory = useConversationMemory();
   const [context, setContext] = useState(readContext);
   const items = useAppStore((s) => s.contextItems);
   const { isPinned, toggle } = usePagePin();
@@ -110,6 +112,13 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
               +{additionalCount}
             </span>
           )}
+          {memory?.nearlyFull && (
+            <span
+              data-memory-dot
+              title="Conversation memory nearly full"
+              className="size-1.5 shrink-0 rounded-full bg-warning"
+            />
+          )}
           <ChevronDown className="size-3.5 shrink-0" />
         </button>
       </PopoverTrigger>
@@ -150,6 +159,7 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
         )}
         <ChatContextItems items={items} onNavigate={() => setOpen(false)} />
         <ChatContextDetailsSlot onDismiss={() => setOpen(false)} />
+        {memory && <ConversationMemory usage={memory} />}
         {context.references.length > 0 && (
           <div className="border-t border-border px-2 pt-3 text-xs">
             <h3 className="font-medium">Also open</h3>
