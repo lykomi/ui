@@ -76,6 +76,13 @@ function dragEnter(element: Element, files = false) {
   element.dispatchEvent(event);
 }
 
+/** A `dragenter` carrying an arbitrary set of types. */
+function dragEnterTypes(element: Element, types: string[]) {
+  const event = new Event("dragenter", { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", { value: { types, files: { length: 0 } } });
+  element.dispatchEvent(event);
+}
+
 /** The drag is dragged out of the browser window: a `dragleave` whose
  *  `relatedTarget` is null, which is the only signal that gives. */
 function leaveWindow() {
@@ -112,23 +119,58 @@ it("reserves its space when the drag starts, not when the pointer arrives", asyn
   const atRest = strip.className;
   expect(atRest).toContain("h-1");
 
-  // Hovering must not resize anything: that is the moving target.
-  await act(async () => dragEnter(band));
-  expect(strip.className).toBe(atRest);
-
   // The drag beginning is what makes room — before the user has aimed.
   await act(async () => beginNavDrag(dnd.type));
   expect(strip.className).toContain("h-7");
   expect(strip.className).not.toContain("h-1");
   expect(host!.textContent).toContain("Move to root");
 
-  // And it holds for the whole drag, however the pointer moves over it.
+  // And it holds for the whole drag, however the pointer moves over it:
+  // the layout settles once, at the first sighting, and never again while
+  // the user is aiming. That — not "a dragenter never resizes" — is the
+  // invariant, since a drag from outside this document has no other way to
+  // announce itself.
   const reserved = strip.className;
   await act(async () => dragEnter(band));
+  expect(strip.className).toBe(reserved);
+  await act(async () => dragEnter(document.documentElement));
   expect(strip.className).toBe(reserved);
 
   await act(async () => endNavDrag());
   expect(strip.className).toBe(atRest);
+});
+
+it("ignores a drag carrying nothing it accepts", async () => {
+  const { strip } = await mount();
+  // Dragging selected text across the sidebar is a `dragenter` like any
+  // other. Adopting whatever types a drag carries must not mean opening for
+  // all of them.
+  await act(async () => dragEnterTypes(document.documentElement, ["text/plain"]));
+  expect(strip.className).toContain("h-1");
+  expect(host!.textContent).toBe("");
+});
+
+it("opens for an entity dragged in from another window of the app", async () => {
+  const { strip } = await mount();
+  // No `dragstart` in THIS document, and it is not a file drag — so the
+  // Files-only watcher left the root target an unlabelled 4px strip for the
+  // whole gesture, even though the zone's own `onDrop` would have taken it.
+  await act(async () => dragEnterTypes(document.documentElement, [dnd.type]));
+  expect(strip.className).toContain("h-7");
+  expect(host!.textContent).toContain("Move to root");
+});
+
+it("keeps a nested row's type when the drag bubbles to its container", async () => {
+  // `dragstart` bubbles, and a draggable row sits inside a draggable
+  // container, so both handlers run. Publishing one type meant the
+  // ancestor's (it runs last) and zones matching the child's payload
+  // stayed shut, though the payload was right there in `dataTransfer`.
+  const { strip } = await mount();
+  await act(async () => {
+    beginNavDrag(dnd.type); // the nested row
+    beginNavDrag("application/x-container"); // its draggable ancestor
+  });
+  expect(strip.className).toContain("h-7");
 });
 
 it("opens for a drag from the desktop before it reaches a row", async () => {

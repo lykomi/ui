@@ -33,10 +33,18 @@ painted is what accepts.
   gesture.
 
 Because the zone is open before the pointer reaches it, nothing about the drag
-can be read off the zone's own hover state any more, so the drag publishes what
-it is — its source and the MIME type it carries. The label follows that (a file
-drag reads "Upload to root" on approach instead of promising a move), and so
-does whether a zone opens at all: reserving space and painting a label is a
-promise that a drop will land, so a container that takes entity moves but not
-files stays shut for a file drag, and a module's zones no longer open for
-another module's `dnd.type`.
+can be read off the zone's own hover state any more, so the drag publishes the
+set of MIME types it carries. The label follows that (a file drag reads "Upload
+to root" on approach instead of promising a move), and so does whether a zone
+opens at all: reserving space and painting a label is a promise that a drop
+will land, so a container that takes entity moves but not files stays shut for
+a file drag, and a module's zones no longer open for another module's
+`dnd.type`.
+
+A set rather than one type, because one type is wrong in two ways. `dragstart`
+bubbles, and a draggable row sits inside a draggable container, so both
+handlers run and both write to `dataTransfer` — publishing one would publish
+whichever ran last and leave zones matching the child's payload shut. And a
+drag entering from another window of the same app carries its own custom
+types, which are adopted exactly as `Files` is, so the root target no longer
+stays an unlabelled strip for a gesture its own `onDrop` would have accepted.
