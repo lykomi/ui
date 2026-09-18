@@ -64,6 +64,8 @@ export function ConversationHistory({
     groups
       .filter((g) => g.meta?.type === "recent-chats" || g.meta?.type === "pinned-chats")
       .flatMap((g) => g.items);
+  const savedTargets = new Set(allItems.map((item) => item.to));
+  const hasServerTimestamps = allItems.some((item) => typeof item.meta?.updatedAt === "string");
   const runs = useChatRuns((s) => s.runs);
   const runFor = (item: NavItem) =>
     Object.values(runs).find(
@@ -110,11 +112,18 @@ export function ConversationHistory({
         return run && isChatRunActive(run) ? 1 : 0;
       };
       if (home) {
-        // The server list can lag a just-finished run. Session activity stays
-        // ahead of that list, including completed runs.
+        // The server list can lag a just-finished run. Compare its session
+        // timestamp with server timestamps so newer chats from other tabs
+        // take priority as soon as navigation refreshes.
         const activityAt = (item: NavItem) => {
+          const updatedAt = item.meta?.updatedAt;
+          const serverAt = typeof updatedAt === "string" ? Date.parse(updatedAt) || 0 : 0;
           const run = runFor(item);
-          return run ? (run.finishedAt ?? run.startedAt) : 0;
+          const sessionAt =
+            run && (hasServerTimestamps || !savedTargets.has(item.to))
+              ? (run.finishedAt ?? run.startedAt)
+              : 0;
+          return Math.max(serverAt, sessionAt);
         };
         return active(b) - active(a) || activityAt(b) - activityAt(a);
       }
