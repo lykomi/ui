@@ -67,6 +67,15 @@ describe("ConversationMemory", () => {
     expect(section()?.dataset.conversationMemory).toBe("nearly-full");
     expect(section()?.textContent).toContain("nearly full");
     expect(section()?.textContent).toContain("start a new chat");
+    expect(bar()?.firstElementChild?.className).toContain("bg-warning");
+  });
+
+  it("at the ceiling says the next message compacts it, in the destructive colour", () => {
+    usage(150_000, 128_000, 128_000);
+    render();
+    expect(section()?.dataset.conversationMemory).toBe("full");
+    expect(section()?.textContent).toContain("compacted with your next message");
+    expect(bar()?.firstElementChild?.className).toContain("bg-destructive");
   });
 
   it("falls back to the raw count against a host-stated window", () => {

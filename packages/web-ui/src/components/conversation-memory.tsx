@@ -6,12 +6,15 @@ import { useCurrentThreadId } from "./ag-ui-adapter-context.ts";
 
 /** From here the chat is close to the point where older content is summarized. */
 const NEARLY_FULL = 0.9;
+/** At the ceiling: the next message compacts the chat. */
+const FULL = 0.98;
 
 export interface ConversationMemoryUsage {
   used: number;
   limit: number;
   ratio: number;
   nearlyFull: boolean;
+  full: boolean;
 }
 
 function formatTokens(n: number): string {
@@ -36,7 +39,13 @@ export function useConversationMemory(): ConversationMemoryUsage | null {
   const limit = usage.contextLimit ?? windowTokens;
   if (!limit) return null;
   const ratio = Math.min(used / limit, 1);
-  return { used: Math.min(used, limit), limit, ratio, nearlyFull: ratio >= NEARLY_FULL };
+  return {
+    used: Math.min(used, limit),
+    limit,
+    ratio,
+    nearlyFull: ratio >= NEARLY_FULL,
+    full: ratio >= FULL,
+  };
 }
 
 /** The "Conversation memory" section of the context card. */
@@ -45,7 +54,7 @@ export function ConversationMemory({ usage }: { usage: ConversationMemoryUsage }
   return (
     <section
       aria-label="Conversation memory"
-      data-conversation-memory={usage.nearlyFull ? "nearly-full" : "ok"}
+      data-conversation-memory={usage.full ? "full" : usage.nearlyFull ? "nearly-full" : "ok"}
       className="border-t border-border px-2 pt-3 text-xs"
     >
       <div className="flex items-baseline justify-between gap-2">
@@ -65,15 +74,17 @@ export function ConversationMemory({ usage }: { usage: ConversationMemoryUsage }
         <div
           className={cn(
             "h-full rounded-full transition-[width]",
-            usage.nearlyFull ? "bg-warning" : "bg-primary/60",
+            usage.full ? "bg-destructive" : usage.nearlyFull ? "bg-warning" : "bg-primary",
           )}
           style={{ width: `${percent}%` }}
         />
       </div>
       <p className="mt-2 leading-relaxed text-muted-foreground">
-        {usage.nearlyFull
-          ? "This chat is nearly full. Older search results and tool output are being summarized so it keeps working; for a fresh topic, start a new chat."
-          : "As this fills, older search results and tool output are summarized so the chat keeps working. Your messages and answers are always kept."}
+        {usage.full
+          ? "This chat is full. It will be compacted with your next message: earlier parts are summarized to make room. Your messages and answers are kept."
+          : usage.nearlyFull
+            ? "This chat is nearly full. When it fills, earlier parts are summarized to make room; for a fresh topic, start a new chat."
+            : "When this fills, the chat is compacted: earlier parts are summarized to make room. Your messages and answers are always kept."}
       </p>
     </section>
   );

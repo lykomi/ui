@@ -116,7 +116,7 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
             <span
               data-memory-dot
               title="Conversation memory nearly full"
-              className="size-1.5 shrink-0 rounded-full bg-warning"
+              className={`size-1.5 shrink-0 rounded-full ${memory.full ? "bg-destructive" : "bg-warning"}`}
             />
           )}
           <ChevronDown className="size-3.5 shrink-0" />

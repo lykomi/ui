@@ -404,6 +404,20 @@ export class AGUIRunner {
               }
               return;
             }
+            // Server-reported activity between model calls ("Compacting
+            // chat…"); a null label means it finished and the run is back to
+            // thinking until the next event says otherwise.
+            if (event.name === "activity") {
+              const label = (event.value as { label?: unknown } | null | undefined)?.label;
+              push({
+                type: "streaming-status",
+                status:
+                  typeof label === "string" && label
+                    ? { status: "working", label: label.slice(0, 80) }
+                    : { status: "thinking" },
+              });
+              return;
+            }
             // Server heartbeat: liveness proof during long tool calls /
             // thinking phases (also keeps intermediary idle-timeouts at bay
             // server-side). Not a UI-visible event.

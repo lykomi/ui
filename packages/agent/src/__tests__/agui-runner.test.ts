@@ -502,6 +502,38 @@ describe("stream integrity", () => {
     expect(beats[0].elapsedMs).toBe(1234);
   });
 
+  it("turns server activity into a labelled working status, and back", async () => {
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onCustomEvent?.({
+          event: {
+            type: "CUSTOM",
+            name: "activity",
+            value: { label: "Compacting chat…" },
+          } as never,
+        } as never);
+        await s.onCustomEvent?.({
+          event: { type: "CUSTOM", name: "activity", value: { label: null } } as never,
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(runner, makeRegistry({ isRegistered: () => false }));
+
+    const statuses = events
+      .filter(
+        (e): e is Extract<RunnerEvent, { type: "streaming-status" }> =>
+          e.type === "streaming-status",
+      )
+      .map((e) => e.status);
+    expect(statuses).toContainEqual({ status: "working", label: "Compacting chat…" });
+    const i = statuses.findIndex((st) => st.status === "working");
+    expect(statuses[i + 1]).toEqual({ status: "thinking" });
+  });
+
   it("forwards the server's usage CUSTOM events as usage runner events", async () => {
     nextScript = [
       async (s) => {

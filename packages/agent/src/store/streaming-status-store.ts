@@ -2,8 +2,13 @@ import { createStore } from "zustand/vanilla";
 
 /** Streaming status emitted by the AG-UI runner. */
 export interface StreamingStatus {
-  status: "thinking" | "reasoning" | "calling" | "streaming" | "stalled" | "idle";
+  status: "thinking" | "reasoning" | "calling" | "streaming" | "working" | "stalled" | "idle";
   toolName?: string;
+  /**
+   * What the server says it is doing, for `working` — work between model
+   * calls that has no events of its own (e.g. "Compacting chat…").
+   */
+  label?: string;
   /**
    * Name of the agent step currently running, from AG-UI `STEP_STARTED`.
    * Long agentic runs otherwise show one opaque "thinking" state for
