@@ -18,28 +18,48 @@
  */
 
 const OMIT: unique symbol = Symbol("omit");
-const MAX_DEPTH = 12;
 
 function isUiValue(value: unknown): boolean {
   if (typeof value === "function" || typeof value === "symbol") return true;
-  // React elements and component objects (memo / forwardRef / lazy) are
-  // tagged with `$$typeof`.
+  // React elements and component objects (memo / forwardRef / lazy) carry a
+  // symbol-valued `$$typeof`. Plain data may use the key too; only the
+  // symbol marks React.
   return (
     typeof value === "object" &&
     value !== null &&
-    "$$typeof" in (value as Record<string, unknown>)
+    typeof (value as Record<string, unknown>).$$typeof === "symbol"
   );
 }
 
 function project(value: unknown, depth: number, seen: WeakSet<object>): unknown {
   if (isUiValue(value)) return OMIT;
   if (value === null || typeof value !== "object") return value;
-  if (depth > MAX_DEPTH || seen.has(value)) return OMIT;
-  // Built-ins a clone copies natively (Date, Map, Set, RegExp, typed arrays…)
-  // keep doing so; only arrays and records are walked.
-  if (!Array.isArray(value) && !isRecord(value)) return value;
+  // Cycles only: a depth cap would cut off deep data that clones fine today.
+  if (seen.has(value)) return OMIT;
   seen.add(value);
   try {
+    // A clone copies collections by cloning every entry, so an entry holding
+    // UI would still make it throw: walk them like any other container.
+    if (value instanceof Map) {
+      const out = new Map();
+      for (const [k, v] of value) {
+        const key = project(k, depth + 1, seen);
+        const val = project(v, depth + 1, seen);
+        if (key !== OMIT && val !== OMIT) out.set(key, val);
+      }
+      return value.size > 0 && out.size === 0 ? OMIT : out;
+    }
+    if (value instanceof Set) {
+      const out = new Set();
+      for (const v of value) {
+        const val = project(v, depth + 1, seen);
+        if (val !== OMIT) out.add(val);
+      }
+      return value.size > 0 && out.size === 0 ? OMIT : out;
+    }
+    // Other built-ins a clone copies natively (Date, RegExp, typed arrays…)
+    // keep doing so; arrays and records are walked.
+    if (!Array.isArray(value) && !isRecord(value)) return value;
     if (Array.isArray(value)) {
       const out = value.map((item) => project(item, depth + 1, seen)).filter((v) => v !== OMIT);
       return value.length > 0 && out.length === 0 ? OMIT : out;
@@ -52,7 +72,16 @@ function project(value: unknown, depth: number, seen: WeakSet<object>): unknown 
     const out: Record<string, unknown> = {};
     for (const [key, v] of entries) {
       const projected = project(v, depth + 1, seen);
-      if (projected !== OMIT) out[key] = projected;
+      // defineProperty, not assignment: a "__proto__" key from JSON data is
+      // an own property, and assigning it would set the prototype instead.
+      if (projected !== OMIT) {
+        Object.defineProperty(out, key, {
+          value: projected,
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        });
+      }
     }
     return out;
   } finally {

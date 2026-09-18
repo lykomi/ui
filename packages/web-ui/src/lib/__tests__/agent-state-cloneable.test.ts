@@ -98,4 +98,40 @@ describe("toAgentData", () => {
 
     expect(toAgentData(a)).toEqual({ id: "a" });
   });
+
+  it("keeps deep data that clones today", () => {
+    let deep: Record<string, unknown> = { leaf: "x" };
+    for (let i = 0; i < 40; i++) deep = { child: deep };
+
+    expect(toAgentData({ deep })).toEqual({ deep });
+  });
+
+  it("treats only a symbol-valued $$typeof as React", () => {
+    const data = { node: { $$typeof: "schema-node", value: 3 } };
+
+    expect(toAgentData(data)).toEqual(data);
+  });
+
+  it("keeps a __proto__ key as data, not as the prototype", () => {
+    const data = JSON.parse('{"__proto__": {"polluted": true}, "a": 1}');
+    const out = toAgentData(data);
+
+    expect(Object.getPrototypeOf(out)).toBe(Object.prototype);
+    expect(Object.prototype.hasOwnProperty.call(out, "__proto__")).toBe(true);
+    expect((out as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it("walks Map and Set entries so the clone cannot throw", () => {
+    const out = toAgentData({
+      byId: new Map<string, unknown>([
+        ["a", { id: "a" }],
+        ["b", navItem("b")],
+      ]),
+      tags: new Set<unknown>(["x", () => undefined]),
+    });
+
+    expect(() => structuredClone(out)).not.toThrow();
+    expect(out.byId).toEqual(new Map([["a", { id: "a" }]]));
+    expect(out.tags).toEqual(new Set(["x"]));
+  });
 });
