@@ -71,7 +71,7 @@ export function WorkbenchChatHeader({
         ) : (
           <>
             <div className="min-w-0 flex-1 px-2 py-2">
-              <div className="text-sm font-semibold">{showHistory ? "Conversations" : "Chat"}</div>
+              <div className="text-sm font-semibold">{showHistory ? "Chats" : "Chat"}</div>
             </div>
             <RunningChatsMenu onOpen={returnToChat} />
             <TooltipIconButton

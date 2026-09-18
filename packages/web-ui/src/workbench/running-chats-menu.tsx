@@ -21,7 +21,7 @@ export function RunningChatsMenu({ onOpen }: { onOpen?: () => void } = {}) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={`${active.length} running conversations`}
+          aria-label={`${active.length} running chats`}
           className="inline-flex items-center gap-1.5 px-2 text-xs text-primary"
         >
           <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" />

@@ -109,11 +109,14 @@ export function ConversationHistory({
         const run = runFor(item);
         return run && isChatRunActive(run) ? 1 : 0;
       };
-      return home
-        ? 0
-        : active(b) - active(a) ||
-            Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned));
+      return (
+        active(b) - active(a) ||
+        (home ? 0 : Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned)))
+      );
     });
+  const homeRecentItems = home ? items.filter((item) => !item.meta?.pinned).slice(0, 3) : [];
+  const homePinnedItems = home ? items.filter((item) => item.meta?.pinned).slice(0, 3) : [];
+  const homeHasItems = homeRecentItems.length > 0 || homePinnedItems.length > 0;
   const visibleItems = compact ? items.slice(0, 3) : items;
   const activeItems = visibleItems.filter((item) => {
     const run = runFor(item);
@@ -121,22 +124,31 @@ export function ConversationHistory({
   });
   const idleItems = visibleItems.filter((item) => !activeItems.includes(item));
   const pinnedItems = idleItems.filter((item) => item.meta?.pinned);
-  const sections = compact
-    ? [{ label: "", items: visibleItems }]
-    : [
-        { label: "Running", items: activeItems },
-        { label: "Pinned", items: pinnedItems },
-        {
-          label: activeItems.length || pinnedItems.length ? "Recent chats" : "",
-          items: idleItems.filter((item) => !item.meta?.pinned),
-        },
-      ];
+  const sections = home
+    ? [
+        { label: "Recent", items: homeRecentItems },
+        { label: "Pinned", items: homePinnedItems },
+      ]
+    : compact
+      ? [{ label: "", items: visibleItems }]
+      : [
+          { label: "Running", items: activeItems },
+          { label: "Pinned", items: pinnedItems },
+          {
+            label: activeItems.length || pinnedItems.length ? "Recent chats" : "",
+            items: idleItems.filter((item) => !item.meta?.pinned),
+          },
+        ];
   return (
     <section
       data-conversation-history
-      aria-label={compact ? "Recent conversations" : "Chat history"}
+      aria-label={home ? "Home chats" : compact ? "Recent chats" : "Chat history"}
       className={
-        compact ? "w-full" : "mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-4"
+        home
+          ? "w-full"
+          : compact
+            ? "w-full"
+            : "mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-4"
       }
     >
       {welcome && (
@@ -168,13 +180,13 @@ export function ConversationHistory({
               compact ? "text-xs font-medium text-muted-foreground" : "text-base font-semibold"
             }
           >
-            {home ? "Recent chats" : compact ? "Recent conversations" : "Conversation history"}
+            {home ? "Your chats" : compact ? "Recent chats" : "Chat history"}
           </h2>
           {home && onViewAll && (
             <button
               type="button"
               onClick={onViewAll}
-              className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary"
+              className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary [@media(pointer:coarse)]:min-h-11"
             >
               View all
             </button>
@@ -191,7 +203,7 @@ export function ConversationHistory({
                 className="w-full justify-between font-normal shadow-none"
               >
                 <span className="truncate">
-                  {all ? "All conversations" : "Last used in this workspace"}
+                  {all ? "All chats" : "Last used in this workspace"}
                 </span>
                 <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               </Button>
@@ -202,7 +214,7 @@ export function ConversationHistory({
             >
               {[
                 { value: false, label: "Last used in this workspace" },
-                { value: true, label: "All conversations" },
+                { value: true, label: "All chats" },
               ].map((option) => (
                 <DropdownMenuItem
                   key={option.label}
@@ -235,22 +247,44 @@ export function ConversationHistory({
           {loadError}
         </p>
       )}
-      <div className="min-h-0 flex-1 overflow-y-auto" aria-busy={Boolean(loadingTo)}>
+      <div
+        className={
+          home
+            ? "grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4"
+            : "min-h-0 flex-1 overflow-y-auto"
+        }
+        aria-busy={Boolean(loadingTo)}
+      >
         {sections
-          .filter((section) => section.items.length)
+          .filter((section) => (home ? homeHasItems : section.items.length))
           .map((section) => (
             <section
               key={section.label}
               aria-label={section.label || "Recent chats"}
-              className="mb-4 last:mb-0"
+              className={
+                home
+                  ? `min-w-0 rounded-xl border border-border/70 bg-muted/10 p-3 ${section.items.length ? "" : "hidden min-[640px]:block"}`
+                  : "mb-4 last:mb-0"
+              }
             >
               {section.label && (
                 <h3
                   data-conversation-section-label
-                  className="px-2 py-2 text-xs font-medium text-muted-foreground"
+                  className={
+                    home
+                      ? "px-1 pb-2 text-xs font-medium text-muted-foreground"
+                      : "px-2 py-2 text-xs font-medium text-muted-foreground"
+                  }
                 >
                   {section.label}
                 </h3>
+              )}
+              {home && !section.items.length && (
+                <p className="px-1 py-3 text-xs text-muted-foreground">
+                  {section.label === "Pinned"
+                    ? "Pin chats to keep them close."
+                    : "Your latest chats will appear here."}
+                </p>
               )}
               {section.items.map((item) =>
                 item.disabled ? (
@@ -262,7 +296,7 @@ export function ConversationHistory({
                     key={item.to}
                     className={
                       home
-                        ? "group mb-1 flex items-center rounded-xl border border-border/70 bg-muted/20 transition-colors hover:border-primary/30 hover:bg-muted/50"
+                        ? "group flex items-center rounded-lg transition-colors hover:bg-muted/60"
                         : "group flex items-center rounded-lg hover:bg-muted"
                     }
                   >
@@ -300,7 +334,7 @@ export function ConversationHistory({
                       data-conversation-row
                       className={
                         home
-                          ? "flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-sm focus-visible:outline-2 focus-visible:outline-primary"
+                          ? "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left text-sm focus-visible:outline-2 focus-visible:outline-primary"
                           : "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
                       }
                     >
@@ -426,7 +460,7 @@ export function ConversationHistory({
           className="mt-1 h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
         >
           <MessagesSquare className="size-4" aria-hidden />
-          Conversation history
+          Chat history
         </Button>
       )}
     </section>

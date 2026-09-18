@@ -2,7 +2,14 @@ import { Link, MemoryRouter } from "react-router";
 import { Folder, MessageSquare } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
 import { type ReactNode, useEffect } from "react";
-import { act, cleanup, fireEvent, render as renderUI, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render as renderUI,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
@@ -231,7 +238,7 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
   });
 
-  it("shows the three most recent chats below the home composer, including a pinned chat", () => {
+  it("shows separate recent and pinned chats below the home composer", () => {
     state.empty = true;
     state.groups = [
       {
@@ -240,7 +247,7 @@ describe("layout preview", () => {
         meta: {
           type: "recent-chats",
           allConversations: [
-            ...["Newest", "Second", "Third", "Fourth"].map((label) => ({
+            ...["Newest", "Second", "Third", "Fourth", "Fifth"].map((label) => ({
               label,
               to: `/chat/${label.toLowerCase()}`,
               icon: MessageSquare,
@@ -251,19 +258,62 @@ describe("layout preview", () => {
       },
     ];
     render(<WorkbenchPreview chatOnly page={<Editor />} />);
-    expect(screen.getByRole("link", { name: /Newest/ })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Second/ })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Third/ })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: /Fourth/ })).toBeNull();
+    const recent = screen.getByRole("region", { name: "Recent" });
+    const pinned = screen.getByRole("region", { name: "Pinned" });
+    expect(within(recent).getByRole("link", { name: /Newest/ })).toBeTruthy();
+    expect(within(recent).getByRole("link", { name: /Third/ })).toBeTruthy();
+    expect(within(recent).getByRole("link", { name: /Fourth/ })).toBeTruthy();
+    expect(within(pinned).getByRole("link", { name: /Second/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Fifth/ })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Chat history" })).toHaveLength(1);
+    expect(
+      screen
+        .getByLabelText("Chat draft")
+        .compareDocumentPosition(screen.getByRole("heading", { name: "Your chats" })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "View all" }));
-    expect(screen.getByRole("heading", { name: "Conversation history" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Chat history" })).toBeTruthy();
+  });
+
+  it("keeps the recent and pinned groups available when only pinned chats exist", () => {
+    state.empty = true;
+    state.groups = [
+      {
+        label: "Pinned",
+        items: [],
+        meta: {
+          type: "recent-chats",
+          allConversations: [
+            {
+              label: "Saved review",
+              to: "/chat/saved",
+              icon: MessageSquare,
+              meta: { pinned: true },
+            },
+          ],
+        },
+      },
+    ];
+    render(<WorkbenchPreview chatOnly page={<Editor />} />);
+    expect(screen.getByRole("heading", { name: "Your chats" })).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "Recent" })).getByText(
+        "Your latest chats will appear here.",
+      ),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "Pinned" })).getByRole("link", {
+        name: /Saved review/,
+      }),
+    ).toBeTruthy();
   });
 
   it("shows workspace recents at a focused root that only exposes root metadata", () => {
     state.empty = true;
     state.navContext.meta = { spacesRootId: "w1" };
     const recent = {
-      label: "Recent conversations",
+      label: "Recent chats",
       items: [],
       meta: {
         type: "recent-chats",
@@ -322,7 +372,7 @@ describe("layout preview", () => {
         meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
       },
       {
-        label: "Recent conversations",
+        label: "Recent chats",
         items: [],
         meta: {
           type: "recent-chats",
@@ -380,7 +430,7 @@ describe("layout preview", () => {
         meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
       },
       {
-        label: "Recent conversations",
+        label: "Recent chats",
         items: [],
         meta: {
           type: "recent-chats",
@@ -413,8 +463,8 @@ describe("layout preview", () => {
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
-    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
-    expect(screen.getByRole("heading", { name: "Conversation history" })).toBeTruthy();
+    fireEvent.click(screen.getAllByRole("button", { name: "Chat history" })[1]);
+    expect(screen.getByRole("heading", { name: "Chat history" })).toBeTruthy();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("none");
     fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
@@ -427,7 +477,7 @@ describe("layout preview", () => {
     fireEvent.change(draft, { target: { value: "Draft question" } });
     fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
     expect(screen.getByRole("region", { name: "Chat history" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
     expect(screen.getByLabelText("Chat draft")).toBe(draft);
@@ -450,7 +500,7 @@ describe("layout preview", () => {
       meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
     };
     const recent = {
-      label: "Recent conversations",
+      label: "Recent chats",
       items: [],
       meta: { type: "recent-chats", workspaceId: "w1" },
     };

@@ -110,7 +110,7 @@ describe("AGUIAdapterSDK", () => {
   it("refuses to send from a deleted conversation even if its adapter is retained", async () => {
     const adapter = new AGUIAdapterSDK();
     removeChatRun(adapter.threadId);
-    await expect(adapter.run(makeRunInput()).next()).rejects.toThrow("conversation was deleted");
+    await expect(adapter.run(makeRunInput()).next()).rejects.toThrow("chat was deleted");
     expect(runMock).not.toHaveBeenCalled();
   });
 

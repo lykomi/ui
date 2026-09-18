@@ -204,10 +204,17 @@ export function WorkbenchPreview({
                 centerComposer={spaciousChat && emptyChat && !historyOpen}
                 composerIntro={
                   spaciousChat && emptyChat ? (
-                    <WelcomeIntro navGroups={navGroups} historyShortcut={emptyChatFooter} />
+                    <WelcomeIntro
+                      navGroups={navGroups}
+                      historyShortcut={workspaceId ? emptyChatFooter : null}
+                    />
                   ) : undefined
                 }
-                composerFooter={spaciousChat && emptyChat && !historyOpen ? homeRecents : undefined}
+                composerFooter={
+                  spaciousChat && emptyChat && !historyOpen && homeRecents ? (
+                    <div className="w-full">{homeRecents}</div>
+                  ) : undefined
+                }
                 compactComposer={!spaciousChat}
                 starterSuggestions={[]}
                 emptyState={

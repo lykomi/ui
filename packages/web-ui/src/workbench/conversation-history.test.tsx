@@ -105,3 +105,30 @@ it("keeps new completions visible but removes successfully deleted chats", async
   expect(host.querySelector('a[href="/chat/deleted"]')).toBeNull();
   expect(host.textContent).toContain("Saved saved");
 });
+
+it("keeps an active chat visible among the three home recents", async () => {
+  const homeItems = ["one", "two", "three", "four"].map((id) => item(id, "entity"));
+  begin("four", "workspace");
+  await act(async () => {
+    root.render(
+      <MemoryRouter>
+        <ConversationHistory
+          groups={[
+            {
+              label: "Recent",
+              items: homeItems,
+              meta: { type: "recent-chats", allConversations: homeItems },
+            },
+          ]}
+          workspaceId={undefined}
+          home
+          onClose={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+  });
+  const recents = host.querySelector('section[aria-label="Recent"]');
+  expect(recents?.querySelectorAll("a")).toHaveLength(3);
+  expect(recents?.querySelector('a[href="/chat/four"]')).not.toBeNull();
+  expect(recents?.querySelector('a[href="/chat/three"]')).toBeNull();
+});

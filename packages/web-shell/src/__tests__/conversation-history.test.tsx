@@ -11,7 +11,7 @@ vi.hoisted(() => {
   });
 });
 afterEach(cleanup);
-it("starts in the current workspace with entity sublines and allows all conversations", () => {
+it("starts in the current workspace with entity sublines and allows all chats", () => {
   const local = {
     label: "Contract review",
     to: "/chat/local",
@@ -27,7 +27,7 @@ it("starts in the current workspace with entity sublines and allows all conversa
         onClose={close}
         groups={[
           {
-            label: "Recent conversations",
+            label: "Recent chats",
             items: [local],
             meta: { type: "recent-chats", workspaceId: "w1", allConversations: [local, other] },
           },
@@ -39,7 +39,7 @@ it("starts in the current workspace with entity sublines and allows all conversa
   expect(screen.getByText("Last at First task")).toBeTruthy();
   expect(screen.queryByText(other.label)).toBeNull();
   fireEvent.keyDown(screen.getByLabelText("History filter"), { key: "ArrowDown" });
-  fireEvent.click(screen.getByRole("menuitemradio", { name: "All conversations" }));
+  fireEvent.click(screen.getByRole("menuitemradio", { name: "All chats" }));
   expect(screen.getByText("Last in Project")).toBeTruthy();
   expect(
     screen
@@ -74,7 +74,7 @@ it("resets the filter on workspace changes and does not invent an entity label",
   expect(screen.getByLabelText("History filter").textContent).toBe("Last used in this workspace");
   expect(screen.getByText("Last in this workspace")).toBeTruthy();
   fireEvent.keyDown(screen.getByLabelText("History filter"), { key: "ArrowDown" });
-  fireEvent.click(screen.getByRole("menuitemradio", { name: "All conversations" }));
+  fireEvent.click(screen.getByRole("menuitemradio", { name: "All chats" }));
   view.rerender(
     <MemoryRouter>
       <ConversationHistory workspaceId="w2" groups={[]} onClose={() => {}} />
@@ -98,7 +98,7 @@ it("shows workspace recents at a root and only exact entity recents elsewhere", 
   };
   const groups = [
     {
-      label: "Recent conversations",
+      label: "Recent chats",
       items: [root, task],
       meta: {
         type: "recent-chats",
@@ -150,7 +150,7 @@ it("shows only the conversations action when an entity has no exact recent chat"
         workspaceId="workspace"
         groups={[
           {
-            label: "Recent conversations",
+            label: "Recent chats",
             items: [],
             meta: {
               type: "recent-chats",
@@ -172,7 +172,7 @@ it("shows only the conversations action when an entity has no exact recent chat"
     </MemoryRouter>,
   );
   expect(screen.queryByText("No chats yet")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
+  fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
   expect(viewAll).toHaveBeenCalledOnce();
 });
 
@@ -184,7 +184,7 @@ it("does not leak workspace recents when the current entity metadata is unavaila
         workspaceId="workspace"
         groups={[
           {
-            label: "Recent conversations",
+            label: "Recent chats",
             items: [],
             meta: {
               type: "recent-chats",
@@ -205,7 +205,7 @@ it("does not leak workspace recents when the current entity metadata is unavaila
     </MemoryRouter>,
   );
   expect(screen.queryByText("Private task review")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Conversation history" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Chat history" })).toBeNull();
 });
 
 it("separates pinned chats from recents without duplicating entries", () => {

@@ -278,12 +278,12 @@ export function ChatBubble() {
                   <span className="font-semibold text-foreground truncate">{pageLabel}</span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {threadActive ? "Active thread" : "New conversation"}
+                  {threadActive ? "Active chat" : "New chat"}
                 </span>
               </div>
               <div className="flex items-center gap-0.5">
                 <TooltipIconButton
-                  tooltip="New Thread"
+                  tooltip="New chat"
                   size="icon"
                   className="size-7"
                   onClick={startNewThread}

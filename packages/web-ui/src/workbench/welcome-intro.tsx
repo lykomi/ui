@@ -34,9 +34,9 @@ export function WelcomeIntro({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="h-9 gap-2 border-primary/20 bg-primary/5 px-3 text-sm font-medium shadow-none hover:border-primary/40 hover:bg-primary/10 [@media(pointer:coarse)]:min-h-11"
+                  className="h-9 gap-2 bg-primary/10 px-3 text-sm font-medium hover:bg-primary/15 [@media(pointer:coarse)]:min-h-11"
                 >
                   <Layers className="size-4" aria-hidden="true" />
                   Create a space

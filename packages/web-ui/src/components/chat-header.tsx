@@ -44,7 +44,7 @@ export const ChatHeader: FC = () => {
         <div className="flex items-center gap-1">
           <RunningChatsMenu />
           <ThemeToggle />
-          <TooltipIconButton tooltip="New Thread" size="icon" onClick={handleNewConversation}>
+          <TooltipIconButton tooltip="New chat" size="icon" onClick={handleNewConversation}>
             <SquarePen className="size-4 text-primary" />
           </TooltipIconButton>
           <UserMenu />
