@@ -10,6 +10,7 @@ import { collectFocusContext } from "./focus-context.ts";
  */
 
 import { create } from "zustand";
+import { toAgentData } from "./agent-data.ts";
 
 export type ContextPersistence = "persistent" | "ephemeral";
 
@@ -448,11 +449,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       navigation: {
         group: s.navContext.group,
         groupDescription: s.navContext.groupDescription,
-        groupMeta: s.navContext.groupMeta,
+        // Nav metadata is written for the UI and may hold what a panel
+        // renders — components, handlers. Only data reaches the agent.
+        groupMeta: toAgentData(s.navContext.groupMeta),
         page: s.currentPage,
         label: s.navContext.label,
         description: s.navContext.description,
-        meta: focusedSurface ? { ...s.navContext.meta, focusedSurface } : s.navContext.meta,
+        meta: toAgentData(
+          focusedSurface ? { ...s.navContext.meta, focusedSurface } : s.navContext.meta,
+        ),
         contextInstructions: focusedSurface
           ? [
               s.navContext.contextInstructions,
@@ -463,7 +468,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           : s.navContext.contextInstructions,
       },
       selectedItemId: s.selectedItemId,
-      content: s.content,
+      content: toAgentData(s.content),
       highlights: s.highlights,
       contextItems: s.contextItems.map(({ type, label, payload, sourcePage }) => {
         switch (payload.kind) {
@@ -484,7 +489,7 @@ export const useAppStore = create<AppState>((set, get) => ({
               refId: payload.refId,
               preview: payload.preview?.slice(0, 100),
               target: compactReferenceTarget(payload.target),
-              meta: payload.meta,
+              meta: payload.meta ? toAgentData(payload.meta) : payload.meta,
               targetPath:
                 typeof payload.target?.path === "string"
                   ? payload.target.path
