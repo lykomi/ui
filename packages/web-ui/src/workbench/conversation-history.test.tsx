@@ -106,7 +106,7 @@ it("keeps new completions visible but removes successfully deleted chats", async
   expect(host.textContent).toContain("Saved saved");
 });
 
-it("keeps an active chat visible among the three home recents", async () => {
+it("keeps active and just-finished chats visible among the three home recents", async () => {
   const homeItems = ["one", "two", "three", "four"].map((id) => item(id, "entity"));
   begin("four", "workspace");
   await act(async () => {
@@ -131,4 +131,6 @@ it("keeps an active chat visible among the three home recents", async () => {
   expect(recents?.querySelectorAll("a")).toHaveLength(3);
   expect(recents?.querySelector('a[href="/chat/four"]')).not.toBeNull();
   expect(recents?.querySelector('a[href="/chat/three"]')).toBeNull();
+  await act(async () => updateChatRun("four", "completed"));
+  expect(recents?.querySelector('a[href="/chat/four"]')).not.toBeNull();
 });

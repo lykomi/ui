@@ -109,9 +109,17 @@ export function ConversationHistory({
         const run = runFor(item);
         return run && isChatRunActive(run) ? 1 : 0;
       };
+      if (home) {
+        // The server list can lag a just-finished run. Session activity stays
+        // ahead of that list, including completed runs.
+        const activityAt = (item: NavItem) => {
+          const run = runFor(item);
+          return run ? (run.finishedAt ?? run.startedAt) : 0;
+        };
+        return active(b) - active(a) || activityAt(b) - activityAt(a);
+      }
       return (
-        active(b) - active(a) ||
-        (home ? 0 : Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned)))
+        active(b) - active(a) || Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned))
       );
     });
   const homeRecentItems = home ? items.filter((item) => !item.meta?.pinned).slice(0, 3) : [];
