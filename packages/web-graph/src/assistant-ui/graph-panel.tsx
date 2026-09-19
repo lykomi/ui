@@ -40,9 +40,11 @@ export default function GraphPanel({ content }: { content: GraphPanelContentLike
 function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
   const frame = useDataTableFrame();
   const handleRef = useRef<GraphViewHandle>(null);
-  // Memoised on the panel's own content, so an unrelated re-render does not
-  // hand `GraphView` a new payload object and re-run the workspace effect.
-  const payload = useMemo(() => graphPanelPayload(content), [content]);
+  // The shell can recreate the small panel-content wrapper on every chat
+  // streaming update. Its payload fields are unchanged, and treating the new
+  // wrapper as new graph data restarts the force simulation and auto-fit loop;
+  // that loop then fights the user's wheel zoom until streaming stops.
+  const payload = useMemo(() => graphPanelPayload(content), [content.content, content.data]);
   const { ref: surfaceRef, visible: isOpen } = useGraphSurfaceVisible(frame?.focused);
   const currentPage = useAppStore((state) => state.currentPage);
 
