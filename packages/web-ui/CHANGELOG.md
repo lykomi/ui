@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.33.3
+
+### Patch Changes
+
+- ab82b2e: Polish the theme-aware connected navigation selection and show more useful conversation context on chat home.
+  - @iloveagents/foundry-agent@0.33.3
+  - @iloveagents/foundry-web-primitives@0.33.3
+
 ## 0.33.2
 
 ### Patch Changes
