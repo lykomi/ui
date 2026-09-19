@@ -247,12 +247,17 @@ describe("layout preview", () => {
         meta: {
           type: "recent-chats",
           allConversations: [
-            ...["Newest", "Second", "Third", "Fourth", "Fifth"].map((label) => ({
-              label,
-              to: `/chat/${label.toLowerCase()}`,
-              icon: MessageSquare,
-              meta: label === "Second" ? { pinned: true } : undefined,
-            })),
+            ...["Newest", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh"].map(
+              (label) => ({
+                label,
+                to: `/chat/${label.toLowerCase()}`,
+                icon: MessageSquare,
+                meta:
+                  label === "Second"
+                    ? { pinned: true, previewSpaceName: "Finance" }
+                    : { previewSpaceName: "Operations" },
+              }),
+            ),
           ],
         },
       },
@@ -263,8 +268,15 @@ describe("layout preview", () => {
     expect(within(recent).getByRole("link", { name: /Newest/ })).toBeTruthy();
     expect(within(recent).getByRole("link", { name: /Third/ })).toBeTruthy();
     expect(within(recent).getByRole("link", { name: /Fourth/ })).toBeTruthy();
+    expect(within(recent).getByRole("link", { name: /Fifth/ })).toBeTruthy();
+    expect(within(recent).getByRole("link", { name: /Sixth/ })).toBeTruthy();
     expect(within(pinned).getByRole("link", { name: /Second/ })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: /Fifth/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Seventh/ })).toBeNull();
+    expect(within(recent).getAllByText("Last in Operations")).toHaveLength(5);
+    expect(within(pinned).getByText("Last in Finance")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Your chats" }).parentElement?.className).toContain(
+      "justify-center",
+    );
     expect(screen.getAllByRole("button", { name: "Chat history" })).toHaveLength(1);
     expect(
       screen
@@ -272,7 +284,9 @@ describe("layout preview", () => {
         .compareDocumentPosition(screen.getByRole("heading", { name: "Your chats" })) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "View all" }));
+    const viewAll = screen.getByRole("button", { name: "View all conversations" });
+    expect(viewAll.parentElement?.className).toContain("justify-center");
+    fireEvent.click(viewAll);
     expect(screen.getByRole("heading", { name: "Chat history" })).toBeTruthy();
   });
 

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 
 /** One continuous contour connects the selected row to the chat boundary. */
 export function SelectionBridge({ children }: { children: ReactNode }) {
@@ -7,10 +7,10 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
     top: number;
     height: number;
     left: number;
-    rowRight: number;
     width: number;
     navHeight: number;
     surfaceWidth: number;
+    radius: number;
   } | null>(null);
   useEffect(() => {
     const node = root.current;
@@ -36,10 +36,14 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
                 top: rect.top - bounds.top,
                 height: rect.height,
                 left: rect.left - bounds.left + 0.5,
-                rowRight: rect.right - bounds.left - 1,
                 width: bounds.width,
                 navHeight: bounds.height,
                 surfaceWidth: node.nextElementSibling?.getBoundingClientRect().width ?? 0,
+                radius: Math.min(
+                  16,
+                  rect.height / 2,
+                  Number.parseFloat(getComputedStyle(row!).borderTopLeftRadius) || 0,
+                ),
               }
             : null,
         );
@@ -56,6 +60,10 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
       attributes: true,
       attributeFilter: ["class", "style", "data-active-nav-row"],
     });
+    mutation?.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    });
     node.addEventListener("scroll", measure, true);
     measure();
     return () => {
@@ -70,13 +78,44 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
       ref={root}
       data-connected-navigation={anchor ? "true" : undefined}
       className="relative flex shrink-0"
+      style={
+        {
+          "--connected-row-radius": anchor ? `${anchor.radius}px` : undefined,
+        } as CSSProperties
+      }
     >
       <style>{`
       [data-connected-navigation="true"] + [data-workbench-surface]::after { display: none; }
       .workbench-preview [data-sidebar-surface="desktop"] nav { padding-right: 16px; }
       .workbench-preview [data-sidebar-surface="desktop"] { border-right-color: transparent; }
       [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"] {
-        border-color: transparent; border-top-right-radius: 0; border-bottom-right-radius: 0;
+        background: var(--background);
+        border-color: transparent;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"]::after {
+        content: "";
+        position: absolute;
+        z-index: 0;
+        inset-block: 0;
+        left: 100%;
+        width: 16px;
+        background: var(--background);
+      }
+      [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"]::before {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        inset-block: 5px;
+        left: 5px;
+        right: -10px;
+        border-radius: max(0px, calc(var(--connected-row-radius) - 5px));
+        background: var(--sidebar-selected);
+        pointer-events: none;
+      }
+      [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"] > * {
+        z-index: 2;
       }
     `}</style>
       {children}
@@ -92,22 +131,22 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
             stroke="var(--sidebar-ring)"
             strokeOpacity={0.6}
             strokeWidth={1}
-            d={`M ${anchor.width + 12},0.5
-          H ${anchor.width + anchor.surfaceWidth - 12}
-          Q ${anchor.width + anchor.surfaceWidth - 0.5},0.5 ${anchor.width + anchor.surfaceWidth - 0.5},12
-          V ${anchor.navHeight - 12}
-          Q ${anchor.width + anchor.surfaceWidth - 0.5},${anchor.navHeight - 0.5} ${anchor.width + anchor.surfaceWidth - 12},${anchor.navHeight - 0.5}
-          H ${anchor.width + 12}
-          Q ${anchor.width - 0.5},${anchor.navHeight - 0.5} ${anchor.width - 0.5},${anchor.navHeight - 12}
-          V ${anchor.top + anchor.height + 7}
-          Q ${anchor.width - 0.5},${anchor.top + anchor.height - 0.5} ${anchor.width - 8},${anchor.top + anchor.height - 0.5}
-          H ${anchor.left + 12}
-          Q ${anchor.left},${anchor.top + anchor.height - 0.5} ${anchor.left},${anchor.top + anchor.height - 12}
-          V ${anchor.top + 12}
-          Q ${anchor.left},${anchor.top + 0.5} ${anchor.left + 12},${anchor.top + 0.5}
-          H ${anchor.width - 8}
-          Q ${anchor.width - 0.5},${anchor.top + 0.5} ${anchor.width - 0.5},${anchor.top - 7}
-          V 12 Q ${anchor.width - 0.5},0.5 ${anchor.width + 12},0.5 Z`}
+            d={`M ${anchor.width + anchor.radius},0.5
+          H ${anchor.width + anchor.surfaceWidth - anchor.radius}
+          Q ${anchor.width + anchor.surfaceWidth - 0.5},0.5 ${anchor.width + anchor.surfaceWidth - 0.5},${anchor.radius}
+          V ${anchor.navHeight - anchor.radius}
+          Q ${anchor.width + anchor.surfaceWidth - 0.5},${anchor.navHeight - 0.5} ${anchor.width + anchor.surfaceWidth - anchor.radius},${anchor.navHeight - 0.5}
+          H ${anchor.width + anchor.radius}
+          Q ${anchor.width - 0.5},${anchor.navHeight - 0.5} ${anchor.width - 0.5},${anchor.navHeight - anchor.radius}
+          V ${anchor.top + anchor.height + anchor.radius}
+          Q ${anchor.width - 0.5},${anchor.top + anchor.height - 0.5} ${anchor.width - anchor.radius},${anchor.top + anchor.height - 0.5}
+          H ${anchor.left + anchor.radius}
+          Q ${anchor.left},${anchor.top + anchor.height - 0.5} ${anchor.left},${anchor.top + anchor.height - anchor.radius}
+          V ${anchor.top + anchor.radius}
+          Q ${anchor.left},${anchor.top + 0.5} ${anchor.left + anchor.radius},${anchor.top + 0.5}
+          H ${anchor.width - anchor.radius}
+          Q ${anchor.width - 0.5},${anchor.top + 0.5} ${anchor.width - 0.5},${anchor.top - anchor.radius}
+          V ${anchor.radius} Q ${anchor.width - 0.5},0.5 ${anchor.width + anchor.radius},0.5 Z`}
           />
         </svg>
       )}

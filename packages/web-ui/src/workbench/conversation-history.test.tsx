@@ -106,7 +106,7 @@ it("keeps new completions visible but removes successfully deleted chats", async
   expect(host.textContent).toContain("Saved saved");
 });
 
-it("keeps active and just-finished chats visible among the three home recents", async () => {
+it("keeps active and just-finished chats visible among the five home recents", async () => {
   const previousUpdate = new Date(Date.now() - 20_000).toISOString();
   const homeItems = ["one", "two", "three", "four"].map((id) => ({
     ...item(id, "entity"),
@@ -135,16 +135,53 @@ it("keeps active and just-finished chats visible among the three home recents", 
   begin("four", "workspace");
   await renderHome(homeItems);
   const recents = host.querySelector('section[aria-label="Recent"]');
-  expect(recents?.querySelectorAll("a")).toHaveLength(3);
+  expect(recents?.querySelectorAll("a")).toHaveLength(4);
   expect(recents?.querySelector('a[href="/chat/four"]')).not.toBeNull();
-  expect(recents?.querySelector('a[href="/chat/three"]')).toBeNull();
+  expect(recents?.querySelector('a[href="/chat/three"]')).not.toBeNull();
   await act(async () => updateChatRun("four", "completed"));
   expect(recents?.querySelector('a[href="/chat/four"]')).not.toBeNull();
-  const newerItems = ["new-a", "new-b", "new-c"].map((id, index) => ({
+  const newerItems = ["new-a", "new-b", "new-c", "new-d", "new-e"].map((id, index) => ({
     ...item(id, "entity"),
     meta: { updatedAt: new Date(Date.now() + (3 - index) * 1_000).toISOString() },
   }));
   await renderHome([...newerItems, ...homeItems]);
-  expect(recents?.querySelector('a[href="/chat/four"]')).toBeNull();
-  expect(recents?.querySelectorAll("a")).toHaveLength(3);
+  expect(recents?.querySelector('a[href="/chat/one"]')).toBeNull();
+  expect(recents?.querySelectorAll("a")).toHaveLength(5);
+});
+
+it("shows the last workspace on home recent and pinned rows", async () => {
+  const recent = {
+    ...item("recent", "entity"),
+    meta: { previewSpaceName: "Sales" },
+  };
+  const pinned = {
+    ...item("pinned", "entity"),
+    meta: { pinned: true, previewSpaceName: "Legal" },
+  };
+  await act(async () => {
+    root.render(
+      <MemoryRouter>
+        <ConversationHistory
+          groups={[
+            {
+              label: "Recent",
+              items: [recent, pinned],
+              meta: { type: "recent-chats", allConversations: [recent, pinned] },
+            },
+          ]}
+          workspaceId={undefined}
+          home
+          onClose={vi.fn()}
+          onViewAll={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+  });
+  expect(host.textContent).toContain("Last in Sales");
+  expect(host.textContent).toContain("Last in Legal");
+  expect(
+    [...host.querySelectorAll("button")].some((button) =>
+      button.textContent?.includes("View all conversations"),
+    ),
+  ).toBe(true);
 });

@@ -9,6 +9,22 @@ import {
 } from "../lib/theme-runtime.ts";
 
 describe("theme runtime", () => {
+  it("keeps selected navigation neutral while highlighting titles and content H1", () => {
+    const light = resolveThemeRuntime([], "light").variables as Record<string, string>;
+    const dark = resolveThemeRuntime([], "dark").variables as Record<string, string>;
+
+    expect(light["--sidebar-selected"]).toBe("var(--sidebar)");
+    expect(light["--sidebar-selected-foreground"]).toBe("var(--sidebar-primary)");
+    expect(light["--heading"]).toBe("var(--primary)");
+    expect(light["--content-heading-1"]).toBe("var(--primary)");
+    expect(light["--content-heading-2"]).toBe("var(--foreground)");
+    expect(dark["--sidebar-selected"]).toBe("var(--sidebar)");
+    expect(dark["--sidebar-selected-foreground"]).toBe("var(--sidebar-primary)");
+    expect(dark["--heading"]).toBe("var(--primary)");
+    expect(dark["--content-heading-1"]).toBe("var(--primary)");
+    expect(dark["--content-heading-2"]).toBe("var(--foreground)");
+  });
+
   it("merges sparse definitions in precedence order", () => {
     const merged = mergeThemeDefinitions(
       {
