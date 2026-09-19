@@ -1,5 +1,14 @@
 # create-foundry-ui-app
 
+## 0.8.17
+
+### Patch Changes
+
+- Release the starter with the updated Foundry package pins:
+
+  - @iloveagents/foundry-web-voice: 0.1.14 → 0.1.15
+  - @iloveagents/foundry-web-graph: 0.2.8 → 0.2.9
+
 ## 0.8.16
 
 ### Patch Changes

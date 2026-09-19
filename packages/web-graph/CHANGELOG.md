@@ -1,5 +1,11 @@
 # @iloveagents/foundry-web-graph
 
+## 0.2.9
+
+### Patch Changes
+
+- c35f58b: Keep graph pan and zoom stable while chat output streams, stop automatic framing after direct canvas interaction, and clarify the automatic-layout control.
+
 ## 0.2.8
 
 ### Patch Changes
