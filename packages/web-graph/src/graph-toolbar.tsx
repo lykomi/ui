@@ -19,7 +19,7 @@ export interface GraphToolbarProps {
   nodeCount: number;
   edgeCount: number;
   onZoomToFit: () => void;
-  onRestartLayout: () => void;
+  onReheat: () => void;
   onFullscreen?: () => void;
   fullscreen?: boolean;
   pinnedCount: number;
@@ -45,7 +45,7 @@ export function GraphToolbar({
   nodeCount,
   edgeCount,
   onZoomToFit,
-  onRestartLayout,
+  onReheat,
   onFullscreen,
   fullscreen,
   pinnedCount,
@@ -120,7 +120,7 @@ export function GraphToolbar({
         )}
         <button
           type="button"
-          onClick={onRestartLayout}
+          onClick={onReheat}
           title="Re-run automatic layout"
           aria-label="Re-run automatic layout"
           className={iconButton}

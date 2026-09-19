@@ -523,7 +523,7 @@ export function GraphView({
         nodeCount={visibleModel.nodes.length}
         edgeCount={visibleModel.links.length}
         onZoomToFit={() => canvasRef.current?.zoomToFit()}
-        onRestartLayout={() => canvasRef.current?.reheat()}
+        onReheat={() => canvasRef.current?.reheat()}
         onFullscreen={
           onFullscreen ?? (container?.requestFullscreen ? () => void toggleFullscreen() : undefined)
         }
