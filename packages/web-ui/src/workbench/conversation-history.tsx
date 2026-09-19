@@ -24,6 +24,8 @@ import type { NavGroup, NavItem } from "../lib/nav-config.ts";
 
 import { useChatRuns, isChatRunActive } from "../lib/chat-runs-store.ts";
 
+const HOME_SECTION_LIMIT = 5;
+
 /** History is a view of existing navigation targets, never a second chat runtime. */
 export function ConversationHistory({
   groups,
@@ -43,7 +45,7 @@ export function ConversationHistory({
   showBack?: boolean;
   welcome?: boolean;
   compact?: boolean;
-  /** The global start page shows the three newest chats below the composer. */
+  /** The global start page shows recent and pinned chats below the composer. */
   home?: boolean;
   onViewAll?: () => void;
   /** Current content entity. Compact homes show only an exact match unless this is the workspace root. */
@@ -131,8 +133,12 @@ export function ConversationHistory({
         active(b) - active(a) || Number(Boolean(b.meta?.pinned)) - Number(Boolean(a.meta?.pinned))
       );
     });
-  const homeRecentItems = home ? items.filter((item) => !item.meta?.pinned).slice(0, 3) : [];
-  const homePinnedItems = home ? items.filter((item) => item.meta?.pinned).slice(0, 3) : [];
+  const homeRecentItems = home
+    ? items.filter((item) => !item.meta?.pinned).slice(0, HOME_SECTION_LIMIT)
+    : [];
+  const homePinnedItems = home
+    ? items.filter((item) => item.meta?.pinned).slice(0, HOME_SECTION_LIMIT)
+    : [];
   const homeHasItems = homeRecentItems.length > 0 || homePinnedItems.length > 0;
   const visibleItems = compact ? items.slice(0, 3) : items;
   const activeItems = visibleItems.filter((item) => {
@@ -188,7 +194,7 @@ export function ConversationHistory({
         <div
           className={
             home
-              ? "mb-2 mt-5 flex items-center justify-between px-1"
+              ? "mb-2 mt-5 flex items-center justify-center px-1 text-center"
               : "mb-2 mt-2 flex items-center justify-between"
           }
         >
@@ -199,15 +205,6 @@ export function ConversationHistory({
           >
             {home ? "Your chats" : compact ? "Recent chats" : "Chat history"}
           </h2>
-          {home && onViewAll && (
-            <button
-              type="button"
-              onClick={onViewAll}
-              className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary [@media(pointer:coarse)]:min-h-11"
-            >
-              View all
-            </button>
-          )}
         </div>
       )}
       {Boolean(workspaceId) && !compact && (
@@ -382,7 +379,7 @@ export function ConversationHistory({
                             {runFor(item)?.status === "waiting" ? "Waiting for you" : "Running"}
                           </span>
                         ) : (
-                          (!compact || rootContext) && (
+                          (home || !compact || rootContext) && (
                             <span className="block truncate text-xs text-muted-foreground">
                               {!all &&
                               typeof item.meta?.previewEntityName === "string" &&
@@ -469,6 +466,19 @@ export function ConversationHistory({
           </p>
         )}
       </div>
+      {home && onViewAll && (
+        <div className="mt-2 flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onViewAll}
+            className="h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
+          >
+            <MessagesSquare className="size-4" aria-hidden />
+            View all conversations
+          </Button>
+        </div>
+      )}
       {compact && onViewAll && !home && (
         <Button
           variant="ghost"
