@@ -36,7 +36,10 @@ import { useNavStore } from "../lib/nav-store.ts";
 import { useAppStore } from "../lib/app-store.ts";
 import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import {
-  getContainerDropZoneLabel,
+  beginNavDrag,
+  subscribeNavDrag,
+  getNavDragVersion,
+  navDragAccepts,
   hasAnyDropTarget,
   hasExternalFilesData,
 } from "../lib/nav-dnd.ts";
@@ -348,6 +351,12 @@ function useNavItemDnd(dnd?: NavItemDnd) {
       if (!data) return;
       e.dataTransfer.setData(dnd.type, data);
       e.dataTransfer.effectAllowed = "move";
+      // Container drop zones reserve their space for the whole drag rather
+      // than growing under the pointer — see `beginNavDrag`. The MIME type
+      // goes with it so only zones that would take THIS drag open, and the
+      // source element so its `dragend` is still heard if a nav refresh
+      // detaches this row mid-drag.
+      beginNavDrag(dnd.type, e.currentTarget);
     },
     [dnd],
   );
@@ -467,13 +476,52 @@ function useNavItemDnd(dnd?: NavItemDnd) {
   };
 }
 
-/** Drop zone rendered inside expanded containers so users can move items back to the container root. */
-function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
+/** Drop zone rendered inside expanded containers so users can move items back to the container root.
+ *
+ * The strip stays IN FLOW and reserves its full height for the whole drag:
+ * 4px at rest, 28px from the moment a drag begins until it ends, with the
+ * band filling exactly what was reserved. Growing on hover instead — the
+ * obvious design — fails in both of its available shapes:
+ *
+ *  - in flow, every row beneath jumps 24px at the exact moment the pointer
+ *    crosses the strip, which is the moment the user is aiming at one of
+ *    those rows. Dragging a file from a nested folder down to a sibling
+ *    crosses one strip per open container, so the destination walks away
+ *    from the cursor mid-drag (measured: 28px per crossing) and the drop
+ *    lands on whatever slid underneath. From the user's seat the gesture
+ *    simply does nothing, with no request made and nothing to read.
+ *  - out of flow, nothing moves, but the expanded band overlaps ~12px of
+ *    the rows on either side and, being positioned, takes their drops — a
+ *    moving target traded for a wrong one.
+ *
+ * Reserving for the whole drag settles the layout once, before the user has
+ * aimed at anything. The opening is deliberately NOT animated: a 150ms
+ * height transition is a moving target for 150ms, which is inside the time
+ * a short drag to a nearby row takes. Only the collapse animates, and by
+ * then nothing is being aimed at.
+ *
+ * Exported for its test only — it is not in the package barrel, and the
+ * invariants (in flow, reserved by the drag rather than the pointer, band
+ * == strip) are ones jsdom can check from the class names and nothing can
+ * check from the outside.
+ */
+export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isFileDragOver, setIsFileDragOver] = useState(false);
   const dragCounter = useRef(0);
   const acceptsFiles = dnd.canDropFiles?.() ?? false;
   const acceptsEntities = dnd.canDrop();
+  // Whether this zone is open is the DRAG's business, not the pointer's:
+  // the band is reserved before the pointer reaches it, so hover can no
+  // longer say anything about what is being dragged. And reserving space
+  // and painting a label is a promise that a drop will land here — so a
+  // zone opens only for a drag it would accept, which the drag's own MIME
+  // types decide.
+  //
+  // The subscribed snapshot is a VERSION, not the types themselves: a MIME
+  // token may legally contain whatever character one joins them with, and a
+  // split on it turns one type into two. The predicate reads the set.
+  useSyncExternalStore(subscribeNavDrag, getNavDragVersion, () => 0);
+  const dragActive = navDragAccepts({ type: dnd.type, acceptsEntities });
 
   const hasExternalFiles = (e: React.DragEvent) => hasExternalFilesData(e.dataTransfer);
 
@@ -485,63 +533,79 @@ function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
 
   return (
     <div
-      onDragEnter={(e) => {
-        if (!hasMatchingDragData(e)) return;
-        e.preventDefault();
-        dragCounter.current++;
-        setIsFileDragOver(hasExternalFiles(e));
-        setIsDragOver(true);
-      }}
-      onDragLeave={() => {
-        dragCounter.current--;
-        if (dragCounter.current <= 0) {
-          dragCounter.current = 0;
-          setIsFileDragOver(false);
-          setIsDragOver(false);
-        }
-      }}
-      onDragOver={(e) => {
-        if (!hasMatchingDragData(e)) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = hasExternalFiles(e) ? "copy" : "move";
-      }}
-      onDrop={async (e) => {
-        const files = Array.from(e.dataTransfer.files ?? []);
-        const draggedData = acceptsEntities ? e.dataTransfer.getData(dnd.type) : "";
-        const hasFiles = acceptsFiles && files.length > 0 && dnd.onFileDrop;
-        const hasEntityDrop = Boolean(acceptsEntities && draggedData);
-        if (!hasFiles && !hasEntityDrop) return;
-        e.preventDefault();
-        e.stopPropagation();
-        dragCounter.current = 0;
-        setIsFileDragOver(false);
-        setIsDragOver(false);
-        if (hasFiles) {
-          await dnd.onFileDrop!(files);
-          return;
-        }
-        await dnd.onDrop(draggedData);
-      }}
       className={cn(
-        "relative mx-2 rounded-md overflow-hidden",
-        isDragOver
-          ? cn(
-              "h-7 flex items-center justify-center gap-1",
-              isFileDragOver
-                ? "bg-primary/10 border border-dashed border-primary"
-                : "bg-primary/10 border border-dashed border-primary/30",
-            )
-          : "-mt-1 h-1",
+        "relative mx-2",
+        // Reserved for the whole drag, so the rows below settle once —
+        // before the user has aimed — and never while they are aiming.
+        // The transition rides on the RESTING class, so the reservation
+        // opens instantly and only the collapse animates: an animated
+        // opening is a moving target for as long as it runs.
+        dragActive ? "mt-0 h-7" : "-mt-1 h-1 transition-[height,margin] duration-150",
       )}
     >
-      {isDragOver && (
-        <>
-          {isFileDragOver && <Upload className="size-3 text-primary" />}
-          <span className="text-[10px] text-primary/70">
-            {getContainerDropZoneLabel(isFileDragOver)}
+      <div
+        onDragEnter={(e) => {
+          if (!hasMatchingDragData(e)) return;
+          e.preventDefault();
+          // Hover state only — the band's size is the drag's business, not
+          // the pointer's. Opening it from here is the original bug: the row
+          // the user is aiming at slides away as they reach it.
+          dragCounter.current++;
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => {
+          dragCounter.current--;
+          if (dragCounter.current <= 0) {
+            dragCounter.current = 0;
+            setIsDragOver(false);
+          }
+        }}
+        onDragOver={(e) => {
+          if (!hasMatchingDragData(e)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = hasExternalFiles(e) ? "copy" : "move";
+        }}
+        onDrop={async (e) => {
+          const files = Array.from(e.dataTransfer.files ?? []);
+          const draggedData = acceptsEntities ? e.dataTransfer.getData(dnd.type) : "";
+          const hasFiles = acceptsFiles && files.length > 0 && dnd.onFileDrop;
+          const hasEntityDrop = Boolean(acceptsEntities && draggedData);
+          if (!hasFiles && !hasEntityDrop) return;
+          e.preventDefault();
+          e.stopPropagation();
+          dragCounter.current = 0;
+          setIsDragOver(false);
+          if (hasFiles) {
+            await dnd.onFileDrop!(files);
+            return;
+          }
+          await dnd.onDrop(draggedData);
+        }}
+        className={cn(
+          // Fills the reserved strip exactly: what is painted is what
+          // accepts a drop, and nothing extends over a neighbouring row.
+          "h-full w-full rounded-md overflow-hidden",
+          dragActive && "flex items-center justify-center",
+          isDragOver && "bg-primary/10 border border-dashed border-primary/30",
+        )}
+      >
+        {/* Always a move, and never an Upload affordance: only a drag that
+            STARTED on a nav row reserves a band, and those carry an entity.
+            A file drag still DROPS here — the handlers above take it — but
+            it is not advertised, because advertising it would mean growing
+            under the pointer, and because this container's own row already
+            accepts and highlights the same drop. */}
+        {dragActive && (
+          <span
+            className={cn(
+              "text-[10px] transition-colors",
+              isDragOver ? "text-primary/70" : "text-sidebar-foreground/35",
+            )}
+          >
+            Move to root
           </span>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
