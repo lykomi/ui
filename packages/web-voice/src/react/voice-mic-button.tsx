@@ -35,6 +35,7 @@ const CIRCLE = "size-8 @md:size-10 rounded-full shrink-0";
 export function VoiceMicButton() {
   const canVoice = useAuiState((s) => s.optional.thread?.capabilities.voice ?? false);
   const composerEmpty = useAuiState((s) => s.optional.composer?.isEmpty ?? true);
+  const threadRunning = useAuiState((s) => s.thread.isRunning);
   const voice = useVoiceState();
   const controls = useVoiceControls();
   const volume = useVoiceVolume();
@@ -45,8 +46,9 @@ export function VoiceMicButton() {
   const idle = !voice || voice.status.type === "ended";
 
   if (idle) {
-    // Typing is a commitment to the keyboard; let Send have the corner.
-    if (!composerEmpty) return null;
+    // Typing belongs to Send; an active run belongs to Stop. Voice is only a
+    // starting action when the composer is empty and the thread is idle.
+    if (!composerEmpty || threadRunning) return null;
     return (
       <TooltipIconButton
         tooltip="Start voice conversation"
