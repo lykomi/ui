@@ -523,7 +523,7 @@ export function GraphView({
         nodeCount={visibleModel.nodes.length}
         edgeCount={visibleModel.links.length}
         onZoomToFit={() => canvasRef.current?.zoomToFit()}
-        onReheat={() => canvasRef.current?.reheat()}
+        onRestartLayout={() => canvasRef.current?.reheat()}
         onFullscreen={
           onFullscreen ?? (container?.requestFullscreen ? () => void toggleFullscreen() : undefined)
         }
@@ -594,6 +594,8 @@ export function GraphView({
             // readable form is; the toolbar's button is what gets you there.
             <div
               role="img"
+              onWheelCapture={() => canvasRef.current?.cancelAutoFit()}
+              onPointerDownCapture={() => canvasRef.current?.cancelAutoFit()}
               aria-label={
                 // Same numbers the sighted user is given, for the same reason.
                 `Graph: ${visibleModel.nodes.length} nodes, ${visibleModel.links.length} relationships. ` +

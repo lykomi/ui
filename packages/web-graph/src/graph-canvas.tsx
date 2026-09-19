@@ -46,6 +46,8 @@ export interface GraphCanvasHandle {
   reveal: (nodeId: string, durationMs?: number) => void;
   /** Re-run the force simulation from a hot state — the "untangle it" action. */
   reheat: () => void;
+  /** Stop automatic framing after the user starts navigating the canvas. */
+  cancelAutoFit: () => void;
 }
 
 export interface GraphCanvasProps {
@@ -252,6 +254,7 @@ export function GraphCanvas({
   hiddenLabelsRef.current = state.hiddenLabels;
   const insetRightRef = useRef(insetRight);
   insetRightRef.current = insetRight;
+  const autoFitCancelledRef = useRef(false);
 
   /**
    * Frame the graph into what the user can SEE, not into the whole canvas.
@@ -350,6 +353,9 @@ export function GraphCanvas({
         engine.centerAt(centre.x + dx / zoom, centre.y + dy / zoom, reducedMotion ? 0 : durationMs);
       },
       reheat,
+      cancelAutoFit: () => {
+        autoFitCancelledRef.current = true;
+      },
     }),
     [model.nodes, reducedMotion, insetRight, width, height, reheat],
   );
@@ -529,13 +535,17 @@ export function GraphCanvas({
 
   useEffect(() => {
     if (width === 0 || height === 0) return;
+    // Each genuine graph/viewport change gets one settling pass. Pointer or
+    // wheel input cancels it through the handle: once the user takes control,
+    // an automatic zoom-to-fit must never overwrite their camera.
+    autoFitCancelledRef.current = false;
     tuneForces(engineRef.current, model.nodes.length, (node) => radiusRef.current(node));
 
     const deadline = Date.now() + cooldownFor(model.nodes.length) + FIT_TAIL_MS;
     // Fit immediately so nothing is off-screen even for one frame.
     fit();
     const timer = setInterval(() => {
-      if (Date.now() > deadline) {
+      if (autoFitCancelledRef.current || Date.now() > deadline) {
         clearInterval(timer);
         return;
       }

@@ -1,4 +1,14 @@
-import { Maximize2, Minimize2, Scan, PinOff, Play, Search, Share2, Table2, X } from "lucide-react";
+import {
+  Maximize2,
+  Minimize2,
+  Scan,
+  PinOff,
+  RefreshCw,
+  Search,
+  Share2,
+  Table2,
+  X,
+} from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export interface GraphToolbarProps {
@@ -9,7 +19,7 @@ export interface GraphToolbarProps {
   nodeCount: number;
   edgeCount: number;
   onZoomToFit: () => void;
-  onReheat: () => void;
+  onRestartLayout: () => void;
   onFullscreen?: () => void;
   fullscreen?: boolean;
   pinnedCount: number;
@@ -35,7 +45,7 @@ export function GraphToolbar({
   nodeCount,
   edgeCount,
   onZoomToFit,
-  onReheat,
+  onRestartLayout,
   onFullscreen,
   fullscreen,
   pinnedCount,
@@ -89,43 +99,50 @@ export function GraphToolbar({
           answer is to make it reachable rather than to describe a picture.
           A control, not a permanently mounted duplicate: a capped graph is
           still 1,500 rows nobody asked for. */}
-      {onToggleTable && (
+      <div className="border-border flex shrink-0 items-center gap-0.5 border-l pl-1.5">
+        {onToggleTable && (
+          <button
+            type="button"
+            onClick={onToggleTable}
+            title={showsTable ? "Show the graph" : "Show as a table"}
+            aria-pressed={showsTable}
+            className={iconButton}
+          >
+            {showsTable ? <Share2 className="size-3.5" /> : <Table2 className="size-3.5" />}
+            <span className="sr-only">{showsTable ? "Show the graph" : "Show as a table"}</span>
+          </button>
+        )}
+        {pinnedCount > 0 && (
+          <button type="button" onClick={onUnpinAll} title="Unpin all nodes" className={iconButton}>
+            <PinOff className="size-3.5" />
+            <span className="sr-only">Unpin all nodes</span>
+          </button>
+        )}
         <button
           type="button"
-          onClick={onToggleTable}
-          title={showsTable ? "Show the graph" : "Show as a table"}
-          aria-pressed={showsTable}
+          onClick={onRestartLayout}
+          title="Re-run automatic layout"
+          aria-label="Re-run automatic layout"
           className={iconButton}
         >
-          {showsTable ? <Share2 className="size-3.5" /> : <Table2 className="size-3.5" />}
-          <span className="sr-only">{showsTable ? "Show the graph" : "Show as a table"}</span>
+          <RefreshCw className="size-3.5" />
         </button>
-      )}
-      {pinnedCount > 0 && (
-        <button type="button" onClick={onUnpinAll} title="Unpin all nodes" className={iconButton}>
-          <PinOff className="size-3.5" />
-          <span className="sr-only">Unpin all nodes</span>
+        <button type="button" onClick={onZoomToFit} title="Zoom to fit" className={iconButton}>
+          <Scan className="size-3.5" />
+          <span className="sr-only">Zoom to fit</span>
         </button>
-      )}
-      <button type="button" onClick={onReheat} title="Restart layout" className={iconButton}>
-        <Play className="size-3.5" />
-        <span className="sr-only">Restart layout</span>
-      </button>
-      <button type="button" onClick={onZoomToFit} title="Zoom to fit" className={iconButton}>
-        <Scan className="size-3.5" />
-        <span className="sr-only">Zoom to fit</span>
-      </button>
-      {onFullscreen && (
-        <button
-          type="button"
-          onClick={onFullscreen}
-          title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
-          aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
-          className={iconButton}
-        >
-          {fullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
-        </button>
-      )}
+        {onFullscreen && (
+          <button
+            type="button"
+            onClick={onFullscreen}
+            title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            className={iconButton}
+          >
+            {fullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
