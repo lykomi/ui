@@ -1,5 +1,11 @@
 # @iloveagents/foundry-web-voice
 
+## 0.1.15
+
+### Patch Changes
+
+- 87b5239: Hide the voice launcher while a chat response is running so it never competes with Stop.
+
 ## 0.1.14
 
 ### Patch Changes
