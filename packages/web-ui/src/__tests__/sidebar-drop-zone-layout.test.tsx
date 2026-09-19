@@ -18,10 +18,18 @@
  * before the user has aimed at anything, and the band that is painted is
  * exactly the area that accepts.
  *
+ * "Before the user has aimed" is also the precondition, and only a drag
+ * that STARTS here has such a moment: one arriving from the desktop or
+ * another window is hit-tested by the browser before any script runs, so
+ * the first event this document sees is already aimed. Those get no
+ * reservation at all — otherwise the mis-aim simply returns by a different
+ * road.
+ *
  * jsdom lays out nothing, so this asserts the mechanism: the strip is in
  * flow, it changes only with the drag as a whole, and the band fills it.
- * Plus the two ways "for the whole drag" can quietly become "for most of
- * it" — an animated opening, and an in-page drag that leaves the window.
+ * Plus the three ways "for the whole drag" can quietly become "for most of
+ * it" or "for the wrong drag" — an animated opening, an in-page drag that
+ * leaves the window, and a source the nav refreshes away mid-drag.
  */
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -65,15 +73,6 @@ async function mount(zone: NavItemDnd = dnd) {
   await act(async () => root!.render(<ContainerDropZone dnd={zone} />));
   const strip = host.firstElementChild as HTMLElement;
   return { strip, band: strip.firstElementChild as HTMLElement };
-}
-
-/** A `dragenter` carrying the zone's own MIME type, or external files. */
-function dragEnter(element: Element, files = false) {
-  const event = new Event("dragenter", { bubbles: true, cancelable: true });
-  Object.defineProperty(event, "dataTransfer", {
-    value: { types: files ? ["Files"] : [dnd.type], files: { length: files ? 1 : 0 } },
-  });
-  element.dispatchEvent(event);
 }
 
 /** A `dragenter` carrying an arbitrary set of types. */
@@ -126,38 +125,16 @@ it("reserves its space when the drag starts, not when the pointer arrives", asyn
   expect(host!.textContent).toContain("Move to root");
 
   // And it holds for the whole drag, however the pointer moves over it:
-  // the layout settles once, at the first sighting, and never again while
-  // the user is aiming. That — not "a dragenter never resizes" — is the
-  // invariant, since a drag from outside this document has no other way to
-  // announce itself.
+  // the layout settles once, when the drag starts, and never again while
+  // the user is aiming.
   const reserved = strip.className;
-  await act(async () => dragEnter(band));
+  await act(async () => dragEnterTypes(band, [dnd.type]));
   expect(strip.className).toBe(reserved);
-  await act(async () => dragEnter(document.documentElement));
+  await act(async () => dragEnterTypes(document.documentElement, [dnd.type]));
   expect(strip.className).toBe(reserved);
 
   await act(async () => endNavDrag());
   expect(strip.className).toBe(atRest);
-});
-
-it("ignores a drag carrying nothing it accepts", async () => {
-  const { strip } = await mount();
-  // Dragging selected text across the sidebar is a `dragenter` like any
-  // other. Adopting whatever types a drag carries must not mean opening for
-  // all of them.
-  await act(async () => dragEnterTypes(document.documentElement, ["text/plain"]));
-  expect(strip.className).toContain("h-1");
-  expect(host!.textContent).toBe("");
-});
-
-it("opens for an entity dragged in from another window of the app", async () => {
-  const { strip } = await mount();
-  // No `dragstart` in THIS document, and it is not a file drag — so the
-  // Files-only watcher left the root target an unlabelled 4px strip for the
-  // whole gesture, even though the zone's own `onDrop` would have taken it.
-  await act(async () => dragEnterTypes(document.documentElement, [dnd.type]));
-  expect(strip.className).toContain("h-7");
-  expect(host!.textContent).toContain("Move to root");
 });
 
 it("keeps a nested row's type when the drag bubbles to its container", async () => {
@@ -173,61 +150,23 @@ it("keeps a nested row's type when the drag bubbles to its container", async () 
   expect(strip.className).toContain("h-7");
 });
 
-it("opens for a drag from the desktop before it reaches a row", async () => {
-  const { strip } = await mount();
-  expect(strip.className).toContain("h-1");
-
-  // The source is outside the document, so the first sight of `Files` on a
-  // dragenter is the only announcement the page gets — and it has to be
-  // taken at the WINDOW, as the pointer crosses the edge. Taking it at the
-  // first nav element meant the target row opened the reservation and then
-  // slid out from under a pointer that had not moved.
-  await act(async () => dragEnter(document.documentElement, true));
-  expect(strip.className).toContain("h-7");
-  expect(host!.textContent).toContain("Upload to root");
-});
-
 it("holds the reservation when an in-page drag leaves the window and returns", async () => {
   const { strip } = await mount();
   await act(async () => beginNavDrag(dnd.type));
   expect(strip.className).toContain("h-7");
 
   // A drag dragged out of the window fires a `dragleave` with no
-  // `relatedTarget` and nothing else — the only signal a DESKTOP drag
-  // gives that it is over. An in-page drag looks identical here and is
-  // not over: it will come back, and its `dragend` will close it. Ending
-  // on this collapsed every zone for the rest of the gesture, so the root
-  // the user was aiming at vanished.
+  // `relatedTarget` and nothing else. That is the same signal whether the
+  // drag is over or merely outside, and this one is not over: it will come
+  // back, and its `dragend` will close it. Ending on it collapsed every
+  // zone for the rest of the gesture, so the root the user was aiming at
+  // vanished as they reached for it.
   await act(async () => leaveWindow());
   expect(strip.className).toContain("h-7");
 
   // And it still ends properly when the drag actually ends.
   await act(async () => window.dispatchEvent(new Event("dragend")));
   expect(strip.className).toContain("h-1");
-});
-
-it("still ends a desktop drag that is dragged back out of the window", async () => {
-  const { strip } = await mount();
-  await act(async () => dragEnter(document.documentElement, true));
-  expect(strip.className).toContain("h-7");
-
-  // This one has no `dragend` here at all, so the relatedTarget-less
-  // `dragleave` is the only ending it will ever get.
-  await act(async () => leaveWindow());
-  expect(strip.className).toContain("h-1");
-});
-
-it("stays shut for a file drag it would refuse", async () => {
-  // Reserving space and painting "Upload to root" is a promise that a drop
-  // will land. A container that takes entity moves but no files must not
-  // make it: `hasMatchingDragData` refuses the file, so the drop would do
-  // nothing and the user would have aimed at a lie.
-  const entitiesOnly: NavItemDnd = { ...dnd, canDropFiles: () => false };
-  const { strip } = await mount(entitiesOnly);
-
-  await act(async () => dragEnter(document.documentElement, true));
-  expect(strip.className).toContain("h-1");
-  expect(host!.textContent).not.toContain("Upload to root");
 });
 
 it("stays shut for another module's entity drag", async () => {
@@ -263,10 +202,9 @@ it("keeps a MIME type whole when it contains a separator", async () => {
 it("ends the drag when a nav refresh detaches the row it started from", async () => {
   const { strip } = await mount();
   // A source removed mid-drag still receives its own `dragend`, but a
-  // detached node's event reaches no window listener — and the
-  // relatedTarget-less `dragleave` deliberately ignores an in-page drag. So
-  // the reservation stayed open, every zone expanded, until the next drag
-  // that happened to finish somewhere else.
+  // detached node's event reaches no window listener, and nothing else ends
+  // the drag. So the reservation stayed open, every zone expanded, until
+  // the next drag that happened to finish somewhere else.
   const source = document.createElement("div");
   document.body.append(source);
   await act(async () => beginNavDrag(dnd.type, source));
@@ -274,5 +212,39 @@ it("ends the drag when a nav refresh detaches the row it started from", async ()
 
   source.remove();
   await act(async () => source.dispatchEvent(new Event("dragend", { bubbles: true })));
+  expect(strip.className).toContain("h-1");
+});
+
+it("stays shut for a drag that arrives already aimed", async () => {
+  const { strip } = await mount();
+  // A drag from the desktop, or from another window, is hit-tested by the
+  // browser before any script runs — so the first `dragenter` this document
+  // sees is already pointing at a row. Opening the zones from it would move
+  // that row out from under a stationary pointer, which is the failure this
+  // whole mechanism exists to remove. There is no earlier moment to use, so
+  // there is no reservation — and a `dragenter` therefore opens nothing,
+  // whatever it carries.
+  await act(async () => dragEnterTypes(document.documentElement, ["Files"]));
+  expect(strip.className).toContain("h-1");
+  expect(host!.textContent).toBe("");
+
+  // Not even something the nav has no use for at all.
+  await act(async () => dragEnterTypes(document.documentElement, ["text/plain"]));
+  expect(strip.className).toContain("h-1");
+
+  // Same for an entity dragged in from another window of the app: no
+  // `dragstart` here either, so the same reasoning applies.
+  await act(async () => dragEnterTypes(document.documentElement, [dnd.type]));
+  expect(strip.className).toContain("h-1");
+});
+
+it("stays shut when the aimed-at row is the one that would be pushed", async () => {
+  const { strip, band } = await mount();
+  // The case stated most sharply: the file enters DIRECTLY over a row, so
+  // the only event available is the one the browser has already resolved
+  // against that row. Nothing may move on it.
+  await act(async () => dragEnterTypes(band, ["Files"]));
+  expect(strip.className).toContain("h-1");
+  await act(async () => dragEnterTypes(strip, ["Files"]));
   expect(strip.className).toContain("h-1");
 });

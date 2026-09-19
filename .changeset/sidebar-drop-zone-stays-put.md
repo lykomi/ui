@@ -17,37 +17,34 @@ So the space is reserved for the whole drag rather than on hover. The zone
 stays in flow, and the band fills exactly the strip it reserved, so what is
 painted is what accepts.
 
-"For the whole drag" has to mean it, so:
+"For the whole drag" has to mean it, so the reservation opens instantly and
+only the collapse animates — an animated opening is a moving target for as
+long as it runs, and 150ms is inside the time a short drag to a nearby row
+takes.
 
-- the reservation opens instantly and only the collapse animates — an
-  animated opening is a moving target for as long as it runs, and 150ms is
-  inside the time a short drag to a nearby row takes;
-- a drag from the desktop has no `dragstart` in the document, so a
-  window-level watcher opens the reservation on the first `dragenter`
-  anywhere — as the pointer crosses the window edge, not when it has already
-  arrived over the row it was aimed at;
-- a drag dragged out of the window and back keeps its reservation. That exit
-  looks the same for both kinds of drag, and it ends only the kind that
-  cannot report its own end; an in-page drag has a `dragend`, and collapsing
-  on the exit made the root it was aimed at vanish for the rest of the
-  gesture.
+It also has to mean "before the user has aimed", which is as much a
+precondition as it is the point. Only a drag that starts in this document has
+a moment before the aim: `dragstart` fires before any movement, so the layout
+settles while the pointer is still on the row being picked up. A drag arriving
+from outside — the desktop, or another window — has no such moment; the
+browser hit-tests whatever is under the pointer before any script runs, so the
+first `dragenter` the document sees is already aimed at something. Opening the
+zones from it would move that something out from under a stationary pointer —
+the very failure this change exists to remove, arriving by a different road.
+So outside drags get no reservation: the strips stay 4px and nothing moves.
+They are not left without a target, because container rows accept and
+highlight file drops themselves.
 
 Because the zone is open before the pointer reaches it, nothing about the drag
 can be read off the zone's own hover state any more, so the drag publishes the
-set of MIME types it carries. The label follows that (a file drag reads "Upload
-to root" on approach instead of promising a move), and so does whether a zone
-opens at all: reserving space and painting a label is a promise that a drop
-will land, so a container that takes entity moves but not files stays shut for
-a file drag, and a module's zones no longer open for another module's
-`dnd.type`.
+set of MIME types it carries, and whether a zone opens at all follows that:
+reserving space and painting a label is a promise that a drop will land, so a
+container that takes entity moves but not files stays shut for a file drag,
+and a module's zones no longer open for another module's `dnd.type`.
 
-A set rather than one type, because one type is wrong in two ways. `dragstart`
-bubbles, and a draggable row sits inside a draggable container, so both
-handlers run and both write to `dataTransfer` — publishing one would publish
-whichever ran last and leave zones matching the child's payload shut. And a
-drag entering from another window of the same app carries its own custom
-types, which are adopted exactly as `Files` is, so the root target no longer
-stays an unlabelled strip for a gesture its own `onDrop` would have accepted.
+A set rather than one type, because `dragstart` bubbles and a draggable row
+sits inside a draggable container — both handlers run, and tracking one would
+track whichever ran last, leaving zones that match the child's payload shut.
 
 The set is read directly and never serialised: a MIME token may legally
 contain any separator one might join them with (`|` is not one of RFC 2045's
@@ -57,6 +54,5 @@ read. What components subscribe to is a version counter instead.
 
 A drag also ends when a nav refresh removes the row it started from. Such a
 source still receives its own `dragend`, but a detached node's event reaches
-no window listener, and the relatedTarget-less `dragleave` deliberately
-ignores an in-page drag — so the reservation would otherwise stay open, every
-zone expanded, until some later drag happened to finish elsewhere.
+no window listener — so the reservation would otherwise stay open, every zone
+expanded, until some later drag happened to finish elsewhere.

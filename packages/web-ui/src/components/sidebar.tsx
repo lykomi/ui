@@ -40,8 +40,6 @@ import {
   subscribeNavDrag,
   getNavDragVersion,
   navDragAccepts,
-  isNavDragExternal,
-  getContainerDropZoneLabel,
   hasAnyDropTarget,
   hasExternalFilesData,
 } from "../lib/nav-dnd.ts";
@@ -512,18 +510,18 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
   const dragCounter = useRef(0);
   const acceptsFiles = dnd.canDropFiles?.() ?? false;
   const acceptsEntities = dnd.canDrop();
-  // What the drag IS rides with the flag, not with this zone's hover state:
-  // the zone is open before the pointer reaches it, so nothing about the
-  // drag can be read from hover any more. And reserving space and showing a
-  // label is a promise that a drop will land here — so a zone opens only
-  // for a drag it would actually accept, which the drag's MIME types decide.
+  // Whether this zone is open is the DRAG's business, not the pointer's:
+  // the band is reserved before the pointer reaches it, so hover can no
+  // longer say anything about what is being dragged. And reserving space
+  // and painting a label is a promise that a drop will land here — so a
+  // zone opens only for a drag it would accept, which the drag's own MIME
+  // types decide.
   //
   // The subscribed snapshot is a VERSION, not the types themselves: a MIME
   // token may legally contain whatever character one joins them with, and a
-  // split on it turns one type into two. The predicates read the set.
+  // split on it turns one type into two. The predicate reads the set.
   useSyncExternalStore(subscribeNavDrag, getNavDragVersion, () => 0);
-  const filesInFlight = isNavDragExternal();
-  const dragActive = navDragAccepts({ type: dnd.type, acceptsEntities, acceptsFiles });
+  const dragActive = navDragAccepts({ type: dnd.type, acceptsEntities });
 
   const hasExternalFiles = (e: React.DragEvent) => hasExternalFilesData(e.dataTransfer);
 
@@ -549,10 +547,9 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
         onDragEnter={(e) => {
           if (!hasMatchingDragData(e)) return;
           e.preventDefault();
-          // A desktop drag opens the reservation from the window-level
-          // watcher in `nav-dnd`, which sees it as it crosses the window
-          // edge. Doing it here instead meant the target row opened the
-          // reservation and then slid out from under a stationary pointer.
+          // Hover state only — the band's size is the drag's business, not
+          // the pointer's. Opening it from here is the original bug: the row
+          // the user is aiming at slides away as they reach it.
           dragCounter.current++;
           setIsDragOver(true);
         }}
@@ -588,25 +585,25 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
           // Fills the reserved strip exactly: what is painted is what
           // accepts a drop, and nothing extends over a neighbouring row.
           "h-full w-full rounded-md overflow-hidden",
-          dragActive && "flex items-center justify-center gap-1",
-          isDragOver &&
-            (filesInFlight
-              ? "bg-primary/10 border border-dashed border-primary"
-              : "bg-primary/10 border border-dashed border-primary/30"),
+          dragActive && "flex items-center justify-center",
+          isDragOver && "bg-primary/10 border border-dashed border-primary/30",
         )}
       >
+        {/* Always a move, and never an Upload affordance: only a drag that
+            STARTED on a nav row reserves a band, and those carry an entity.
+            A file drag still DROPS here — the handlers above take it — but
+            it is not advertised, because advertising it would mean growing
+            under the pointer, and because this container's own row already
+            accepts and highlights the same drop. */}
         {dragActive && (
-          <>
-            {filesInFlight && <Upload className="size-3 text-primary" />}
-            <span
-              className={cn(
-                "text-[10px] transition-colors",
-                isDragOver ? "text-primary/70" : "text-sidebar-foreground/35",
-              )}
-            >
-              {getContainerDropZoneLabel(filesInFlight)}
-            </span>
-          </>
+          <span
+            className={cn(
+              "text-[10px] transition-colors",
+              isDragOver ? "text-primary/70" : "text-sidebar-foreground/35",
+            )}
+          >
+            Move to root
+          </span>
         )}
       </div>
     </div>

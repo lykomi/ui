@@ -9,10 +9,6 @@ export function hasAnyDropTarget(isDropTarget: boolean, isFileDropTarget: boolea
   return isDropTarget || isFileDropTarget;
 }
 
-export function getContainerDropZoneLabel(hasExternalFiles: boolean): string {
-  return hasExternalFiles ? "Upload to root" : "Move to root";
-}
-
 /**
  * Is a drag that the nav can accept in flight, anywhere — and what is it?
  *
@@ -31,37 +27,37 @@ export function getContainerDropZoneLabel(hasExternalFiles: boolean): string {
  * hit area is exactly the band that is painted — no moving target, and no
  * neighbour quietly answering for another.
  *
- * "Before the user has aimed" is the whole value, so the flag opens at the
- * earliest moment each kind of drag can be observed:
+ * "Before the user has aimed" is the whole value, and it is also the whole
+ * PRECONDITION. Only a drag that starts in this document has a moment before
+ * the aim: `dragstart` fires before any movement, so the layout can settle
+ * while the pointer is still on the row being picked up.
  *
- *  - an IN-PAGE drag announces itself with `dragstart`, before any movement;
- *  - a drag from OUTSIDE this document — the desktop, or another window of
- *    the same app — has no `dragstart` here, and its earliest sign is the
- *    first `dragenter` anywhere, usually `<html>` as the pointer crosses the
- *    window edge, long before it reaches a row. A window-level capture
- *    listener sees that one; waiting for a nav element to see it meant the
- *    target row itself opened the reservation and then slid out from under
- *    the stationary pointer.
+ * A drag arriving from OUTSIDE — the desktop, or another window — has no such
+ * moment. The browser hit-tests whatever is under the pointer before any
+ * script runs, so the first `dragenter` this document sees is already aimed
+ * at something; opening the zones from it moves that something out from under
+ * a stationary pointer. That is the very failure this whole change exists to
+ * remove, arriving by a different road.
  *
- * And WHAT is tracked is the gesture's set of MIME types, not just "a drag
- * is happening". Reserving space and painting a label is a promise that a
- * drop will land, so only a zone that would take this particular drag may
- * make it. Two consequences the set — rather than one type — is what gets
- * right:
+ * So outside drags get no reservation: the strips stay 4px and nothing moves.
+ * They are not left without a target — container rows accept and highlight
+ * file drops themselves, which is the path a file drag was always going to
+ * take. The root-drop affordance is a convenience with a redundant route; the
+ * mis-aim was a correctness failure with none.
  *
- *  - `dragstart` BUBBLES, and a draggable row sits inside a draggable
- *    container, so both handlers run and both write to `dataTransfer`. A
- *    single tracked type would be whichever handler ran last (the
- *    ancestor's), leaving zones that match the child's payload shut.
- *  - a `dragenter` from another document carries its custom types, so those
- *    can be adopted the same way `Files` is.
+ * WHAT is tracked is the gesture's set of MIME types, not just "a drag is
+ * happening". Reserving space and painting a label is a promise that a drop
+ * will land, so only a zone that would take this particular drag may make it.
+ * A set rather than one type because `dragstart` BUBBLES: a draggable row
+ * sits inside a draggable container, both handlers run, and tracking one
+ * would track whichever ran last — the ancestor's — leaving zones that match
+ * the child's payload shut.
  *
  * The set is read directly and never serialised. It was briefly published as
  * a joined string, for `useSyncExternalStore`'s identity comparison — but a
  * MIME token may legally contain the separator (`|` is not one of RFC 2045's
- * tspecials), and then one type splits into two: the zone that owns it stays
- * shut while a zone matching a fragment opens for data it cannot read. The
- * snapshot is a version counter instead, so there is nothing to encode.
+ * tspecials), and then one type splits into two. The snapshot is a version
+ * counter instead, so there is nothing to encode.
  */
 type NavDragListener = () => void;
 const navDragListeners = new Set<NavDragListener>();
@@ -70,86 +66,43 @@ const navDragListeners = new Set<NavDragListener>();
 const navDragTypes = new Set<string>();
 /** Bumped on every change — the `useSyncExternalStore` snapshot. */
 let navDragVersion = 0;
-/** Did this gesture start HERE? Only then is a `dragend` coming at all. */
-let navDragStartedHere = false;
-/** The element it started from, when we were given one. Separate from the
- *  flag above: the flag decides whether a `dragend` is owed, this decides
- *  where to listen for it. Conflating them lost an in-page drag the
- *  window-exit protection whenever the caller had no element to pass. */
+/** The element the drag started from, when we were given one — so its
+ *  `dragend` is heard even after a nav refresh detaches it mid-drag. */
 let navDragSource: Element | null = null;
 let navDragWatchBound = false;
-
-/** The type an external file drag announces itself with. */
-const FILES_TYPE = "Files";
 
 function publish(): void {
   navDragVersion += 1;
   for (const listener of navDragListeners) listener();
 }
 
-function endNavDragInternal(): void {
-  navDragStartedHere = false;
+/**
+ * Ends whatever drag is in flight.
+ *
+ * Bound to the window for `dragend` (a drop or a cancel) and `drop` (a
+ * source outside this document, which has no `dragend` here at all), and to
+ * the source element itself, whose own `dragend` is the only one left once a
+ * nav refresh has detached it.
+ *
+ * There is deliberately no `dragleave` ending. A relatedTarget-less
+ * `dragleave` is the only signal a drag leaving the window gives, and it is
+ * the same signal whether the drag is over or merely outside — so it ended
+ * live in-page drags, collapsing every zone for the rest of the gesture. It
+ * existed for drags with no `dragend` in this document, and none of those
+ * opens a reservation now.
+ */
+export function endNavDrag(): void {
   navDragSource = null;
   if (navDragTypes.size === 0) return;
   navDragTypes.clear();
   publish();
 }
 
-/**
- * Bind the window-level listeners: the earliest sight of a drag from outside
- * this document, and every way a drag can end — including the ones that skip
- * `dragend`.
- */
 function bindNavDragWatch(): void {
   if (navDragWatchBound || typeof window === "undefined") return;
   navDragWatchBound = true;
-
-  // A drag from outside, as early as this document can see it. Capture phase,
-  // so it runs before the handler of whatever element the pointer entered.
-  window.addEventListener(
-    "dragenter",
-    (event) => {
-      const transfer = (event as DragEvent).dataTransfer;
-      if (!transfer) return;
-      let added = false;
-      for (const type of Array.from(transfer.types)) {
-        if (!navDragTypes.has(type)) {
-          navDragTypes.add(type);
-          added = true;
-        }
-      }
-      // `files.length` is the other way a file drag shows itself.
-      if ((transfer.files?.length ?? 0) > 0 && !navDragTypes.has(FILES_TYPE)) {
-        navDragTypes.add(FILES_TYPE);
-        added = true;
-      }
-      if (added) publish();
-    },
-    true,
-  );
-
-  // `dragend` fires on the source after a drop or a cancel, and `drop`
-  // covers a source outside the document that has no `dragend` here at all.
-  window.addEventListener("dragend", endNavDragInternal, true);
-  window.addEventListener("drop", endNavDragInternal, true);
-
-  // A drag taken back OUT of the window leaves neither: the last `dragleave`
-  // has no `relatedTarget`, which is the only signal it gives.
-  //
-  // A drag that STARTED here looks identical and is not over — it is still in
-  // progress and will come back, and its `dragend` will close it properly.
-  // Ending on this collapsed every zone for the rest of that gesture, so the
-  // root the user was aiming at simply vanished. Hence the check: only a drag
-  // that cannot report its own end is ended here.
-  window.addEventListener(
-    "dragleave",
-    (event) => {
-      if ((event as DragEvent).relatedTarget) return;
-      if (navDragStartedHere) return;
-      endNavDragInternal();
-    },
-    true,
-  );
+  window.addEventListener("dragend", endNavDrag, true);
+  window.addEventListener("drop", endNavDrag, true);
 }
 
 /**
@@ -162,33 +115,24 @@ function bindNavDragWatch(): void {
  * The source is held so its `dragend` can be heard even after a nav refresh
  * has removed the row mid-drag. A detached node still receives its own
  * `dragend`, but the event reaches no window listener from there — so
- * without this the reservation would stay open, every zone expanded, with
- * the relatedTarget-less `dragleave` deliberately ignoring an in-page drag.
+ * without this the reservation would stay open, every zone expanded, until
+ * some later drag happened to finish elsewhere.
  */
 export function beginNavDrag(type: string, source?: Element | null): void {
   bindNavDragWatch();
-  navDragStartedHere = true;
   if (source && source !== navDragSource) {
     navDragSource = source;
-    source.addEventListener("dragend", endNavDragInternal, { once: true });
+    source.addEventListener("dragend", endNavDrag, { once: true });
   }
   if (navDragTypes.has(type)) return;
   navDragTypes.add(type);
   publish();
 }
 
-export function endNavDrag(): void {
-  endNavDragInternal();
-}
-
 export function subscribeNavDrag(listener: NavDragListener): () => void {
   bindNavDragWatch();
   navDragListeners.add(listener);
   return () => navDragListeners.delete(listener);
-}
-
-export function isNavDragActive(): boolean {
-  return navDragTypes.size > 0;
 }
 
 /**
@@ -201,33 +145,26 @@ export function getNavDragVersion(): number {
 }
 
 /**
- * Would a zone with these capabilities accept the live drag?
+ * Would a zone with this `dnd.type` accept the live drag?
  *
- * Reserving space and showing a label is a promise that a drop will land, so
- * only a zone that would actually take this drag may do either. "A drag is
- * happening" was not enough: a container that accepts entity moves but not
- * files advertised "Upload to root" at a file it would refuse, and two
- * modules with different `dnd.type`s opened each other's zones.
+ * Reserving space and painting a label is a promise that a drop will land,
+ * so only a zone that would actually take this drag may do either. "A drag
+ * is happening" was not enough: two modules with different `dnd.type`s
+ * opened each other's zones.
+ *
+ * Files need no case here. Only a nav row's `dragstart` opens a reservation
+ * and those carry an entity, so no zone ever opens for a file drag whatever
+ * it is configured to accept. It still HANDLES one — the resting strip takes
+ * a file drop like any other target — and the container's own row advertises
+ * that same drop at full size.
  */
-export function navDragAccepts(zone: {
-  type: string;
-  acceptsEntities: boolean;
-  acceptsFiles: boolean;
-}): boolean {
-  if (navDragTypes.size === 0) return false;
-  if (zone.acceptsEntities && navDragTypes.has(zone.type)) return true;
-  return zone.acceptsFiles && navDragTypes.has(FILES_TYPE);
-}
-
-/** Is the live drag carrying files from outside the document? */
-export function isNavDragExternal(): boolean {
-  return navDragTypes.has(FILES_TYPE);
+export function navDragAccepts(zone: { type: string; acceptsEntities: boolean }): boolean {
+  return zone.acceptsEntities && navDragTypes.has(zone.type);
 }
 
 /** Test seam — module-level state outlives a test file otherwise. */
 export function __resetNavDragForTest(): void {
   navDragTypes.clear();
-  navDragStartedHere = false;
   navDragSource = null;
   navDragVersion = 0;
 }
