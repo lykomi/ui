@@ -246,14 +246,15 @@
   left: 0;
 }
 /* Only rows that actually respond to a hover — `DataTable` marks those —
- * so a read-only row never lights up its frozen half alone. */
-tr[data-clickable]:hover > [data-pinned="cell"] {
+ * so a read-only row never lights up its frozen half alone. Zero-specificity
+ * interaction states let the selected/active rules below retain precedence. */
+tr[data-clickable]:where(:hover) > [data-pinned="cell"] {
   background-color: color-mix(in srgb, var(--muted) 30%, var(--pinned-surface));
 }
 /* Only when the ROW itself is focused. A control inside a cell does not tint
  * the ordinary cells, so tinting the frozen ones would make the strip diverge
  * exactly while someone is using that control. */
-tr[data-focusable]:focus-visible > [data-pinned="cell"] {
+tr[data-focusable]:where(:focus-visible) > [data-pinned="cell"] {
   background-color: color-mix(in srgb, var(--muted) 30%, var(--pinned-surface));
 }
 tr[data-state="selected"] > [data-pinned="cell"] {
