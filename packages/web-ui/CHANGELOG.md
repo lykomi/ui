@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.33.4
+
+### Patch Changes
+
+- 9189ee1: Keep frozen table cells highlighted with the rest of an active or selected row during hover and keyboard focus.
+  - @iloveagents/foundry-agent@0.33.4
+  - @iloveagents/foundry-web-primitives@0.33.4
+
 ## 0.33.3
 
 ### Patch Changes
