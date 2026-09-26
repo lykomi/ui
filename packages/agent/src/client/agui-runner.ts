@@ -492,6 +492,17 @@ export class AGUIRunner {
             }
             tc.result = parsedResult;
             tc.isError = isError;
+            // The SERVER answered this call, so its run already carries the
+            // result and continues on its own. A host may still register the
+            // same tool locally for its UI effect (open a panel, highlight a
+            // row) and run it at `tool-call-end`, but replaying that local
+            // result as a continuation would hand the model a second answer
+            // to a call it has already seen answered. This is what lets a
+            // server take purely cosmetic UI tools off the browser's critical
+            // path: a hidden tab that the browser freezes cannot post a
+            // continuation, and a turn that waits for one waits until
+            // somebody looks at the tab again.
+            tc.followedUp = true;
             push({
               type: "tool-call-result",
               id: event.toolCallId,

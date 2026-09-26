@@ -239,6 +239,62 @@ describe("AGUIRunner", () => {
     expect(start!.isClientSide).toBe(true);
   });
 
+  it("applies a server-answered UI tool locally and never replays it", async () => {
+    // A server may answer a purely cosmetic UI tool itself, so its turn does
+    // not wait on a browser that may be frozen in a background tab. The host
+    // still runs the tool for its effect, but the server's run already holds
+    // the answer: a replay would give the model a second one.
+    const executeTool = vi.fn().mockResolvedValue('{"status":"success"}');
+    nextScript = [
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onToolCallStartEvent?.({
+          event: {
+            type: "TOOL_CALL_START",
+            toolCallId: "tc-panel",
+            toolCallName: "ui_open_panel",
+          } as never,
+        } as never);
+        await s.onToolCallArgsEvent?.({
+          event: {
+            type: "TOOL_CALL_ARGS",
+            toolCallId: "tc-panel",
+            delta: '{"title":"Suppliers"}',
+          } as never,
+        } as never);
+        await s.onToolCallEndEvent?.({
+          event: { type: "TOOL_CALL_END", toolCallId: "tc-panel" } as never,
+        } as never);
+        await s.onToolCallResultEvent?.({
+          event: {
+            type: "TOOL_CALL_RESULT",
+            toolCallId: "tc-panel",
+            content: '{"status":"requested"}',
+          } as never,
+        } as never);
+        await s.onTextMessageStartEvent?.({ event: { type: "TEXT_MESSAGE_START" } } as never);
+        await s.onTextMessageContentEvent?.({
+          event: { type: "TEXT_MESSAGE_CONTENT", delta: "Built." } as never,
+        } as never);
+        await s.onTextMessageEndEvent?.({ event: { type: "TEXT_MESSAGE_END" } } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const events = await collect(
+      runner,
+      makeRegistry({ isRegistered: (name) => name === "ui_open_panel", executeTool }),
+    );
+
+    expect(executeTool).toHaveBeenCalledWith("ui_open_panel", '{"title":"Suppliers"}');
+    expect(runCount).toBe(1);
+    const result = events.find(
+      (e): e is Extract<RunnerEvent, { type: "tool-call-result" }> => e.type === "tool-call-result",
+    );
+    expect(result?.result).toEqual({ status: "requested" });
+  });
+
   it("preserves pre-tool assistant text in the follow-up replay", async () => {
     // Regression: if the model emits text before the tool call in the
     // same turn ("Looking up..." then ui_navigate), the follow-up
