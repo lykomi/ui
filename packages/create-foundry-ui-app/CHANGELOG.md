@@ -1,11 +1,18 @@
 # create-foundry-ui-app
 
+## 0.8.19
+
+### Patch Changes
+
+- 529bfa9: Generated apps split assistant-ui's framework-free runtime (`core`, `store`, `tap`) into its own chunk.
+
+  Together with the React bindings it crossed Vite's 500 kB chunk warning once the template's `^0.15` range resolved newer assistant-ui releases, which failed the starter smoke for every change. The split leaves both halves well under the gate (about 170 kB and 335 kB minified), in the default template and the neo4j preset.
+
 ## 0.8.18
 
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.33.3 → 0.33.4
   - @iloveagents/foundry-web-primitives: 0.33.3 → 0.33.4
   - @iloveagents/foundry-web-shell: 0.33.3 → 0.33.4
@@ -16,7 +23,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-web-voice: 0.1.14 → 0.1.15
   - @iloveagents/foundry-web-graph: 0.2.8 → 0.2.9
 
@@ -25,7 +31,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.33.2 → 0.33.3
   - @iloveagents/foundry-web-primitives: 0.33.2 → 0.33.3
   - @iloveagents/foundry-web-shell: 0.33.2 → 0.33.3
@@ -36,7 +41,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.33.1 → 0.33.2
   - @iloveagents/foundry-web-primitives: 0.33.1 → 0.33.2
   - @iloveagents/foundry-web-shell: 0.33.1 → 0.33.2
