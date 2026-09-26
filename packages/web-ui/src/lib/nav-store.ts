@@ -21,9 +21,22 @@ export interface NavFooterAction {
   onToggle: () => void;
 }
 
+/**
+ * A setting the user turns on or off from the user menu — present in every
+ * shell, where the sidebar footer is not (the workbench hides it inside a
+ * workspace). For a preference about the whole interface: "show hidden items".
+ */
+export interface UserMenuToggle {
+  id: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}
+
 interface NavStoreState {
   config: NavGroup[];
   footerActions: NavFooterAction[];
+  userMenuToggles: UserMenuToggle[];
   /**
    * True while an integrator's nav sync is loading its first batch of
    * groups. Optional/defaulted (starts ``false``) so existing consumers
@@ -44,11 +57,16 @@ interface NavStoreState {
   setFooterAction: (action: NavFooterAction) => void;
   /** Remove a footer action by id */
   removeFooterAction: (id: string) => void;
+  /** Register a user-menu toggle (replaces existing by id) */
+  setUserMenuToggle: (toggle: UserMenuToggle) => void;
+  /** Remove a user-menu toggle by id */
+  removeUserMenuToggle: (id: string) => void;
 }
 
 export const useNavStore = create<NavStoreState>((set, get) => ({
   config: DEFAULT_NAV_CONFIG,
   footerActions: [],
+  userMenuToggles: [],
   navLoading: false,
 
   setConfig: (config) => set({ config }),
@@ -85,5 +103,18 @@ export const useNavStore = create<NavStoreState>((set, get) => ({
 
   removeFooterAction: (id) => {
     set({ footerActions: get().footerActions.filter((a) => a.id !== id) });
+  },
+
+  setUserMenuToggle: (toggle) => {
+    const toggles = get().userMenuToggles;
+    const idx = toggles.findIndex((t) => t.id === toggle.id);
+    set({
+      userMenuToggles:
+        idx >= 0 ? toggles.map((t, i) => (i === idx ? toggle : t)) : [...toggles, toggle],
+    });
+  },
+
+  removeUserMenuToggle: (id) => {
+    set({ userMenuToggles: get().userMenuToggles.filter((t) => t.id !== id) });
   },
 }));
