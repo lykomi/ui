@@ -239,6 +239,108 @@ describe("AGUIRunner", () => {
     expect(start!.isClientSide).toBe(true);
   });
 
+  it("applies a server-answered UI tool locally and never replays it", async () => {
+    // A server may answer a purely cosmetic UI tool itself, so its turn does
+    // not wait on a browser that may be frozen in a background tab. The host
+    // still runs the tool for its effect, but the server's run already holds
+    // the answer: a replay would give the model a second one.
+    const executeTool = vi.fn().mockResolvedValue('{"status":"success"}');
+    nextScript = [
+      async (s, agent) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onToolCallStartEvent?.({
+          event: {
+            type: "TOOL_CALL_START",
+            toolCallId: "tc-panel",
+            toolCallName: "ui_open_panel",
+          } as never,
+        } as never);
+        await s.onToolCallArgsEvent?.({
+          event: {
+            type: "TOOL_CALL_ARGS",
+            toolCallId: "tc-panel",
+            delta: '{"title":"Suppliers"}',
+          } as never,
+        } as never);
+        await s.onToolCallEndEvent?.({
+          event: { type: "TOOL_CALL_END", toolCallId: "tc-panel" } as never,
+        } as never);
+        await s.onToolCallResultEvent?.({
+          event: {
+            type: "TOOL_CALL_RESULT",
+            toolCallId: "tc-panel",
+            content: '{"status":"success"}',
+          } as never,
+        } as never);
+        // What defaultApplyEvents does on the real client: the streamed call
+        // AND the server's result land in the agent's own history.
+        agent.messages.push(
+          {
+            id: "srv-1",
+            role: "assistant",
+            content: "",
+            toolCalls: [
+              {
+                id: "tc-panel",
+                type: "function",
+                function: { name: "ui_open_panel", arguments: '{"title":"Suppliers"}' },
+              },
+            ],
+          },
+          { id: "srv-2", role: "tool", toolCallId: "tc-panel", content: '{"status":"success"}' },
+          { id: "srv-3", role: "assistant", content: "Built." },
+        );
+        await s.onTextMessageStartEvent?.({ event: { type: "TEXT_MESSAGE_START" } } as never);
+        await s.onTextMessageContentEvent?.({
+          event: { type: "TEXT_MESSAGE_CONTENT", delta: "Built." } as never,
+        } as never);
+        await s.onTextMessageEndEvent?.({ event: { type: "TEXT_MESSAGE_END" } } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+      async (s) => {
+        await s.onRunStartedEvent?.({ event: { type: "RUN_STARTED" } } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+
+    const runner = new AGUIRunner();
+    const registry = makeRegistry({
+      isRegistered: (name) => name === "ui_open_panel",
+      executeTool,
+    });
+    const events = await collect(runner, registry);
+
+    expect(executeTool).toHaveBeenCalledWith("ui_open_panel", '{"title":"Suppliers"}');
+    // One request for the turn: the server's answer was not replayed.
+    expect(runCount).toBe(1);
+    const result = events.find(
+      (e): e is Extract<RunnerEvent, { type: "tool-call-result" }> => e.type === "tool-call-result",
+    );
+    expect(result?.result).toEqual({ status: "success" });
+
+    // The user's NEXT turn carries the answered call exactly once, with
+    // exactly one result — the history the server continues from.
+    await collectWithMessages(
+      runner,
+      [
+        ...(lastMessages as Parameters<AGUIRunner["run"]>[0]["messages"]),
+        { id: "u2", role: "user", content: "thanks" },
+      ],
+      registry,
+    );
+    expect(runCount).toBe(2);
+    const calls = lastMessages.flatMap((m) => {
+      const msg = m as { role?: string; toolCalls?: Array<{ id: string }> };
+      return msg.role === "assistant" && msg.toolCalls ? msg.toolCalls.map((t) => t.id) : [];
+    });
+    expect(calls.filter((id) => id === "tc-panel")).toHaveLength(1);
+    const results = lastMessages.filter((m) => {
+      const msg = m as { role?: string; toolCallId?: string };
+      return msg.role === "tool" && msg.toolCallId === "tc-panel";
+    });
+    expect(results).toHaveLength(1);
+  });
+
   it("preserves pre-tool assistant text in the follow-up replay", async () => {
     // Regression: if the model emits text before the tool call in the
     // same turn ("Looking up..." then ui_navigate), the follow-up
