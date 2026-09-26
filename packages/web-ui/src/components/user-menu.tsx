@@ -14,12 +14,14 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu.tsx";
 import { Button } from "@iloveagents/foundry-web-primitives";
+import { useNavStore } from "../lib/nav-store.ts";
 
 export const UserMenu: FC = () => {
   const { user, signOut } = useStore(
     authStore,
     useShallow((s) => ({ user: s.user, signOut: s.signOut })),
   );
+  const toggles = useNavStore((s) => s.userMenuToggles);
 
   let preview = false;
   try {
@@ -70,6 +72,15 @@ export const UserMenu: FC = () => {
             <DropdownMenuSeparator />
           </>
         )}
+        {toggles.map((toggle) => (
+          <DropdownMenuCheckboxItem
+            key={toggle.id}
+            checked={toggle.checked}
+            onCheckedChange={toggle.onCheckedChange}
+          >
+            {toggle.label}
+          </DropdownMenuCheckboxItem>
+        ))}
         <DropdownMenuCheckboxItem
           checked={preview}
           onCheckedChange={(enabled) => {
