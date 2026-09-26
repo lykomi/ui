@@ -54,6 +54,9 @@ export default defineConfig({
           ) {
             return "vendor-graph-engine";
           }
+          // Same split as the default template: the framework-free runtime
+          // apart from the React bindings keeps both under the chunk gate.
+          if (/^@assistant-ui\/(core|store|tap)\//.test(pkg)) return "vendor-assistant-core";
           if (pkg.startsWith("@assistant-ui/")) return "vendor-assistant-ui";
           if (pkg.startsWith("@ag-ui/")) return "vendor-ag-ui";
           if (pkg.startsWith("@azure/msal")) return "vendor-auth";
