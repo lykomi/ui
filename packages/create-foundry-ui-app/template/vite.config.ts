@@ -34,6 +34,11 @@ export default defineConfig({
           // whichever peer name the rules met first, and "react" matched
           // half the store. The last node_modules segment is the package.
           const pkg = id.slice(id.lastIndexOf("node_modules/") + "node_modules/".length);
+          // assistant-ui's framework-free runtime (core, store, tap) apart
+          // from its React bindings: together they crossed the 500 kB
+          // chunk gate as the template's `^0.15` range picked up newer
+          // releases, and the split keeps both halves well under it.
+          if (/^@assistant-ui\/(core|store|tap)\//.test(pkg)) return "vendor-assistant-core";
           if (pkg.startsWith("@assistant-ui/")) return "vendor-assistant-ui";
           if (pkg.startsWith("@ag-ui/")) return "vendor-ag-ui";
           if (pkg.startsWith("@azure/msal")) return "vendor-auth";
