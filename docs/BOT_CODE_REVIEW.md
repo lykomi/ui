@@ -1,57 +1,22 @@
 # Bot code review
 
-Every PR in this repo is reviewed by **Codex** (`chatgpt-codex-connector`) and
-**GitHub Copilot**.
+Every PR in this repo is reviewed by **Codex** (`chatgpt-codex-connector`).
+GitHub Copilot's reviewer is not used here — do not request it.
 
-Their findings are not advisory noise. They have caught defects that green CI
+Its findings are not advisory noise. They have caught defects that green CI
 and a passing local suite did not: a frozen column painted over a sticky
 header, a parser that guessed a date's country, an admin write that read the
 string `"false"` as consent, an endpoint broken by a careless in-place edit
 that 3,059 passing tests never touched.
 
-## Know which bot you are looking at
+## Know the bot you are looking at
 
-**Match on the numeric id, never the login** — the same bot answers to
-different names on different endpoints.
-
-| Bot                 | id          | on `/pulls/{n}/reviews`              | on the timeline |
-| ------------------- | ----------- | ------------------------------------ | --------------- |
-| Copilot code review | `175728472` | `copilot-pull-request-reviewer[bot]` | `Copilot`       |
-| Codex               | `199175422` | `chatgpt-codex-connector[bot]`       | same            |
-
-`copilot-swe-agent` is a **third** bot — the coding agent, not the reviewer.
-It is what GraphQL `suggestedActors(capabilities: [CAN_BE_ASSIGNED])` returns,
-and that enum has no reviewer capability at all, so its absence there says
-nothing about whether a review can be requested.
+**Match on the numeric id, never the login.** Codex is `199175422`
+(`chatgpt-codex-connector[bot]` on `/pulls/{n}/reviews` and on the timeline).
 
 ## Asking for a review
 
-**Copilot: request it over REST. It works — the response body lies.**
-
-```bash
-gh api -X POST repos/OWNER/REPO/pulls/N/requested_reviewers \
-  -f 'reviewers[]=copilot-pull-request-reviewer[bot]'
-```
-
-The response echoes the PR with `requested_reviewers: []`, and so does a
-`gh pr view` afterwards, because the field is cleared the moment the review
-lands — and Copilot answers in three to six minutes. **Never read that empty
-list as a failed request.** The timeline is the truth:
-
-```bash
-gh api --paginate repos/OWNER/REPO/issues/N/timeline \
-  -q '.[] | select(.event == "review_requested")
-       | select(.requested_reviewer.id == 175728472) | .created_at'
-```
-
-`gh pr edit N --add-reviewer @copilot` does the same thing. A `@copilot
-review` comment also gets an answer, as a comment.
-
-Copilot **reviews a PR once** unless the repo's ruleset enables _Review new
-pushes_. On a branch that has moved since, re-request explicitly rather than
-waiting for a pass that is not coming.
-
-**Codex: comment `@codex review`.** Free text after the trigger is read as
+**Comment `@codex review`** — after opening the PR and after every push. Free text after the trigger is read as
 instruction. It also runs on PR open and on ready-for-review where the repo
 enables automatic reviews. Its rules can be steered from a `## Code Review
 Rules` section in the nearest AGENTS.md.
@@ -61,11 +26,10 @@ Rules` section in the nearest AGENTS.md.
 **A verdict does not always arrive as a review object.** This is the trap that
 matters most:
 
-| Bot     | outcome       | where it lands                                                                            |
-| ------- | ------------- | ----------------------------------------------------------------------------------------- |
-| Codex   | findings      | PR review — body starts `### 💡 Codex Review`                                             |
-| Codex   | nothing found | **issue comment** — `Codex Review: Didn't find any major issues`, with `Reviewed commit:` |
-| Copilot | either        | PR review; a mention may also be answered as an issue comment                             |
+| Bot   | outcome       | where it lands                                                                            |
+| ----- | ------------- | ----------------------------------------------------------------------------------------- |
+| Codex | findings      | PR review — body starts `### 💡 Codex Review`                                             |
+| Codex | nothing found | **issue comment** — `Codex Review: Didn't find any major issues`, with `Reviewed commit:` |
 
 So query **both** `/pulls/{n}/reviews` and `/issues/{n}/comments`, filter by
 numeric id, and check the review's `commit_id` against the head SHA. Reading
@@ -77,28 +41,24 @@ recent reviews behind the first page and looks unreviewed.
 
 ## Is a review running right now?
 
-Neither bot exposes a first-class state, and neither registers a check-run.
-Two soft signals, both with caveats:
-
-- **Codex** adds 👀 to the comment that triggered it, and removes it when it
-  finishes. Present means running — but a stranded 👀 is also the known shape
-  of a hang, so give it a deadline instead of waiting indefinitely.
-- **Copilot** emits `copilot_work_started` seconds after the request.
-  `copilot_work_finished` is unreliable and often never arrives, and a
-  dangling `started` from hours ago means nothing. Bound it by age.
+Codex exposes no first-class state and registers no check-run. The soft
+signal: it adds 👀 to the comment that triggered it, and removes it when it
+finishes. Present means running — but a stranded 👀 is also the known shape
+of a hang, so give it a deadline instead of waiting indefinitely. Its summary
+comment ("Codex Review Summary") also shows _Running_ / _Completed_ per commit.
 
 The dependable question has to cover **both** surfaces, because a clean Codex
 pass has no `commit_id` to match — the SHA lives only in the comment body:
 
-- a **review** by that bot's id whose `commit_id` is your head, **or**
-- an **issue comment** by that bot's id whose `Reviewed commit:` names it.
+- a **review** by Codex's id whose `commit_id` is your head, **or**
+- an **issue comment** by Codex's id whose `Reviewed commit:` names it.
 
 Either one means it looked at this code. Waiting only for the first is how an
 agent sits on a finished review indefinitely, or asks for it again.
 
 ## The loop
 
-1. **Push, then ask** — Codex by comment, Copilot by REST. Both, every round.
+1. **Push, then ask** — `@codex review`, every round.
 2. **Read every thread.** `gh api graphql` → `pullRequest.reviewThreads` with
    `isResolved` / `isOutdated`. A thread whose line still exists stays "live"
    after the fix, so judge by content, not by the flag.

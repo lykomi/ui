@@ -157,19 +157,19 @@ and is missing for everyone else until it is released.
 
 # Bot code review (do not skip, do not merge around)
 
-Every PR here is reviewed by **Codex** and **GitHub Copilot**. Their findings are not advisory noise: they have caught defects that
+Every PR here is reviewed by **Codex**. (GitHub Copilot's reviewer is not used
+here — do not request it.) Its findings are not advisory noise: they have caught defects that
 green CI and a passing local suite did not, including fixes of ours that broke
 the case they were written for.
 
-The loop, in full — how to trigger each bot, where a verdict actually lands,
+The loop, in full — how to trigger the bot, where a verdict actually lands,
 how to tell a running review from a finished one, and how to judge a finding —
 is **[`docs/BOT_CODE_REVIEW.md`](docs/BOT_CODE_REVIEW.md)**. Read it before
 your first round; the traps in it are ones this repo has already paid for.
 
 The non-negotiables:
 
-- **Ask both bots every round**, and re-ask after every push. Copilot reviews a
-  PR once unless the ruleset says otherwise.
+- **Ask Codex every round** (`@codex review`), and re-ask after every push.
 - **A verdict is not always a review object.** A clean Codex pass is an issue
   comment. Query both surfaces, match on the bot's numeric id, and compare
   against the head SHA — or you will call a finished review missing.
