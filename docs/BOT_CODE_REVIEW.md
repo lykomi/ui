@@ -105,5 +105,20 @@ A green suite is not evidence that a path works, only that the tested paths
 do. When a bot finds something a full run missed, the lesson is usually that
 the path had no test — and the fix is that one test, not a bigger suite.
 
+## A second, independent pass for high-risk PRs
+
+Codex is one reviewer. For changes where a missed defect is expensive, add a
+second pass from a different reviewer before merging:
+
+- **What counts as high-risk:** permissions and auth, anything that deletes,
+  prunes or overwrites data, migrations, the install/apply/publish/sync core,
+  and anything a customer deploy depends on.
+- **`/code-review` at high effort** (Claude Code, local). An agent may run
+  this itself. Treat its findings like a Codex round: verify, fix or answer.
+- **`/code-review ultra`** is a multi-agent review that runs in the cloud. It is
+  started by the user and billed, and an agent cannot launch it. For the
+  riskiest changes, an agent _suggests_ it to the user and says why.
+- Routine PRs don't get either. Codex plus CI is the default.
+
 Never merge with unread findings, and never close a thread by force-pushing
 over it.

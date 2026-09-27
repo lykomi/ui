@@ -170,6 +170,9 @@ your first round; the traps in it are ones this repo has already paid for.
 The non-negotiables:
 
 - **Ask Codex every round** (`@codex review`), and re-ask after every push.
+- **High-risk PRs get a second pass** — local `/code-review` at high effort;
+  for the riskiest, suggest `/code-review ultra` to the user (user-triggered,
+  billed). See the review manual.
 - **A verdict is not always a review object.** A clean Codex pass is an issue
   comment. Query both surfaces, match on the bot's numeric id, and compare
   against the head SHA — or you will call a finished review missing.
