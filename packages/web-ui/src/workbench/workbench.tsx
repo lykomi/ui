@@ -9,13 +9,17 @@ import { WorkbenchStyles } from "./workbench-styles.tsx";
 import { type ReactNode } from "react";
 import { Button } from "@iloveagents/foundry-web-primitives";
 import { ChatContent, TooltipIconButton } from "../index.ts";
+import type { ChatContentProps } from "../components/assistant-chat.tsx";
+import { ChatContentDefaultsContext } from "../components/chat-content-defaults.ts";
 import { FileText, MessageSquare, Menu, LoaderCircle } from "lucide-react";
 import { ConversationHistory } from "./conversation-history.tsx";
 export function WorkbenchPreview({
   page,
+  chatPage,
   chatOnly: chatRoute = false,
 }: {
   page: ReactNode;
+  chatPage?: ReactNode;
   chatOnly?: boolean;
 }) {
   const {
@@ -83,6 +87,27 @@ export function WorkbenchPreview({
   ) : undefined;
   const buttonClass =
     "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary";
+  const chatDefaults: ChatContentProps = {
+    centerComposer: spaciousChat && emptyChat && !historyOpen,
+    composerIntro:
+      spaciousChat && emptyChat ? (
+        <WelcomeIntro
+          navGroups={navGroups}
+          historyShortcut={workspaceId ? emptyChatFooter : null}
+        />
+      ) : undefined,
+    composerFooter:
+      spaciousChat && emptyChat && !historyOpen && homeRecents ? (
+        <div className="w-full">{homeRecents}</div>
+      ) : undefined,
+    compactComposer: !spaciousChat,
+    starterSuggestions: [],
+    emptyState: (
+      <ChatEmptyState pageLabel={pageLabel} showHomeStarters={!spaciousChat}>
+        {emptyChatFooter}
+      </ChatEmptyState>
+    ),
+  };
   return (
     <div
       className="workbench-preview flex min-h-0 flex-1 overflow-hidden"
@@ -200,29 +225,9 @@ export function WorkbenchPreview({
                   spaciousChat && emptyChat && !historyOpen ? "clamp(32px, 10vh, 96px)" : undefined,
               }}
             >
-              <ChatContent
-                centerComposer={spaciousChat && emptyChat && !historyOpen}
-                composerIntro={
-                  spaciousChat && emptyChat ? (
-                    <WelcomeIntro
-                      navGroups={navGroups}
-                      historyShortcut={workspaceId ? emptyChatFooter : null}
-                    />
-                  ) : undefined
-                }
-                composerFooter={
-                  spaciousChat && emptyChat && !historyOpen && homeRecents ? (
-                    <div className="w-full">{homeRecents}</div>
-                  ) : undefined
-                }
-                compactComposer={!spaciousChat}
-                starterSuggestions={[]}
-                emptyState={
-                  <ChatEmptyState pageLabel={pageLabel} showHomeStarters={!spaciousChat}>
-                    {emptyChatFooter}
-                  </ChatEmptyState>
-                }
-              />
+              <ChatContentDefaultsContext.Provider value={chatDefaults}>
+                {chatPage ?? <ChatContent />}
+              </ChatContentDefaultsContext.Provider>
             </div>
           </section>
           <WorkbenchContentPane

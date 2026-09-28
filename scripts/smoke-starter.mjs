@@ -327,7 +327,9 @@ async function runBrowserStarterSmoke() {
       throw new Error(`Expected browser title "Foundry UI", got "${title}".`);
     }
 
-    await page.getByText("How can I help you today?").waitFor({ timeout: 10_000 });
+    await page
+      .getByRole("heading", { name: "What would you like to get done?" })
+      .waitFor({ timeout: 10_000 });
     await page.getByRole("button", { name: "Say hello world using the hello_world tool" }).click();
     await page.getByText("Hello from the", { exact: false }).first().waitFor({ timeout: 10_000 });
 

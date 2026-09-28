@@ -1,7 +1,8 @@
 import { Link, MemoryRouter } from "react-router";
 import { Folder, MessageSquare } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useContext, useEffect } from "react";
+import { ChatContentDefaultsContext } from "../../../web-ui/dist/components/chat-content-defaults.js";
 import {
   act,
   cleanup,
@@ -53,24 +54,17 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   UserMenu: () => null,
   useNavStore: (select: (s: unknown) => unknown) => select({ config: state.groups }),
   useNewConversation: () => vi.fn(),
-  ChatContent: ({
-    emptyState,
-    composerIntro,
-    composerFooter,
-    centerComposer,
-  }: {
-    emptyState: ReactNode;
-    composerIntro: ReactNode;
-    composerFooter: ReactNode;
-    centerComposer: boolean;
-  }) => (
-    <>
-      {" "}
-      {state.empty && (centerComposer ? composerIntro : emptyState)}
-      <textarea aria-label="Chat draft" />
-      {composerFooter}
-    </>
-  ),
+  ChatContent: () => {
+    const { emptyState, composerIntro, composerFooter, centerComposer } =
+      useContext(ChatContentDefaultsContext) ?? {};
+    return (
+      <>
+        {state.empty && (centerComposer ? composerIntro : emptyState)}
+        <textarea aria-label="Chat draft" />
+        {composerFooter}
+      </>
+    );
+  },
   ToolPanelLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
   useToolPanelStore: (select: (s: unknown) => unknown) =>
     select({ isOpen: state.panelOpen, closePanel: vi.fn() }),
@@ -80,7 +74,6 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ),
 }));
 import { WorkbenchPreview } from "@iloveagents/foundry-web-ui/workbench";
-import { isWorkbenchPreviewEnabled } from "../runtime-config.ts";
 
 function Editor() {
   useEffect(() => () => state.unmount(), []);
@@ -545,29 +538,6 @@ describe("layout preview", () => {
     expect(state.sidebar.mock.lastCall?.[0].collapsedGroupsOnly).toBe(true);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);
     expect(state.sidebar.mock.lastCall?.[0].hideFooterActions).toBe(false);
-  });
-
-  it("is opt-in, survives local navigation, and restores classic", () => {
-    vi.stubEnv("DEV", true);
-    expect(isWorkbenchPreviewEnabled()).toBe(false);
-    window.history.replaceState({}, "", "/?ux=workbench");
-    expect(isWorkbenchPreviewEnabled()).toBe(true);
-    window.history.replaceState({}, "", "/document");
-    expect(isWorkbenchPreviewEnabled()).toBe(true);
-    window.history.replaceState({}, "", "/?ux=classic");
-    expect(isWorkbenchPreviewEnabled()).toBe(false);
-    vi.stubEnv("DEV", false);
-    window.history.replaceState({}, "", "/?ux=workbench");
-    expect(isWorkbenchPreviewEnabled()).toBe(true);
-  });
-
-  it("honors an explicit preview URL when session storage is unavailable", () => {
-    window.history.replaceState({}, "", "/?ux=workbench");
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new DOMException("blocked");
-    });
-
-    expect(isWorkbenchPreviewEnabled()).toBe(true);
   });
 
   it("preserves unsaved fields and chat drafts when collapsed to a rail", () => {

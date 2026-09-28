@@ -117,7 +117,13 @@ export function ShellApp({
             <Suspense fallback={null}>
               <Routes>
                 <Route
-                  element={<ShellLayout modules={modules} baseThemeLayers={baseThemeLayers} />}
+                  element={
+                    <ShellLayout
+                      modules={modules}
+                      baseThemeLayers={baseThemeLayers}
+                      chatRoutes={mergedPages.filter((p) => p.chatOnly).map((p) => p.path)}
+                    />
+                  }
                 >
                   {mergedPages.map((p) => (
                     <Route

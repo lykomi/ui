@@ -5,8 +5,8 @@
  * rendered. Bypasses bootstrap-shell.tsx (which calls createRoot) and
  * renders ShellApp directly so we can probe React's tree.
  */
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { defineChatModule, type ChatModule, type ShellPage } from "../types.ts";
 
@@ -54,6 +54,23 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   useThemeStore: (selector: (s: any) => unknown) => selector({ mode: "system" }),
 }));
 
+vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
+  WorkbenchPreview: ({
+    page,
+    chatPage,
+    chatOnly,
+  }: {
+    page: ReactNode;
+    chatPage?: ReactNode;
+    chatOnly: boolean;
+  }) => (
+    <div data-testid="workbench" data-chat-only={chatOnly}>
+      {chatPage}
+      {page}
+    </div>
+  ),
+}));
+
 vi.mock("@iloveagents/foundry-web-primitives", () => ({
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
 }));
@@ -77,7 +94,42 @@ const noopAuth: AuthAdapter = {
   Provider: ({ children }) => <>{children}</>,
 };
 
+afterEach(cleanup);
+
 describe("ChatModule bootstrap composition", () => {
+  it("uses the workbench even for an old classic URL", async () => {
+    window.history.replaceState({}, "", "/?ux=classic");
+    render(
+      <ShellApp
+        modules={[]}
+        pages={[{ path: "/", element: <div>home</div> }]}
+        baseThemeLayers={[]}
+        authProvider={noopAuth}
+        agentFetch={fetch}
+      />,
+    );
+    const workbench = await screen.findByTestId("workbench");
+    expect(workbench.getAttribute("data-chat-only")).toBe("true");
+    expect(screen.getByText("home")).toBeTruthy();
+    expect(screen.queryByTestId("sidebar")).toBeNull();
+  });
+
+  it("renders a marked chat route in the chat pane without a persistence module", async () => {
+    window.history.replaceState({}, "", "/chat/starter-thread");
+    render(
+      <ShellApp
+        modules={[]}
+        pages={[{ path: "chat/:id", element: <div>resumed chat</div>, chatOnly: true }]}
+        baseThemeLayers={[]}
+        authProvider={noopAuth}
+        agentFetch={fetch}
+      />,
+    );
+    const workbench = await screen.findByTestId("workbench");
+    expect(workbench.getAttribute("data-chat-only")).toBe("true");
+    expect(screen.getByText("resumed chat")).toBeTruthy();
+  });
+
   it("calls every extension point when ShellApp renders", async () => {
     const useInit = vi.fn();
     const useThemeLayers = vi.fn(() => []);
@@ -89,17 +141,17 @@ describe("ChatModule bootstrap composition", () => {
     }
 
     const homePage: ShellPage = {
-      path: "/",
+      path: "elsewhere",
       element: <div data-testid="home-page">home</div>,
     };
 
     const moduleHome: ShellPage = {
-      path: "/",
+      path: "elsewhere",
       element: <div data-testid="module-home">module home</div>,
     };
 
     const modulePage: ShellPage = {
-      path: "elsewhere",
+      path: "other",
       element: <div data-testid="module-page">module elsewhere</div>,
     };
 
@@ -113,6 +165,7 @@ describe("ChatModule bootstrap composition", () => {
       pages: [moduleHome, modulePage],
     });
 
+    window.history.replaceState({}, "", "/elsewhere");
     render(
       <ShellApp
         modules={[m]}
@@ -139,8 +192,8 @@ describe("ChatModule bootstrap composition", () => {
     // Layout extra rendered.
     expect(screen.getByTestId("layout-extra-marker")).toBeTruthy();
 
-    // Customer page wins on path collision (/ resolves to home-page, not module-home).
-    expect(screen.getByTestId("home-page")).toBeTruthy();
+    // Customer page wins on path collision (/elsewhere resolves to home-page, not module-home).
+    await waitFor(() => expect(screen.getByTestId("home-page")).toBeTruthy());
     expect(screen.queryByTestId("module-home")).toBeNull();
   });
 

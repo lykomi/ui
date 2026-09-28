@@ -79,6 +79,10 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   useThemeStore: (selector: (s: any) => unknown) => selector({ mode: "system" }),
 }));
 
+vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
+  WorkbenchPreview: ({ page }: { page: ReactNode }) => <>{page}</>,
+}));
+
 vi.mock("@iloveagents/foundry-web-primitives", () => ({
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
 }));
@@ -113,7 +117,7 @@ describe("Shell wrapper ordering contract", () => {
     });
 
     const homePage: ShellPage = {
-      path: "/",
+      path: "elsewhere",
       element: <RouteProbe />,
     };
 
@@ -130,6 +134,7 @@ describe("Shell wrapper ordering contract", () => {
       ),
     };
 
+    window.history.replaceState({}, "", "/elsewhere");
     render(
       <ShellApp
         modules={[m]}

@@ -17,5 +17,5 @@ export const customerPages: ShellPage[] = [
   // ChatPage itself is URL-agnostic; foundry-ui's
   // ChatConversationAwareRuntime reads the thread id from the URL via
   // `CHAT_PATH_PATTERN` in spaces-web-ui's `chat-conversation-config`.
-  { path: "chat/:id", element: <ChatPage /> },
+  { path: "chat/:id", element: <ChatPage />, chatOnly: true },
 ];

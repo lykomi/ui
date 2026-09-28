@@ -91,6 +91,8 @@ export interface ChatConversationConfig {
 export interface ShellPage {
   path: string;
   element: ReactNode;
+  /** Render this page in the workbench chat pane, without a content pane. */
+  chatOnly?: boolean;
 }
 
 /**
