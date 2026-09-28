@@ -85,9 +85,7 @@ it("posts the client-tool continuation and finishes the turn while the tab is hi
       const messages = state.thread.messages;
       const message = messages[messages.length - 1];
       if (!message || message.role !== "assistant") return "";
-      return message.content
-        .map((part) => (part.type === "text" ? part.text : ""))
-        .join("");
+      return message.content.map((part) => (part.type === "text" ? part.text : "")).join("");
     });
     return <output data-running={String(running)}>{last}</output>;
   }
