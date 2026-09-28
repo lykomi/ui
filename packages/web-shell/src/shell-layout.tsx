@@ -94,7 +94,8 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
     });
   }, [pathname, search, navConfig, setCurrentPage, setNavContext]);
 
-  // Page content stays mounted in the workbench while chat opens and closes.
+  // Routed chat pages supply their own ChatContent and any page-specific hooks.
+  // Other pages stay mounted in the content pane while chat opens and closes.
   const page = <Outlet />;
 
   const layoutExtras: ReactNode[] = [];
@@ -110,7 +111,11 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
         <ThemeDocumentMetadata />
         {layoutExtras}
         <Suspense fallback={null}>
-          <WorkbenchPreview page={isChatRoute ? null : page} chatOnly={isChatRoute} />
+          <WorkbenchPreview
+            page={isChatRoute ? null : page}
+            chatPage={isChatRoute ? page : undefined}
+            chatOnly={isChatRoute}
+          />
         </Suspense>
         <GlobalSelectionPopover />
       </ThemeScope>

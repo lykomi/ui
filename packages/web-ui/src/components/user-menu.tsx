@@ -23,6 +23,8 @@ export const UserMenu: FC = () => {
   );
   const toggles = useNavStore((s) => s.userMenuToggles);
 
+  if (!user && toggles.length === 0) return null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

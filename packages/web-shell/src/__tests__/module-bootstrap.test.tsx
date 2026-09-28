@@ -55,8 +55,17 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
 }));
 
 vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
-  WorkbenchPreview: ({ page, chatOnly }: { page: ReactNode; chatOnly: boolean }) => (
+  WorkbenchPreview: ({
+    page,
+    chatPage,
+    chatOnly,
+  }: {
+    page: ReactNode;
+    chatPage?: ReactNode;
+    chatOnly: boolean;
+  }) => (
     <div data-testid="workbench" data-chat-only={chatOnly}>
+      {chatPage}
       {page}
     </div>
   ),
@@ -99,6 +108,7 @@ describe("ChatModule bootstrap composition", () => {
     );
     const workbench = await screen.findByTestId("workbench");
     expect(workbench.getAttribute("data-chat-only")).toBe("true");
+    expect(screen.getByText("home")).toBeTruthy();
     expect(screen.queryByTestId("sidebar")).toBeNull();
   });
 

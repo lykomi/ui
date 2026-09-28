@@ -1,7 +1,8 @@
 import { Link, MemoryRouter } from "react-router";
 import { Folder, MessageSquare } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useContext, useEffect } from "react";
+import { ChatContentDefaultsContext } from "../../../web-ui/dist/components/chat-content-defaults.js";
 import {
   act,
   cleanup,
@@ -53,24 +54,17 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   UserMenu: () => null,
   useNavStore: (select: (s: unknown) => unknown) => select({ config: state.groups }),
   useNewConversation: () => vi.fn(),
-  ChatContent: ({
-    emptyState,
-    composerIntro,
-    composerFooter,
-    centerComposer,
-  }: {
-    emptyState: ReactNode;
-    composerIntro: ReactNode;
-    composerFooter: ReactNode;
-    centerComposer: boolean;
-  }) => (
-    <>
-      {" "}
-      {state.empty && (centerComposer ? composerIntro : emptyState)}
-      <textarea aria-label="Chat draft" />
-      {composerFooter}
-    </>
-  ),
+  ChatContent: () => {
+    const { emptyState, composerIntro, composerFooter, centerComposer } =
+      useContext(ChatContentDefaultsContext) ?? {};
+    return (
+      <>
+        {state.empty && (centerComposer ? composerIntro : emptyState)}
+        <textarea aria-label="Chat draft" />
+        {composerFooter}
+      </>
+    );
+  },
   ToolPanelLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
   useToolPanelStore: (select: (s: unknown) => unknown) =>
     select({ isOpen: state.panelOpen, closePanel: vi.fn() }),

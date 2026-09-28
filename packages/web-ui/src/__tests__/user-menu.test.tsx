@@ -12,14 +12,14 @@ afterEach(() => {
 });
 
 describe("UserMenu", () => {
-  it("keeps the UI chooser available with a custom auth adapter", async () => {
+  it("hides the menu when there is no user or toggle", async () => {
     const host = document.createElement("div");
     document.body.append(host);
     const root = createRoot(host);
 
     await act(async () => root.render(<UserMenu />));
 
-    expect(host.querySelector('[aria-label="Interface menu"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="Interface menu"]')).toBeNull();
     await act(async () => root.unmount());
   });
 

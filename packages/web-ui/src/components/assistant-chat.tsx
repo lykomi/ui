@@ -1,5 +1,14 @@
 import { ComposerInput } from "./composer-input.tsx";
-import { type FC, type ReactNode, useState, useRef, useCallback, useEffect } from "react";
+import {
+  type FC,
+  type ReactNode,
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useContext,
+} from "react";
+import { ChatContentDefaultsContext } from "./chat-content-defaults.ts";
 import {
   ThreadPrimitive,
   ComposerPrimitive,
@@ -420,15 +429,17 @@ export const DEFAULT_COMPOSER_PLACEHOLDER = "Do anything";
  * Reusable chat content — used by ChatPage and ChatBubble.
  * Renders inside a ThreadPrimitive.Root context.
  */
-export function ChatContent({
-  centerComposer = false,
-  composerIntro,
-  composerFooter,
-  compactComposer = false,
-  emptyState,
-  starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
-  placeholder = DEFAULT_COMPOSER_PLACEHOLDER,
-}: ChatContentProps = {}) {
+export function ChatContent(props: ChatContentProps = {}) {
+  const defaults = useContext(ChatContentDefaultsContext);
+  const {
+    centerComposer = false,
+    composerIntro,
+    composerFooter,
+    compactComposer = false,
+    emptyState,
+    starterSuggestions = DEFAULT_STARTER_SUGGESTIONS,
+    placeholder = DEFAULT_COMPOSER_PLACEHOLDER,
+  } = { ...defaults, ...props };
   const ThreadSurface = useChatThreadSurface();
   const hideComposer = useChatSlotsStore((s) => !!s.threadSurface && s.threadSurfaceHidesComposer);
   const isExpanded = useChatBubbleStore((s) => s.isExpanded);
@@ -491,7 +502,22 @@ export function ChatContent({
             aria-hidden={ThreadSurface ? true : undefined}
           >
             <ThreadPrimitive.Empty>
-              {emptyState ?? (
+              {emptyState ? (
+                <>
+                  {emptyState}
+                  {starterSuggestions.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-2 px-4 pb-4">
+                      {starterSuggestions.map((prompt) => (
+                        <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
+                          <Button variant="outline" className="text-sm">
+                            {prompt}
+                          </Button>
+                        </ThreadPrimitive.Suggestion>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
                 <div
                   className={cn("flex min-h-full flex-col", "items-center justify-center", "px-4")}
                 >
