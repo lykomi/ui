@@ -5,8 +5,8 @@
  * rendered. Bypasses bootstrap-shell.tsx (which calls createRoot) and
  * renders ShellApp directly so we can probe React's tree.
  */
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { defineChatModule, type ChatModule, type ShellPage } from "../types.ts";
 
@@ -94,6 +94,8 @@ const noopAuth: AuthAdapter = {
   Provider: ({ children }) => <>{children}</>,
 };
 
+afterEach(cleanup);
+
 describe("ChatModule bootstrap composition", () => {
   it("uses the workbench even for an old classic URL", async () => {
     window.history.replaceState({}, "", "/?ux=classic");
@@ -110,6 +112,22 @@ describe("ChatModule bootstrap composition", () => {
     expect(workbench.getAttribute("data-chat-only")).toBe("true");
     expect(screen.getByText("home")).toBeTruthy();
     expect(screen.queryByTestId("sidebar")).toBeNull();
+  });
+
+  it("renders a marked chat route in the chat pane without a persistence module", async () => {
+    window.history.replaceState({}, "", "/chat/starter-thread");
+    render(
+      <ShellApp
+        modules={[]}
+        pages={[{ path: "chat/:id", element: <div>resumed chat</div>, chatOnly: true }]}
+        baseThemeLayers={[]}
+        authProvider={noopAuth}
+        agentFetch={fetch}
+      />,
+    );
+    const workbench = await screen.findByTestId("workbench");
+    expect(workbench.getAttribute("data-chat-only")).toBe("true");
+    expect(screen.getByText("resumed chat")).toBeTruthy();
   });
 
   it("calls every extension point when ShellApp renders", async () => {

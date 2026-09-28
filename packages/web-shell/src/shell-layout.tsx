@@ -1,5 +1,5 @@
 import { type ReactNode, lazy, Suspense, useEffect, useRef } from "react";
-import { Outlet, useLocation } from "react-router";
+import { matchPath, Outlet, useLocation } from "react-router";
 import {
   ThemeDocumentMetadata,
   ThemeRuntimeProvider,
@@ -21,6 +21,7 @@ const WorkbenchPreview = lazy(() =>
 interface ShellLayoutProps {
   modules: ChatModule[];
   baseThemeLayers: ThemeLayer[];
+  chatRoutes: string[];
 }
 
 /**
@@ -34,7 +35,7 @@ interface ShellLayoutProps {
  * The shell knows nothing about Spaces — `useSpacesInit`, dialogs, banners
  * all flow through the module protocol.
  */
-export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
+export function ShellLayout({ modules, baseThemeLayers, chatRoutes }: ShellLayoutProps) {
   // Module init hooks — called in registration order. Rules-of-hooks
   // require a stable count, so module additions/removals across renders
   // are forbidden (ChatModule[] is meant to be a static prop).
@@ -57,6 +58,9 @@ export function ShellLayout({ modules, baseThemeLayers }: ShellLayoutProps) {
   const { pathname, search } = useLocation();
   const isChatRoute =
     pathname === "/" ||
+    chatRoutes.some((path) =>
+      matchPath({ path: path.startsWith("/") ? path : `/${path}`, end: true }, pathname),
+    ) ||
     modules.some((m) => {
       const pattern = m.chatConversation?.pathPattern;
       if (!pattern) return false;

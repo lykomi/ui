@@ -29,7 +29,7 @@ import { bootstrapShell, defineChatModule, type ChatModule } from "@iloveagents/
 - `layoutExtras?: ReactNode` — rendered inside the layout (banners, dialogs, popovers).
 - `wrappers?: ComponentType<{ children }>[]` — applied outer→inner from array.
 - `useThemeLayers?: () => ThemeLayer[]` — hook returning theme layers; merged on top of static `theme` prop.
-- `pages?: { path; element }[]` — appended to Routes; customer `pages` win on path collision. (Sidebar nav items are mutated via `useNavStore.getState().setConfig(...)` inside `useInit` — see Spaces' `useSpacesNavSync` for the pattern.)
+- `pages?: { path; element; chatOnly? }[]` — appended to Routes; mark non-root chat pages with `chatOnly: true` so they render in the chat pane even without a persistence module. Customer `pages` win on path collision. (Sidebar nav items are mutated via `useNavStore.getState().setConfig(...)` inside `useInit` — see Spaces' `useSpacesNavSync` for the pattern.)
 - `fetchInterceptor?: () => void` — installed before `createRoot` (use to install global fetch wrappers).
 - `chatConversation?: ChatConversationConfig` — URL-driven chat persistence: `pathPattern` (regex capturing the conversation id), optional `useStickyConversationId()` (keeps the chat runtime alive across non-chat navigation), and `buildHistoryAdapter({ urlMatch, aguiThreadId })` returning an assistant-ui `ThreadHistoryAdapter`. Selection order: URL match → first registered config (fresh chats persist too) → none (legacy in-memory mode). Full contract: `src/types.ts`.
 
