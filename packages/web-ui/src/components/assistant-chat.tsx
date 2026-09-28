@@ -502,7 +502,7 @@ export function ChatContent(props: ChatContentProps = {}) {
             aria-hidden={ThreadSurface ? true : undefined}
           >
             <ThreadPrimitive.Empty>
-              {emptyState ? (
+              {emptyState != null ? (
                 <>
                   {emptyState}
                   {!centerComposer && starterSuggestions.length > 0 && (
