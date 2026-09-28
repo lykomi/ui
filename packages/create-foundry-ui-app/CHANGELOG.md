@@ -1,5 +1,18 @@
 # create-foundry-ui-app
 
+## 0.8.20
+
+### Patch Changes
+
+- Release the starter with the updated Foundry package pins:
+
+  - @iloveagents/foundry-agent: 0.34.0 → 0.35.0
+  - @iloveagents/foundry-web-primitives: 0.34.0 → 0.35.0
+  - @iloveagents/foundry-web-shell: 0.34.0 → 0.35.0
+  - @iloveagents/foundry-web-ui: 0.34.0 → 0.35.0
+  - @iloveagents/foundry-web-voice: 0.1.16 → 0.1.17
+  - @iloveagents/foundry-web-graph: 0.2.10 → 0.2.11
+
 ## 0.8.19
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.35.0
+
+### Minor Changes
+
+- ef38375: Make the workbench the only shell layout and remove the classic UI switch.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.35.0
+- @iloveagents/foundry-web-primitives@0.35.0
+
 ## 0.34.0
 
 ### Minor Changes
