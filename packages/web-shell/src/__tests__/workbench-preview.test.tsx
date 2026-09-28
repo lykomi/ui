@@ -80,7 +80,6 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ),
 }));
 import { WorkbenchPreview } from "@iloveagents/foundry-web-ui/workbench";
-import { isWorkbenchPreviewEnabled } from "../runtime-config.ts";
 
 function Editor() {
   useEffect(() => () => state.unmount(), []);
@@ -545,29 +544,6 @@ describe("layout preview", () => {
     expect(state.sidebar.mock.lastCall?.[0].collapsedGroupsOnly).toBe(true);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);
     expect(state.sidebar.mock.lastCall?.[0].hideFooterActions).toBe(false);
-  });
-
-  it("is opt-in, survives local navigation, and restores classic", () => {
-    vi.stubEnv("DEV", true);
-    expect(isWorkbenchPreviewEnabled()).toBe(false);
-    window.history.replaceState({}, "", "/?ux=workbench");
-    expect(isWorkbenchPreviewEnabled()).toBe(true);
-    window.history.replaceState({}, "", "/document");
-    expect(isWorkbenchPreviewEnabled()).toBe(true);
-    window.history.replaceState({}, "", "/?ux=classic");
-    expect(isWorkbenchPreviewEnabled()).toBe(false);
-    vi.stubEnv("DEV", false);
-    window.history.replaceState({}, "", "/?ux=workbench");
-    expect(isWorkbenchPreviewEnabled()).toBe(true);
-  });
-
-  it("honors an explicit preview URL when session storage is unavailable", () => {
-    window.history.replaceState({}, "", "/?ux=workbench");
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new DOMException("blocked");
-    });
-
-    expect(isWorkbenchPreviewEnabled()).toBe(true);
   });
 
   it("preserves unsaved fields and chat drafts when collapsed to a rail", () => {

@@ -9,12 +9,11 @@ src/
   index.ts                 ← public barrel (bootstrapShell, ChatModule, defineChatModule, types)
   bootstrap-shell.tsx      ← entry point: installs fetch interceptors, calls createRoot
   shell-app.tsx            ← <BrowserRouter> → AuthProvider → [wrappers outer→inner] → AGUIRuntimeProvider → {toolUIs} → Suspense → Routes
-  shell-layout.tsx         ← generic layout (Sidebar + ChatHeader + ToolPanelLayout + ChatBubble + GlobalSelectionPopover + module layoutExtras)
+  shell-layout.tsx         ← generic workbench layout (WorkbenchPreview + GlobalSelectionPopover + module layoutExtras)
   types.ts                 ← ChatModule, ChatConversationConfig, ShellPage, AuthAdapter, BootstrapShellOptions
   auth-default.tsx         ← default authProvider (wraps @iloveagents/foundry-web-ui's AuthProvider; reads MsalAuthConfig from import.meta.env)
   service-fetch-default.ts ← default fetchFn (createServiceFetch + tokenFetch wiring)
   runtime-config.ts        ← runtime config resolution helpers
-  use-page-panel-width.ts  ← drag-to-resize chat/content split (persisted)
 ```
 
 # Public API

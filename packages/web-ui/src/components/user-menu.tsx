@@ -23,16 +23,6 @@ export const UserMenu: FC = () => {
   );
   const toggles = useNavStore((s) => s.userMenuToggles);
 
-  let preview = false;
-  try {
-    const choice = new URLSearchParams(window.location.search).get("ux");
-    preview =
-      choice === "workbench" ||
-      (choice !== "classic" && sessionStorage.getItem("foundry.workbench-preview") === "on");
-  } catch {
-    /* Storage may be unavailable in embedded browsers. */
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -81,17 +71,6 @@ export const UserMenu: FC = () => {
             {toggle.label}
           </DropdownMenuCheckboxItem>
         ))}
-        <DropdownMenuCheckboxItem
-          checked={preview}
-          onCheckedChange={(enabled) => {
-            const url = new URL(window.location.href);
-            url.searchParams.set("ux", enabled ? "workbench" : "classic");
-            window.location.assign(url.href);
-          }}
-        >
-          UI preview
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuSeparator />
         {user && (
           <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
             <LogOut className="size-4" />

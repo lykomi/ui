@@ -49,6 +49,10 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   useThemeStore: (selector: (s: any) => unknown) => selector({ mode: "system" }),
 }));
 
+vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
+  WorkbenchPreview: ({ page }: { page: ReactNode }) => <>{page}</>,
+}));
+
 vi.mock("@iloveagents/foundry-web-primitives", () => ({
   cn: (...c: unknown[]) => c.filter(Boolean).join(" "),
 }));

@@ -54,6 +54,10 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   useThemeStore: (selector: (s: any) => unknown) => selector({ mode: "system" }),
 }));
 
+vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
+  WorkbenchPreview: ({ page }: { page: ReactNode }) => <>{page}</>,
+}));
+
 vi.mock("@iloveagents/foundry-web-primitives", () => ({
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
 }));
@@ -89,17 +93,17 @@ describe("ChatModule bootstrap composition", () => {
     }
 
     const homePage: ShellPage = {
-      path: "/",
+      path: "elsewhere",
       element: <div data-testid="home-page">home</div>,
     };
 
     const moduleHome: ShellPage = {
-      path: "/",
+      path: "elsewhere",
       element: <div data-testid="module-home">module home</div>,
     };
 
     const modulePage: ShellPage = {
-      path: "elsewhere",
+      path: "other",
       element: <div data-testid="module-page">module elsewhere</div>,
     };
 
@@ -113,6 +117,7 @@ describe("ChatModule bootstrap composition", () => {
       pages: [moduleHome, modulePage],
     });
 
+    window.history.replaceState({}, "", "/elsewhere");
     render(
       <ShellApp
         modules={[m]}
@@ -139,8 +144,8 @@ describe("ChatModule bootstrap composition", () => {
     // Layout extra rendered.
     expect(screen.getByTestId("layout-extra-marker")).toBeTruthy();
 
-    // Customer page wins on path collision (/ resolves to home-page, not module-home).
-    expect(screen.getByTestId("home-page")).toBeTruthy();
+    // Customer page wins on path collision (/elsewhere resolves to home-page, not module-home).
+    await waitFor(() => expect(screen.getByTestId("home-page")).toBeTruthy());
     expect(screen.queryByTestId("module-home")).toBeNull();
   });
 
