@@ -55,7 +55,11 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
 }));
 
 vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
-  WorkbenchPreview: ({ page }: { page: ReactNode }) => <>{page}</>,
+  WorkbenchPreview: ({ page, chatOnly }: { page: ReactNode; chatOnly: boolean }) => (
+    <div data-testid="workbench" data-chat-only={chatOnly}>
+      {page}
+    </div>
+  ),
 }));
 
 vi.mock("@iloveagents/foundry-web-primitives", () => ({
@@ -82,6 +86,22 @@ const noopAuth: AuthAdapter = {
 };
 
 describe("ChatModule bootstrap composition", () => {
+  it("uses the workbench even for an old classic URL", async () => {
+    window.history.replaceState({}, "", "/?ux=classic");
+    render(
+      <ShellApp
+        modules={[]}
+        pages={[{ path: "/", element: <div>home</div> }]}
+        baseThemeLayers={[]}
+        authProvider={noopAuth}
+        agentFetch={fetch}
+      />,
+    );
+    const workbench = await screen.findByTestId("workbench");
+    expect(workbench.getAttribute("data-chat-only")).toBe("true");
+    expect(screen.queryByTestId("sidebar")).toBeNull();
+  });
+
   it("calls every extension point when ShellApp renders", async () => {
     const useInit = vi.fn();
     const useThemeLayers = vi.fn(() => []);
