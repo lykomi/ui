@@ -505,7 +505,7 @@ export function ChatContent(props: ChatContentProps = {}) {
               {emptyState ? (
                 <>
                   {emptyState}
-                  {starterSuggestions.length > 0 && (
+                  {!centerComposer && starterSuggestions.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 px-4 pb-4">
                       {starterSuggestions.map((prompt) => (
                         <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
@@ -580,6 +580,19 @@ export function ChatContent(props: ChatContentProps = {}) {
         >
           {composerIntro && !ThreadSurface && (
             <div className="mx-auto max-w-3xl px-4 pt-4">{composerIntro}</div>
+          )}
+          {centerComposer && starterSuggestions.length > 0 && !ThreadSurface && (
+            <ThreadPrimitive.Empty>
+              <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2 px-4 pb-4">
+                {starterSuggestions.map((prompt) => (
+                  <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send asChild>
+                    <Button variant="outline" className="text-sm">
+                      {prompt}
+                    </Button>
+                  </ThreadPrimitive.Suggestion>
+                ))}
+              </div>
+            </ThreadPrimitive.Empty>
           )}
           <ChatComposerBannerSlot />
           <ThreadPrimitive.If running={false}>
