@@ -205,6 +205,7 @@ export function describeNode(node: GraphNode, caption: string): string {
 }
 
 export function describeEdge(edge: GraphEdge): string {
-  return edge.type ?? "RELATED";
+  const type = edge.type ?? "RELATED";
+  return edge.caption && edge.caption !== type ? `${edge.caption} (${type})` : type;
 }
 export { buildLabelColors as __buildLabelColorsForTest };

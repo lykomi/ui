@@ -8,7 +8,7 @@ import {
   type Ref,
 } from "react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
-import { primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
+import { edgeCaption, primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
 import {
   paintEdgeLabel,
   paintNode,
@@ -618,7 +618,7 @@ export function GraphCanvas({
       // Only worth drawing while the graph is sparse enough to read.
       if (model.links.length > 300) return;
       if (!captioned.has(`${EDGE_LABEL_PREFIX}${(link as EngineLink).id}`)) return;
-      paintEdgeLabel(link, (link as EngineLink).type ?? "", theme, ctx, globalScale);
+      paintEdgeLabel(link, edgeCaption(link as EngineLink), theme, ctx, globalScale);
     },
     [model.links.length, theme, captioned],
   );

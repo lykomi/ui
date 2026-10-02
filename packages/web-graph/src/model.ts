@@ -35,8 +35,12 @@ export interface GraphEdge {
   source: string;
   /** {@link GraphNode.id} of the edge's destination. */
   target: string;
-  /** Relationship type — drawn along the edge and used for legend grouping. */
+  /** Relationship type — used for legend grouping, and drawn along the edge
+   * when it has no {@link GraphEdge.caption}. */
   type?: string;
+  /** What the edge says ("replaces 9.1"), drawn along it in place of its type.
+   * The type still groups and filters it. */
+  caption?: string;
   properties?: Record<string, unknown>;
 }
 
@@ -112,7 +116,13 @@ const isEdge = (value: unknown): value is GraphEdge =>
   typeof value.source === "string" &&
   typeof value.target === "string" &&
   (value.type === undefined || typeof value.type === "string") &&
+  (value.caption === undefined || typeof value.caption === "string") &&
   (value.properties === undefined || isRecord(value.properties));
+
+/** What to draw along an edge: its caption, else its type. */
+export function edgeCaption(edge: Pick<GraphEdge, "caption" | "type">): string {
+  return edge.caption || edge.type || "RELATED";
+}
 
 /**
  * Structural check. Strict on the discriminator — an arbitrary object that

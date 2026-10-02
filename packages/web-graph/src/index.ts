@@ -18,6 +18,7 @@ export {
   primaryLabel,
   pruneDanglingEdges,
   resolveCaption,
+  edgeCaption,
   type GraphEdge,
   type GraphNode,
   type GraphPayload,

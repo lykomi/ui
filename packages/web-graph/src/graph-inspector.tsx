@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Maximize2, Snowflake, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
+  edgeCaption,
   primaryLabel,
   resolveCaption,
   safeStringify,
@@ -284,6 +285,6 @@ export function GraphInspector({
 
   function headingOf(): string {
     if (node) return captionOf(node) || resolveCaption(node);
-    return edge?.type ?? "RELATED";
+    return edge ? edgeCaption(edge) : "RELATED";
   }
 }
