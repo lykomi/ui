@@ -2,7 +2,14 @@ import { graphViewSummary } from "../graph-view-summary.ts";
 import { useGraphSurfaceVisible } from "./use-graph-surface-visible.ts";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
-import { edgeCaption, hasOwn, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
+import {
+  edgeCaption,
+  hasOwn,
+  jsonSafe,
+  primaryLabel,
+  resolveCaption,
+  type GraphNode,
+} from "../model.ts";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
 import {
@@ -148,6 +155,10 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
                 view.selection,
                 workspace.payload?.legend?.[primaryLabel(view.selection)]?.captionKey,
               ),
+              // What the drawer shows first is what "this" refers to.
+              ...(view.selection.details?.length
+                ? { details: jsonSafe(view.selection.details) }
+                : {}),
             }
           : null,
         selectedRelationship: view.selectedEdge
@@ -157,6 +168,9 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
               target: view.selectedEdge.target,
               type: view.selectedEdge.type,
               caption: edgeCaption(view.selectedEdge),
+              ...(view.selectedEdge.details?.length
+                ? { details: jsonSafe(view.selectedEdge.details) }
+                : {}),
             }
           : null,
         inspectTool: "graph_get_view",
