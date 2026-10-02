@@ -90,7 +90,9 @@ export function GraphTable({
             const degree = degrees.get(node.id) ?? 0;
             return (
               <tr key={node.id} className="border-border/60 border-b last:border-0">
-                <td className="text-muted-foreground px-2 py-1">{primaryLabel(node)}</td>
+                <td className="text-muted-foreground px-2 py-1" title={primaryLabel(node)}>
+                  {styleMap.nameForLabel(primaryLabel(node))}
+                </td>
                 <td className="px-2 py-1">
                   {onSelectNode ? (
                     <button
