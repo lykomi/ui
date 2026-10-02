@@ -1,8 +1,8 @@
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useMemo } from "react";
-import { edgeCaption, primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
+import { primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
 import { endpointId, type GraphModel } from "./use-graph-model.ts";
-import type { GraphStyleMap } from "./use-graph-styling.ts";
+import { describeEdge, type GraphStyleMap } from "./use-graph-styling.ts";
 
 export interface GraphTableProps {
   model: GraphModel;
@@ -151,10 +151,10 @@ export function GraphTable({
                       }
                       className="hover:text-foreground focus-visible:ring-ring rounded text-left underline decoration-dotted underline-offset-2 focus-visible:outline-none focus-visible:ring-1"
                     >
-                      {edgeCaption(link)}
+                      {describeEdge(link)}
                     </button>
                   ) : (
-                    edgeCaption(link)
+                    describeEdge(link)
                   )}
                 </td>
                 <td className="px-2 py-1">{captionFor(endpointId(link.target))}</td>

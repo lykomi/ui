@@ -3,6 +3,7 @@ import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-a
 import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
 import {
   coerceGraphPayload,
+  edgeCaption,
   hasOwn,
   mergeGraphPayloads,
   primaryLabel,
@@ -40,6 +41,8 @@ const describe = (node: GraphNode, legend?: GraphPayload["legend"]) => {
     id: node.id,
     labels: node.labels ?? [],
     caption: resolveCaption(node, captionKey),
+    // What the user reads in the drawer, so a question about it has it.
+    ...(node.details?.length ? { details: node.details } : {}),
     properties: node.properties ?? {},
   };
 };
@@ -258,6 +261,8 @@ const getView: ClientToolEntry = {
         ? {
             id: view.selectedEdge.id,
             type: view.selectedEdge.type ?? "RELATED",
+            caption: edgeCaption(view.selectedEdge),
+            ...(view.selectedEdge.details?.length ? { details: view.selectedEdge.details } : {}),
             source: view.selectedEdge.source,
             target: view.selectedEdge.target,
             properties: view.selectedEdge.properties ?? {},

@@ -59,6 +59,15 @@ function matchNodes(
       out.add(node.id);
       continue;
     }
+    // What the inspector shows first is what a person searches for.
+    if (
+      node.details?.some(
+        (d) => d.label.toLowerCase().includes(needle) || d.value.toLowerCase().includes(needle),
+      )
+    ) {
+      out.add(node.id);
+      continue;
+    }
     for (const value of Object.values(node.properties ?? {})) {
       if (value == null) continue;
       if (String(value).toLowerCase().includes(needle)) {

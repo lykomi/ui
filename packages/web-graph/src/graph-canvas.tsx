@@ -477,8 +477,9 @@ export function GraphCanvas({
     // captions as readily as captions overlap each other, and a `DIRECTED` you
     // cannot read is a smaller loss than a `Metropolis` you cannot read.
     for (const link of model.links) {
-      const type = (link as EngineLink).type;
-      if (!type) continue;
+      // What is painted is what is measured: the caption when there is one.
+      const text = (link as EngineLink).caption || (link as EngineLink).type;
+      if (!text) continue;
       const source = screens.get(String((link.source as EngineNode)?.id ?? link.source));
       const target = screens.get(String((link.target as EngineNode)?.id ?? link.target));
       if (!source || !target) continue;
@@ -486,7 +487,7 @@ export function GraphCanvas({
       const targetId = String((link.target as EngineNode)?.id ?? link.target);
       candidates.push({
         id: `${EDGE_LABEL_PREFIX}${(link as EngineLink).id}`,
-        rect: edgeLabelRect(source.x, source.y, target.x, target.y, measureEdge(type)),
+        rect: edgeLabelRect(source.x, source.y, target.x, target.y, measureEdge(text)),
         tier: LabelTier.Edge,
         weight: 0,
         exempt: [sourceId, targetId],

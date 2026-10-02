@@ -83,3 +83,21 @@ describe("curated details", () => {
     expect(text).not.toContain("EomiDerived");
   });
 });
+
+describe("details follow the data", () => {
+  it("refreshes a kept node's details, and search finds their text", async () => {
+    const { reconcileGraphModel } = await import("../use-graph-model.ts");
+    const { __matchNodesForTest } = await import("../use-graph-view-state.ts");
+    const payload = (value: string) => ({
+      kind: GRAPH_PAYLOAD_KIND,
+      version: GRAPH_PAYLOAD_VERSION,
+      nodes: [{ id: "a", details: [{ label: "Quote", value }] }],
+      edges: [],
+    });
+    const first = reconcileGraphModel(payload("old words"), new Map());
+    const second = reconcileGraphModel(payload("new words"), first.cache);
+
+    expect(second.model.nodes[0].details?.[0].value).toBe("new words");
+    expect(__matchNodesForTest(second.model.nodes, "new wor", () => "")).toEqual(new Set(["a"]));
+  });
+});

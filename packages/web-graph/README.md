@@ -145,6 +145,7 @@ interface GraphPayload {
     id: string;
     labels?: string[];
     caption?: string;
+    details?: GraphDetail[];
     properties?: Record<string, unknown>;
   }[];
   edges: {
@@ -152,6 +153,8 @@ interface GraphPayload {
     source: string;
     target: string;
     type?: string;
+    caption?: string; // drawn in place of `type`, which still groups and filters
+    details?: GraphDetail[];
     properties?: Record<string, unknown>;
   }[];
   truncated?: boolean;
@@ -159,6 +162,22 @@ interface GraphPayload {
   legend?: Record<string, { color?: string; captionKey?: string }>;
 }
 ```
+
+```ts
+interface GraphDetail {
+  label: string; // "Quote", "Status"
+  value: string;
+  href?: string; // opened in a new tab; http(s) or a same-origin path only
+}
+```
+
+`details` are what a person should read about a node or edge, curated by the
+producer. The inspector shows them first, links opening in a new tab, and keeps
+the raw `properties` and secondary labels in a collapsed **Advanced** section;
+the hover shows them instead of the first properties; search matches them; the
+agent receives them with the selection. Without details everything shows the
+properties as before. An edge's `caption` is what it says ("replaces 9.1"),
+drawn along it in place of its `type`; the table and inspector show both.
 
 `kind` and `version` are what let a tool card look at an arbitrary result and
 decide whether to render it. `isGraphPayload` checks both strictly;

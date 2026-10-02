@@ -269,7 +269,8 @@ export function GraphInspector({
               </p>
             ) : (
               <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.14em]">
-                Relationship
+                {/* The type beside the caption the heading shows, for every reader. */}
+                {edge?.type ? `Relationship · ${edge.type}` : "Relationship"}
               </p>
             )}
             <h2 className="text-foreground truncate text-base font-semibold" title={headingOf()}>

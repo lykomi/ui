@@ -176,6 +176,7 @@ export function reconcileGraphModel(
         // those belong to the simulation, not to the payload.
         existing.labels = node.labels;
         existing.caption = node.caption;
+        existing.details = node.details;
         existing.properties = node.properties;
         next.set(node.id, existing);
         return existing;

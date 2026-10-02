@@ -204,7 +204,7 @@ export function describeNode(node: GraphNode, caption: string): string {
   return `${labels} — ${caption}`;
 }
 
-export function describeEdge(edge: GraphEdge): string {
+export function describeEdge(edge: Pick<GraphEdge, "type" | "caption">): string {
   const type = edge.type ?? "RELATED";
   return edge.caption && edge.caption !== type ? `${edge.caption} (${type})` : type;
 }

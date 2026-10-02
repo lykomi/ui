@@ -2,7 +2,7 @@ import { graphViewSummary } from "../graph-view-summary.ts";
 import { useGraphSurfaceVisible } from "./use-graph-surface-visible.ts";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
-import { hasOwn, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
+import { edgeCaption, hasOwn, primaryLabel, resolveCaption, type GraphNode } from "../model.ts";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
 import {
@@ -156,6 +156,7 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
               source: view.selectedEdge.source,
               target: view.selectedEdge.target,
               type: view.selectedEdge.type,
+              caption: edgeCaption(view.selectedEdge),
             }
           : null,
         inspectTool: "graph_get_view",
