@@ -320,6 +320,7 @@ export function GraphView({
         selection.node.id,
         selection.node.labels ?? [],
         selection.node.caption ?? null,
+        selection.node.details ?? [],
         selection.node.properties ?? {},
       ]
     : null;
