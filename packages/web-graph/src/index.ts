@@ -19,6 +19,8 @@ export {
   pruneDanglingEdges,
   resolveCaption,
   edgeCaption,
+  safeHref,
+  type GraphDetail,
   type GraphEdge,
   type GraphNode,
   type GraphPayload,

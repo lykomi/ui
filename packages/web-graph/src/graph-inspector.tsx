@@ -1,11 +1,13 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Maximize2, Snowflake, X } from "lucide-react";
+import { ChevronRight, ExternalLink, Maximize2, Snowflake, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   edgeCaption,
   primaryLabel,
   resolveCaption,
+  safeHref,
   safeStringify,
+  type GraphDetail,
   type GraphEdge,
   type GraphNode,
 } from "./model.ts";
@@ -62,6 +64,37 @@ function PropertyRows({ properties }: { properties: Record<string, unknown> | un
         </div>
       ))}
     </div>
+  );
+}
+
+/** The producer's curated lines, links opening in a new tab. */
+function DetailRows({ details }: { details: GraphDetail[] }) {
+  return (
+    <dl className="space-y-3">
+      {details.map((detail, index) => {
+        const href = safeHref(detail.href);
+        return (
+          <div key={`${detail.label}-${index}`}>
+            <dt className="text-muted-foreground text-xs">{detail.label}</dt>
+            <dd className="text-foreground mt-0.5 break-words text-sm">
+              {href ? (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary inline-flex items-start gap-1 underline-offset-2 hover:underline"
+                >
+                  <span>{detail.value}</span>
+                  <ExternalLink aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                </a>
+              ) : (
+                detail.value
+              )}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
 
@@ -157,6 +190,15 @@ export function GraphInspector({
   if (!node && !edge) return null;
 
   const frozen = node ? Boolean(isFrozen?.(node)) : false;
+  const item = node ?? (edge as GraphEdge);
+  const details = item.details?.length ? item.details : undefined;
+  // With curated details, one label names the kind; the rest are the
+  // producer's bookkeeping and go under "Advanced" with the properties.
+  const shownLabels = node?.labels?.length
+    ? details
+      ? [primaryLabel(node)]
+      : node.labels
+    : ["Node"];
 
   return (
     // Non-modal, and pointer-transparent everywhere but the drawer itself.
@@ -223,7 +265,7 @@ export function GraphInspector({
                   className="size-2 shrink-0 rounded-full"
                   style={{ backgroundColor: colorForLabel(primaryLabel(node)) }}
                 />
-                {(node.labels?.length ? node.labels : ["Node"]).join(" · ")}
+                {shownLabels.join(" · ")}
               </p>
             ) : (
               <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.14em]">
@@ -245,7 +287,27 @@ export function GraphInspector({
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <PropertyRows properties={(node ?? (edge as GraphEdge)).properties} />
+          {details ? (
+            <>
+              <DetailRows details={details} />
+              <details className="group mt-5">
+                <summary className="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-1 text-xs [&::-webkit-details-marker]:hidden">
+                  <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
+                  Advanced
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {node?.labels?.length ? (
+                    <p className="text-muted-foreground text-xs">{node.labels.join(" · ")}</p>
+                  ) : edge?.type ? (
+                    <p className="text-muted-foreground text-xs">{edge.type}</p>
+                  ) : null}
+                  <PropertyRows properties={item.properties} />
+                </div>
+              </details>
+            </>
+          ) : (
+            <PropertyRows properties={item.properties} />
+          )}
         </div>
 
         {node && (onExpandNode || onToggleFrozen || actions) && (

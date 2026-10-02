@@ -15,6 +15,19 @@ export const GRAPH_PAYLOAD_KIND = "foundry.graph" as const;
 /** Payload format version. Bump only for a breaking shape change. */
 export const GRAPH_PAYLOAD_VERSION = 1 as const;
 
+/**
+ * A line the producer curated for people: what a node or edge IS, in words
+ * ("Quote", "Status: agreed by 2 of 2 readings"), optionally a link to where
+ * it comes from. The inspector and the hover show these first and keep the
+ * raw `properties` under "Advanced"; without details they show the properties.
+ */
+export interface GraphDetail {
+  label: string;
+  value: string;
+  /** Opened in a new tab. `http(s):` or a same-origin path only. */
+  href?: string;
+}
+
 export interface GraphNode {
   /** Stable identity. Edges reference nodes by this value. */
   id: string;
@@ -26,6 +39,8 @@ export interface GraphNode {
   labels?: string[];
   /** Text drawn on the node. When absent, {@link resolveCaption} picks one. */
   caption?: string;
+  /** What people should read about the node; see {@link GraphDetail}. */
+  details?: GraphDetail[];
   properties?: Record<string, unknown>;
 }
 
@@ -41,6 +56,7 @@ export interface GraphEdge {
   /** What the edge says ("replaces 9.1"), drawn along it in place of its type.
    * The type still groups and filters it. */
   caption?: string;
+  details?: GraphDetail[];
   properties?: Record<string, unknown>;
 }
 
@@ -108,7 +124,35 @@ const isNode = (value: unknown): value is GraphNode =>
   value.id.length > 0 &&
   isStringArray(value.labels) &&
   (value.caption === undefined || typeof value.caption === "string") &&
+  isDetails(value.details) &&
   (value.properties === undefined || isRecord(value.properties));
+
+const isDetails = (value: unknown): boolean =>
+  value === undefined ||
+  (Array.isArray(value) &&
+    value.every(
+      (d) =>
+        isRecord(d) &&
+        typeof d.label === "string" &&
+        typeof d.value === "string" &&
+        (d.href === undefined || typeof d.href === "string"),
+    ));
+
+/**
+ * A detail's link, or `undefined` when it is not one a click may follow:
+ * `http(s):` or a same-origin path. A `javascript:` URL out of a graph
+ * property would otherwise run in the host page.
+ */
+export function safeHref(href: string | undefined): string | undefined {
+  if (!href) return undefined;
+  if (href.startsWith("/") && !href.startsWith("//")) return href;
+  try {
+    const url = new URL(href);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const isEdge = (value: unknown): value is GraphEdge =>
   isRecord(value) &&
@@ -117,6 +161,7 @@ const isEdge = (value: unknown): value is GraphEdge =>
   typeof value.target === "string" &&
   (value.type === undefined || typeof value.type === "string") &&
   (value.caption === undefined || typeof value.caption === "string") &&
+  isDetails(value.details) &&
   (value.properties === undefined || isRecord(value.properties));
 
 /** What to draw along an edge: its caption, else its type. */
