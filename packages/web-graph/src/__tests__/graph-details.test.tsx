@@ -1,4 +1,6 @@
 import { act } from "react";
+import { linkStore } from "@iloveagents/foundry-agent";
+import { graphLink } from "../graph-links.ts";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import { GraphInspector } from "../graph-inspector.tsx";
@@ -99,5 +101,64 @@ describe("details follow the data", () => {
 
     expect(second.model.nodes[0].details?.[0].value).toBe("new words");
     expect(__matchNodesForTest(second.model.nodes, "new wor", () => "")).toEqual(new Set(["a"]));
+  });
+});
+
+describe("app links", () => {
+  it("follows an app address only when a host handler claims it, in place", () => {
+    expect(graphLink("spaces://doc#block-b1")).toBeUndefined();
+    linkStore.getState().setHandler({
+      normalizeHref: (href) => (href.startsWith("spaces://") ? "/spaces/doc" : null),
+      canHandle: (href) => href.startsWith("/spaces/"),
+      openLink: () => {},
+    });
+    try {
+      expect(graphLink("spaces://doc#block-b1")).toEqual({
+        href: "spaces://doc#block-b1",
+        external: false,
+      });
+      expect(graphLink("https://example.com")).toEqual({
+        href: "https://example.com/",
+        external: true,
+      });
+      expect(graphLink("javascript:alert(1)")).toBeUndefined();
+    } finally {
+      linkStore.getState().clear();
+    }
+  });
+});
+
+describe("label names", () => {
+  it("shows the producer's name for a label and keeps the label beside it", async () => {
+    const { GraphLegend } = await import("../graph-legend.tsx");
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const styleMap = {
+      labels: ["EomiBlock", "Person"],
+      colorForLabel: () => "gray",
+      nameForLabel: (label: string) => (label === "EomiBlock" ? "Paragraph" : label),
+      styleForNode: () => ({ color: "gray", caption: "", radius: 4 }),
+      edgeTypes: [],
+    } as unknown as GraphStyleMap;
+    try {
+      await act(async () =>
+        root.render(
+          <GraphLegend
+            styleMap={styleMap}
+            counts={new Map([["EomiBlock", 2]])}
+            hiddenLabels={new Set()}
+            onToggleLabel={() => {}}
+            onShowAll={() => {}}
+          />,
+        ),
+      );
+      const titles = [...host.querySelectorAll("button")].map((b) => b.getAttribute("title"));
+      expect(titles).toEqual(["Hide Paragraph (EomiBlock)", "Hide Person"]);
+      expect(host.textContent).toContain("Paragraph");
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
   });
 });

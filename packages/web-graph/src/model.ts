@@ -70,7 +70,12 @@ export interface GraphPayload {
   /** Totals BEFORE truncation, when the producer knows them. */
   stats?: { nodeCount?: number; edgeCount?: number };
   /** Per-label styling hints from the producer. Overridden by host styling. */
-  legend?: Record<string, { color?: string; captionKey?: string }>;
+  /**
+   * Per-label hints: a colour, the property to caption by, and the `name`
+   * people read for the label ("Paragraph" for `EomiBlock`) — the label itself
+   * stays what queries and filters use.
+   */
+  legend?: Record<string, { color?: string; captionKey?: string; name?: string }>;
   /**
    * Producer-supplied context about how this graph was obtained.
    *
@@ -199,7 +204,8 @@ const isLegend = (value: unknown): boolean =>
       (hint) =>
         isRecord(hint) &&
         (hint.color === undefined || typeof hint.color === "string") &&
-        (hint.captionKey === undefined || typeof hint.captionKey === "string"),
+        (hint.captionKey === undefined || typeof hint.captionKey === "string") &&
+        (hint.name === undefined || typeof hint.name === "string"),
     ));
 
 /**

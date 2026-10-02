@@ -73,7 +73,8 @@ function detailRows(details: GraphDetail[]): [string, string][] {
 export function nodeTooltip(node: GraphNode, styleMap: GraphStyleMap): HTMLElement {
   const caption = styleMap.styleForNode(node).caption;
   if (node.details?.length) {
-    return tooltipElement(`${primaryLabel(node)} — ${caption}`, detailRows(node.details));
+    const kind = styleMap.nameForLabel?.(primaryLabel(node)) ?? primaryLabel(node);
+    return tooltipElement(`${kind} — ${caption}`, detailRows(node.details));
   }
   return tooltipElement(describeNode(node, caption), previewRows(node.properties));
 }

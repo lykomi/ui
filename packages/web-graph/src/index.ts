@@ -63,3 +63,4 @@ export {
   isGraphOpen,
   type GraphWorkspaceState,
 } from "./graph-workspace.ts";
+export { graphLink, type GraphLink } from "./graph-links.ts";

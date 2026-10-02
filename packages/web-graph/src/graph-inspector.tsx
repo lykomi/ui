@@ -5,12 +5,12 @@ import {
   edgeCaption,
   primaryLabel,
   resolveCaption,
-  safeHref,
   safeStringify,
   type GraphDetail,
   type GraphEdge,
   type GraphNode,
 } from "./model.ts";
+import { graphLink } from "./graph-links.ts";
 import type { GraphSelection } from "./use-graph-view-state.ts";
 
 /** Render a property value without collapsing structure into "[object Object]". */
@@ -72,16 +72,15 @@ function DetailRows({ details }: { details: GraphDetail[] }) {
   return (
     <dl className="space-y-3">
       {details.map((detail, index) => {
-        const href = safeHref(detail.href);
+        const link = graphLink(detail.href);
         return (
           <div key={`${detail.label}-${index}`}>
             <dt className="text-muted-foreground text-xs">{detail.label}</dt>
             <dd className="text-foreground mt-0.5 break-words text-sm">
-              {href ? (
+              {link ? (
                 <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href={link.href}
+                  {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                   className="text-primary inline-flex items-start gap-1 underline-offset-2 hover:underline"
                 >
                   <span>{detail.value}</span>
@@ -111,6 +110,8 @@ export const GRAPH_INSPECTOR_WIDTH = 320;
 export interface GraphInspectorProps {
   selection: GraphSelection;
   colorForLabel: (label: string) => string;
+  /** What people read for a label (the payload legend's `name`). */
+  nameForLabel?: (label: string) => string;
   /** The same caption the canvas draws — resolved once by the styling hook. */
   captionOf: (node: GraphNode) => string;
   onClose: () => void;
@@ -144,6 +145,7 @@ export interface GraphInspectorProps {
 export function GraphInspector({
   selection,
   colorForLabel,
+  nameForLabel = (label) => label,
   captionOf,
   onClose,
   onExpandNode,
@@ -196,7 +198,7 @@ export function GraphInspector({
   // producer's bookkeeping and go under "Advanced" with the properties.
   const shownLabels = node?.labels?.length
     ? details
-      ? [primaryLabel(node)]
+      ? [nameForLabel(primaryLabel(node))]
       : node.labels
     : ["Node"];
 

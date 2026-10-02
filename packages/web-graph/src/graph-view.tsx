@@ -630,6 +630,7 @@ export function GraphView({
               onWidthChange={setInspectorWidth}
               selection={selection}
               colorForLabel={styleMap.colorForLabel}
+              nameForLabel={styleMap.nameForLabel}
               captionOf={captionOf}
               onClose={state.clearSelection}
               onExpandNode={onExpandNode}
