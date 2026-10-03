@@ -22,6 +22,8 @@ export class ModelScene {
   private offsets = new Map<Object3D, Vector3>();
   private originals = new Map<ModelRenderable, Material | Material[]>();
   private arrows: ModelArrow[] = [];
+  private addressed = new Set<Object3D>();
+  private assemblies = new Set<Object3D>();
 
   constructor(root: Object3D, gltf: Pick<GLTF, "parser">) {
     this.root = root;
@@ -38,6 +40,7 @@ export class ModelScene {
         this.objects.set(`node:${index}`, object);
       }
     });
+    this.addressed = new Set(this.objects.values());
     const worldOffsets = new Map<Object3D, Vector3>();
     for (const [id, object] of this.objects) {
       let parent = object.parent;
@@ -52,6 +55,7 @@ export class ModelScene {
         return isModelRenderable(child) || child.children.some(ownsGeometry);
       };
       const ownMeshes = ownsGeometry(object);
+      if (!ownMeshes) this.assemblies.add(object);
       const index = Number(id.slice(5));
       const source = gltf.parser.json.nodes?.[index] as
         | { name?: string; extras?: Record<string, unknown> }
@@ -96,13 +100,10 @@ export class ModelScene {
   }
 
   private targetRenderables(target: Object3D): ModelRenderable[] {
-    const addressed = new Set(this.objects.values());
-    const assembly = this.parts.some(
-      (part) => part.kind === "assembly" && this.objects.get(part.id) === target,
-    );
+    const assembly = this.assemblies.has(target);
     const result: ModelRenderable[] = [];
     const visit = (object: Object3D) => {
-      if (!assembly && object !== target && addressed.has(object)) return;
+      if (!assembly && object !== target && this.addressed.has(object)) return;
       if (isModelRenderable(object)) result.push(object);
       object.children.forEach(visit);
     };
@@ -120,7 +121,7 @@ export class ModelScene {
         if (object.boundingBox)
           bounds.union(object.boundingBox.clone().applyMatrix4(object.matrixWorld));
       } else {
-        object.geometry.computeBoundingBox();
+        if (!object.geometry.boundingBox) object.geometry.computeBoundingBox();
         if (object.geometry.boundingBox)
           bounds.union(object.geometry.boundingBox.clone().applyMatrix4(object.matrixWorld));
       }
