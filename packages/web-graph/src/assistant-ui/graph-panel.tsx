@@ -266,7 +266,7 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
                 type="button"
                 onClick={() => askAgentToExpand(node)}
                 title="Ask the AI about this node's neighbours"
-                className="border-border hover:bg-muted text-muted-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1"
+                className="border-border hover:bg-muted text-muted-foreground focus-visible:ring-ring inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1"
               >
                 <Sparkles className="size-3.5" aria-hidden="true" />
                 Ask AI
