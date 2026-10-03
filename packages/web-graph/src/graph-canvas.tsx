@@ -336,18 +336,6 @@ export function GraphCanvas({
     if (reducedMotion) setLayoutEpoch((epoch) => epoch + 1);
   }, [reducedMotion]);
 
-  // A new layout is a new arrangement: settle it, then frame what it drew.
-  const firstLayout = useRef(true);
-  useEffect(() => {
-    if (firstLayout.current) {
-      firstLayout.current = false;
-      return;
-    }
-    reheat();
-    const timer = setTimeout(() => fit(reducedMotion ? 0 : 400), reducedMotion ? 0 : 900);
-    return () => clearTimeout(timer);
-  }, [layout, reheat, fit, reducedMotion]);
-
   /**
    * Memoised, and that is load-bearing twice over.
    *
@@ -597,7 +585,9 @@ export function GraphCanvas({
         clearInterval(timer);
         return;
       }
-      fit();
+      // Glide, over exactly one interval: an instant re-frame every 150ms
+      // while the nodes still move read as the camera jittering.
+      fit(reducedMotion ? 0 : FIT_INTERVAL_MS);
     }, FIT_INTERVAL_MS);
     return () => clearInterval(timer);
     // `fit` reads the drawer's width through a ref rather than taking it as a
@@ -605,7 +595,7 @@ export function GraphCanvas({
     // click that means "tell me about this node" would re-frame the graph the
     // user had arranged. `reveal` is what handles the drawer opening.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, width, height, fit]);
+  }, [model, width, height, fit, layout, reducedMotion]);
 
   // Selection, hover and search decide a caption's priority, so a change to
   // any of them re-places. Held in a ref as well so the framing interval and
@@ -772,8 +762,10 @@ export function GraphCanvas({
       // anything, so these users got the engine's initial placement — a
       // scatter with edges crossing at random, which is not a graph. The ticks
       // run synchronously before the first paint instead: the same layout,
-      // arrived at without motion. Bounded, because they block.
-      warmupTicks={reducedMotion ? warmupFor(model.nodes.length) : 0}
+      // arrived at without motion. Bounded, because they block. Everyone gets
+      // them: a graph that first appears as a random scatter and then sorts
+      // itself out in view read as jitter; it now opens nearly settled.
+      warmupTicks={warmupFor(model.nodes.length)}
       cooldownTicks={reducedMotion ? 0 : undefined}
       cooldownTime={reducedMotion ? 0 : cooldownFor(model.nodes.length)}
     />
