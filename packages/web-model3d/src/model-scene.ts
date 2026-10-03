@@ -100,10 +100,18 @@ export class ModelScene {
     this.clearHighlights();
     const meshes = new Set<ModelRenderable>();
     if (style === "color") {
-      for (const target of targets)
-        target.traverse((object) => {
+      const addressed = new Set(this.objects.values());
+      for (const target of targets) {
+        const isAssembly = this.parts.some(
+          (part) => part.kind === "assembly" && this.objects.get(part.id) === target,
+        );
+        const visit = (object: Object3D) => {
+          if (!isAssembly && object !== target && addressed.has(object)) return;
           if (isModelRenderable(object)) meshes.add(object);
-        });
+          object.children.forEach(visit);
+        };
+        visit(target);
+      }
       for (const mesh of meshes) {
         this.originals.set(mesh, mesh.material);
         const clone = (material: Material) => {

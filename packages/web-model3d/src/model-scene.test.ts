@@ -283,3 +283,28 @@ it("explodes an owned multi-primitive group behind a node attachment", async () 
   expect(object.position.distanceTo(origin)).toBeGreaterThan(0);
   disposeModel(gltf.scenes);
 });
+
+it("highlights a nested part independently while assembly highlights include descendants", () => {
+  const root = new Group();
+  const parent = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
+  const child = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
+  parent.add(child);
+  root.add(parent);
+  const original = child.material;
+  const model = new ModelScene(root, {
+    parser: {
+      associations: new Map([
+        [root, { nodes: 0 }],
+        [parent, { nodes: 1 }],
+        [child, { nodes: 2 }],
+      ]),
+      json: { nodes: [{ name: "Assembly" }, { name: "Parent" }, { name: "Child" }] },
+    },
+  } as ConstructorParameters<typeof ModelScene>[1]);
+  model.highlight(["node:1"], "#ff0000", "color");
+  expect(child.material).toBe(original);
+  model.highlight(["node:0"], "#ff0000", "color");
+  expect(child.material).not.toBe(original);
+  model.dispose();
+  disposeModel(root);
+});
