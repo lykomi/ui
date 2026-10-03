@@ -1,0 +1,54 @@
+{
+  "name": "@iloveagents/foundry-web-model3d",
+  "version": "0.0.0",
+  "license": "MIT",
+  "description": "Optional preview GLB viewer with part hierarchy and AG-UI model tools for Foundry UI.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iLoveAgents/foundry-ui.git",
+    "directory": "packages/web-model3d"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@iloveagents/foundry-agent": "workspace:^",
+    "@iloveagents/foundry-web-primitives": "workspace:^",
+    "three": "0.186.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": ">=0.400.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.186.0",
+    "@types/react": "^19.2.2",
+    "@types/node": "^24.10.1",
+    "jsdom": "^28.1.0",
+    "lucide-react": ">=0.400.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.4"
+  }
+}

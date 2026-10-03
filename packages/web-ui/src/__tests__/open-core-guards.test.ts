@@ -48,6 +48,10 @@ const OPEN_CORE_GRAPH: Record<string, string[]> = {
     "@iloveagents/foundry-web-ui",
     "@iloveagents/foundry-agent",
   ],
+  "@iloveagents/foundry-web-model3d": [
+    "@iloveagents/foundry-web-primitives",
+    "@iloveagents/foundry-agent",
+  ],
   "@iloveagents/foundry-web-shell": [
     "@iloveagents/foundry-web-primitives",
     "@iloveagents/foundry-web-ui",

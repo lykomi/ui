@@ -24,6 +24,10 @@ const packages = [
     runtime: true,
   },
   {
+    dir: "packages/web-model3d",
+    runtime: true,
+  },
+  {
     dir: "packages/web-shell",
     runtime: true,
   },
