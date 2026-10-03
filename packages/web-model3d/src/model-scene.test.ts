@@ -1,8 +1,20 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
-import { Color, Mesh, MeshStandardMaterial, Vector3 } from "three";
+import { describe, expect, it, vi } from "vitest";
+import {
+  Bone,
+  BoxGeometry,
+  Color,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Quaternion,
+  Skeleton,
+  SkinnedMesh,
+  Vector3,
+} from "three";
 import { parseModel, inspectGlb, disposeModel } from "./model-resources.ts";
+import { ModelArrow } from "./model-arrow.ts";
 import { ModelScene } from "./model-scene.ts";
 
 const bytes = () => {
@@ -100,4 +112,37 @@ describe("self-contained GLB boundary", () => {
     new Uint8Array(file, 20).set(chunk);
     expect(() => inspectGlb(file)).toThrow("external files");
   });
+});
+
+it("disposes a shared skin skeleton and its bone texture once", () => {
+  const skeleton = new Skeleton([new Bone()]);
+  skeleton.computeBoneTexture();
+  const dispose = vi.spyOn(skeleton, "dispose");
+  const textureDispose = vi.spyOn(skeleton.boneTexture!, "dispose");
+  const root = new Group();
+  for (let index = 0; index < 2; index++) {
+    const mesh = new SkinnedMesh(new BoxGeometry(), new MeshStandardMaterial());
+    mesh.bind(skeleton);
+    root.add(mesh);
+  }
+  disposeModel(root);
+  expect(dispose).toHaveBeenCalledTimes(1);
+  expect(textureDispose).toHaveBeenCalledTimes(1);
+});
+
+it.each(["x", "z"] as const)("points toward the target after %s rotation", async (axis) => {
+  const model = await fixture();
+  const parent = new Group();
+  parent.rotation[axis] = Math.PI / 3;
+  parent.add(model.root);
+  parent.updateMatrixWorld(true);
+  model.highlight(["node:3"], "#ff8800", "arrow");
+  model.root.updateMatrixWorld(true);
+  const arrow = model.root.children.find((child) => child instanceof ModelArrow)!;
+  const direction = new Vector3(0, -1, 0).applyQuaternion(
+    arrow.getWorldQuaternion(new Quaternion()),
+  );
+  expect(direction.distanceTo(new Vector3(0, -1, 0))).toBeLessThan(1e-6);
+  model.dispose();
+  disposeModel(model.root);
 });

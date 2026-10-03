@@ -1,4 +1,4 @@
-import { Box3, Mesh, Vector3, type Material, type Object3D } from "three";
+import { Box3, Mesh, Quaternion, Vector3, type Material, type Object3D } from "three";
 import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
 import type { ModelPart } from "./model-types.ts";
 import { ModelArrow } from "./model-arrow.ts";
@@ -114,6 +114,7 @@ export class ModelScene {
         this.root.worldToLocal(tip);
         const arrow = new ModelArrow(this.radius, color);
         arrow.position.copy(tip);
+        arrow.quaternion.copy(this.root.getWorldQuaternion(new Quaternion()).invert());
         this.root.add(arrow);
         this.arrows.push(arrow);
       }

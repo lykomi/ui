@@ -59,6 +59,7 @@ export class ModelRuntime implements ModelHandle {
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     const viewport = element.getBoundingClientRect();
+    let needsVisibleFrame = !viewport.width || !viewport.height;
     this.renderer.setSize(Math.max(viewport.width, 1), Math.max(viewport.height, 1));
     this.camera.aspect = Math.max(viewport.width, 1) / Math.max(viewport.height, 1);
     element.append(this.renderer.domElement);
@@ -75,6 +76,10 @@ export class ModelRuntime implements ModelHandle {
       this.renderer.setSize(width, height);
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
+      if (needsVisibleFrame) {
+        needsVisibleFrame = false;
+        this.fit();
+      }
     });
     this.observer.observe(element);
     this.stopPicking = this.installPicking();

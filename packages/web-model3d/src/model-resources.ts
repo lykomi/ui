@@ -1,4 +1,12 @@
-import { LoadingManager, Mesh, Texture, type Material, type Object3D } from "three";
+import {
+  LoadingManager,
+  Mesh,
+  SkinnedMesh,
+  Texture,
+  type Skeleton,
+  type Material,
+  type Object3D,
+} from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 
 export const MAX_MODEL_BYTES = 64 * 1024 * 1024;
@@ -91,8 +99,10 @@ export function parseModel(bytes: ArrayBuffer): Promise<GLTF> {
 export function disposeModel(root: Object3D): void {
   const materials = new Set<Material>();
   const textures = new Set<Texture>();
+  const skeletons = new Set<Skeleton>();
   root.traverse((object) => {
     if (!(object instanceof Mesh)) return;
+    if (object instanceof SkinnedMesh) skeletons.add(object.skeleton);
     object.geometry.dispose();
     for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
       materials.add(material);
@@ -100,6 +110,7 @@ export function disposeModel(root: Object3D): void {
         if (value instanceof Texture) textures.add(value);
     }
   });
+  for (const skeleton of skeletons) skeleton.dispose();
   for (const texture of textures) {
     const image: unknown = texture.source.data;
     if (typeof ImageBitmap !== "undefined" && image instanceof ImageBitmap) image.close();
