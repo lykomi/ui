@@ -3,7 +3,6 @@ import {
   DirectionalLight,
   Group,
   HemisphereLight,
-  Mesh,
   PerspectiveCamera,
   Raycaster,
   Scene,
@@ -13,6 +12,7 @@ import {
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
+import { isModelRenderable } from "./model-renderable.ts";
 import { ModelScene } from "./model-scene.ts";
 import { disposeModel } from "./model-resources.ts";
 import type { ModelHandle, ModelViewState } from "./model-types.ts";
@@ -202,7 +202,7 @@ export class ModelRuntime implements ModelHandle {
       ray.setFromCamera(ndc, this.camera);
       let object = ray
         .intersectObject(this.model.root, true)
-        .find((hit) => hit.object instanceof Mesh)?.object;
+        .find((hit) => isModelRenderable(hit.object))?.object;
       while (object) {
         const part = this.model.parts.find((part) => this.model.objects.get(part.id) === object);
         if (part) {

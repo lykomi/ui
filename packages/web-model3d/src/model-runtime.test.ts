@@ -1,7 +1,17 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, it, vi } from "vitest";
-import { Quaternion, Vector3 } from "three";
+import {
+  BoxGeometry,
+  Group,
+  Line,
+  LineBasicMaterial,
+  Points,
+  PointsMaterial,
+  Quaternion,
+  Raycaster,
+  Vector3,
+} from "three";
 import { ModelArrow } from "./model-arrow.ts";
 import { ModelRuntime } from "./model-runtime.ts";
 import { parseModel } from "./model-resources.ts";
@@ -106,4 +116,48 @@ it("frames an initially visible canvas after the structure tree reduces its widt
   host.remove();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+it.each(["line", "points"])("selects a rendered %s on canvas tap", (kind) => {
+  const root = new Group();
+  const part =
+    kind === "line"
+      ? new Line(new BoxGeometry(), new LineBasicMaterial())
+      : new Points(new BoxGeometry(), new PointsMaterial());
+  root.add(part);
+  const gltf = {
+    scene: root,
+    scenes: [root],
+    parser: { associations: new Map([[part, { nodes: 0 }]]), json: { nodes: [{ name: "Part" }] } },
+  } as ConstructorParameters<typeof ModelRuntime>[1];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const host = document.createElement("div");
+  document.body.append(host);
+  vi.spyOn(Raycaster.prototype, "intersectObject").mockReturnValue([{ object: part }] as ReturnType<
+    Raycaster["intersectObject"]
+  >);
+  const runtime = new ModelRuntime(
+    host,
+    gltf,
+    "model",
+    "Demo",
+    () => true,
+    () => {},
+  );
+  const canvas = runtime.renderer.domElement;
+  canvas.setPointerCapture = vi.fn();
+  canvas.releasePointerCapture = vi.fn();
+  canvas.dispatchEvent(new MouseEvent("pointerdown", { clientX: 10, clientY: 10, button: 0 }));
+  canvas.dispatchEvent(new MouseEvent("pointerup", { clientX: 10, clientY: 10, button: 0 }));
+  expect(runtime.getView().selectedIds).toEqual(["node:0"]);
+  runtime.dispose();
+  host.remove();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
