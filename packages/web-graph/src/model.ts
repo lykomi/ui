@@ -56,9 +56,17 @@ export interface GraphEdge {
   /** What the edge says ("replaces 9.1"), drawn along it in place of its type.
    * The type still groups and filters it. */
   caption?: string;
+  /**
+   * How much the edge stands out: `strong` for what the graph is ABOUT (a
+   * relation a reader follows), `muted` for structure around it. Unset is
+   * the normal weight.
+   */
+  emphasis?: GraphEdgeEmphasis;
   details?: GraphDetail[];
   properties?: Record<string, unknown>;
 }
+
+export type GraphEdgeEmphasis = "strong" | "muted";
 
 export interface GraphPayload {
   kind: typeof GRAPH_PAYLOAD_KIND;
@@ -166,6 +174,7 @@ const isEdge = (value: unknown): value is GraphEdge =>
   typeof value.target === "string" &&
   (value.type === undefined || typeof value.type === "string") &&
   (value.caption === undefined || typeof value.caption === "string") &&
+  (value.emphasis === undefined || value.emphasis === "strong" || value.emphasis === "muted") &&
   isDetails(value.details) &&
   (value.properties === undefined || isRecord(value.properties));
 

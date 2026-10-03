@@ -162,3 +162,60 @@ describe("label names", () => {
     }
   });
 });
+
+describe("edge emphasis and layout", () => {
+  it("accepts strong and muted edges and nothing else", () => {
+    const payload = (emphasis: unknown) => ({
+      kind: GRAPH_PAYLOAD_KIND,
+      version: GRAPH_PAYLOAD_VERSION,
+      nodes: [{ id: "a" }, { id: "b" }],
+      edges: [{ id: "e", source: "a", target: "b", emphasis }],
+    });
+    expect(isGraphPayload(payload("strong"))).toBe(true);
+    expect(isGraphPayload(payload("muted"))).toBe(true);
+    expect(isGraphPayload(payload(undefined))).toBe(true);
+    expect(isGraphPayload(payload("loud"))).toBe(false);
+  });
+
+  it("offers the layouts and reports the one chosen", async () => {
+    const { GraphToolbar } = await import("../graph-toolbar.tsx");
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const chosen: string[] = [];
+    try {
+      await act(async () =>
+        root.render(
+          <GraphToolbar
+            query=""
+            onQueryChange={() => {}}
+            matchCount={0}
+            nodeCount={1}
+            edgeCount={0}
+            onZoomToFit={() => {}}
+            onReheat={() => {}}
+            pinnedCount={0}
+            onUnpinAll={() => {}}
+            layout="force"
+            onLayoutChange={(layout) => chosen.push(layout)}
+          />,
+        ),
+      );
+      const select = host.querySelector<HTMLSelectElement>('select[aria-label="Layout"]')!;
+      expect([...select.options].map((o) => o.value)).toEqual([
+        "force",
+        "tree",
+        "tree-lr",
+        "radial",
+      ]);
+      await act(async () => {
+        select.value = "tree";
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(chosen).toEqual(["tree"]);
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+});

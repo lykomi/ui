@@ -33,7 +33,7 @@ import {
 import { useGraphStyling, type GraphStyling } from "./use-graph-styling.ts";
 import { useGraphTheme } from "./use-graph-theme.ts";
 import { useGraphViewState } from "./use-graph-view-state.ts";
-import type { GraphCanvasHandle } from "./graph-canvas.tsx";
+import type { GraphCanvasHandle, GraphLayout } from "./graph-canvas.tsx";
 
 /**
  * The engine is code-split.
@@ -235,6 +235,8 @@ export function GraphView({
   const [tableRequested, setTableRequested] = useState(false);
   const [canvasHost, setCanvasHost] = useState<HTMLDivElement | null>(null);
   const canvasRef = useRef<GraphCanvasHandle>(null);
+  const [layout, setLayout] = useState<GraphLayout>("force");
+  const [layoutNotice, setLayoutNotice] = useState<string | null>(null);
   const theme = useGraphTheme(container);
   const reducedMotion = usePrefersReducedMotion();
 
@@ -537,8 +539,18 @@ export function GraphView({
         onToggleTable={
           forceTable || noCanvas ? undefined : () => setTableRequested((shown) => !shown)
         }
+        layout={useTable ? undefined : layout}
+        onLayoutChange={(next) => {
+          setLayoutNotice(null);
+          setLayout(next);
+        }}
         className="shrink-0"
       />
+      {layoutNotice && (
+        <p role="status" className="text-muted-foreground shrink-0 pt-1 text-xs">
+          {layoutNotice}
+        </p>
+      )}
 
       {fullscreenError && (
         <p role="alert" className="text-sm text-destructive">
@@ -617,6 +629,13 @@ export function GraphView({
                     insetRight={inspectorInset}
                     handleRef={canvasRef}
                     reducedMotion={reducedMotion}
+                    layout={layout}
+                    onLayoutUnavailable={() => {
+                      setLayout("force");
+                      setLayoutNotice(
+                        "This graph has a cycle, so it cannot be drawn as a hierarchy. Showing the force layout.",
+                      );
+                    }}
                   />
                 )}
               </Suspense>

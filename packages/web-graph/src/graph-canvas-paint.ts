@@ -13,6 +13,7 @@
 
 import type { NodeStyle } from "./use-graph-styling.ts";
 import type { GraphTheme } from "./theme.ts";
+import type { GraphEdgeEmphasis } from "./model.ts";
 
 /** A node after force-graph has assigned it a position. */
 export interface PositionedNode {
@@ -120,10 +121,15 @@ export function paintNode(
   }
 
   if (pinned) {
+    // A dashed ring: "held in place", without reading as a badge or a dot of
+    // data the way a filled marker on the rim did.
     ctx.beginPath();
-    ctx.arc(x + r * 0.78, y - r * 0.78, Math.max(1.2, r * 0.28), 0, 2 * Math.PI);
-    ctx.fillStyle = theme.foreground;
-    ctx.fill();
+    ctx.arc(x, y, r + 3.5 / globalScale + 1, 0, 2 * Math.PI);
+    ctx.setLineDash([3 / globalScale, 2 / globalScale]);
+    ctx.lineWidth = 1.2 / globalScale;
+    ctx.strokeStyle = theme.mutedForeground;
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   if (showCaption && style.caption) {
@@ -206,6 +212,7 @@ export function paintEdgeLabel(
   theme: GraphTheme,
   ctx: CanvasRenderingContext2D,
   globalScale: number,
+  emphasis?: GraphEdgeEmphasis,
 ): void {
   if (!label) return;
   const source = asPositioned(link.source);
@@ -230,7 +237,7 @@ export function paintEdgeLabel(
   // Divide by the zoom and DO NOT floor it in graph units. A floor here is a
   // minimum in GRAPH space, which the zoom then multiplies — so on a small
   // graph, where zoom-to-fit lands at a high scale, the label renders enormous.
-  const fontSize = 9 / globalScale;
+  const fontSize = (emphasis === "strong" ? 11 : 10) / globalScale;
   ctx.save();
   ctx.font = `${fontSize}px ui-sans-serif, system-ui, sans-serif`;
 
@@ -249,21 +256,16 @@ export function paintEdgeLabel(
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
 
-  // A halo, not a knockout box.
-  //
-  // Filling a rectangle behind the label reads as the relationship line being
-  // BROKEN: the gap is the same colour as the canvas and sits exactly where
-  // the eye is following the line. Stroking the glyphs in the background
-  // colour keeps the text readable over the line and over anything crossing
-  // it, and the line stays continuous.
-  const offset = 1.5 / globalScale;
-  ctx.lineWidth = 3 / globalScale;
-  ctx.strokeStyle = theme.background;
-  ctx.lineJoin = "round";
-  ctx.miterLimit = 2;
-  ctx.strokeText(label, 0, -offset);
+  // A plate behind the text. A halo alone left the label grey on grey where
+  // it crossed other lines; the plate is small and sits ABOVE the line, so
+  // the line itself stays continuous underneath it.
+  const offset = 2 / globalScale;
+  const width = ctx.measureText(label).width;
+  const pad = 3 / globalScale;
+  ctx.fillStyle = theme.background;
+  ctx.fillRect(-width / 2 - pad, -offset - fontSize - pad / 2, width + pad * 2, fontSize + pad);
 
-  ctx.fillStyle = theme.mutedForeground;
+  ctx.fillStyle = emphasis === "strong" ? theme.foreground : theme.mutedForeground;
   ctx.fillText(label, 0, -offset);
   ctx.restore();
 }

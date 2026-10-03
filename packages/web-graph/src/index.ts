@@ -21,6 +21,7 @@ export {
   edgeCaption,
   safeHref,
   type GraphDetail,
+  type GraphEdgeEmphasis,
   type GraphEdge,
   type GraphNode,
   type GraphPayload,
@@ -64,3 +65,4 @@ export {
   type GraphWorkspaceState,
 } from "./graph-workspace.ts";
 export { graphLink, type GraphLink } from "./graph-links.ts";
+export type { GraphLayout } from "./graph-canvas.tsx";

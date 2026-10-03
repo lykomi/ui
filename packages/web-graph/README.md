@@ -154,6 +154,7 @@ interface GraphPayload {
     target: string;
     type?: string;
     caption?: string; // drawn in place of `type`, which still groups and filters
+    emphasis?: "strong" | "muted"; // what the graph is about, or structure around it
     details?: GraphDetail[];
     properties?: Record<string, unknown>;
   }[];
