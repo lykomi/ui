@@ -122,7 +122,7 @@ export class ModelRuntime implements ModelHandle {
       return;
     }
     const bounds = new Box3();
-    for (const target of targets) bounds.union(new Box3().setFromObject(target));
+    for (const target of targets) bounds.union(this.model.targetBounds(target));
     this.frameBounds(bounds);
     this.state.selectedIds = [...ids];
     this.changed();

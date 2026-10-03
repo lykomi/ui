@@ -1,4 +1,12 @@
-import { Box3, Quaternion, Vector3, type Material, type Object3D } from "three";
+import {
+  Box3,
+  InstancedMesh,
+  SkinnedMesh,
+  Quaternion,
+  Vector3,
+  type Material,
+  type Object3D,
+} from "three";
 import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
 import type { ModelPart } from "./model-types.ts";
 import { isModelRenderable, type ModelRenderable } from "./model-renderable.ts";
@@ -62,7 +70,7 @@ export class ModelScene {
       });
       if (ownMeshes) {
         this.origins.set(object, object.position.clone());
-        const center = new Box3().setFromObject(object).getCenter(new Vector3());
+        const center = this.targetBounds(object).getCenter(new Vector3());
         const delta = center.sub(this.bounds.getCenter(new Vector3()));
         if (delta.lengthSq() < 1e-10) delta.set(0, 1, 0);
         delta.normalize().multiplyScalar(this.radius);
@@ -87,6 +95,39 @@ export class ModelScene {
     if (!this.parts.length) throw new Error("No addressable glTF nodes were found.");
   }
 
+  private targetRenderables(target: Object3D): ModelRenderable[] {
+    const addressed = new Set(this.objects.values());
+    const assembly = this.parts.some(
+      (part) => part.kind === "assembly" && this.objects.get(part.id) === target,
+    );
+    const result: ModelRenderable[] = [];
+    const visit = (object: Object3D) => {
+      if (!assembly && object !== target && addressed.has(object)) return;
+      if (isModelRenderable(object)) result.push(object);
+      object.children.forEach(visit);
+    };
+    visit(target);
+    return result;
+  }
+
+  targetBounds(target: Object3D): Box3 {
+    target.updateWorldMatrix(true, true);
+    const bounds = new Box3();
+    for (const object of this.targetRenderables(target)) {
+      // Bounds of just this primitive, without separately exported child nodes.
+      if (object instanceof SkinnedMesh || object instanceof InstancedMesh) {
+        object.computeBoundingBox();
+        if (object.boundingBox)
+          bounds.union(object.boundingBox.clone().applyMatrix4(object.matrixWorld));
+      } else {
+        object.geometry.computeBoundingBox();
+        if (object.geometry.boundingBox)
+          bounds.union(object.geometry.boundingBox.clone().applyMatrix4(object.matrixWorld));
+      }
+    }
+    return bounds;
+  }
+
   resolve(ids: string[]): Object3D[] {
     return ids.map((id) => {
       const object = this.parts.some((part) => part.id === id) && this.objects.get(id);
@@ -100,18 +141,8 @@ export class ModelScene {
     this.clearHighlights();
     const meshes = new Set<ModelRenderable>();
     if (style === "color") {
-      const addressed = new Set(this.objects.values());
-      for (const target of targets) {
-        const isAssembly = this.parts.some(
-          (part) => part.kind === "assembly" && this.objects.get(part.id) === target,
-        );
-        const visit = (object: Object3D) => {
-          if (!isAssembly && object !== target && addressed.has(object)) return;
-          if (isModelRenderable(object)) meshes.add(object);
-          object.children.forEach(visit);
-        };
-        visit(target);
-      }
+      for (const target of targets)
+        for (const object of this.targetRenderables(target)) meshes.add(object);
       for (const mesh of meshes) {
         this.originals.set(mesh, mesh.material);
         const clone = (material: Material) => {
@@ -132,7 +163,7 @@ export class ModelScene {
       }
     } else {
       for (const target of targets) {
-        const bounds = new Box3().setFromObject(target);
+        const bounds = this.targetBounds(target);
         const tip = bounds.getCenter(new Vector3());
         tip.y = bounds.max.y;
         this.root.worldToLocal(tip);

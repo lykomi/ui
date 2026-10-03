@@ -80,11 +80,11 @@ export const MODEL_CLIENT_TOOLS: ClientToolEntry[] = [
     (model, args) => {
       if (args.query !== undefined && typeof args.query !== "string")
         throw new Error("query must be a string.");
-      const query = ((args.query as string | undefined) ?? "").toLocaleLowerCase();
+      const query = ((args.query as string | undefined) ?? "").toLowerCase();
       const matches = model
         .getParts()
         .filter((part) =>
-          `${part.name} ${JSON.stringify(part.metadata)}`.toLocaleLowerCase().includes(query),
+          `${part.name} ${JSON.stringify(part.metadata)}`.toLowerCase().includes(query),
         );
       const offset = numberArg(args, "offset", 0, 1000000, 0);
       const limit = numberArg(args, "limit", 1, 100, 50);

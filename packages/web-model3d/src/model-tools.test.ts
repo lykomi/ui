@@ -95,3 +95,20 @@ it("never applies an explicit empty model ID to another active model", async () 
   expect(await execute("model3d_reset", { modelId: "" })).toHaveProperty("error");
   expect(other.reset).not.toHaveBeenCalled();
 });
+
+it("finds ASCII part codes with Turkish default casing", async () => {
+  const original = String.prototype.toLocaleLowerCase;
+  vi.spyOn(String.prototype, "toLocaleLowerCase").mockImplementation(function (this: string) {
+    return original.call(this, "tr");
+  });
+  try {
+    const model = handle("a");
+    model.getParts = () => [
+      { id: "node:0", name: "PIN", parentId: null, kind: "part", metadata: {} },
+    ];
+    disconnects.push(connectModel(model, () => true));
+    expect((await execute("model3d_list_parts", { query: "pin" })).parts).toHaveLength(1);
+  } finally {
+    vi.restoreAllMocks();
+  }
+});

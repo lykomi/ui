@@ -308,3 +308,40 @@ it("highlights a nested part independently while assembly highlights include des
   model.dispose();
   disposeModel(root);
 });
+
+it("keeps a parent part arrow and framing bounds on its own geometry", () => {
+  const root = new Group();
+  const parent = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
+  const child = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
+  child.position.set(100, 100, 0);
+  parent.add(child);
+  root.add(parent);
+  const model = new ModelScene(root, {
+    parser: {
+      associations: new Map([
+        [root, { nodes: 0 }],
+        [parent, { nodes: 1 }],
+        [child, { nodes: 2 }],
+      ]),
+      json: { nodes: [{}, {}, {}] },
+    },
+  } as ConstructorParameters<typeof ModelScene>[1]);
+  expect(model.targetBounds(parent).getCenter(new Vector3())).toEqual(new Vector3());
+  expect(model.targetBounds(root).max.x).toBeGreaterThan(100);
+  model.highlight(["node:1"], "#ff8800", "arrow");
+  const arrow = root.children.find((object) => object instanceof ModelArrow)!;
+  expect(arrow.position).toEqual(new Vector3(0, 0.5, 0));
+  model.dispose();
+  disposeModel(root);
+});
+
+it("loads a model when Crypto.randomUUID is unavailable", async () => {
+  vi.stubGlobal("crypto", {});
+  try {
+    const model = await fixture();
+    expect(model.parts).toHaveLength(5);
+    disposeModel(model.root);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

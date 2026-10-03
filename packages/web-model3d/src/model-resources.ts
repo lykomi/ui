@@ -1,5 +1,6 @@
 import {
   LoadingManager,
+  MathUtils,
   SkinnedMesh,
   Texture,
   type Skeleton,
@@ -95,7 +96,7 @@ export function parseModel(bytes: ArrayBuffer): Promise<GLTF> {
   const loader = new GLTFLoader(manager);
   // Scene parsing reduces associations. Carry node identity through scene clones,
   // then restore mappings for every scene without exposing temporary metadata.
-  const key = `__foundryNode_${crypto.randomUUID()}`;
+  const key = `__foundryNode_${MathUtils.generateUUID()}`;
   loader.register((parser) => ({
     name: "FOUNDRY_node_identity",
     loadNode: async (index) => {

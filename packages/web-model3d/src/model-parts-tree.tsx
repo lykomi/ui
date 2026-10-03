@@ -38,11 +38,10 @@ export function ModelPartsTree({
     });
   }, [selection, parts]);
   const matching = new Set<string>();
-  const search = query.trim().toLocaleLowerCase();
+  const search = query.trim().toLowerCase();
   if (search)
     for (const part of parts) {
-      if (!`${part.name} ${JSON.stringify(part.metadata)}`.toLocaleLowerCase().includes(search))
-        continue;
+      if (!`${part.name} ${JSON.stringify(part.metadata)}`.toLowerCase().includes(search)) continue;
       let current: ModelPart | undefined = part;
       while (current && !matching.has(current.id)) {
         matching.add(current.id);
