@@ -10,6 +10,15 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
+import type { GraphLayout } from "./graph-canvas.tsx";
+
+/** The layouts offered, in the order a reader thinks of them. */
+const LAYOUTS: { value: GraphLayout; label: string }[] = [
+  { value: "force", label: "Force" },
+  { value: "tree", label: "Hierarchy" },
+  { value: "tree-lr", label: "Left to right" },
+  { value: "radial", label: "Radial" },
+];
 
 export interface GraphToolbarProps {
   query: string;
@@ -31,6 +40,9 @@ export interface GraphToolbarProps {
    */
   showsTable?: boolean;
   onToggleTable?: () => void;
+  /** How nodes are arranged, and how to change it; omitted, no choice is offered. */
+  layout?: GraphLayout;
+  onLayoutChange?: (layout: GraphLayout) => void;
   className?: string;
 }
 
@@ -52,6 +64,8 @@ export function GraphToolbar({
   onUnpinAll,
   showsTable,
   onToggleTable,
+  layout,
+  onLayoutChange,
   className,
 }: GraphToolbarProps) {
   return (
@@ -117,6 +131,21 @@ export function GraphToolbar({
             <PinOff className="size-3.5" />
             <span className="sr-only">Unpin all nodes</span>
           </button>
+        )}
+        {layout && onLayoutChange && (
+          <select
+            value={layout}
+            onChange={(event) => onLayoutChange(event.target.value as GraphLayout)}
+            aria-label="Layout"
+            title="Layout"
+            className="border-border bg-card text-muted-foreground hover:text-foreground focus-visible:ring-ring h-7 rounded border px-1.5 text-xs focus-visible:outline-none focus-visible:ring-1"
+          >
+            {LAYOUTS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         )}
         <button
           type="button"

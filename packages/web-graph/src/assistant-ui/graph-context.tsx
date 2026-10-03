@@ -3,6 +3,7 @@ import { Pin, PinOff } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useAppStore } from "@iloveagents/foundry-web-ui";
 import {
+  edgeCaption,
   jsonSafe,
   primaryLabel,
   resolveCaption,
@@ -45,7 +46,11 @@ function contextItemFor(node: GraphNode, sourcePage: string, captionKey?: string
       // That does not lose a property, it stops the user sending any message
       // at all for as long as the node stays selected. Copying also detaches
       // it from a node object the simulation keeps mutating.
-      meta: jsonSafe({ labels: node.labels ?? [], properties: node.properties ?? {} }),
+      meta: jsonSafe({
+        labels: node.labels ?? [],
+        ...(node.details?.length ? { details: node.details } : {}),
+        properties: node.properties ?? {},
+      }),
     },
     sourcePage,
     // Ephemeral: it follows the selection. Pinning promotes it, which drops
@@ -144,14 +149,16 @@ export function GraphContextPinButton({
       type="button"
       onClick={toggle}
       title={pinned ? "Unpin from chat" : "Pin to chat"}
+      aria-label={pinned ? "Unpin from chat" : "Pin to chat"}
       aria-pressed={!!pinned}
+      // An icon with a tooltip: the inspector footer is narrow, and the label
+      // is what the one primary action there (Expand) needs.
       className={cn(
-        "border-border hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1",
+        "border-border hover:bg-muted focus-visible:ring-ring inline-flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-1",
         pinned ? "text-primary" : "text-muted-foreground",
       )}
     >
       {pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
-      {pinned ? "Pinned" : "Pin"}
     </button>
   );
 }
@@ -164,16 +171,19 @@ export function syncGraphEdgeContext(edge: GraphEdge | null, sourcePage: string)
       ? {
           key: "graph.edge-selection",
           type: "ref",
-          label: edge.type ?? "Relationship",
+          label: edgeCaption(edge),
           payload: {
             kind: "ref",
             refType: "graph-relationship",
             refId: edge.id,
-            preview: `${edge.source} → ${edge.type ?? "Relationship"} → ${edge.target}`,
+            preview: `${edge.source} → ${edgeCaption(edge)} → ${edge.target}`,
             meta: jsonSafe({
               source: edge.source,
               target: edge.target,
               type: edge.type,
+              caption: edgeCaption(edge),
+              ...(edge.emphasis ? { emphasis: edge.emphasis } : {}),
+              ...(edge.details?.length ? { details: edge.details } : {}),
               properties: edge.properties ?? {},
             }),
           },

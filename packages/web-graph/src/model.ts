@@ -15,6 +15,19 @@ export const GRAPH_PAYLOAD_KIND = "foundry.graph" as const;
 /** Payload format version. Bump only for a breaking shape change. */
 export const GRAPH_PAYLOAD_VERSION = 1 as const;
 
+/**
+ * A line the producer curated for people: what a node or edge IS, in words
+ * ("Quote", "Status: agreed by 2 of 2 readings"), optionally a link to where
+ * it comes from. The inspector and the hover show these first and keep the
+ * raw `properties` under "Advanced"; without details they show the properties.
+ */
+export interface GraphDetail {
+  label: string;
+  value: string;
+  /** Opened in a new tab. `http(s):` or a same-origin path only. */
+  href?: string;
+}
+
 export interface GraphNode {
   /** Stable identity. Edges reference nodes by this value. */
   id: string;
@@ -26,6 +39,8 @@ export interface GraphNode {
   labels?: string[];
   /** Text drawn on the node. When absent, {@link resolveCaption} picks one. */
   caption?: string;
+  /** What people should read about the node; see {@link GraphDetail}. */
+  details?: GraphDetail[];
   properties?: Record<string, unknown>;
 }
 
@@ -35,10 +50,23 @@ export interface GraphEdge {
   source: string;
   /** {@link GraphNode.id} of the edge's destination. */
   target: string;
-  /** Relationship type — drawn along the edge and used for legend grouping. */
+  /** Relationship type — used for legend grouping, and drawn along the edge
+   * when it has no {@link GraphEdge.caption}. */
   type?: string;
+  /** What the edge says ("replaces 9.1"), drawn along it in place of its type.
+   * The type still groups and filters it. */
+  caption?: string;
+  /**
+   * How much the edge stands out: `strong` for what the graph is ABOUT (a
+   * relation a reader follows), `muted` for structure around it. Unset is
+   * the normal weight.
+   */
+  emphasis?: GraphEdgeEmphasis;
+  details?: GraphDetail[];
   properties?: Record<string, unknown>;
 }
+
+export type GraphEdgeEmphasis = "strong" | "muted";
 
 export interface GraphPayload {
   kind: typeof GRAPH_PAYLOAD_KIND;
@@ -50,7 +78,12 @@ export interface GraphPayload {
   /** Totals BEFORE truncation, when the producer knows them. */
   stats?: { nodeCount?: number; edgeCount?: number };
   /** Per-label styling hints from the producer. Overridden by host styling. */
-  legend?: Record<string, { color?: string; captionKey?: string }>;
+  /**
+   * Per-label hints: a colour, the property to caption by, and the `name`
+   * people read for the label ("Paragraph" for `EomiBlock`) — the label itself
+   * stays what queries and filters use.
+   */
+  legend?: Record<string, { color?: string; captionKey?: string; name?: string }>;
   /**
    * Producer-supplied context about how this graph was obtained.
    *
@@ -104,7 +137,35 @@ const isNode = (value: unknown): value is GraphNode =>
   value.id.length > 0 &&
   isStringArray(value.labels) &&
   (value.caption === undefined || typeof value.caption === "string") &&
+  isDetails(value.details) &&
   (value.properties === undefined || isRecord(value.properties));
+
+const isDetails = (value: unknown): boolean =>
+  value === undefined ||
+  (Array.isArray(value) &&
+    value.every(
+      (d) =>
+        isRecord(d) &&
+        typeof d.label === "string" &&
+        typeof d.value === "string" &&
+        (d.href === undefined || typeof d.href === "string"),
+    ));
+
+/**
+ * A detail's link, or `undefined` when it is not one a click may follow:
+ * `http(s):` or a same-origin path. A `javascript:` URL out of a graph
+ * property would otherwise run in the host page.
+ */
+export function safeHref(href: string | undefined): string | undefined {
+  if (!href) return undefined;
+  if (href.startsWith("/") && !href.startsWith("//")) return href;
+  try {
+    const url = new URL(href);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const isEdge = (value: unknown): value is GraphEdge =>
   isRecord(value) &&
@@ -112,7 +173,15 @@ const isEdge = (value: unknown): value is GraphEdge =>
   typeof value.source === "string" &&
   typeof value.target === "string" &&
   (value.type === undefined || typeof value.type === "string") &&
+  (value.caption === undefined || typeof value.caption === "string") &&
+  (value.emphasis === undefined || value.emphasis === "strong" || value.emphasis === "muted") &&
+  isDetails(value.details) &&
   (value.properties === undefined || isRecord(value.properties));
+
+/** What to draw along an edge: its caption, else its type. */
+export function edgeCaption(edge: Pick<GraphEdge, "caption" | "type">): string {
+  return edge.caption || edge.type || "RELATED";
+}
 
 /**
  * Structural check. Strict on the discriminator — an arbitrary object that
@@ -144,7 +213,8 @@ const isLegend = (value: unknown): boolean =>
       (hint) =>
         isRecord(hint) &&
         (hint.color === undefined || typeof hint.color === "string") &&
-        (hint.captionKey === undefined || typeof hint.captionKey === "string"),
+        (hint.captionKey === undefined || typeof hint.captionKey === "string") &&
+        (hint.name === undefined || typeof hint.name === "string"),
     ));
 
 /**

@@ -30,6 +30,8 @@ export interface GraphStyleMap {
   /** Distinct labels in first-seen order — also the legend's order. */
   labels: string[];
   colorForLabel: (label: string) => string;
+  /** What people read for a label: the producer's legend `name`, else the label. */
+  nameForLabel: (label: string) => string;
   styleForNode: (node: GraphNode) => NodeStyle;
   /** Distinct relationship types, for the legend. */
   edgeTypes: string[];
@@ -156,6 +158,12 @@ export function useGraphStyling(
     const colorForLabel = (label: string) =>
       colors.get(label) ?? theme.palette[0] ?? theme.foreground;
 
+    const names = new Map<string, string>();
+    for (const [label, hint] of Object.entries(payload.legend ?? {})) {
+      if (hint.name?.trim()) names.set(label, hint.name.trim());
+    }
+    const nameForLabel = (label: string) => names.get(label) ?? label;
+
     // Size by connectedness. In a force layout every node is a same-sized
     // dot, so the structure — which nodes hold the graph together — is
     // invisible until you trace the edges by eye. Scaling by degree makes the
@@ -194,17 +202,22 @@ export function useGraphStyling(
       return style;
     };
 
-    return { labels, colorForLabel, styleForNode, edgeTypes };
+    return { labels, colorForLabel, nameForLabel, styleForNode, edgeTypes };
   }, [payload, theme, styling]);
 }
 
 /** Human-readable one-liner for a hover tooltip. */
-export function describeNode(node: GraphNode, caption: string): string {
-  const labels = node.labels?.length ? node.labels.join(":") : "Node";
+export function describeNode(
+  node: GraphNode,
+  caption: string,
+  nameForLabel: (label: string) => string = (label) => label,
+): string {
+  const labels = node.labels?.length ? node.labels.map(nameForLabel).join(" · ") : "Node";
   return `${labels} — ${caption}`;
 }
 
-export function describeEdge(edge: GraphEdge): string {
-  return edge.type ?? "RELATED";
+export function describeEdge(edge: Pick<GraphEdge, "type" | "caption">): string {
+  const type = edge.type ?? "RELATED";
+  return edge.caption && edge.caption !== type ? `${edge.caption} (${type})` : type;
 }
 export { buildLabelColors as __buildLabelColorsForTest };

@@ -1,0 +1,288 @@
+import { act } from "react";
+import { graphLink } from "../graph-links.ts";
+import { createRoot } from "react-dom/client";
+import { describe, expect, it } from "vitest";
+import { GraphInspector } from "../graph-inspector.tsx";
+import { nodeTooltip } from "../graph-tooltip.ts";
+import {
+  GRAPH_PAYLOAD_KIND,
+  GRAPH_PAYLOAD_VERSION,
+  isGraphPayload,
+  safeHref,
+  type GraphNode,
+} from "../model.ts";
+import type { GraphStyleMap } from "../use-graph-styling.ts";
+
+const statement: GraphNode = {
+  id: "s1",
+  labels: ["DocumentOrder", "EomiDerived", "EomiNode"],
+  caption: "Precedence",
+  details: [
+    { label: "Quote", value: "they apply in this order" },
+    { label: "Stated in", value: "Contract, 2.1", href: "/spaces/c1#b4" },
+    { label: "Unsafe", value: "x", href: "javascript:alert(1)" },
+  ],
+  properties: { eomiKey: "platform/x:1", readings: 2 },
+};
+
+describe("curated details", () => {
+  it("follows only http(s) and same-origin paths", () => {
+    expect(safeHref("/spaces/c1#b4")).toBe("/spaces/c1#b4");
+    expect(safeHref("https://example.com/a")).toBe("https://example.com/a");
+    expect(safeHref("javascript:alert(1)")).toBeUndefined();
+    expect(safeHref("//evil.example/x")).toBeUndefined();
+  });
+
+  it("accepts details and rejects malformed ones", () => {
+    const payload = (details: unknown) => ({
+      kind: GRAPH_PAYLOAD_KIND,
+      version: GRAPH_PAYLOAD_VERSION,
+      nodes: [{ id: "a", details }],
+      edges: [],
+    });
+    expect(isGraphPayload(payload(statement.details))).toBe(true);
+    expect(isGraphPayload(payload([{ label: "Quote" }]))).toBe(false);
+  });
+
+  it("shows details first, links in a new tab, and the rest under Advanced", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          <GraphInspector
+            selection={{ node: statement, edge: null }}
+            colorForLabel={() => "gray"}
+            captionOf={() => "Precedence"}
+            onClose={() => {}}
+          />,
+        ),
+      );
+      const links = [...host.querySelectorAll("a")];
+      expect(links.map((a) => a.getAttribute("href"))).toEqual(["/spaces/c1#b4"]);
+      expect(links[0].getAttribute("target")).toBe("_blank");
+      expect(links[0].getAttribute("rel")).toContain("noopener");
+      const advanced = host.querySelector("details")!;
+      expect(advanced.open).toBe(false);
+      expect(advanced.textContent).toContain("eomiKey");
+      expect(host.querySelector("header")!.textContent).not.toContain("EomiDerived");
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+
+  it("hovers with the details, not the raw properties", () => {
+    const styleMap = {
+      styleForNode: () => ({ caption: "Precedence" }),
+    } as unknown as GraphStyleMap;
+    const text = nodeTooltip(statement, styleMap).textContent ?? "";
+    expect(text).toContain("DocumentOrder — Precedence");
+    expect(text).toContain("Quote: they apply in this order");
+    expect(text).not.toContain("eomiKey");
+    expect(text).not.toContain("EomiDerived");
+  });
+});
+
+describe("details follow the data", () => {
+  it("refreshes a kept node's details, and search finds their text", async () => {
+    const { reconcileGraphModel } = await import("../use-graph-model.ts");
+    const { __matchNodesForTest } = await import("../use-graph-view-state.ts");
+    const payload = (value: string) => ({
+      kind: GRAPH_PAYLOAD_KIND,
+      version: GRAPH_PAYLOAD_VERSION,
+      nodes: [{ id: "a", details: [{ label: "Quote", value }] }],
+      edges: [],
+    });
+    const first = reconcileGraphModel(payload("old words"), new Map());
+    const second = reconcileGraphModel(payload("new words"), first.cache);
+
+    expect(second.model.nodes[0].details?.[0].value).toBe("new words");
+    expect(__matchNodesForTest(second.model.nodes, "new wor", () => "")).toEqual(new Set(["a"]));
+  });
+});
+
+describe("app links", () => {
+  it("follows an app address only when the host's resolver claims it", () => {
+    const opened: string[] = [];
+    const resolve = (href: string) =>
+      href.startsWith("spaces://") ? { open: () => opened.push(href) } : null;
+
+    expect(graphLink("spaces://doc#block-b1")).toBeUndefined();
+    const link = graphLink("spaces://doc#block-b1", resolve)!;
+    expect(link.external).toBe(false);
+    link.open?.();
+    expect(opened).toEqual(["spaces://doc#block-b1"]);
+    expect(graphLink("https://example.com", resolve)).toEqual({
+      href: "https://example.com/",
+      external: true,
+    });
+    expect(graphLink("javascript:alert(1)", resolve)).toBeUndefined();
+  });
+
+  it("opens an app link through the host on click, not the browser", async () => {
+    const opened: string[] = [];
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          <GraphInspector
+            selection={{
+              node: {
+                id: "n",
+                labels: ["EomiBlock"],
+                details: [{ label: "Source", value: "Open", href: "spaces://doc#block-b1" }],
+              },
+              edge: null,
+            }}
+            colorForLabel={() => "gray"}
+            nameForLabel={(label) => (label === "EomiBlock" ? "Paragraph" : label)}
+            resolveAppLink={(href) => ({ open: () => opened.push(href) })}
+            captionOf={() => "b1"}
+            onClose={() => {}}
+          />,
+        ),
+      );
+      const link = host.querySelector("a")!;
+      expect(link.getAttribute("target")).toBeNull();
+      const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+      await act(async () => link.dispatchEvent(click));
+      expect(click.defaultPrevented).toBe(true);
+      expect(opened).toEqual(["spaces://doc#block-b1"]);
+      expect(host.querySelector("header")!.textContent).toContain("Paragraph");
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+});
+
+describe("label names", () => {
+  it("shows the producer's name for a label and keeps the label beside it", async () => {
+    const { GraphLegend } = await import("../graph-legend.tsx");
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const styleMap = {
+      labels: ["EomiBlock", "Person"],
+      colorForLabel: () => "gray",
+      nameForLabel: (label: string) => (label === "EomiBlock" ? "Paragraph" : label),
+      styleForNode: () => ({ color: "gray", caption: "", radius: 4 }),
+      edgeTypes: [],
+    } as unknown as GraphStyleMap;
+    try {
+      await act(async () =>
+        root.render(
+          <GraphLegend
+            styleMap={styleMap}
+            counts={new Map([["EomiBlock", 2]])}
+            hiddenLabels={new Set()}
+            onToggleLabel={() => {}}
+            onShowAll={() => {}}
+          />,
+        ),
+      );
+      const titles = [...host.querySelectorAll("button")].map((b) => b.getAttribute("title"));
+      expect(titles).toEqual(["Hide Paragraph (EomiBlock)", "Hide Person"]);
+      expect(host.textContent).toContain("Paragraph");
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+});
+
+describe("edge emphasis and layout", () => {
+  it("accepts strong and muted edges and nothing else", () => {
+    const payload = (emphasis: unknown) => ({
+      kind: GRAPH_PAYLOAD_KIND,
+      version: GRAPH_PAYLOAD_VERSION,
+      nodes: [{ id: "a" }, { id: "b" }],
+      edges: [{ id: "e", source: "a", target: "b", emphasis }],
+    });
+    expect(isGraphPayload(payload("strong"))).toBe(true);
+    expect(isGraphPayload(payload("muted"))).toBe(true);
+    expect(isGraphPayload(payload(undefined))).toBe(true);
+    expect(isGraphPayload(payload("loud"))).toBe(false);
+  });
+
+  it("offers the layouts and reports the one chosen", async () => {
+    const { GraphToolbar } = await import("../graph-toolbar.tsx");
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const chosen: string[] = [];
+    try {
+      await act(async () =>
+        root.render(
+          <GraphToolbar
+            query=""
+            onQueryChange={() => {}}
+            matchCount={0}
+            nodeCount={1}
+            edgeCount={0}
+            onZoomToFit={() => {}}
+            onReheat={() => {}}
+            pinnedCount={0}
+            onUnpinAll={() => {}}
+            layout="force"
+            onLayoutChange={(layout) => chosen.push(layout)}
+          />,
+        ),
+      );
+      const select = host.querySelector<HTMLSelectElement>('select[aria-label="Layout"]')!;
+      expect([...select.options].map((o) => o.value)).toEqual([
+        "force",
+        "tree",
+        "tree-lr",
+        "radial",
+      ]);
+      await act(async () => {
+        select.value = "tree";
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(chosen).toEqual(["tree"]);
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+});
+
+describe("expanding without the agent", () => {
+  it("is off until a host registers an expander, and off again after", async () => {
+    const { graphExpander, registerGraphExpander } =
+      await import("../assistant-ui/graph-expander.ts");
+    expect(graphExpander()).toBeNull();
+    const expander = async () => null;
+    const unregister = registerGraphExpander(expander);
+    expect(graphExpander()).toBe(expander);
+    unregister();
+    expect(graphExpander()).toBeNull();
+  });
+});
+
+describe("names without details", () => {
+  it("names a plain node by its label's name in the hover", () => {
+    const styleMap = {
+      styleForNode: () => ({ caption: "b1" }),
+      nameForLabel: (label: string) => (label === "EomiBlock" ? "Paragraph" : label),
+    } as unknown as GraphStyleMap;
+    const text = nodeTooltip({ id: "n", labels: ["EomiBlock"] }, styleMap).textContent ?? "";
+    expect(text).toContain("Paragraph — b1");
+  });
+
+  it("finds a node by its label's name", async () => {
+    const { __matchNodesForTest } = await import("../use-graph-view-state.ts");
+    const found = __matchNodesForTest(
+      [{ id: "n", labels: ["EomiBlock"] }],
+      "paragraph",
+      () => "",
+      (label: string) => (label === "EomiBlock" ? "Paragraph" : label),
+    );
+    expect(found).toEqual(new Set(["n"]));
+  });
+});

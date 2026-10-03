@@ -39,7 +39,7 @@ export function GraphLegend({
             type="button"
             onClick={() => onToggleLabel(label)}
             aria-pressed={!hidden}
-            title={hidden ? `Show ${label}` : `Hide ${label}`}
+            title={`${hidden ? "Show" : "Hide"} ${legendTitle(styleMap.nameForLabel(label), label)}`}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
@@ -53,7 +53,7 @@ export function GraphLegend({
               className="size-2 shrink-0 rounded-full"
               style={{ backgroundColor: styleMap.colorForLabel(label) }}
             />
-            <span className={cn(hidden && "line-through")}>{label}</span>
+            <span className={cn(hidden && "line-through")}>{styleMap.nameForLabel(label)}</span>
             <span className="text-muted-foreground tabular-nums">{counts.get(label) ?? 0}</span>
           </button>
         );
@@ -69,4 +69,9 @@ export function GraphLegend({
       )}
     </div>
   );
+}
+
+/** The label's name, and the label itself when the two differ. */
+function legendTitle(name: string, label: string): string {
+  return name === label ? label : `${name} (${label})`;
 }

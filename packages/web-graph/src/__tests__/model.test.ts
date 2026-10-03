@@ -4,6 +4,7 @@ import {
   GRAPH_PAYLOAD_VERSION,
   coerceGraphPayload,
   deepEqual,
+  edgeCaption,
   emptyGraphPayload,
   isGraphPayload,
   mergeGraphPayloads,
@@ -345,5 +346,21 @@ describe("coerceGraphPayload rejects a payload it cannot render", () => {
   it("refuses a caption or properties of the wrong shape", () => {
     expect(coerceGraphPayload(wrap([{ id: "a", caption: 7 }]))).toBeNull();
     expect(coerceGraphPayload(wrap([{ id: "a", properties: "nope" }]))).toBeNull();
+  });
+});
+
+describe("edge captions", () => {
+  it("draws what the edge says, and falls back to its type", () => {
+    expect(edgeCaption({ type: "CHANGES", caption: "replaces 9.1" })).toBe("replaces 9.1");
+    expect(edgeCaption({ type: "CHANGES" })).toBe("CHANGES");
+    expect(edgeCaption({})).toBe("RELATED");
+  });
+
+  it("accepts a captioned edge and rejects a caption that is not text", () => {
+    const edge = { id: "e1", source: "a", target: "b", type: "CHANGES" };
+    expect(isGraphPayload(payload({ edges: [{ ...edge, caption: "replaces 9.1" }] }))).toBe(true);
+    expect(isGraphPayload(payload({ edges: [{ ...edge, caption: 7 as unknown as string }] }))).toBe(
+      false,
+    );
   });
 });

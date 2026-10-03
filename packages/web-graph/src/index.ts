@@ -18,6 +18,10 @@ export {
   primaryLabel,
   pruneDanglingEdges,
   resolveCaption,
+  edgeCaption,
+  safeHref,
+  type GraphDetail,
+  type GraphEdgeEmphasis,
   type GraphEdge,
   type GraphNode,
   type GraphPayload,
@@ -60,3 +64,5 @@ export {
   isGraphOpen,
   type GraphWorkspaceState,
 } from "./graph-workspace.ts";
+export { graphLink, type GraphLink, type GraphLinkResolver } from "./graph-links.ts";
+export type { GraphLayout } from "./graph-canvas.tsx";

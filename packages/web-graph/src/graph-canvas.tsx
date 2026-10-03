@@ -8,7 +8,7 @@ import {
   type Ref,
 } from "react";
 import ForceGraph2D, { type ForceGraphMethods } from "react-force-graph-2d";
-import { primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
+import { edgeCaption, primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
 import {
   paintEdgeLabel,
   paintNode,
@@ -67,20 +67,43 @@ export interface GraphCanvasProps {
   handleRef?: Ref<GraphCanvasHandle>;
   /** Skip the settle animation for `prefers-reduced-motion`. */
   reducedMotion?: boolean;
+  /** How nodes are arranged; a hierarchy needs a graph without cycles. */
+  layout?: GraphLayout;
+  /** The graph has a cycle, so the hierarchy cannot be drawn: fall back. */
+  onLayoutUnavailable?: () => void;
 }
+
+/** Force-directed, or a hierarchy: top-down, left to right, or radial. */
+export type GraphLayout = "force" | "tree" | "tree-lr" | "radial";
 
 /** Matches the platform default well enough that the gesture feels native. */
 const DOUBLE_CLICK_MS = 350;
 
 /**
- * Upper bound on zoom.
- *
- * `zoomToFit` has no upper bound, so a two- or three-node result frames itself
- * at a scale where the nodes fill the panel like beach balls. Capping keeps a
- * small graph looking like a small graph, while leaving room to zoom into a
- * dense neighbourhood by hand.
+ * Upper bound on zoom by hand: close enough to read a dense neighbourhood's
+ * labels. Framing has its own, lower bound (`FIT_MAX_ZOOM`).
  */
-const MAX_ZOOM = 2.2;
+const MAX_ZOOM = 8;
+
+/**
+ * Upper bound on framing. `zoomToFit` has none, so a two- or three-node result
+ * framed itself at a scale where the nodes filled the panel like beach balls;
+ * capping the FIT keeps a small graph looking small without stopping anyone
+ * from zooming in by hand.
+ */
+const FIT_MAX_ZOOM = 2.2;
+
+/** Line width and arrow length by emphasis, in graph units. */
+const EDGE_WIDTH = { strong: 1.8, normal: 1.1, muted: 0.8 } as const;
+const EDGE_ARROW = { strong: 7, normal: 5, muted: 4 } as const;
+
+/** What each layout asks of the engine: none is the force layout. */
+const DAG_MODE: Record<GraphLayout, "td" | "lr" | "radialout" | undefined> = {
+  force: undefined,
+  tree: "td",
+  "tree-lr": "lr",
+  radial: "radialout",
+};
 
 /**
  * How far inside the visible edge a revealed node must sit.
@@ -248,10 +271,14 @@ export function GraphCanvas({
   insetRight = 0,
   handleRef,
   reducedMotion = false,
+  layout = "force",
+  onLayoutUnavailable,
 }: GraphCanvasProps) {
   const engineRef = useRef<ForceGraphMethods<EngineNode, EngineLink> | undefined>(undefined);
   const hiddenLabelsRef = useRef(state.hiddenLabels);
   hiddenLabelsRef.current = state.hiddenLabels;
+  const sizeRef = useRef({ width, height });
+  sizeRef.current = { width, height };
   const insetRightRef = useRef(insetRight);
   insetRightRef.current = insetRight;
   const autoFitCancelledRef = useRef(false);
@@ -269,15 +296,25 @@ export function GraphCanvas({
     const engine = engineRef.current;
     if (!engine) return;
     const inset = insetRightRef.current;
-    engine.zoomToFit(
-      durationMs,
-      FIT_PADDING + inset / 2,
-      (node) => !hiddenLabelsRef.current.has(primaryLabel(node)),
+    // Framed here rather than by `zoomToFit`, which has no upper bound: the
+    // fit is capped (`FIT_MAX_ZOOM`) while the zoom by hand is not.
+    const box = engine.getGraphBbox((node) => !hiddenLabelsRef.current.has(primaryLabel(node)));
+    const { width: w, height: h } = sizeRef.current;
+    if (!box || w <= 0 || h <= 0) return;
+    const pad = FIT_PADDING + inset / 2;
+    const zoom = Math.min(
+      FIT_MAX_ZOOM,
+      // No floor but a positive one: a wide hierarchy can need far less
+      // than 0.05 to fit, and a floor would leave its ends off-screen.
+      Math.max(1e-4, (w - pad * 2) / Math.max(1, box.x[1] - box.x[0])),
+      Math.max(1e-4, (h - pad * 2) / Math.max(1, box.y[1] - box.y[0])),
     );
-    if (inset <= 0) return;
-    const zoom = engine.zoom() || 1;
-    const centre = engine.centerAt();
-    engine.centerAt(centre.x + inset / 2 / zoom, centre.y, durationMs);
+    engine.centerAt(
+      (box.x[0] + box.x[1]) / 2 + inset / 2 / zoom,
+      (box.y[0] + box.y[1]) / 2,
+      durationMs,
+    );
+    engine.zoom(zoom, durationMs);
   }, []);
 
   /**
@@ -430,10 +467,14 @@ export function GraphCanvas({
    * as a signal that the view changed.
    */
   const measure = useMemo(() => createCaptionMeasurer(), []);
-  // Relationship types are painted at 9px, not 11px — a different font, so a
-  // different cache.
-  const measureEdge = useMemo(
-    () => createCaptionMeasurer("9px ui-sans-serif, system-ui, sans-serif"),
+  // Edge labels are painted at 11px when strong and 10px otherwise
+  // (`paintEdgeLabel`) — measured with the font that paints them.
+  const measureEdgeNormal = useMemo(
+    () => createCaptionMeasurer("10px ui-sans-serif, system-ui, sans-serif"),
+    [],
+  );
+  const measureEdgeStrong = useMemo(
+    () => createCaptionMeasurer("11px ui-sans-serif, system-ui, sans-serif"),
     [],
   );
   const [captioned, setCaptioned] = useState<Set<string>>(() => new Set());
@@ -477,8 +518,9 @@ export function GraphCanvas({
     // captions as readily as captions overlap each other, and a `DIRECTED` you
     // cannot read is a smaller loss than a `Metropolis` you cannot read.
     for (const link of model.links) {
-      const type = (link as EngineLink).type;
-      if (!type) continue;
+      // What is painted is what is measured: the caption when there is one.
+      const text = (link as EngineLink).caption || (link as EngineLink).type;
+      if (!text) continue;
       const source = screens.get(String((link.source as EngineNode)?.id ?? link.source));
       const target = screens.get(String((link.target as EngineNode)?.id ?? link.target));
       if (!source || !target) continue;
@@ -486,7 +528,15 @@ export function GraphCanvas({
       const targetId = String((link.target as EngineNode)?.id ?? link.target);
       candidates.push({
         id: `${EDGE_LABEL_PREFIX}${(link as EngineLink).id}`,
-        rect: edgeLabelRect(source.x, source.y, target.x, target.y, measureEdge(type)),
+        rect: edgeLabelRect(
+          source.x,
+          source.y,
+          target.x,
+          target.y,
+          ((link as EngineLink).emphasis === "strong" ? measureEdgeStrong : measureEdgeNormal)(
+            text,
+          ),
+        ),
         tier: LabelTier.Edge,
         weight: 0,
         exempt: [sourceId, targetId],
@@ -497,7 +547,17 @@ export function GraphCanvas({
     // Replace only on a real change: this runs on every frame the view moves,
     // and a new Set each time would re-render the whole canvas for nothing.
     setCaptioned((prev) => (sameIds(prev, next) ? prev : next));
-  }, [model.nodes, model.links, styleMap, isHidden, measure, measureEdge, width, height]);
+  }, [
+    model.nodes,
+    model.links,
+    styleMap,
+    isHidden,
+    measure,
+    measureEdgeNormal,
+    measureEdgeStrong,
+    width,
+    height,
+  ]);
 
   const lastPlacedRef = useRef(0);
   const handleFramePre = useCallback(() => {
@@ -549,7 +609,9 @@ export function GraphCanvas({
         clearInterval(timer);
         return;
       }
-      fit();
+      // Glide, over exactly one interval: an instant re-frame every 150ms
+      // while the nodes still move read as the camera jittering.
+      fit(reducedMotion ? 0 : FIT_INTERVAL_MS);
     }, FIT_INTERVAL_MS);
     return () => clearInterval(timer);
     // `fit` reads the drawer's width through a ref rather than taking it as a
@@ -557,7 +619,7 @@ export function GraphCanvas({
     // click that means "tell me about this node" would re-frame the graph the
     // user had arranged. `reveal` is what handles the drawer opening.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, width, height, fit]);
+  }, [model, width, height, fit, layout, reducedMotion]);
 
   // Selection, hover and search decide a caption's priority, so a change to
   // any of them re-places. Held in a ref as well so the framing interval and
@@ -618,7 +680,14 @@ export function GraphCanvas({
       // Only worth drawing while the graph is sparse enough to read.
       if (model.links.length > 300) return;
       if (!captioned.has(`${EDGE_LABEL_PREFIX}${(link as EngineLink).id}`)) return;
-      paintEdgeLabel(link, (link as EngineLink).type ?? "", theme, ctx, globalScale);
+      paintEdgeLabel(
+        link,
+        edgeCaption(link as EngineLink),
+        theme,
+        ctx,
+        globalScale,
+        (link as EngineLink).emphasis,
+      );
     },
     [model.links.length, theme, captioned],
   );
@@ -661,10 +730,13 @@ export function GraphCanvas({
       width={width}
       height={height}
       backgroundColor="transparent"
-      // Cap the zoom. `zoomToFit` has no upper bound, so a three-node result
-      // frames itself at a scale where the nodes fill the panel like beach
-      // balls. Capping keeps a small graph looking like a small graph.
+      // The bound on zooming by hand; framing has its own, lower one (`fit`).
       maxZoom={MAX_ZOOM}
+      dagMode={DAG_MODE[layout]}
+      dagLevelDistance={90}
+      // A cycle cannot be drawn as a hierarchy. The engine's default is to
+      // THROW; falling back to the force layout, and saying so, is the host's.
+      onDagError={() => onLayoutUnavailable?.()}
       nodeRelSize={4}
       nodeVal={(node) => (styleMap.styleForNode(node as EngineNode).radius / 4) ** 2}
       nodeVisibility={(node) => !isHidden(node)}
@@ -681,13 +753,17 @@ export function GraphCanvas({
       nodePointerAreaPaint={nodePointerAreaPaint}
       linkCanvasObjectMode={() => "after"}
       linkCanvasObject={linkCanvasObject}
+      // What the graph is ABOUT reads first: a `strong` edge is drawn in the
+      // accent, thicker and with a larger arrow; structure (`muted`) recedes.
       // border is too faint to follow across a canvas; mutedForeground reads
       // as a line without competing with the nodes.
-      linkColor={() => theme.mutedForeground}
-      linkWidth={1.1}
-      linkDirectionalArrowLength={4}
+      linkColor={(link) => (link.emphasis === "strong" ? theme.ring : theme.mutedForeground)}
+      linkWidth={(link) => EDGE_WIDTH[link.emphasis ?? "normal"]}
+      linkDirectionalArrowLength={(link) => EDGE_ARROW[link.emphasis ?? "normal"]}
       linkDirectionalArrowRelPos={1}
-      linkDirectionalArrowColor={() => theme.mutedForeground}
+      linkDirectionalArrowColor={(link) =>
+        link.emphasis === "strong" ? theme.ring : theme.mutedForeground
+      }
       d3VelocityDecay={0.32}
       // Every way a label can move — the layout settling, a pan, a zoom, or the
       // user dragging one node — shows up as a rendered frame, and nothing else
@@ -710,8 +786,10 @@ export function GraphCanvas({
       // anything, so these users got the engine's initial placement — a
       // scatter with edges crossing at random, which is not a graph. The ticks
       // run synchronously before the first paint instead: the same layout,
-      // arrived at without motion. Bounded, because they block.
-      warmupTicks={reducedMotion ? warmupFor(model.nodes.length) : 0}
+      // arrived at without motion. Bounded, because they block. Everyone gets
+      // them: a graph that first appears as a random scatter and then sorts
+      // itself out in view read as jitter; it now opens nearly settled.
+      warmupTicks={warmupFor(model.nodes.length)}
       cooldownTicks={reducedMotion ? 0 : undefined}
       cooldownTime={reducedMotion ? 0 : cooldownFor(model.nodes.length)}
     />

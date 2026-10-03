@@ -91,8 +91,8 @@ describe("GraphViewHandle", () => {
     act(() => {
       handle.current!.select("n2");
     });
-    const freeze = [...container.querySelectorAll("button")].find((b) =>
-      b.textContent?.includes("Freeze"),
+    const freeze = [...container.querySelectorAll("button")].find(
+      (b) => b.getAttribute("aria-label") === "Freeze",
     );
     expect(freeze, "no Freeze control on the drawer").toBeTruthy();
     act(() => freeze!.click());

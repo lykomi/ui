@@ -1,8 +1,8 @@
 import { cn } from "@iloveagents/foundry-web-primitives";
 import { useMemo } from "react";
-import { primaryLabel, type GraphEdge, type GraphNode } from "./model.ts";
+import { primaryLabel, type GraphEdge, type GraphEdgeEmphasis, type GraphNode } from "./model.ts";
 import { endpointId, type GraphModel } from "./use-graph-model.ts";
-import type { GraphStyleMap } from "./use-graph-styling.ts";
+import { describeEdge, type GraphStyleMap } from "./use-graph-styling.ts";
 
 export interface GraphTableProps {
   model: GraphModel;
@@ -90,7 +90,9 @@ export function GraphTable({
             const degree = degrees.get(node.id) ?? 0;
             return (
               <tr key={node.id} className="border-border/60 border-b last:border-0">
-                <td className="text-muted-foreground px-2 py-1">{primaryLabel(node)}</td>
+                <td className="text-muted-foreground px-2 py-1" title={primaryLabel(node)}>
+                  {styleMap.nameForLabel(primaryLabel(node))}
+                </td>
                 <td className="px-2 py-1">
                   {onSelectNode ? (
                     <button
@@ -151,10 +153,14 @@ export function GraphTable({
                       }
                       className="hover:text-foreground focus-visible:ring-ring rounded text-left underline decoration-dotted underline-offset-2 focus-visible:outline-none focus-visible:ring-1"
                     >
-                      {link.type ?? "RELATED"}
+                      {describeEdge(link)}
+                      <EmphasisNote emphasis={link.emphasis} />
                     </button>
                   ) : (
-                    (link.type ?? "RELATED")
+                    <>
+                      {describeEdge(link)}
+                      <EmphasisNote emphasis={link.emphasis} />
+                    </>
                   )}
                 </td>
                 <td className="px-2 py-1">{captionFor(endpointId(link.target))}</td>
@@ -164,5 +170,18 @@ export function GraphTable({
         </table>
       )}
     </div>
+  );
+}
+
+/**
+ * What the canvas says with colour and weight, said in words: a strong edge
+ * is what the graph is about, a muted one the structure around it.
+ */
+function EmphasisNote({ emphasis }: { emphasis?: GraphEdgeEmphasis }) {
+  if (!emphasis) return null;
+  return (
+    <span className="text-muted-foreground ml-1 text-[11px]">
+      {emphasis === "strong" ? "· key relation" : "· structure"}
+    </span>
   );
 }

@@ -46,6 +46,7 @@ function matchNodes(
   nodes: GraphNode[],
   query: string,
   captionOf: (n: GraphNode) => string,
+  nameForLabel: (label: string) => string = (label) => label,
 ): Set<string> {
   const needle = query.trim().toLowerCase();
   if (needle.length === 0) return new Set();
@@ -55,7 +56,20 @@ function matchNodes(
       out.add(node.id);
       continue;
     }
-    if (node.labels?.some((l) => l.toLowerCase().includes(needle))) {
+    if (
+      node.labels?.some(
+        (l) => l.toLowerCase().includes(needle) || nameForLabel(l).toLowerCase().includes(needle),
+      )
+    ) {
+      out.add(node.id);
+      continue;
+    }
+    // What the inspector shows first is what a person searches for.
+    if (
+      node.details?.some(
+        (d) => d.label.toLowerCase().includes(needle) || d.value.toLowerCase().includes(needle),
+      )
+    ) {
       out.add(node.id);
       continue;
     }
@@ -78,6 +92,7 @@ function matchNodes(
 export function useGraphViewState(
   payload: GraphPayload,
   captionOf: (node: GraphNode) => string,
+  nameForLabel?: (label: string) => string,
 ): GraphViewState {
   const [selection, setSelection] = useState<GraphSelection>(EMPTY_SELECTION);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -86,8 +101,8 @@ export function useGraphViewState(
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
 
   const matchedIds = useMemo(
-    () => matchNodes(payload.nodes, query, captionOf),
-    [payload.nodes, query, captionOf],
+    () => matchNodes(payload.nodes, query, captionOf, nameForLabel),
+    [payload.nodes, query, captionOf, nameForLabel],
   );
 
   /**

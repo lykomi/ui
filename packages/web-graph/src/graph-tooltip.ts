@@ -1,5 +1,11 @@
 import { describeEdge, describeNode, type GraphStyleMap } from "./use-graph-styling.ts";
-import type { GraphEdge, GraphNode } from "./model.ts";
+import {
+  edgeCaption,
+  primaryLabel,
+  type GraphDetail,
+  type GraphEdge,
+  type GraphNode,
+} from "./model.ts";
 
 /**
  * Build the hover tooltip as a DOM element, NOT as an HTML string.
@@ -52,13 +58,31 @@ function previewRows(properties: Record<string, unknown> | undefined): [string, 
   return rows;
 }
 
+/** A curated hover: the first few details, never a link or the raw properties. */
+function detailRows(details: GraphDetail[]): [string, string][] {
+  return details
+    .slice(0, MAX_TOOLTIP_ROWS)
+    .map(({ label, value }) => [
+      label,
+      value.length > MAX_TOOLTIP_VALUE_CHARS
+        ? `${value.slice(0, MAX_TOOLTIP_VALUE_CHARS - 1)}…`
+        : value,
+    ]);
+}
+
 export function nodeTooltip(node: GraphNode, styleMap: GraphStyleMap): HTMLElement {
+  const caption = styleMap.styleForNode(node).caption;
+  if (node.details?.length) {
+    const kind = styleMap.nameForLabel?.(primaryLabel(node)) ?? primaryLabel(node);
+    return tooltipElement(`${kind} — ${caption}`, detailRows(node.details));
+  }
   return tooltipElement(
-    describeNode(node, styleMap.styleForNode(node).caption),
+    describeNode(node, caption, styleMap.nameForLabel),
     previewRows(node.properties),
   );
 }
 
 export function edgeTooltip(edge: GraphEdge): HTMLElement {
+  if (edge.details?.length) return tooltipElement(edgeCaption(edge), detailRows(edge.details));
   return tooltipElement(describeEdge(edge), previewRows(edge.properties));
 }

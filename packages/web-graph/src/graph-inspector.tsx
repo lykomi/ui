@@ -1,13 +1,16 @@
-import { useEffect, useRef, type ReactNode } from "react";
-import { Maximize2, Snowflake, X } from "lucide-react";
+import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { ChevronRight, ExternalLink, Maximize2, Snowflake, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
+  edgeCaption,
   primaryLabel,
   resolveCaption,
   safeStringify,
+  type GraphDetail,
   type GraphEdge,
   type GraphNode,
 } from "./model.ts";
+import { graphLink, type GraphLinkResolver } from "./graph-links.ts";
 import type { GraphSelection } from "./use-graph-view-state.ts";
 
 /** Render a property value without collapsing structure into "[object Object]". */
@@ -64,6 +67,50 @@ function PropertyRows({ properties }: { properties: Record<string, unknown> | un
   );
 }
 
+/** The producer's curated lines, links opening in a new tab. */
+function DetailRows({
+  details,
+  resolveAppLink,
+}: {
+  details: GraphDetail[];
+  resolveAppLink?: GraphLinkResolver;
+}) {
+  return (
+    <dl className="space-y-3">
+      {details.map((detail, index) => {
+        const link = graphLink(detail.href, resolveAppLink);
+        return (
+          <div key={`${detail.label}-${index}`}>
+            <dt className="text-muted-foreground text-xs">{detail.label}</dt>
+            <dd className="text-foreground mt-0.5 break-words text-sm">
+              {link ? (
+                <a
+                  href={link.href}
+                  {...(link.external
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {
+                        // The host opens its own addresses; the browser cannot.
+                        onClick: (event: MouseEvent<HTMLAnchorElement>) => {
+                          event.preventDefault();
+                          link.open?.();
+                        },
+                      })}
+                  className="text-primary inline-flex items-start gap-1 underline-offset-2 hover:underline"
+                >
+                  <span>{detail.value}</span>
+                  <ExternalLink aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                </a>
+              ) : (
+                detail.value
+              )}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
+  );
+}
+
 /**
  * The drawer's width in pixels, matching `w-80` below.
  *
@@ -77,6 +124,10 @@ export const GRAPH_INSPECTOR_WIDTH = 320;
 export interface GraphInspectorProps {
   selection: GraphSelection;
   colorForLabel: (label: string) => string;
+  /** What people read for a label (the payload legend's `name`). */
+  nameForLabel?: (label: string) => string;
+  /** How the host opens its own addresses in details (`graphLink`). */
+  resolveAppLink?: GraphLinkResolver;
   /** The same caption the canvas draws — resolved once by the styling hook. */
   captionOf: (node: GraphNode) => string;
   onClose: () => void;
@@ -110,6 +161,8 @@ export interface GraphInspectorProps {
 export function GraphInspector({
   selection,
   colorForLabel,
+  nameForLabel = (label) => label,
+  resolveAppLink,
   captionOf,
   onClose,
   onExpandNode,
@@ -156,6 +209,13 @@ export function GraphInspector({
   if (!node && !edge) return null;
 
   const frozen = node ? Boolean(isFrozen?.(node)) : false;
+  const item = node ?? (edge as GraphEdge);
+  const details = item.details?.length ? item.details : undefined;
+  // With curated details, one label names the kind; the rest are the
+  // producer's bookkeeping and go under "Advanced" with the properties.
+  const shownLabels = node?.labels?.length
+    ? (details ? [primaryLabel(node)] : node.labels).map(nameForLabel)
+    : ["Node"];
 
   return (
     // Non-modal, and pointer-transparent everywhere but the drawer itself.
@@ -222,11 +282,12 @@ export function GraphInspector({
                   className="size-2 shrink-0 rounded-full"
                   style={{ backgroundColor: colorForLabel(primaryLabel(node)) }}
                 />
-                {(node.labels?.length ? node.labels : ["Node"]).join(" · ")}
+                {shownLabels.join(" · ")}
               </p>
             ) : (
               <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.14em]">
-                Relationship
+                {/* The type beside the caption the heading shows, for every reader. */}
+                {edge?.type ? `Relationship · ${edge.type}` : "Relationship"}
               </p>
             )}
             <h2 className="text-foreground truncate text-base font-semibold" title={headingOf()}>
@@ -244,11 +305,31 @@ export function GraphInspector({
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <PropertyRows properties={(node ?? (edge as GraphEdge)).properties} />
+          {details ? (
+            <>
+              <DetailRows details={details} resolveAppLink={resolveAppLink} />
+              <details className="group mt-5">
+                <summary className="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-1 text-xs [&::-webkit-details-marker]:hidden">
+                  <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
+                  Advanced
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {node?.labels?.length ? (
+                    <p className="text-muted-foreground text-xs">{node.labels.join(" · ")}</p>
+                  ) : edge?.type ? (
+                    <p className="text-muted-foreground text-xs">{edge.type}</p>
+                  ) : null}
+                  <PropertyRows properties={item.properties} />
+                </div>
+              </details>
+            </>
+          ) : (
+            <PropertyRows properties={item.properties} />
+          )}
         </div>
 
         {node && (onExpandNode || onToggleFrozen || actions) && (
-          <footer className="border-border flex items-center justify-end gap-1.5 border-t px-4 py-3">
+          <footer className="border-border flex flex-wrap items-center justify-end gap-1.5 border-t px-4 py-3">
             {actions}
             {onToggleFrozen && (
               <button
@@ -256,13 +337,13 @@ export function GraphInspector({
                 onClick={() => onToggleFrozen(node)}
                 aria-pressed={frozen}
                 title={frozen ? "Let the layout move this node" : "Freeze this node in place"}
+                aria-label={frozen ? "Unfreeze" : "Freeze"}
                 className={cn(
-                  "border-border hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1",
+                  "border-border hover:bg-muted focus-visible:ring-ring inline-flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-1",
                   frozen ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <Snowflake className="size-3.5" />
-                {frozen ? "Frozen" : "Freeze"}
+                <Snowflake className="size-3.5" aria-hidden="true" />
               </button>
             )}
             {onExpandNode && (
@@ -284,6 +365,6 @@ export function GraphInspector({
 
   function headingOf(): string {
     if (node) return captionOf(node) || resolveCaption(node);
-    return edge?.type ?? "RELATED";
+    return edge ? edgeCaption(edge) : "RELATED";
   }
 }

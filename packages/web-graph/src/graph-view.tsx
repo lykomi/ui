@@ -33,7 +33,8 @@ import {
 import { useGraphStyling, type GraphStyling } from "./use-graph-styling.ts";
 import { useGraphTheme } from "./use-graph-theme.ts";
 import { useGraphViewState } from "./use-graph-view-state.ts";
-import type { GraphCanvasHandle } from "./graph-canvas.tsx";
+import type { GraphCanvasHandle, GraphLayout } from "./graph-canvas.tsx";
+import type { GraphLinkResolver } from "./graph-links.ts";
 
 /**
  * The engine is code-split.
@@ -155,6 +156,11 @@ export interface GraphViewProps {
    * chat" or "open the record" mean.
    */
   inspectorActions?: (node: GraphNode) => ReactNode;
+  /**
+   * How the host opens its own addresses (`spaces://…`) in a node's details.
+   * Without it only web links are followed; this view knows no routing.
+   */
+  resolveAppLink?: GraphLinkResolver;
   /** Render the table instead of the canvas. Used by tests and print. */
   forceTable?: boolean;
   handleRef?: Ref<GraphViewHandle>;
@@ -208,6 +214,7 @@ export function GraphView({
   onQueryChange,
   onFilterChange,
   inspectorActions,
+  resolveAppLink,
   forceTable = false,
   handleRef,
 }: GraphViewProps) {
@@ -235,6 +242,8 @@ export function GraphView({
   const [tableRequested, setTableRequested] = useState(false);
   const [canvasHost, setCanvasHost] = useState<HTMLDivElement | null>(null);
   const canvasRef = useRef<GraphCanvasHandle>(null);
+  const [layout, setLayout] = useState<GraphLayout>("force");
+  const [layoutNotice, setLayoutNotice] = useState<string | null>(null);
   const theme = useGraphTheme(container);
   const reducedMotion = usePrefersReducedMotion();
 
@@ -244,7 +253,7 @@ export function GraphView({
     (node: GraphNode) => styleMap.styleForNode(node).caption,
     [styleMap],
   );
-  const state = useGraphViewState(data, captionOf);
+  const state = useGraphViewState(data, captionOf, styleMap.nameForLabel);
   const size = useElementSize(canvasHost);
 
   // A `Map`, not `{}`. Labels come from the payload and the payload is
@@ -320,6 +329,7 @@ export function GraphView({
         selection.node.id,
         selection.node.labels ?? [],
         selection.node.caption ?? null,
+        selection.node.details ?? [],
         selection.node.properties ?? {},
       ]
     : null;
@@ -536,8 +546,18 @@ export function GraphView({
         onToggleTable={
           forceTable || noCanvas ? undefined : () => setTableRequested((shown) => !shown)
         }
+        layout={useTable ? undefined : layout}
+        onLayoutChange={(next) => {
+          setLayoutNotice(null);
+          setLayout(next);
+        }}
         className="shrink-0"
       />
+      {layoutNotice && (
+        <p role="status" className="text-muted-foreground shrink-0 pt-1 text-xs">
+          {layoutNotice}
+        </p>
+      )}
 
       {fullscreenError && (
         <p role="alert" className="text-sm text-destructive">
@@ -616,6 +636,13 @@ export function GraphView({
                     insetRight={inspectorInset}
                     handleRef={canvasRef}
                     reducedMotion={reducedMotion}
+                    layout={layout}
+                    onLayoutUnavailable={() => {
+                      setLayout("force");
+                      setLayoutNotice(
+                        "This graph has a cycle, so it cannot be drawn as a hierarchy. Showing the force layout.",
+                      );
+                    }}
                   />
                 )}
               </Suspense>
@@ -629,6 +656,8 @@ export function GraphView({
               onWidthChange={setInspectorWidth}
               selection={selection}
               colorForLabel={styleMap.colorForLabel}
+              nameForLabel={styleMap.nameForLabel}
+              resolveAppLink={resolveAppLink}
               captionOf={captionOf}
               onClose={state.clearSelection}
               onExpandNode={onExpandNode}
