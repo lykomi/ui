@@ -14,6 +14,12 @@ export { graphToolBindings, type GraphToolBinding } from "./graph-tool-registry.
 export { registerGraphPanelRenderer } from "./register-graph-panel.ts";
 export { mergeIntoOpenGraph } from "./merge-into-panel.ts";
 export {
+  graphExpander,
+  registerGraphExpander,
+  type GraphExpander,
+  type GraphExpandOptions,
+} from "./graph-expander.ts";
+export {
   GRAPH_SELECTION_CONTEXT_KEY,
   GraphContextPinButton,
   syncGraphSelectionContext,

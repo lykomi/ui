@@ -15,3 +15,4 @@ Payloads without captions or details render exactly as before.
 - A layout switcher in the toolbar: force, hierarchy (top-down), left to right and radial. A graph with a cycle falls back to force and says so.
 - Zooming by hand goes to 8x; framing (zoom to fit) stays capped at 2.2x so a small graph still looks small.
 - A frozen node is marked with a dashed ring instead of a dot on its rim.
+- Expanding without the agent: a host that can read its graph registers an expander (`registerGraphExpander` in `/assistant-ui`). "Expand" then loads the neighbours directly and merges them into the open graph, and the inspector offers "Ask AI" for the agent's take. With no expander, Expand asks the agent as before.

@@ -1,6 +1,7 @@
 import { graphViewSummary } from "../graph-view-summary.ts";
 import { useGraphSurfaceVisible } from "./use-graph-surface-visible.ts";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { GraphView, type GraphViewHandle } from "../graph-view.tsx";
 import {
   edgeCaption,
@@ -19,6 +20,8 @@ import {
   useAppStore,
 } from "@iloveagents/foundry-web-ui";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
+import { graphExpander } from "./graph-expander.ts";
+import { mergeIntoOpenGraph } from "./merge-into-panel.ts";
 import {
   GraphContextPinButton,
   syncGraphSelectionContext,
@@ -56,15 +59,6 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
   const currentPage = useAppStore((state) => state.currentPage);
 
   /**
-   * Expand through the conversation, not behind it.
-   *
-   * The panel cannot query the graph — the Cypher tools live on the server, as
-   * they must. So a double-click asks the agent, in the chat, the way the user
-   * would: the turn is visible, the agent picks the traversal, and the answer
-   * merges into the graph on screen. The expansion becomes part of the
-   * conversation rather than a side effect nobody can refer back to.
-   */
-  /**
    * The payload's caption key for this node's label.
    *
    * Every path that NAMES a node — the expansion prompt, the chat-context
@@ -81,13 +75,55 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
     [payload],
   );
 
-  const expandNode = useCallback(
+  /**
+   * Expand through the conversation, not behind it — the default.
+   *
+   * The panel cannot query the graph — the Cypher tools live on the server, as
+   * they must. So a double-click asks the agent, in the chat, the way the user
+   * would: the turn is visible, the agent picks the traversal, and the answer
+   * merges into the graph on screen. A host that CAN read the graph registers
+   * an expander instead (`registerGraphExpander`), and this stays "Ask AI".
+   */
+  const askAgentToExpand = useCallback(
     (node: GraphNode) => {
       submitComposerText(
         `Expand "${resolveCaption(node, captionKeyFor(node))}" (${primaryLabel(node)}) in the graph — node id ${node.id}.`,
       );
     },
     [captionKeyFor],
+  );
+
+  const [expandNotice, setExpandNotice] = useState<string | null>(null);
+
+  /**
+   * Expand straight from the host's backend when it registered an expander
+   * (`registerGraphExpander`); otherwise, or when it cannot expand this node,
+   * through the conversation.
+   */
+  const expandNode = useCallback(
+    async (node: GraphNode) => {
+      const expander = graphExpander();
+      if (!expander) {
+        askAgentToExpand(node);
+        return;
+      }
+      setExpandNotice(null);
+      try {
+        const result = await expander(node, { hops: 1 });
+        if (result === null) {
+          askAgentToExpand(node);
+          return;
+        }
+        if (result.nodes.length <= 1) {
+          setExpandNotice("Nothing more is connected to this node.");
+        } else if (!mergeIntoOpenGraph(result)) {
+          setExpandNotice("The neighbours could not be added to this graph.");
+        }
+      } catch {
+        setExpandNotice("The neighbours could not be loaded. Try again, or ask the AI.");
+      }
+    },
+    [askAgentToExpand],
   );
 
   // Publish this panel as THE live graph, so the agent's client tools can read
@@ -195,6 +231,11 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
   // what the ResizeObserver needs to re-fit on drag-resize and fullscreen.
   return (
     <div ref={surfaceRef} data-graph-surface className="relative min-h-0 flex-1">
+      {expandNotice && (
+        <p role="status" className="text-muted-foreground absolute bottom-2 left-2 z-10 text-xs">
+          {expandNotice}
+        </p>
+      )}
       <GraphView
         data={payload}
         onFullscreen={() => frame?.setFocused(!frame.focused)}
@@ -217,7 +258,21 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
           );
         }}
         inspectorActions={(node) => (
-          <GraphContextPinButton node={node} captionKey={captionKeyFor(node)} />
+          <>
+            <GraphContextPinButton node={node} captionKey={captionKeyFor(node)} />
+            {graphExpander() && (
+              // Expand loads directly; the agent's view of it is one click away.
+              <button
+                type="button"
+                onClick={() => askAgentToExpand(node)}
+                title="Ask the AI about this node's neighbours"
+                className="border-border hover:bg-muted text-muted-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1"
+              >
+                <Sparkles className="size-3.5" aria-hidden="true" />
+                Ask AI
+              </button>
+            )}
+          </>
         )}
         onQueryChange={(query) => graphWorkspaceStore.getState().setQuery(query)}
         onFilterChange={(labels) => graphWorkspaceStore.getState().setHiddenLabels(labels)}

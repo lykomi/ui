@@ -219,3 +219,16 @@ describe("edge emphasis and layout", () => {
     }
   });
 });
+
+describe("expanding without the agent", () => {
+  it("is off until a host registers an expander, and off again after", async () => {
+    const { graphExpander, registerGraphExpander } =
+      await import("../assistant-ui/graph-expander.ts");
+    expect(graphExpander()).toBeNull();
+    const expander = async () => null;
+    const unregister = registerGraphExpander(expander);
+    expect(graphExpander()).toBe(expander);
+    unregister();
+    expect(graphExpander()).toBeNull();
+  });
+});
