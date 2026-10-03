@@ -96,20 +96,23 @@ export function parseModel(bytes: ArrayBuffer): Promise<GLTF> {
 }
 
 /** GPU resources and decoded image bitmaps outlive the object tree unless disposed. */
-export function disposeModel(root: Object3D): void {
+export function disposeModel(root: Object3D | Object3D[]): void {
+  const geometries = new Set<Mesh["geometry"]>();
   const materials = new Set<Material>();
   const textures = new Set<Texture>();
   const skeletons = new Set<Skeleton>();
-  root.traverse((object) => {
-    if (!(object instanceof Mesh)) return;
-    if (object instanceof SkinnedMesh) skeletons.add(object.skeleton);
-    object.geometry.dispose();
-    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-      materials.add(material);
-      for (const value of Object.values(material))
-        if (value instanceof Texture) textures.add(value);
-    }
-  });
+  for (const scene of Array.isArray(root) ? root : [root])
+    scene.traverse((object) => {
+      if (!(object instanceof Mesh)) return;
+      if (object instanceof SkinnedMesh) skeletons.add(object.skeleton);
+      geometries.add(object.geometry);
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        materials.add(material);
+        for (const value of Object.values(material))
+          if (value instanceof Texture) textures.add(value);
+      }
+    });
+  for (const geometry of geometries) geometry.dispose();
   for (const skeleton of skeletons) skeleton.dispose();
   for (const texture of textures) {
     const image: unknown = texture.source.data;

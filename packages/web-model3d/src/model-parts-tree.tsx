@@ -62,6 +62,7 @@ export function ModelPartsTree({
       for (const part of (children.get(row.part.id) ?? []).slice().reverse())
         pending.push({ part, depth: row.depth + 1 });
   }
+  const hasFocusedRow = rows.some((row) => row.part.id === focused);
   const toggle = (id: string) =>
     setCollapsed((previous) => {
       const next = new Set(previous);
@@ -106,11 +107,7 @@ export function ModelPartsTree({
               aria-level={depth}
               aria-selected={selected}
               aria-expanded={branch ? expanded : undefined}
-              tabIndex={
-                (rows.some((r) => r.part.id === focused) ? focused === part.id : index === 0)
-                  ? 0
-                  : -1
-              }
+              tabIndex={(hasFocusedRow ? focused === part.id : index === 0) ? 0 : -1}
               className={`flex cursor-pointer items-center gap-1 py-1.5 pr-2 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${selected ? "bg-accent text-accent-foreground" : ""}`}
               style={{ paddingLeft: 8 + Math.min(depth - 1, 8) * 14 }}
               onFocus={() => setFocused(part.id)}

@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   Bone,
+  Box3,
   BoxGeometry,
   Color,
   Group,
@@ -145,4 +146,53 @@ it.each(["x", "z"] as const)("points toward the target after %s rotation", async
   expect(direction.distanceTo(new Vector3(0, -1, 0))).toBeLessThan(1e-6);
   model.dispose();
   disposeModel(model.root);
+});
+
+it("explodes nested mesh nodes by their own world displacement only", () => {
+  const root = new Group();
+  const parent = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
+  parent.position.set(2, 0, 0);
+  parent.rotation.z = Math.PI / 4;
+  parent.scale.set(2, 1, 1);
+  const child = new Mesh(new BoxGeometry(), parent.material);
+  child.position.set(0, 2, 0);
+  parent.add(child);
+  root.add(parent);
+  const model = new ModelScene(root, {
+    parser: {
+      associations: new Map([
+        [parent, { nodes: 0 }],
+        [child, { nodes: 1 }],
+      ]),
+      json: { nodes: [{ name: "Parent" }, { name: "Child" }] },
+    },
+  } as ConstructorParameters<typeof ModelScene>[1]);
+  const before = child.getWorldPosition(new Vector3());
+  const center = new Box3().setFromObject(child).getCenter(new Vector3());
+  const expected = center
+    .sub(model.bounds.getCenter(new Vector3()))
+    .normalize()
+    .multiplyScalar(model.radius);
+  model.explode(1);
+  expect(child.getWorldPosition(new Vector3()).sub(before).distanceTo(expected)).toBeLessThan(1e-6);
+  model.explode(0);
+  expect(child.getWorldPosition(new Vector3()).distanceTo(before)).toBeLessThan(1e-6);
+  disposeModel(root);
+});
+
+it("disposes alternate scenes and shared resources exactly once", () => {
+  const geometry = new BoxGeometry();
+  const material = new MeshStandardMaterial();
+  const alternateGeometry = new BoxGeometry();
+  const first = new Group(),
+    alternate = new Group();
+  first.add(new Mesh(geometry, material));
+  alternate.add(new Mesh(geometry, material), new Mesh(alternateGeometry, material));
+  const sharedDispose = vi.spyOn(geometry, "dispose");
+  const alternateDispose = vi.spyOn(alternateGeometry, "dispose");
+  const materialDispose = vi.spyOn(material, "dispose");
+  disposeModel([first, alternate]);
+  expect(sharedDispose).toHaveBeenCalledTimes(1);
+  expect(alternateDispose).toHaveBeenCalledTimes(1);
+  expect(materialDispose).toHaveBeenCalledTimes(1);
 });

@@ -34,7 +34,7 @@ export class ModelRuntime implements ModelHandle {
 
   constructor(
     element: HTMLElement,
-    gltf: GLTF,
+    private readonly gltf: GLTF,
     modelId: string,
     title: string,
     active: () => boolean,
@@ -59,7 +59,9 @@ export class ModelRuntime implements ModelHandle {
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     const viewport = element.getBoundingClientRect();
-    let needsVisibleFrame = !viewport.width || !viewport.height;
+    // The structure tree commits after loading and changes the canvas width.
+    // Frame at the first observed visible layout, then preserve user framing.
+    let needsVisibleFrame = true;
     this.renderer.setSize(Math.max(viewport.width, 1), Math.max(viewport.height, 1));
     this.camera.aspect = Math.max(viewport.width, 1) / Math.max(viewport.height, 1);
     element.append(this.renderer.domElement);
@@ -132,6 +134,8 @@ export class ModelRuntime implements ModelHandle {
       (radians) => (radians * 180) / Math.PI,
     ) as [number, number, number];
     this.pivot.updateMatrixWorld(true);
+    const mark = this.state.highlights;
+    if (mark?.style === "arrow") this.model.highlight(mark.ids, mark.color, mark.style);
     this.changed();
   }
 
@@ -222,7 +226,7 @@ export class ModelRuntime implements ModelHandle {
     this.stopPicking();
     this.controls.dispose();
     this.model.dispose();
-    disposeModel(this.model.root);
+    disposeModel(this.gltf.scenes);
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }

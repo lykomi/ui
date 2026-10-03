@@ -29,6 +29,7 @@ export class ModelScene {
         this.objects.set(`node:${index}`, object);
       }
     });
+    const worldOffsets = new Map<Object3D, Vector3>();
     for (const [id, object] of this.objects) {
       let parent = object.parent;
       while (parent && !ids.has(parent)) parent = parent.parent;
@@ -60,13 +61,23 @@ export class ModelScene {
         const delta = center.sub(this.bounds.getCenter(new Vector3()));
         if (delta.lengthSq() < 1e-10) delta.set(0, 1, 0);
         delta.normalize().multiplyScalar(this.radius);
-        // Convert a world displacement to the parent's coordinate system, including scale.
-        const worldOrigin = object.parent!.getWorldPosition(new Vector3());
-        const localDelta = object
-          .parent!.worldToLocal(worldOrigin.clone().add(delta))
-          .sub(object.parent!.worldToLocal(worldOrigin));
-        this.offsets.set(object, localDelta);
+        worldOffsets.set(object, delta);
       }
+    }
+    for (const [object, displacement] of worldOffsets) {
+      let ancestor = object.parent;
+      while (ancestor && !worldOffsets.has(ancestor)) ancestor = ancestor.parent;
+      const delta = displacement.clone();
+      if (ancestor) delta.sub(worldOffsets.get(ancestor)!);
+      // Ancestor motion already contributes its displacement to descendants.
+      // Convert only the remainder into this parent's local coordinates.
+      const worldOrigin = object.parent!.getWorldPosition(new Vector3());
+      this.offsets.set(
+        object,
+        object
+          .parent!.worldToLocal(worldOrigin.clone().add(delta))
+          .sub(object.parent!.worldToLocal(worldOrigin)),
+      );
     }
     if (!this.parts.length) throw new Error("No addressable glTF nodes were found.");
   }

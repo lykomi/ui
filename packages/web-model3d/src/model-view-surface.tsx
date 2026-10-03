@@ -38,7 +38,7 @@ export function ModelView({ url, modelId, title, fetchFn = fetch, active = true 
       const bytes = await readModelResponse(response, abort.signal);
       const gltf = await parseModel(bytes);
       if (disposed) {
-        disposeModel(gltf.scene);
+        disposeModel(gltf.scenes);
         return;
       }
       try {
@@ -53,7 +53,7 @@ export function ModelView({ url, modelId, title, fetchFn = fetch, active = true 
           },
         );
       } catch (failure) {
-        disposeModel(gltf.scene);
+        disposeModel(gltf.scenes);
         throw failure;
       }
       runtime.current = loaded;
