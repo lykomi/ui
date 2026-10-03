@@ -314,7 +314,7 @@ export function GraphInspector({
         </div>
 
         {node && (onExpandNode || onToggleFrozen || actions) && (
-          <footer className="border-border flex items-center justify-end gap-1.5 border-t px-4 py-3">
+          <footer className="border-border flex flex-wrap items-center justify-end gap-1.5 border-t px-4 py-3">
             {actions}
             {onToggleFrozen && (
               <button
@@ -322,13 +322,13 @@ export function GraphInspector({
                 onClick={() => onToggleFrozen(node)}
                 aria-pressed={frozen}
                 title={frozen ? "Let the layout move this node" : "Freeze this node in place"}
+                aria-label={frozen ? "Unfreeze" : "Freeze"}
                 className={cn(
-                  "border-border hover:bg-muted focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1",
+                  "border-border hover:bg-muted focus-visible:ring-ring inline-flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-1",
                   frozen ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <Snowflake className="size-3.5" />
-                {frozen ? "Frozen" : "Freeze"}
+                <Snowflake className="size-3.5" aria-hidden="true" />
               </button>
             )}
             {onExpandNode && (
