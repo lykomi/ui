@@ -1,5 +1,4 @@
 import { act } from "react";
-import { linkStore } from "@iloveagents/foundry-agent";
 import { graphLink } from "../graph-links.ts";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
@@ -105,25 +104,58 @@ describe("details follow the data", () => {
 });
 
 describe("app links", () => {
-  it("follows an app address only when a host handler claims it, in place", () => {
+  it("follows an app address only when the host's resolver claims it", () => {
+    const opened: string[] = [];
+    const resolve = (href: string) =>
+      href.startsWith("spaces://") ? { open: () => opened.push(href) } : null;
+
     expect(graphLink("spaces://doc#block-b1")).toBeUndefined();
-    linkStore.getState().setHandler({
-      normalizeHref: (href) => (href.startsWith("spaces://") ? "/spaces/doc" : null),
-      canHandle: (href) => href.startsWith("/spaces/"),
-      openLink: () => {},
+    const link = graphLink("spaces://doc#block-b1", resolve)!;
+    expect(link.external).toBe(false);
+    link.open?.();
+    expect(opened).toEqual(["spaces://doc#block-b1"]);
+    expect(graphLink("https://example.com", resolve)).toEqual({
+      href: "https://example.com/",
+      external: true,
     });
+    expect(graphLink("javascript:alert(1)", resolve)).toBeUndefined();
+  });
+
+  it("opens an app link through the host on click, not the browser", async () => {
+    const opened: string[] = [];
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
     try {
-      expect(graphLink("spaces://doc#block-b1")).toEqual({
-        href: "spaces://doc#block-b1",
-        external: false,
-      });
-      expect(graphLink("https://example.com")).toEqual({
-        href: "https://example.com/",
-        external: true,
-      });
-      expect(graphLink("javascript:alert(1)")).toBeUndefined();
+      await act(async () =>
+        root.render(
+          <GraphInspector
+            selection={{
+              node: {
+                id: "n",
+                labels: ["EomiBlock"],
+                details: [{ label: "Source", value: "Open", href: "spaces://doc#block-b1" }],
+              },
+              edge: null,
+            }}
+            colorForLabel={() => "gray"}
+            nameForLabel={(label) => (label === "EomiBlock" ? "Paragraph" : label)}
+            resolveAppLink={(href) => ({ open: () => opened.push(href) })}
+            captionOf={() => "b1"}
+            onClose={() => {}}
+          />,
+        ),
+      );
+      const link = host.querySelector("a")!;
+      expect(link.getAttribute("target")).toBeNull();
+      const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+      await act(async () => link.dispatchEvent(click));
+      expect(click.defaultPrevented).toBe(true);
+      expect(opened).toEqual(["spaces://doc#block-b1"]);
+      expect(host.querySelector("header")!.textContent).toContain("Paragraph");
     } finally {
-      linkStore.getState().clear();
+      await act(async () => root.unmount());
+      host.remove();
     }
   });
 });
@@ -230,5 +262,27 @@ describe("expanding without the agent", () => {
     expect(graphExpander()).toBe(expander);
     unregister();
     expect(graphExpander()).toBeNull();
+  });
+});
+
+describe("names without details", () => {
+  it("names a plain node by its label's name in the hover", () => {
+    const styleMap = {
+      styleForNode: () => ({ caption: "b1" }),
+      nameForLabel: (label: string) => (label === "EomiBlock" ? "Paragraph" : label),
+    } as unknown as GraphStyleMap;
+    const text = nodeTooltip({ id: "n", labels: ["EomiBlock"] }, styleMap).textContent ?? "";
+    expect(text).toContain("Paragraph — b1");
+  });
+
+  it("finds a node by its label's name", async () => {
+    const { __matchNodesForTest } = await import("../use-graph-view-state.ts");
+    const found = __matchNodesForTest(
+      [{ id: "n", labels: ["EomiBlock"] }],
+      "paragraph",
+      () => "",
+      (label: string) => (label === "EomiBlock" ? "Paragraph" : label),
+    );
+    expect(found).toEqual(new Set(["n"]));
   });
 });

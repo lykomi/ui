@@ -182,6 +182,7 @@ export function syncGraphEdgeContext(edge: GraphEdge | null, sourcePage: string)
               target: edge.target,
               type: edge.type,
               caption: edgeCaption(edge),
+              ...(edge.emphasis ? { emphasis: edge.emphasis } : {}),
               ...(edge.details?.length ? { details: edge.details } : {}),
               properties: edge.properties ?? {},
             }),

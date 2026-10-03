@@ -64,5 +64,5 @@ export {
   isGraphOpen,
   type GraphWorkspaceState,
 } from "./graph-workspace.ts";
-export { graphLink, type GraphLink } from "./graph-links.ts";
+export { graphLink, type GraphLink, type GraphLinkResolver } from "./graph-links.ts";
 export type { GraphLayout } from "./graph-canvas.tsx";

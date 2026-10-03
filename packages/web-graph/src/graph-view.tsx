@@ -34,6 +34,7 @@ import { useGraphStyling, type GraphStyling } from "./use-graph-styling.ts";
 import { useGraphTheme } from "./use-graph-theme.ts";
 import { useGraphViewState } from "./use-graph-view-state.ts";
 import type { GraphCanvasHandle, GraphLayout } from "./graph-canvas.tsx";
+import type { GraphLinkResolver } from "./graph-links.ts";
 
 /**
  * The engine is code-split.
@@ -155,6 +156,11 @@ export interface GraphViewProps {
    * chat" or "open the record" mean.
    */
   inspectorActions?: (node: GraphNode) => ReactNode;
+  /**
+   * How the host opens its own addresses (`spaces://…`) in a node's details.
+   * Without it only web links are followed; this view knows no routing.
+   */
+  resolveAppLink?: GraphLinkResolver;
   /** Render the table instead of the canvas. Used by tests and print. */
   forceTable?: boolean;
   handleRef?: Ref<GraphViewHandle>;
@@ -208,6 +214,7 @@ export function GraphView({
   onQueryChange,
   onFilterChange,
   inspectorActions,
+  resolveAppLink,
   forceTable = false,
   handleRef,
 }: GraphViewProps) {
@@ -246,7 +253,7 @@ export function GraphView({
     (node: GraphNode) => styleMap.styleForNode(node).caption,
     [styleMap],
   );
-  const state = useGraphViewState(data, captionOf);
+  const state = useGraphViewState(data, captionOf, styleMap.nameForLabel);
   const size = useElementSize(canvasHost);
 
   // A `Map`, not `{}`. Labels come from the payload and the payload is
@@ -650,6 +657,7 @@ export function GraphView({
               selection={selection}
               colorForLabel={styleMap.colorForLabel}
               nameForLabel={styleMap.nameForLabel}
+              resolveAppLink={resolveAppLink}
               captionOf={captionOf}
               onClose={state.clearSelection}
               onExpandNode={onExpandNode}

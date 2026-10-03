@@ -207,8 +207,12 @@ export function useGraphStyling(
 }
 
 /** Human-readable one-liner for a hover tooltip. */
-export function describeNode(node: GraphNode, caption: string): string {
-  const labels = node.labels?.length ? node.labels.join(":") : "Node";
+export function describeNode(
+  node: GraphNode,
+  caption: string,
+  nameForLabel: (label: string) => string = (label) => label,
+): string {
+  const labels = node.labels?.length ? node.labels.map(nameForLabel).join(" · ") : "Node";
   return `${labels} — ${caption}`;
 }
 

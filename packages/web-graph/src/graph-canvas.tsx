@@ -304,8 +304,10 @@ export function GraphCanvas({
     const pad = FIT_PADDING + inset / 2;
     const zoom = Math.min(
       FIT_MAX_ZOOM,
-      Math.max(0.05, (w - pad * 2) / Math.max(1, box.x[1] - box.x[0])),
-      Math.max(0.05, (h - pad * 2) / Math.max(1, box.y[1] - box.y[0])),
+      // No floor but a positive one: a wide hierarchy can need far less
+      // than 0.05 to fit, and a floor would leave its ends off-screen.
+      Math.max(1e-4, (w - pad * 2) / Math.max(1, box.x[1] - box.x[0])),
+      Math.max(1e-4, (h - pad * 2) / Math.max(1, box.y[1] - box.y[0])),
     );
     engine.centerAt(
       (box.x[0] + box.x[1]) / 2 + inset / 2 / zoom,
@@ -465,10 +467,14 @@ export function GraphCanvas({
    * as a signal that the view changed.
    */
   const measure = useMemo(() => createCaptionMeasurer(), []);
-  // Relationship types are painted at 9px, not 11px — a different font, so a
-  // different cache.
-  const measureEdge = useMemo(
-    () => createCaptionMeasurer("9px ui-sans-serif, system-ui, sans-serif"),
+  // Edge labels are painted at 11px when strong and 10px otherwise
+  // (`paintEdgeLabel`) — measured with the font that paints them.
+  const measureEdgeNormal = useMemo(
+    () => createCaptionMeasurer("10px ui-sans-serif, system-ui, sans-serif"),
+    [],
+  );
+  const measureEdgeStrong = useMemo(
+    () => createCaptionMeasurer("11px ui-sans-serif, system-ui, sans-serif"),
     [],
   );
   const [captioned, setCaptioned] = useState<Set<string>>(() => new Set());
@@ -522,7 +528,15 @@ export function GraphCanvas({
       const targetId = String((link.target as EngineNode)?.id ?? link.target);
       candidates.push({
         id: `${EDGE_LABEL_PREFIX}${(link as EngineLink).id}`,
-        rect: edgeLabelRect(source.x, source.y, target.x, target.y, measureEdge(text)),
+        rect: edgeLabelRect(
+          source.x,
+          source.y,
+          target.x,
+          target.y,
+          ((link as EngineLink).emphasis === "strong" ? measureEdgeStrong : measureEdgeNormal)(
+            text,
+          ),
+        ),
         tier: LabelTier.Edge,
         weight: 0,
         exempt: [sourceId, targetId],
@@ -533,7 +547,17 @@ export function GraphCanvas({
     // Replace only on a real change: this runs on every frame the view moves,
     // and a new Set each time would re-render the whole canvas for nothing.
     setCaptioned((prev) => (sameIds(prev, next) ? prev : next));
-  }, [model.nodes, model.links, styleMap, isHidden, measure, measureEdge, width, height]);
+  }, [
+    model.nodes,
+    model.links,
+    styleMap,
+    isHidden,
+    measure,
+    measureEdgeNormal,
+    measureEdgeStrong,
+    width,
+    height,
+  ]);
 
   const lastPlacedRef = useRef(0);
   const handleFramePre = useCallback(() => {

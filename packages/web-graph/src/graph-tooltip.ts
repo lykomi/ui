@@ -76,7 +76,10 @@ export function nodeTooltip(node: GraphNode, styleMap: GraphStyleMap): HTMLEleme
     const kind = styleMap.nameForLabel?.(primaryLabel(node)) ?? primaryLabel(node);
     return tooltipElement(`${kind} — ${caption}`, detailRows(node.details));
   }
-  return tooltipElement(describeNode(node, caption), previewRows(node.properties));
+  return tooltipElement(
+    describeNode(node, caption, styleMap.nameForLabel),
+    previewRows(node.properties),
+  );
 }
 
 export function edgeTooltip(edge: GraphEdge): HTMLElement {

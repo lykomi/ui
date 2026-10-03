@@ -21,6 +21,7 @@ import {
 } from "@iloveagents/foundry-web-ui";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
 import { graphExpander } from "./graph-expander.ts";
+import { resolveLinkHandler } from "@iloveagents/foundry-agent";
 import { mergeIntoOpenGraph } from "./merge-into-panel.ts";
 import {
   GraphContextPinButton,
@@ -114,16 +115,23 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
           askAgentToExpand(node);
           return;
         }
-        if (result.nodes.length <= 1) {
-          setExpandNotice("Nothing more is connected to this node.");
-        } else if (!mergeIntoOpenGraph(result)) {
-          setExpandNotice("The neighbours could not be added to this graph.");
+        // Merged first, whatever it holds: a node alone may still carry
+        // fresher fields or a self-loop. Only a result that changed nothing
+        // on screen says so.
+        const onScreen = new Set(payload?.nodes.map((n) => n.id));
+        const adds = result.nodes.some((n) => !onScreen.has(n.id));
+        if (!mergeIntoOpenGraph(result)) {
+          setExpandNotice(
+            adds
+              ? "The neighbours could not be added to this graph."
+              : "Nothing more is connected to this node.",
+          );
         }
       } catch {
         setExpandNotice("The neighbours could not be loaded. Try again, or ask the AI.");
       }
     },
-    [askAgentToExpand],
+    [askAgentToExpand, payload],
   );
 
   // Publish this panel as THE live graph, so the agent's client tools can read
@@ -204,6 +212,7 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
               target: view.selectedEdge.target,
               type: view.selectedEdge.type,
               caption: edgeCaption(view.selectedEdge),
+              ...(view.selectedEdge.emphasis ? { emphasis: view.selectedEdge.emphasis } : {}),
               ...(view.selectedEdge.details?.length
                 ? { details: jsonSafe(view.selectedEdge.details) }
                 : {}),
@@ -245,6 +254,12 @@ function GraphPanelBody({ content }: { content: GraphPanelContentLike }) {
         height="100%"
         handleRef={handleRef}
         onExpandNode={expandNode}
+        // A detail's app address opens through the handler the host registered
+        // for it (`linkStore`), where the host opens such things.
+        resolveAppLink={(href) => {
+          const resolved = resolveLinkHandler(href);
+          return resolved ? { open: () => resolved.handler.openLink(resolved.href) } : null;
+        }}
         // The user's clicks and the agent's reads share one piece of state, so
         // "tell me about this node" needs no restating on either side.
         onSelectionChange={(node) => {

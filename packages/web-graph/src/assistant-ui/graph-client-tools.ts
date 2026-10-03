@@ -262,6 +262,7 @@ const getView: ClientToolEntry = {
             id: view.selectedEdge.id,
             type: view.selectedEdge.type ?? "RELATED",
             caption: edgeCaption(view.selectedEdge),
+            ...(view.selectedEdge.emphasis ? { emphasis: view.selectedEdge.emphasis } : {}),
             ...(view.selectedEdge.details?.length ? { details: view.selectedEdge.details } : {}),
             source: view.selectedEdge.source,
             target: view.selectedEdge.target,

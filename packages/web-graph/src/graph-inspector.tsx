@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { ChevronRight, ExternalLink, Maximize2, Snowflake, X } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -10,7 +10,7 @@ import {
   type GraphEdge,
   type GraphNode,
 } from "./model.ts";
-import { graphLink } from "./graph-links.ts";
+import { graphLink, type GraphLinkResolver } from "./graph-links.ts";
 import type { GraphSelection } from "./use-graph-view-state.ts";
 
 /** Render a property value without collapsing structure into "[object Object]". */
@@ -68,11 +68,17 @@ function PropertyRows({ properties }: { properties: Record<string, unknown> | un
 }
 
 /** The producer's curated lines, links opening in a new tab. */
-function DetailRows({ details }: { details: GraphDetail[] }) {
+function DetailRows({
+  details,
+  resolveAppLink,
+}: {
+  details: GraphDetail[];
+  resolveAppLink?: GraphLinkResolver;
+}) {
   return (
     <dl className="space-y-3">
       {details.map((detail, index) => {
-        const link = graphLink(detail.href);
+        const link = graphLink(detail.href, resolveAppLink);
         return (
           <div key={`${detail.label}-${index}`}>
             <dt className="text-muted-foreground text-xs">{detail.label}</dt>
@@ -80,7 +86,15 @@ function DetailRows({ details }: { details: GraphDetail[] }) {
               {link ? (
                 <a
                   href={link.href}
-                  {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  {...(link.external
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {
+                        // The host opens its own addresses; the browser cannot.
+                        onClick: (event: MouseEvent<HTMLAnchorElement>) => {
+                          event.preventDefault();
+                          link.open?.();
+                        },
+                      })}
                   className="text-primary inline-flex items-start gap-1 underline-offset-2 hover:underline"
                 >
                   <span>{detail.value}</span>
@@ -112,6 +126,8 @@ export interface GraphInspectorProps {
   colorForLabel: (label: string) => string;
   /** What people read for a label (the payload legend's `name`). */
   nameForLabel?: (label: string) => string;
+  /** How the host opens its own addresses in details (`graphLink`). */
+  resolveAppLink?: GraphLinkResolver;
   /** The same caption the canvas draws — resolved once by the styling hook. */
   captionOf: (node: GraphNode) => string;
   onClose: () => void;
@@ -146,6 +162,7 @@ export function GraphInspector({
   selection,
   colorForLabel,
   nameForLabel = (label) => label,
+  resolveAppLink,
   captionOf,
   onClose,
   onExpandNode,
@@ -197,9 +214,7 @@ export function GraphInspector({
   // With curated details, one label names the kind; the rest are the
   // producer's bookkeeping and go under "Advanced" with the properties.
   const shownLabels = node?.labels?.length
-    ? details
-      ? [nameForLabel(primaryLabel(node))]
-      : node.labels
+    ? (details ? [primaryLabel(node)] : node.labels).map(nameForLabel)
     : ["Node"];
 
   return (
@@ -292,7 +307,7 @@ export function GraphInspector({
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           {details ? (
             <>
-              <DetailRows details={details} />
+              <DetailRows details={details} resolveAppLink={resolveAppLink} />
               <details className="group mt-5">
                 <summary className="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-1 text-xs [&::-webkit-details-marker]:hidden">
                   <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" />
