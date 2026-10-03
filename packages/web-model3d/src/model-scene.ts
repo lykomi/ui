@@ -1,6 +1,7 @@
-import { Box3, Mesh, Quaternion, Vector3, type Material, type Object3D } from "three";
+import { Box3, Quaternion, Vector3, type Material, type Object3D } from "three";
 import type { GLTF } from "three/addons/loaders/GLTFLoader.js";
 import type { ModelPart } from "./model-types.ts";
+import { isModelRenderable, type ModelRenderable } from "./model-renderable.ts";
 import { ModelArrow } from "./model-arrow.ts";
 
 export class ModelScene {
@@ -11,7 +12,7 @@ export class ModelScene {
   readonly radius: number;
   private origins = new Map<Object3D, Vector3>();
   private offsets = new Map<Object3D, Vector3>();
-  private originals = new Map<Mesh, Material | Material[]>();
+  private originals = new Map<ModelRenderable, Material | Material[]>();
   private arrows: ModelArrow[] = [];
 
   constructor(root: Object3D, gltf: Pick<GLTF, "parser">) {
@@ -35,12 +36,14 @@ export class ModelScene {
       while (parent && !ids.has(parent)) parent = parent.parent;
       let hasMesh = false;
       object.traverse((child) => {
-        if (child instanceof Mesh) hasMesh = true;
+        if (isModelRenderable(child)) hasMesh = true;
       });
       if (!hasMesh) continue;
-      const ownMeshes =
-        object instanceof Mesh ||
-        object.children.some((child) => child instanceof Mesh && !ids.has(child));
+      const ownsGeometry = (child: Object3D): boolean => {
+        if (child !== object && ids.has(child)) return false;
+        return isModelRenderable(child) || child.children.some(ownsGeometry);
+      };
+      const ownMeshes = ownsGeometry(object);
       const index = Number(id.slice(5));
       const source = gltf.parser.json.nodes?.[index] as
         | { name?: string; extras?: Record<string, unknown> }
@@ -53,7 +56,9 @@ export class ModelScene {
         metadata:
           source?.extras && typeof source.extras === "object" && !Array.isArray(source.extras)
             ? source.extras
-            : {},
+            : source && "extras" in source
+              ? { extras: source.extras }
+              : {},
       });
       if (ownMeshes) {
         this.origins.set(object, object.position.clone());
@@ -93,11 +98,11 @@ export class ModelScene {
   highlight(ids: string[], color: string, style: "color" | "arrow"): void {
     const targets = this.resolve(ids); // validate ALL before changing anything
     this.clearHighlights();
-    const meshes = new Set<Mesh>();
+    const meshes = new Set<ModelRenderable>();
     if (style === "color") {
       for (const target of targets)
         target.traverse((object) => {
-          if (object instanceof Mesh) meshes.add(object);
+          if (isModelRenderable(object)) meshes.add(object);
         });
       for (const mesh of meshes) {
         this.originals.set(mesh, mesh.material);

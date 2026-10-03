@@ -196,3 +196,90 @@ it("disposes alternate scenes and shared resources exactly once", () => {
   expect(alternateDispose).toHaveBeenCalledTimes(1);
   expect(materialDispose).toHaveBeenCalledTimes(1);
 });
+
+function editFixture(
+  edit: (json: {
+    scenes: { nodes: number[] }[];
+    nodes: { mesh?: number; name?: string; camera?: number }[];
+    meshes: { primitives: { mode?: number }[] }[];
+    scene?: number;
+    cameras?: unknown[];
+  }) => void,
+): ArrayBuffer {
+  const original = bytes();
+  const header = new DataView(original);
+  const length = header.getUint32(12, true);
+  const json = JSON.parse(new TextDecoder().decode(new Uint8Array(original, 20, length)));
+  edit(json);
+  const text = JSON.stringify(json);
+  const body = new TextEncoder().encode(text.padEnd(Math.ceil(text.length / 4) * 4, " "));
+  const tail = new Uint8Array(original, 20 + length);
+  const result = new ArrayBuffer(20 + body.length + tail.length);
+  new Uint8Array(result).set(new Uint8Array(original, 0, 20));
+  new DataView(result).setUint32(8, result.byteLength, true);
+  new DataView(result).setUint32(12, body.length, true);
+  new Uint8Array(result, 20).set(body);
+  new Uint8Array(result, 20 + body.length).set(tail);
+  return result;
+}
+
+it.each([false, true])(
+  "preserves default scene IDs with alternate scenes (shared=%s)",
+  async (shared) => {
+    const gltf = await parseModel(
+      editFixture((json) => {
+        if (shared) json.scenes.push({ nodes: [0] });
+        else {
+          json.nodes.push({ mesh: 0, name: "Alternate" });
+          json.scenes.push({ nodes: [json.nodes.length - 1] });
+        }
+        json.scene = 0;
+      }),
+    );
+    const model = new ModelScene(gltf.scene, gltf);
+    expect(model.parts.map((part) => part.id)).toEqual([
+      "node:0",
+      "node:1",
+      "node:2",
+      "node:3",
+      "node:4",
+    ]);
+    expect(model.objects.get("node:3")?.userData).not.toHaveProperty("__foundryNode");
+    disposeModel(gltf.scenes);
+  },
+);
+
+it.each([0, 1, 2, 3])("addresses, highlights and disposes primitive mode %s", async (mode) => {
+  const gltf = await parseModel(
+    editFixture((json) => {
+      for (const mesh of json.meshes)
+        for (const primitive of mesh.primitives) primitive.mode = mode;
+    }),
+  );
+  const model = new ModelScene(gltf.scene, gltf);
+  expect(model.parts).toHaveLength(5);
+  model.highlight(["node:3"], "#ff0000", "color");
+  model.explode(1);
+  model.dispose();
+  const geometry = (model.objects.get("node:3") as Mesh).geometry;
+  const dispose = vi.spyOn(geometry, "dispose");
+  disposeModel(gltf.scenes);
+  expect(dispose).toHaveBeenCalledTimes(1);
+});
+
+it("explodes an owned multi-primitive group behind a node attachment", async () => {
+  const gltf = await parseModel(
+    editFixture((json) => {
+      json.meshes[0].primitives.push({ ...json.meshes[0].primitives[0] });
+      json.cameras = [{ type: "perspective", perspective: { yfov: 1, znear: 0.1 } }];
+      json.nodes[1].camera = 0;
+    }),
+  );
+  const model = new ModelScene(gltf.scene, gltf);
+  expect(model.parts.find((part) => part.id === "node:1")?.kind).toBe("part");
+  const object = model.objects.get("node:1")!;
+  const origin = object.position.clone();
+  model.explode(1);
+  expect(object.position.distanceTo(origin)).toBeGreaterThan(0);
+  disposeModel(gltf.scenes);
+});

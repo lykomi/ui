@@ -88,3 +88,10 @@ describe("model AG-UI tools", () => {
     ).toContain("model3d_highlight");
   });
 });
+
+it("never applies an explicit empty model ID to another active model", async () => {
+  const other = handle("other");
+  disconnects.push(connectModel(other, () => true));
+  expect(await execute("model3d_reset", { modelId: "" })).toHaveProperty("error");
+  expect(other.reset).not.toHaveBeenCalled();
+});

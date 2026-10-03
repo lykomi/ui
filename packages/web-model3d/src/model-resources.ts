@@ -1,12 +1,12 @@
 import {
   LoadingManager,
-  Mesh,
   SkinnedMesh,
   Texture,
   type Skeleton,
   type Material,
   type Object3D,
 } from "three";
+import { isModelRenderable } from "./model-renderable.ts";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 
 export const MAX_MODEL_BYTES = 64 * 1024 * 1024;
@@ -92,18 +92,40 @@ export function parseModel(bytes: ArrayBuffer): Promise<GLTF> {
     }
     return url;
   });
-  return new GLTFLoader(manager).parseAsync(bytes, "");
+  const loader = new GLTFLoader(manager);
+  // Scene parsing reduces associations. Carry node identity through scene clones,
+  // then restore mappings for every scene without exposing temporary metadata.
+  const key = `__foundryNode_${crypto.randomUUID()}`;
+  loader.register((parser) => ({
+    name: "FOUNDRY_node_identity",
+    loadNode: async (index) => {
+      const node = await parser.loadNode(index);
+      node.userData[key] = index;
+      return node;
+    },
+    afterRoot: async (gltf) => {
+      for (const scene of gltf.scenes)
+        scene.traverse((object) => {
+          const index: unknown = object.userData[key];
+          if (typeof index === "number") {
+            parser.associations.set(object, { ...parser.associations.get(object), nodes: index });
+            delete object.userData[key];
+          }
+        });
+    },
+  }));
+  return loader.parseAsync(bytes, "");
 }
 
 /** GPU resources and decoded image bitmaps outlive the object tree unless disposed. */
 export function disposeModel(root: Object3D | Object3D[]): void {
-  const geometries = new Set<Mesh["geometry"]>();
+  const geometries = new Set<import("three").BufferGeometry>();
   const materials = new Set<Material>();
   const textures = new Set<Texture>();
   const skeletons = new Set<Skeleton>();
   for (const scene of Array.isArray(root) ? root : [root])
     scene.traverse((object) => {
-      if (!(object instanceof Mesh)) return;
+      if (!isModelRenderable(object)) return;
       if (object instanceof SkinnedMesh) skeletons.add(object.skeleton);
       geometries.add(object.geometry);
       for (const material of Array.isArray(object.material) ? object.material : [object.material]) {

@@ -38,7 +38,8 @@ export function connectModel(handle: ModelHandle, active: () => boolean): () => 
 
 export function activeModel(modelId?: string): ModelHandle {
   const candidates = [...surfaces].filter(
-    ([handle, visible]) => visible() && (!modelId || handle.getView().modelId === modelId),
+    ([handle, visible]) =>
+      visible() && (modelId === undefined || handle.getView().modelId === modelId),
   );
   if (candidates.length !== 1) {
     throw new Error(
