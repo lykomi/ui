@@ -50,9 +50,7 @@ describe("the hover tooltip", () => {
     const keys = [...tip.querySelectorAll(".foundry-graph-tip__key")].map((k) => k.textContent);
     expect(keys).toEqual(["Status"]);
     expect(tip.textContent).not.toContain("Open at the passage");
-    expect(tip.querySelector(".foundry-graph-tip__hint")?.textContent).toBe(
-      "Click for details and links",
-    );
+    expect(tip.querySelector(".foundry-graph-tip__hint")?.textContent).toBe("Click for details");
   });
 
   it("promises no click where no details drawer opens (the inline card)", () => {
@@ -63,7 +61,11 @@ describe("the hover tooltip", () => {
       details: [{ label: "Source", value: "Open at the passage", href: "/spaces/x" }],
     };
 
-    expect(nodeTooltip(node, styleMap).querySelector(".foundry-graph-tip__hint")).toBeNull();
+    const tip = nodeTooltip(node, styleMap);
+    expect(tip.querySelector(".foundry-graph-tip__hint")).toBeNull();
+    // With no drawer to carry it, the link's row stays readable, as text.
+    expect(tip.querySelector(".foundry-graph-tip__key")?.textContent).toBe("Source");
+    expect(tip.querySelector("a")).toBeNull();
   });
 
   it("takes every colour from the theme's classes, never an inline style", () => {

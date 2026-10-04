@@ -98,15 +98,16 @@ function previewRows(properties: Record<string, unknown> | undefined): [string, 
 }
 
 /**
- * A curated hover: the first few details, never a link or the raw properties.
+ * A curated hover: the first few details, never the raw properties.
  *
- * The card follows the cursor, so nothing in it can be clicked: a link row
- * would show "Open at the passage" that no pointer can ever reach. Links live
- * in the details drawer a click opens, and the hint says so.
+ * The card follows the cursor, so nothing in it can be clicked. Where a click
+ * opens the details drawer, a link row ("Open at the passage") stays out of
+ * the card — no pointer could reach it — and the drawer carries it. An inline
+ * graph has no drawer, so there the row stays, as text.
  */
-function detailRows(details: GraphDetail[]): [string, string][] {
+function detailRows(details: GraphDetail[], options: TooltipOptions): [string, string][] {
   return details
-    .filter((detail) => !detail.href)
+    .filter((detail) => !(options.clickShowsDetails && detail.href))
     .slice(0, MAX_TOOLTIP_ROWS)
     .map(({ label, value }) => [
       label,
@@ -121,11 +122,9 @@ export interface TooltipOptions {
   clickShowsDetails?: boolean;
 }
 
-function clickHint(details: GraphDetail[], options: TooltipOptions): string | undefined {
-  if (!options.clickShowsDetails) return undefined;
-  return details.some((detail) => detail.href)
-    ? "Click for details and links"
-    : "Click for details";
+/** Not "and links": the drawer shows a link it cannot resolve as plain text. */
+function clickHint(options: TooltipOptions): string | undefined {
+  return options.clickShowsDetails ? "Click for details" : undefined;
 }
 
 export function nodeTooltip(
@@ -136,12 +135,7 @@ export function nodeTooltip(
   const caption = styleMap.styleForNode(node).caption;
   if (node.details?.length) {
     const kind = styleMap.nameForLabel?.(primaryLabel(node)) ?? primaryLabel(node);
-    return tooltipElement(
-      caption,
-      detailRows(node.details),
-      kind,
-      clickHint(node.details, options),
-    );
+    return tooltipElement(caption, detailRows(node.details, options), kind, clickHint(options));
   }
   return tooltipElement(
     describeNode(node, caption, styleMap.nameForLabel),
@@ -153,9 +147,9 @@ export function edgeTooltip(edge: GraphEdge, options: TooltipOptions = {}): HTML
   if (edge.details?.length) {
     return tooltipElement(
       edgeCaption(edge),
-      detailRows(edge.details),
+      detailRows(edge.details, options),
       undefined,
-      clickHint(edge.details, options),
+      clickHint(options),
     );
   }
   return tooltipElement(describeEdge(edge), previewRows(edge.properties));
