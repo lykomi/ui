@@ -161,6 +161,6 @@ MIT — see [LICENSE](LICENSE).
 
 ### Optional 3D preview
 
-[`@iloveagents/foundry-web-model3d`](packages/web-model3d/) adds a lazy GLB viewer,
+[`@iloveagents/foundry-web-3d`](packages/web-3d/) adds a lazy GLB viewer,
 an assembly tree and AG-UI part tools. It is a preview feature, released
 independently, with no AR or backend indexing dependency.

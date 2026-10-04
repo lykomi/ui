@@ -1,5 +1,5 @@
 {
-  "name": "@iloveagents/foundry-web-model3d",
+  "name": "@iloveagents/foundry-web-3d",
   "version": "0.1.0",
   "license": "MIT",
   "description": "Optional preview GLB viewer with part hierarchy and AG-UI model tools for Foundry UI.",
@@ -23,7 +23,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iLoveAgents/foundry-ui.git",
-    "directory": "packages/web-model3d"
+    "directory": "packages/web-3d"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist",

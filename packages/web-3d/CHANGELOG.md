@@ -1,4 +1,4 @@
-# @iloveagents/foundry-web-model3d
+# @iloveagents/foundry-web-3d
 
 ## 0.1.0
 
