@@ -77,9 +77,13 @@ describe("curated details", () => {
     const styleMap = {
       styleForNode: () => ({ caption: "Precedence" }),
     } as unknown as GraphStyleMap;
-    const text = nodeTooltip(statement, styleMap).textContent ?? "";
-    expect(text).toContain("DocumentOrder — Precedence");
-    expect(text).toContain("Quote: they apply in this order");
+    const tip = nodeTooltip(statement, styleMap);
+    const text = tip.textContent ?? "";
+    expect(tip.querySelector(".foundry-graph-tip__kind")?.textContent).toBe("DocumentOrder");
+    expect(tip.querySelector(".foundry-graph-tip__title")?.textContent).toBe("Precedence");
+    const keys = [...tip.querySelectorAll(".foundry-graph-tip__key")].map((k) => k.textContent);
+    expect(keys).toContain("Quote");
+    expect(text).toContain("they apply in this order");
     expect(text).not.toContain("eomiKey");
     expect(text).not.toContain("EomiDerived");
   });

@@ -26,12 +26,32 @@ describe("the hover tooltip", () => {
       styleMap,
     );
 
-    expect(tip.querySelector(".foundry-graph-tip__kind")?.textContent).toBe(
-      "Order of precedence",
-    );
+    expect(tip.querySelector(".foundry-graph-tip__kind")?.textContent).toBe("Order of precedence");
     expect(tip.querySelector(".foundry-graph-tip__title")?.textContent).toBe("Precedence");
     const keys = [...tip.querySelectorAll(".foundry-graph-tip__key")].map((k) => k.textContent);
     expect(keys).toEqual(["Order", "Quote"]);
+  });
+
+  it("leaves links to the drawer, since a card that follows the cursor cannot be clicked", () => {
+    const tip = nodeTooltip(
+      {
+        id: "n1",
+        labels: ["DocumentOrder"],
+        properties: { name: "Precedence" },
+        details: [
+          { label: "Status", value: "Agreed" },
+          { label: "Source", value: "Open at the passage", href: "/spaces/x" },
+        ],
+      },
+      styleMap,
+    );
+
+    const keys = [...tip.querySelectorAll(".foundry-graph-tip__key")].map((k) => k.textContent);
+    expect(keys).toEqual(["Status"]);
+    expect(tip.textContent).not.toContain("Open at the passage");
+    expect(tip.querySelector(".foundry-graph-tip__hint")?.textContent).toBe(
+      "Click for details and links",
+    );
   });
 
   it("takes every colour from the theme's classes, never an inline style", () => {
