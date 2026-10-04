@@ -18,22 +18,61 @@ import {
  *
  * Do not "simplify" this back into a template literal.
  */
-function tooltipElement(heading: string, rows: [string, string][]): HTMLElement {
+/** Full class strings, written out so Tailwind's scan finds every one. */
+const TIP = {
+  kind: "text-[10px] font-medium uppercase tracking-wider text-muted-foreground",
+  title: "font-semibold text-popover-foreground [overflow-wrap:anywhere]",
+  rows: "mt-1.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5 border-t border-border pt-1.5",
+  // A producer's long label wraps inside the card instead of widening it.
+  key: "max-w-32 text-muted-foreground [overflow-wrap:anywhere]",
+  value: "line-clamp-2 text-popover-foreground [overflow-wrap:anywhere]",
+  hint: "mt-1.5 text-[11px] text-muted-foreground",
+} as const;
+
+function tooltipElement(
+  heading: string,
+  rows: [string, string][],
+  kind?: string,
+  hint?: string,
+): HTMLElement {
+  // Tailwind utilities on theme tokens, like the rest of GraphView: they need
+  // no optional stylesheet, and never an inline colour. The `foundry-graph-tip__*`
+  // names are hooks for tests and hosts. Only the container float-tooltip
+  // draws around this card needs styles.css (`.float-tooltip-kap`).
   const root = document.createElement("div");
 
+  if (kind) {
+    const label = document.createElement("div");
+    label.className = `foundry-graph-tip__kind ${TIP.kind}`;
+    label.textContent = kind;
+    root.appendChild(label);
+  }
+
   const title = document.createElement("div");
-  title.style.fontWeight = "600";
+  title.className = `foundry-graph-tip__title ${TIP.title}`;
   title.textContent = heading;
-  title.style.marginBottom = rows.length ? "0.125rem" : "0";
   root.appendChild(title);
 
-  for (const [key, value] of rows) {
-    const row = document.createElement("div");
-    // The token, not a hardcoded grey — the tooltip sits on the host's
-    // popover surface (see `.float-tooltip-kap` in styles.css).
-    row.style.color = "var(--muted-foreground)";
-    row.textContent = `${key}: ${value}`;
-    root.appendChild(row);
+  if (rows.length) {
+    const grid = document.createElement("div");
+    grid.className = `foundry-graph-tip__rows ${TIP.rows}`;
+    for (const [key, value] of rows) {
+      const k = document.createElement("div");
+      k.className = `foundry-graph-tip__key ${TIP.key}`;
+      k.textContent = key;
+      const v = document.createElement("div");
+      v.className = `foundry-graph-tip__value ${TIP.value}`;
+      v.textContent = value;
+      grid.append(k, v);
+    }
+    root.appendChild(grid);
+  }
+
+  if (hint) {
+    const line = document.createElement("div");
+    line.className = `foundry-graph-tip__hint ${TIP.hint}`;
+    line.textContent = hint;
+    root.appendChild(line);
   }
   return root;
 }
@@ -58,9 +97,17 @@ function previewRows(properties: Record<string, unknown> | undefined): [string, 
   return rows;
 }
 
-/** A curated hover: the first few details, never a link or the raw properties. */
-function detailRows(details: GraphDetail[]): [string, string][] {
+/**
+ * A curated hover: the first few details, never the raw properties.
+ *
+ * The card follows the cursor, so nothing in it can be clicked. Where a click
+ * opens the details drawer, a link row ("Open at the passage") stays out of
+ * the card — no pointer could reach it — and the drawer carries it. An inline
+ * graph has no drawer, so there the row stays, as text.
+ */
+function detailRows(details: GraphDetail[], options: TooltipOptions): [string, string][] {
   return details
+    .filter((detail) => !(options.clickShowsDetails && detail.href))
     .slice(0, MAX_TOOLTIP_ROWS)
     .map(({ label, value }) => [
       label,
@@ -70,19 +117,47 @@ function detailRows(details: GraphDetail[]): [string, string][] {
     ]);
 }
 
-export function nodeTooltip(node: GraphNode, styleMap: GraphStyleMap): HTMLElement {
+export interface TooltipOptions {
+  /** A click opens the details drawer; without one, no hint promises it. */
+  clickShowsDetails?: boolean;
+}
+
+/** Not "and links": the drawer shows a link it cannot resolve as plain text. */
+function clickHint(options: TooltipOptions): string | undefined {
+  return options.clickShowsDetails ? "Click for details" : undefined;
+}
+
+export function nodeTooltip(
+  node: GraphNode,
+  styleMap: GraphStyleMap,
+  options: TooltipOptions = {},
+): HTMLElement {
   const caption = styleMap.styleForNode(node).caption;
   if (node.details?.length) {
     const kind = styleMap.nameForLabel?.(primaryLabel(node)) ?? primaryLabel(node);
-    return tooltipElement(`${kind} — ${caption}`, detailRows(node.details));
+    return tooltipElement(caption, detailRows(node.details, options), kind, clickHint(options));
   }
   return tooltipElement(
     describeNode(node, caption, styleMap.nameForLabel),
     previewRows(node.properties),
+    undefined,
+    clickHint(options),
   );
 }
 
-export function edgeTooltip(edge: GraphEdge): HTMLElement {
-  if (edge.details?.length) return tooltipElement(edgeCaption(edge), detailRows(edge.details));
-  return tooltipElement(describeEdge(edge), previewRows(edge.properties));
+export function edgeTooltip(edge: GraphEdge, options: TooltipOptions = {}): HTMLElement {
+  if (edge.details?.length) {
+    return tooltipElement(
+      edgeCaption(edge),
+      detailRows(edge.details, options),
+      undefined,
+      clickHint(options),
+    );
+  }
+  return tooltipElement(
+    describeEdge(edge),
+    previewRows(edge.properties),
+    undefined,
+    clickHint(options),
+  );
 }

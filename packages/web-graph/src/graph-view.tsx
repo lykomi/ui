@@ -637,6 +637,7 @@ export function GraphView({
                     handleRef={canvasRef}
                     reducedMotion={reducedMotion}
                     layout={layout}
+                    clickShowsDetails={variant === "full"}
                     onLayoutUnavailable={() => {
                       setLayout("force");
                       setLayoutNotice(
