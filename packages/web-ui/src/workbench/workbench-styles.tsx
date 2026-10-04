@@ -148,7 +148,7 @@ export function WorkbenchStyles() {
           gap: 0;
         }
         .workbench-preview [data-navigation-rail-items],
-        .workbench-preview [data-chat-rail] {
+        .workbench-preview [data-chat-shortcuts] {
           margin-top: 0;
           padding-top: var(--workbench-rail-inset);
           gap: var(--workbench-rail-gap);
