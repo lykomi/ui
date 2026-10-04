@@ -22,7 +22,7 @@
     "smoke:neo4j": "node scripts/smoke-neo4j-preset.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "pnpm --filter @iloveagents/foundry-agent build && pnpm --filter @iloveagents/foundry-web-primitives build && pnpm --filter @iloveagents/foundry-web-ui build && pnpm --filter @iloveagents/foundry-web-graph build && pnpm --filter @iloveagents/foundry-web-model3d build && pnpm --filter @iloveagents/foundry-web-shell build && pnpm --filter @iloveagents/foundry-web-voice build && pnpm --filter create-foundry-ui-app build",
+    "build": "pnpm --filter @iloveagents/foundry-agent build && pnpm --filter @iloveagents/foundry-web-primitives build && pnpm --filter @iloveagents/foundry-web-ui build && pnpm --filter @iloveagents/foundry-web-graph build && pnpm --filter @iloveagents/foundry-web-3d build && pnpm --filter @iloveagents/foundry-web-shell build && pnpm --filter @iloveagents/foundry-web-voice build && pnpm --filter create-foundry-ui-app build",
     "changeset": "changeset",
     "changeset:status": "changeset status",
     "changeset:version": "changeset version && node scripts/sync-template-versions.mjs",
