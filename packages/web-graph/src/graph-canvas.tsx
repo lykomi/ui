@@ -71,6 +71,11 @@ export interface GraphCanvasProps {
   layout?: GraphLayout;
   /** The graph has a cycle, so the hierarchy cannot be drawn: fall back. */
   onLayoutUnavailable?: () => void;
+  /**
+   * A click opens the details drawer (the `full` variant). Only then does the
+   * hover card say "Click for details": an inline card has no drawer to open.
+   */
+  clickShowsDetails?: boolean;
 }
 
 /** Force-directed, or a hierarchy: top-down, left to right, or radial. */
@@ -273,6 +278,7 @@ export function GraphCanvas({
   reducedMotion = false,
   layout = "force",
   onLayoutUnavailable,
+  clickShowsDetails = false,
 }: GraphCanvasProps) {
   const engineRef = useRef<ForceGraphMethods<EngineNode, EngineLink> | undefined>(undefined);
   const hiddenLabelsRef = useRef(state.hiddenLabels);
@@ -747,8 +753,13 @@ export function GraphCanvas({
       linkVisibility={(link) => !isLinkHidden(link)}
       // MUST return an element, never a string: force-graph's tooltip assigns
       // a string via innerHTML, which would execute markup stored in the graph.
-      nodeLabel={((node: EngineNode) => nodeTooltip(node, styleMap)) as never}
-      linkLabel={((link: EngineLink) => edgeTooltip(link as unknown as GraphEdge)) as never}
+      nodeLabel={
+        ((node: EngineNode) => nodeTooltip(node, styleMap, { clickShowsDetails })) as never
+      }
+      linkLabel={
+        ((link: EngineLink) =>
+          edgeTooltip(link as unknown as GraphEdge, { clickShowsDetails })) as never
+      }
       nodeCanvasObject={nodeCanvasObject}
       nodePointerAreaPaint={nodePointerAreaPaint}
       linkCanvasObjectMode={() => "after"}

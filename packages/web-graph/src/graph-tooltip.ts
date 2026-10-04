@@ -116,17 +116,32 @@ function detailRows(details: GraphDetail[]): [string, string][] {
     ]);
 }
 
-function clickHint(details: GraphDetail[]): string {
+export interface TooltipOptions {
+  /** A click opens the details drawer; without one, no hint promises it. */
+  clickShowsDetails?: boolean;
+}
+
+function clickHint(details: GraphDetail[], options: TooltipOptions): string | undefined {
+  if (!options.clickShowsDetails) return undefined;
   return details.some((detail) => detail.href)
     ? "Click for details and links"
     : "Click for details";
 }
 
-export function nodeTooltip(node: GraphNode, styleMap: GraphStyleMap): HTMLElement {
+export function nodeTooltip(
+  node: GraphNode,
+  styleMap: GraphStyleMap,
+  options: TooltipOptions = {},
+): HTMLElement {
   const caption = styleMap.styleForNode(node).caption;
   if (node.details?.length) {
     const kind = styleMap.nameForLabel?.(primaryLabel(node)) ?? primaryLabel(node);
-    return tooltipElement(caption, detailRows(node.details), kind, clickHint(node.details));
+    return tooltipElement(
+      caption,
+      detailRows(node.details),
+      kind,
+      clickHint(node.details, options),
+    );
   }
   return tooltipElement(
     describeNode(node, caption, styleMap.nameForLabel),
@@ -134,13 +149,13 @@ export function nodeTooltip(node: GraphNode, styleMap: GraphStyleMap): HTMLEleme
   );
 }
 
-export function edgeTooltip(edge: GraphEdge): HTMLElement {
+export function edgeTooltip(edge: GraphEdge, options: TooltipOptions = {}): HTMLElement {
   if (edge.details?.length) {
     return tooltipElement(
       edgeCaption(edge),
       detailRows(edge.details),
       undefined,
-      clickHint(edge.details),
+      clickHint(edge.details, options),
     );
   }
   return tooltipElement(describeEdge(edge), previewRows(edge.properties));

@@ -44,6 +44,7 @@ describe("the hover tooltip", () => {
         ],
       },
       styleMap,
+      { clickShowsDetails: true },
     );
 
     const keys = [...tip.querySelectorAll(".foundry-graph-tip__key")].map((k) => k.textContent);
@@ -52,6 +53,17 @@ describe("the hover tooltip", () => {
     expect(tip.querySelector(".foundry-graph-tip__hint")?.textContent).toBe(
       "Click for details and links",
     );
+  });
+
+  it("promises no click where no details drawer opens (the inline card)", () => {
+    const node = {
+      id: "n1",
+      labels: ["DocumentOrder"],
+      properties: { name: "Precedence" },
+      details: [{ label: "Source", value: "Open at the passage", href: "/spaces/x" }],
+    };
+
+    expect(nodeTooltip(node, styleMap).querySelector(".foundry-graph-tip__hint")).toBeNull();
   });
 
   it("takes every colour from the theme's classes, never an inline style", () => {
