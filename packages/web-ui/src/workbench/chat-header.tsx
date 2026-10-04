@@ -107,7 +107,7 @@ export function WorkbenchChatHeader({
         )}
       </div>
       {collapsed && (
-        <div data-chat-rail className="flex flex-col items-center gap-1">
+        <div data-chat-rail data-chat-shortcuts className="flex flex-col items-center gap-1">
           <TooltipIconButton
             tooltip="Open navigation"
             className={`${buttonClass} preview-mobile-navigation`}

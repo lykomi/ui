@@ -2062,10 +2062,12 @@ function SidebarContent({
 
   if (collapsed) {
     return (
-      <div className="flex flex-col items-center gap-1 py-3 flex-1">
-        <TooltipIconButton tooltip="Expand sidebar" side="right" onClick={toggle}>
-          <PanelLeftOpen className="size-5" />
-        </TooltipIconButton>
+      <div data-navigation-rail className="flex flex-col items-center gap-1 py-3 flex-1">
+        <div data-navigation-header className="flex items-center justify-center">
+          <TooltipIconButton tooltip="Expand sidebar" side="right" onClick={toggle}>
+            <PanelLeftOpen className="size-5" />
+          </TooltipIconButton>
+        </div>
         {!hideNewConversation && !collapsedGroupsOnly && (
           <TooltipIconButton
             tooltip={newConversationLabel}
@@ -2075,7 +2077,7 @@ function SidebarContent({
             <SquarePen className="size-4 text-sidebar-icon" />
           </TooltipIconButton>
         )}
-        <div className="mt-4 flex w-full flex-col items-stretch gap-1">
+        <div data-navigation-rail-items className="mt-4 flex w-full flex-col items-stretch gap-1">
           {/* `w-full` on this inner column makes children resolve to the
               rail width even though the outer rail uses `items-center`
               — that way the per-group `border-t` divider spans the
