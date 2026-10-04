@@ -18,22 +18,40 @@ import {
  *
  * Do not "simplify" this back into a template literal.
  */
-function tooltipElement(heading: string, rows: [string, string][]): HTMLElement {
+function tooltipElement(
+  heading: string,
+  rows: [string, string][],
+  kind?: string,
+): HTMLElement {
+  // Classes, never inline colours: every colour is a theme token, set in
+  // styles.css (`.foundry-graph-tip__*`).
   const root = document.createElement("div");
 
+  if (kind) {
+    const label = document.createElement("div");
+    label.className = "foundry-graph-tip__kind";
+    label.textContent = kind;
+    root.appendChild(label);
+  }
+
   const title = document.createElement("div");
-  title.style.fontWeight = "600";
+  title.className = "foundry-graph-tip__title";
   title.textContent = heading;
-  title.style.marginBottom = rows.length ? "0.125rem" : "0";
   root.appendChild(title);
 
-  for (const [key, value] of rows) {
-    const row = document.createElement("div");
-    // The token, not a hardcoded grey — the tooltip sits on the host's
-    // popover surface (see `.float-tooltip-kap` in styles.css).
-    row.style.color = "var(--muted-foreground)";
-    row.textContent = `${key}: ${value}`;
-    root.appendChild(row);
+  if (rows.length) {
+    const grid = document.createElement("div");
+    grid.className = "foundry-graph-tip__rows";
+    for (const [key, value] of rows) {
+      const k = document.createElement("div");
+      k.className = "foundry-graph-tip__key";
+      k.textContent = key;
+      const v = document.createElement("div");
+      v.className = "foundry-graph-tip__value";
+      v.textContent = value;
+      grid.append(k, v);
+    }
+    root.appendChild(grid);
   }
   return root;
 }
@@ -74,7 +92,7 @@ export function nodeTooltip(node: GraphNode, styleMap: GraphStyleMap): HTMLEleme
   const caption = styleMap.styleForNode(node).caption;
   if (node.details?.length) {
     const kind = styleMap.nameForLabel?.(primaryLabel(node)) ?? primaryLabel(node);
-    return tooltipElement(`${kind} — ${caption}`, detailRows(node.details));
+    return tooltipElement(caption, detailRows(node.details), kind);
   }
   return tooltipElement(
     describeNode(node, caption, styleMap.nameForLabel),
