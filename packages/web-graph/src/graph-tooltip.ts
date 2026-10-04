@@ -140,6 +140,8 @@ export function nodeTooltip(
   return tooltipElement(
     describeNode(node, caption, styleMap.nameForLabel),
     previewRows(node.properties),
+    undefined,
+    clickHint(options),
   );
 }
 
@@ -152,5 +154,10 @@ export function edgeTooltip(edge: GraphEdge, options: TooltipOptions = {}): HTML
       clickHint(options),
     );
   }
-  return tooltipElement(describeEdge(edge), previewRows(edge.properties));
+  return tooltipElement(
+    describeEdge(edge),
+    previewRows(edge.properties),
+    undefined,
+    clickHint(options),
+  );
 }

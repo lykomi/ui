@@ -53,6 +53,20 @@ describe("the hover tooltip", () => {
     expect(tip.querySelector(".foundry-graph-tip__hint")?.textContent).toBe("Click for details");
   });
 
+  it("hints the click on a plain node and relationship too, which open the drawer as well", () => {
+    const options = { clickShowsDetails: true };
+    const node = nodeTooltip(
+      { id: "n", labels: ["Clause"], properties: { name: "9.1" } },
+      styleMap,
+      options,
+    );
+    const edge = edgeTooltip({ id: "e", source: "a", target: "b", type: "AMENDS" }, options);
+
+    for (const tip of [node, edge]) {
+      expect(tip.querySelector(".foundry-graph-tip__hint")?.textContent).toBe("Click for details");
+    }
+  });
+
   it("promises no click where no details drawer opens (the inline card)", () => {
     const node = {
       id: "n1",
