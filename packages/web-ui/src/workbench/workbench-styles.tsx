@@ -101,6 +101,8 @@ export function WorkbenchStyles() {
         }
         .workbench-preview {
           --workbench-header-height: 60px;
+          --workbench-rail-inset: 8px;
+          --workbench-rail-gap: 4px;
           background: var(--sidebar);
           --workbench-outline: color-mix(in srgb, var(--sidebar-ring) 28%, transparent);
           padding: 8px 8px 8px 0;
@@ -140,10 +142,22 @@ export function WorkbenchStyles() {
             min-width: 0;
           }
         }
+        /* Collapsed navigation and chat share the same header and first row. */
+        .workbench-preview [data-navigation-rail] {
+          padding-block: 0;
+          gap: 0;
+        }
+        .workbench-preview [data-navigation-rail-items],
+        .workbench-preview [data-chat-rail] {
+          margin-top: 0;
+          padding-top: var(--workbench-rail-inset);
+          gap: var(--workbench-rail-gap);
+        }
         .workbench-preview [data-navigation-header],
         .workbench-preview [data-chat-header] {
           height: var(--workbench-header-height);
           min-height: var(--workbench-header-height);
+          flex-shrink: 0;
           box-sizing: border-box;
           padding-top: 0;
           padding-bottom: 0;
