@@ -65,6 +65,27 @@ describe("the hover tooltip", () => {
     }
   });
 
+  it("keeps its hierarchy in utilities, so it needs no optional stylesheet", () => {
+    const tip = nodeTooltip(
+      {
+        id: "n1",
+        labels: ["DocumentOrder"],
+        properties: { name: "Precedence" },
+        details: [{ label: "A producer's very long label for one row", value: "x" }],
+      },
+      styleMap,
+    );
+    const classes = (name: string) =>
+      tip.querySelector(`.foundry-graph-tip__${name}`)?.className.split(" ") ?? [];
+
+    expect(classes("kind")).toEqual(expect.arrayContaining(["uppercase", "text-muted-foreground"]));
+    expect(classes("title")).toContain("font-semibold");
+    expect(classes("rows")).toContain("grid");
+    // A long label wraps inside the card instead of widening it.
+    expect(classes("key")).toContain("max-w-32");
+    expect(classes("key")).not.toContain("whitespace-nowrap");
+  });
+
   it("keeps markup in a caption as text", () => {
     const tip = edgeTooltip({
       id: "e1",
@@ -90,8 +111,8 @@ describe("the tooltip's stylesheet", () => {
   });
 
   it("is an opaque surface of the theme's tokens", () => {
-    expect(rule).toMatch(/background:\s*var\(--popover\)/);
-    expect(rule).toMatch(/color:\s*var\(--popover-foreground\)/);
+    expect(rule).toMatch(/background:\s*var\(--popover,\s*Canvas\)/);
+    expect(rule).toMatch(/color:\s*var\(--popover-foreground,\s*CanvasText\)/);
     expect(rule).not.toMatch(/rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\.\d/);
   });
 });
