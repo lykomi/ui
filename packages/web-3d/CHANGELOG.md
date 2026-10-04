@@ -1,5 +1,11 @@
 # @iloveagents/foundry-web-3d
 
+## 0.1.1
+
+### Patch Changes
+
+- 799781e: Rename the optional 3D module to `@iloveagents/foundry-web-3d` before its first publication, leaving room for further 3D capabilities. The GLB viewer and agent tools retain their existing API.
+
 ## 0.1.0
 
 ### Minor Changes
