@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.35.1
+
+### Patch Changes
+
+- 38a3c7f: Align collapsed chat history and navigation shortcuts on a shared header and icon-row grid.
+  - @iloveagents/foundry-agent@0.35.1
+  - @iloveagents/foundry-web-primitives@0.35.1
+
 ## 0.35.0
 
 ### Minor Changes
