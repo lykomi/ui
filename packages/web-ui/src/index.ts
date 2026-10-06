@@ -4,6 +4,7 @@ export { Sidebar } from "./components/sidebar.tsx";
 export { ToolPanel } from "./components/tool-panel.tsx";
 export { ToolPanelLayout } from "./components/tool-panel-layout.tsx";
 export { MarkdownText, markdownComponents } from "./components/markdown-text.tsx";
+export { MermaidDiagram } from "./components/mermaid-diagram.tsx";
 export { ClientToolExecutor } from "./components/client-tool-executor.tsx";
 export {
   AGUIRuntimeProvider,
