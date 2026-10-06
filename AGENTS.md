@@ -193,3 +193,14 @@ The non-negotiables:
 
 Never merge with unread findings, and never close a thread by force-pushing
 over it.
+
+# Opinionated form and renderer UX
+
+Follow [docs/FORM_UX.md](docs/FORM_UX.md) for every native or generated form,
+custom renderer and list-item inspector. Use the shared layout presets, existing
+semantic theme tokens and spacing rhythm by default. Change that UX only on an
+explicit user instruction. Open starts in view mode, Edit is explicit, and the
+same labels, sections and value slots remain mounted in both modes. Verify actual
+browser behavior at desktop and narrow widths and in light and dark themes.
+
+Maintain form UX rules only in `docs/FORM_UX.md`; run `pnpm sync:form-ux` after changes. Plugin skills consume generated references and `pnpm check:form-ux` rejects drift.

@@ -1,0 +1,193 @@
+# Opinionated form and renderer UX
+
+This is the default contract for developers and coding agents using Foundry UI.
+Use it for native UI, generated forms, list-item inspectors and custom renderers.
+Depart from the default only when the user explicitly requests the different interaction
+or layout. A request for a domain-specific renderer does not request a different UX.
+
+## Semantic composition: decide what belongs where
+
+Start from the person's task and the real schema, not a visual template or an
+alphabetical dump of properties. Keep one semantic order in View, Edit and
+Read-only. These placements are product defaults; preserve an established domain
+workflow and depart only on explicit user instruction.
+
+| Order | Content and purpose                                                         | Placement                                                                                                                                                                                           |
+| ----- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Identity and orientation: what item is this, what is this form for?         | One title, optional one-sentence purpose, parent/context when needed. Reuse identity already supplied by the host.                                                                                  |
+| 2     | Current situation and next step: state, outcome, blocker requiring action.  | Compact status/summary near the title. Put an actionable blocker before affected fields; put field-specific errors at the field. Do not invent a status from completeness.                          |
+| 3     | Core facts needed to recognise, assign or act on the record.                | First visible group: the relevant identity/name field, type/category, responsible person and date/deadline. Include only facts meaningful to this task.                                             |
+| 4     | Main work: the decision or information the person is here to supply/review. | Clearly named sections, in task order. Put a prerequisite before its dependent field. Group related fields; put narrative explanations in full-width slots.                                         |
+| 5     | Evidence and related material supporting the decision.                      | Citations, sources, attachments and related records near the finding they substantiate, or in a dedicated Evidence section. Keep links usable in reading mode.                                      |
+| 6     | Secondary information that rarely changes the next action.                  | Additional details, collapsed only when safe. Technical identifiers, timestamps, audit/version information go last in metadata/support, never as primary editable fields.                           |
+| 7     | Complete the current transaction.                                           | One Save/Cancel group for Edit/Create, owned by the host. Primary action last; destructive actions live separately with explicit meaning. Reading states have task actions instead of a submit bar. |
+
+Required is a validation property, not the only ordering rule. Keep essential
+inputs visible early; do not collapse a missing required input or an unresolved
+error. Do not sort all required fields ahead of their prerequisites or split a
+logical group. Use short, task-specific section names such as “Ownership”,
+“Assessment” or “Evidence”; “Details” alone is not a useful name for every group.
+One page title is level 1, sections below it level 2; an embedded form headed at
+level 2 uses level 3 sections. Adjust semantic heading level without inventing
+another typography style.
+
+Before generating UI, map each applicable field to a group and explain its role
+(identity, status, core fact, decision, evidence or metadata). Reuse schema labels,
+help, options, applicability and persisted order; do not fabricate backend fields.
+An existing empty value keeps its slot so later values and Edit do not move.
+Store grouping in the schema or shared composition rather than separate read/edit
+layouts. Keep summaries concise and grounded in saved values; avoid repeating
+all the fields above the form.
+
+## Reading, Read-only and temporarily disabled
+
+| State                                     | Values and interactions                                                                                                                                                                        | Actions                                                                                                                 |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| View, with write access                   | Saved values as readable text, matching the edit field slots. Text selection, copying, links and context selection work.                                                                       | Explicit Edit is available. No Save/Cancel yet.                                                                         |
+| Edit/Create                               | Controls replace values within the same sections and slots. Clearly explain required fields, validation and blockers.                                                                          | One Save/Create and Cancel transaction.                                                                                 |
+| Read-only record                          | Same information hierarchy and normal text contrast, with readable/copyable values. Explain the reason once near the header when available, such as “Published version” or “Read-only access”. | No Edit, inline edit triggers or Save/Cancel. Reading actions, links, export and permitted discussion remain available. |
+| One protected field in an editable record | Keep its saved value readable in its normal slot; explain the field-specific lock/managed-source reason.                                                                                       | Other writable fields still work. No editor or Save for this field.                                                     |
+| Temporarily disabled control              | Retain the control while a prerequisite, save or load is pending; explain what enables it.                                                                                                     | Prevent duplicate/invalid action; restore availability when the condition resolves.                                     |
+
+Use display values for a read-only record, not a page of grey disabled inputs.
+Do not dim the whole form, hide meaningful values or show input-required/error
+badges that the reader cannot act on. Keep an explicit empty state (“Not set”,
+or the schema's display convention); zero and false remain real values.
+Selection keeps the same leading context marker; it never grants write access.
+
+Read-only is enforced by application permissions and save handlers, not by CSS.
+When access is unknown, withhold writes until resolved. Field locks, edit rights
+and review rights are distinct: check the actual permission for each action.
+Historical snapshots must not mutate or review the live record. A permission
+change must stop writes without silently losing a draft. Do not use blur to save.
+
+## Compose the shipped presets
+
+Import `FormLayout`, `FormHeader`, `FormSection`, `FormActions`, `Field`, `FieldSet`,
+`ReadOnlyField`, `Input`, `Textarea` and `Button` from `@iloveagents/foundry-web-primitives`.
+Use the existing themed `FormDialog`, `SurfaceCard` and `CollectionSurface` from
+`@iloveagents/foundry-web-ui` for the host surface. These presets compose with them;
+do not put another card around every field or another form inside a form.
+
+```tsx
+<FormLayout>
+  <FormHeader title="Contact details" description="How we can reach you." />
+  <FormSection title="Contact" description="Use your work contact details.">
+    <Field label="Email" htmlFor="contact-email" hint="We use this for updates.">
+      <Input id="contact-email" type="email" autoComplete="email" />
+    </Field>
+  </FormSection>
+  <FormActions className="justify-end">
+    <Button variant="outline" type="button">
+      Cancel
+    </Button>
+    <Button type="submit">Save</Button>
+  </FormActions>
+</FormLayout>
+```
+
+The application supplies its save handlers and one outer `<form>` if needed.
+Preset layout components do not submit, fetch or store data.
+
+## Interaction contract
+
+- Open (including a list double-click or keyboard activation) starts in reading mode.
+  Edit is an explicit, discoverable action; Create starts in editing mode.
+- Labels, field order, sections, width and value origins stay in the same slots when
+  switching modes. Keep the field layout mounted and replace only the value/control.
+  Preserve expanded sections and reading position. Empty values retain their slots.
+- Prefer one column. Put a small pair on one row only when its meaning requires it.
+  Long text gets its own full-width section. Use container width rather than screen width
+  when forms appear in side panels.
+- Inline edits have visible Edit, Save and Cancel controls, with keyboard access and
+  focus restoration. Escape cancels; a multiline Enter writes a newline. Do not save
+  long text on blur. Do not put links or other controls inside an edit button or label.
+- The host owns identity, navigation and the transactional Save/Cancel controls.
+  Embedded renderers do not repeat the host's title or submit controls.
+- Retain dirty input on failed save or conflict. Show an actionable error and let the
+  person retry. Explain a disabled Save; for long forms link errors to their fields.
+- Associate labels with controls; use descriptive help and errors, not placeholders
+  as labels. Use an accessible Dialog for modal detail views (focus trap, Escape,
+  return focus), including mobile.
+
+## Themes and spacing
+
+Use semantic tokens (`background`, `card`, `foreground`, `muted-foreground`, `border`,
+`primary`, `ring`, `destructive`) and the existing theme. Never invent a color palette,
+hard-code white/black surfaces, or create a second theme in a custom renderer.
+Tailwind spacing utilities resolve through the host's `--spacing` token.
+The default rhythm is 8 units between sections, 4 between fields, 2 between actions
+and between a heading and help. At the standard 4px unit these are 32/16/8px.
+Use `density="compact"` for constrained inspectors; keep controls comfortably usable.
+Use the host radius tokens. Read/edit mode does not change density.
+Test light, dark, narrow containers, long labels, empty values, keyboard and errors.
+
+## Evidence behind the default
+
+Checked 2026-10-06:
+
+- [Atlassian inline edit](https://atlassian.design/components/inline-edit/usage/)
+  supports matched read/edit alignment and explicit controls, with special care for
+  long text and blur behavior.
+- [Carbon forms](https://www.carbondesignsystem.com/building-blocks/core/patterns/forms)
+  supports logical grouping, a single-column default, contextual spacing and useful
+  validation timing.
+- [WAI labels](https://www.w3.org/WAI/tutorials/forms/labels/) and
+  [WAI validation](https://www.w3.org/WAI/tutorials/forms/validation/) ground naming
+  and understandable errors.
+- [GOV.UK error summary](https://design-system.service.gov.uk/components/error-summary/)
+  describes focused summaries linking errors to fields.
+
+These are a baseline for usability checks, not a claim that the presets alone guarantee
+accessibility or usability. Browser evidence must exercise the application's real flows.
+
+## Release boundary
+
+New presets must be released through Changesets before downstream applications import
+them. A local sibling workspace can validate this source but cannot prove registry
+availability. Downstream adapters may compose the already-published `FieldSet`, `Field`
+and surface components until the preset release is available; then switch their internal
+composition to these presets without changing the user-facing contract.
+
+## Selection and active context
+
+Use one quiet leading marker for selected blocks, fields, tabs and item panels:
+2px wide, inset 6px vertically, theme primary at 55% opacity. The shared
+`--selection-marker-width` and `--selection-marker-color` overrides may adapt it
+to the theme. Selection changes no layout geometry and adds no colored outer
+frame, fill or shadow. Workbench chrome uses a neutral theme border. Keyboard
+focus, input validation, drop targets and pending-review frames keep their
+respective semantics. Temporary windows remain identifiable through the unpinned
+icon, accessible name and tooltip.
+
+`ReadOnlyField label hint emptyLabel` renders a semantic label/value pair with
+selectable text and usable links, preserving the `Field` spacing rhythm. Use it
+for View/Read-only and keep the same `FormLayout`/`FormSection` composition.
+`FormSection level={2}` pairs with a page-level `FormHeader level={1}`; its default
+level 3 pairs with the default header level 2. The source preview opens in View
+and lets you exercise Edit, Cancel/Save and simulated read-only access.
+
+## Required indicators and field frames
+
+Use quiet inline “(Required)” text in mixed Create/Edit forms; no pill or badge
+frame. Do not show input requirements in View or permanently read-only records.
+`Field` derives the visible marker from its single control's `required` or
+`aria-required` state; use `ReadOnlyField` for reading states.
+Keep `required`/`aria-required` on the actual control and actionable validation.
+A star requires an explanation at the form start; when almost all fields are
+mandatory, marking the exceptions “(optional)” is a valid explicit product choice.
+See [W3C H90](https://www.w3.org/WAI/WCAG22/Techniques/html/H90) and
+[GOV.UK question pages](https://design-system.service.gov.uk/patterns/question-pages/).
+
+Display values use the same neutral theme border, radius and padding as their
+editor, without pretending to be disabled controls. Multi-line values and editors
+share line height and a minimum height; editors grow with their content. Reserve
+the reading height on the actual textarea, not just its wrapper. Verify that the
+textarea has no hidden lines and that following sections do not jump. Double-click
+on form text stays in View so text selection works; explicit Edit enters editing.
+
+Field frames and editors use the same theme radius, including enum/select buttons and multiline controls. Keep single-line heights consistent; chips have their own pill treatment. Group secondary metadata in a compact footer with one separator. Helpers explain meaningful decisions in everyday language, not storage formats or schema internals. Suggestion popovers anchor to the input, match its width, fit the viewport and support keyboard selection/dismissal.
+
+## Keeping skill guidance current
+
+Edit this document rather than reproducing the rules in plugin skills. Run `pnpm sync:form-ux` to regenerate their bundled `references/form-ux.md` resources. `pnpm check:form-ux` (part of `pnpm test` and CI) rejects stale resources. Skills read the bundled reference even when installed outside the framework checkout.

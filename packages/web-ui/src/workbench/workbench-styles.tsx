@@ -104,7 +104,7 @@ export function WorkbenchStyles() {
           --workbench-rail-inset: 8px;
           --workbench-rail-gap: 4px;
           background: var(--sidebar);
-          --workbench-outline: color-mix(in srgb, var(--sidebar-ring) 28%, transparent);
+          --workbench-outline: var(--border);
           padding: 8px 8px 8px 0;
         }
         .workbench-preview [data-workbench-surface] {

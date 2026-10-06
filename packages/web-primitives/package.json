@@ -19,6 +19,7 @@
   "homepage": "https://github.com/iLoveAgents/foundry-ui/tree/main/packages/web-primitives#readme",
   "bugs": "https://github.com/iLoveAgents/foundry-ui/issues",
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

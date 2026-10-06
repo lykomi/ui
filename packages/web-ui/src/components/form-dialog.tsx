@@ -41,7 +41,9 @@ export function FormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(sizeClassName, contentClassName)}>
+      <DialogContent
+        className={cn("min-w-0 grid-cols-[minmax(0,1fr)]", sizeClassName, contentClassName)}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className={description ? undefined : "sr-only"}>
