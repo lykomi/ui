@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-3d
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [28ab214]
+  - @iloveagents/foundry-web-primitives@0.36.0
+  - @iloveagents/foundry-agent@0.36.0
+
 ## 0.1.1
 
 ### Patch Changes

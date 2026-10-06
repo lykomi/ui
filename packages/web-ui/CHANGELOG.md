@@ -1,5 +1,21 @@
 # @iloveagents/foundry-web-ui
 
+## 0.36.0
+
+### Minor Changes
+
+- 1ab5ae9: Render Mermaid fences as themed diagrams in chat and Markdown panels, with source view, copy, streaming fallback, and isolated rendering. Export the shared MermaidDiagram component for document surfaces.
+
+### Patch Changes
+
+- 28ab214: Use the neutral theme border for workbench chrome so it does not look like an active selection frame.
+
+  Constrain form-dialog grid tracks so lookup controls fit narrow viewports.
+
+- Updated dependencies [28ab214]
+  - @iloveagents/foundry-web-primitives@0.36.0
+  - @iloveagents/foundry-agent@0.36.0
+
 ## 0.35.1
 
 ### Patch Changes
