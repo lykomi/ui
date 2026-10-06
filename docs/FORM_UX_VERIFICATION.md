@@ -7,11 +7,13 @@ access, with the same field slots and theme in each state.
 Three field slots retained their x/y/width/height at 1200px in light mode and
 390px in dark mode. The multiline editor displayed its full content. Keyboard
 focus, required/help/error associations and zero/false display values have
-component regression coverage. Read-only access in the example is a simulation;
+component regression coverage. The browser also confirmed Edit focuses the first
+control and Save/Cancel restore focus to Edit; both required controls show a
+quiet requirement marker. Read-only access in the example is a simulation;
 the consuming application must enforce actual permissions.
 
 `pnpm test` passed: build, guidance drift, sensitive-term scan, format, typecheck
-and 1,112 unit tests. `pnpm pack:check` passed for all eight packages.
+and 1,113 unit tests. `pnpm pack:check` passed for all eight packages.
 
 ![Themed reading form](assets/form-ux/view.png)
 

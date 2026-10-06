@@ -171,6 +171,8 @@ and lets you exercise Edit, Cancel/Save and simulated read-only access.
 
 Use quiet inline “(Required)” text in mixed Create/Edit forms; no pill or badge
 frame. Do not show input requirements in View or permanently read-only records.
+`Field` derives the visible marker from its single control's `required` or
+`aria-required` state; use `ReadOnlyField` for reading states.
 Keep `required`/`aria-required` on the actual control and actionable validation.
 A star requires an explanation at the form start; when almost all fields are
 mandatory, marking the exceptions “(optional)” is a valid explicit product choice.

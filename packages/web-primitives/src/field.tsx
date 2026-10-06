@@ -30,6 +30,8 @@ export function Field({
   const id = useId();
   const child = isValidElement<{
     id?: string;
+    required?: boolean;
+    "aria-required"?: boolean | "true" | "false";
     "aria-describedby"?: string;
     "aria-invalid"?: boolean | "true" | "false";
   }>(children)
@@ -41,6 +43,21 @@ export function Field({
       child.type === Input ||
       child.type === Textarea);
   const controlId = htmlFor ?? child?.props.id ?? `${id}-control`;
+  const required =
+    child?.props.required ||
+    child?.props["aria-required"] === true ||
+    child?.props["aria-required"] === "true";
+  const labelContent = (
+    <>
+      {label}
+      {required && (
+        <span aria-hidden="true" className="font-normal">
+          {" "}
+          (Required)
+        </span>
+      )}
+    </>
+  );
   const labelClass = "text-xs font-medium text-muted-foreground";
   const descriptions =
     [child?.props["aria-describedby"], hint && `${id}-hint`, error && `${id}-error`]
@@ -62,7 +79,7 @@ export function Field({
             <div className="flex items-center justify-between gap-3">
               {label ? (
                 <label htmlFor={controlId} className={labelClass}>
-                  {label}
+                  {labelContent}
                 </label>
               ) : (
                 <span />
@@ -76,7 +93,7 @@ export function Field({
         <>
           {action && <div className="flex justify-end">{action}</div>}
           <label className="grid gap-1.5">
-            {label && <span className={labelClass}>{label}</span>}
+            {label && <span className={labelClass}>{labelContent}</span>}
             {control}
           </label>
         </>

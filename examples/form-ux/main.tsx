@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Button,
@@ -28,6 +28,14 @@ function Demo() {
   const [draft, setDraft] = useState(initial);
   const [message, setMessage] = useState("");
   const edit = editing && canEdit;
+  const nameInput = useRef<HTMLInputElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(false);
+  useEffect(() => {
+    if (edit) nameInput.current?.focus();
+    else if (wasEditing.current) editButton.current?.focus();
+    wasEditing.current = edit;
+  }, [edit]);
   return (
     <main
       className={`${dark ? "dark" : ""} min-h-screen bg-background p-6 text-foreground sm:p-10`}
@@ -59,6 +67,7 @@ function Demo() {
                     </Button>
                     {canEdit && !edit && (
                       <Button
+                        ref={editButton}
                         type="button"
                         onClick={() => {
                           setDraft(saved);
@@ -76,6 +85,7 @@ function Demo() {
                 {edit ? (
                   <Field label="Full name" hint="The name your team will see.">
                     <Input
+                      ref={nameInput}
                       name="name"
                       required
                       value={draft.name}

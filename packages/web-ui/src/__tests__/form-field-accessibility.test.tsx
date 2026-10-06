@@ -23,6 +23,23 @@ it("associates help and errors while keeping field actions outside the control l
 });
 
 describe("existing Field forms", () => {
+  it("shows a quiet requirement from the native control without adding it to the accessible name", () => {
+    const html = renderToStaticMarkup(
+      <Field label="Email">
+        <Input required />
+      </Field>,
+    );
+    expect(html).toContain("(Required)");
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain('required=""');
+    expect(
+      renderToStaticMarkup(
+        <Field label="Notes">
+          <Input />
+        </Field>,
+      ),
+    ).not.toContain("(Required)");
+  });
   it("retains an explicit target and existing descriptions", () => {
     const html = renderToStaticMarkup(
       <Field label="Name" htmlFor="person" hint="Team name">
