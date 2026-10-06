@@ -5,6 +5,7 @@ import {
   type ComponentPropsWithoutRef,
   type ReactNode,
 } from "react";
+import { Checkbox } from "./checkbox.tsx";
 import { Input } from "./input.tsx";
 import { Textarea } from "./textarea.tsx";
 import { cn } from "./utils.ts";
@@ -40,6 +41,7 @@ export function Field({
   const singleControl =
     child &&
     (["input", "select", "textarea"].includes(String(child.type)) ||
+      child.type === Checkbox ||
       child.type === Input ||
       child.type === Textarea);
   const controlId = htmlFor ?? child?.props.id ?? `${id}-control`;

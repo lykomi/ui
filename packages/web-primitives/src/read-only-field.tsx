@@ -1,7 +1,9 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { Fragment, isValidElement, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { cn } from "./utils.ts";
 
 function isEmptyValue(value: ReactNode): boolean {
+  if (isValidElement<{ children?: ReactNode }>(value) && value.type === Fragment)
+    return isEmptyValue(value.props.children);
   return Array.isArray(value)
     ? value.every(isEmptyValue)
     : value === null || value === undefined || value === "";

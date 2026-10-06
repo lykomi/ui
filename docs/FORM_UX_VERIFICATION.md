@@ -13,7 +13,7 @@ quiet requirement marker. Read-only access in the example is a simulation;
 the consuming application must enforce actual permissions.
 
 `pnpm test` passed: build, guidance drift, sensitive-term scan, format, typecheck
-and 1,114 unit tests. `pnpm pack:check` passed for all eight packages.
+and 1,116 unit tests. `pnpm pack:check` passed for all eight packages.
 
 ![Themed reading form](assets/form-ux/view.png)
 

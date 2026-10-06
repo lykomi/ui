@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Field, Input, ReadOnlyField } from "@iloveagents/foundry-web-primitives";
+import { Checkbox, Field, Input, ReadOnlyField } from "@iloveagents/foundry-web-primitives";
 
 it("associates help and errors while keeping field actions outside the control label", () => {
   const html = renderToStaticMarkup(
@@ -89,6 +89,42 @@ it("shows an explicit empty label for empty and nested child collections", () =>
   expect(
     renderToStaticMarkup(
       <ReadOnlyField label="Teams">{[<span key="team">Platform</span>]}</ReadOnlyField>,
+    ),
+  ).toContain("Platform");
+});
+
+it("associates the public checkbox with its label, help and validation error", () => {
+  const html = renderToStaticMarkup(
+    <Field label="Consent" hint="Choose whether to receive updates" error="Confirm your preference">
+      <Checkbox />
+    </Field>,
+  );
+  const control = html.match(/<button[^>]*role="checkbox"[^>]*>/)?.[0];
+  expect(control).toBeTruthy();
+  expect(control).toMatch(/aria-describedby="[^"]+-hint [^"]+-error"/);
+  expect(control).toContain('aria-invalid="true"');
+  const id = control?.match(/\sid="([^"]+)"/)?.[1];
+  expect(html).toContain(`for="${id}"`);
+});
+
+it("uses the empty label for fragment-wrapped collections while retaining populated fragments", () => {
+  const html = renderToStaticMarkup(
+    <ReadOnlyField label="Teams">
+      <>
+        {[].map(() => (
+          <span>Team</span>
+        ))}
+      </>
+    </ReadOnlyField>,
+  );
+  expect(html).toContain("Not set");
+  expect(
+    renderToStaticMarkup(
+      <ReadOnlyField label="Teams">
+        <>
+          <span>Platform</span>
+        </>
+      </ReadOnlyField>,
     ),
   ).toContain("Platform");
 });
