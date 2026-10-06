@@ -1,11 +1,16 @@
 # create-foundry-ui-app
 
+## 0.8.24
+
+### Patch Changes
+
+- 1ab5ae9: Render Mermaid fences as themed diagrams in chat and Markdown panels, with source view, copy, streaming fallback, and isolated rendering. Export the shared MermaidDiagram component for document surfaces.
+
 ## 0.8.23
 
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.35.0 → 0.35.1
   - @iloveagents/foundry-web-primitives: 0.35.0 → 0.35.1
   - @iloveagents/foundry-web-shell: 0.35.0 → 0.35.1
@@ -16,7 +21,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-web-graph: 0.3.0 → 0.3.1
 
 ## 0.8.21
@@ -24,7 +28,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-web-graph: 0.2.11 → 0.3.0
 
 ## 0.8.20
@@ -32,7 +35,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.34.0 → 0.35.0
   - @iloveagents/foundry-web-primitives: 0.34.0 → 0.35.0
   - @iloveagents/foundry-web-shell: 0.34.0 → 0.35.0

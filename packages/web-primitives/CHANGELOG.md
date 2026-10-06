@@ -1,5 +1,11 @@
 # @iloveagents/foundry-web-primitives
 
+## 0.36.0
+
+### Minor Changes
+
+- 28ab214: Add themed FormLayout, FormHeader, FormSection and FormActions presets and ReadOnlyField display rows, with a shared form and renderer UX contract for developers and agents. Associate Field help and errors with native controls and keep field actions outside labels.
+
 ## 0.35.1
 
 ## 0.35.0
