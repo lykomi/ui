@@ -6,6 +6,7 @@ import type { Components } from "react-markdown";
 import { Children, type ReactElement, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
+import { MermaidDiagram, MermaidStreamingContext } from "./mermaid-diagram.tsx";
 import { useStore } from "zustand";
 import {
   citationStore,
@@ -275,6 +276,7 @@ export const markdownComponents: Components = {
   pre: ({ children }) => {
     const info = extractCodeInfo(children);
     if (info) {
+      if (info.language?.toLowerCase() === "mermaid") return <MermaidDiagram source={info.code} />;
       return <HighlightedCodeBlock language={info.language} code={info.code} />;
     }
     return (
@@ -410,8 +412,10 @@ export const MarkdownText: FC = () => {
   const part = useMessagePartText();
 
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-      {part.text}
-    </ReactMarkdown>
+    <MermaidStreamingContext.Provider value={part.status.type === "running"}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+        {part.text}
+      </ReactMarkdown>
+    </MermaidStreamingContext.Provider>
   );
 };

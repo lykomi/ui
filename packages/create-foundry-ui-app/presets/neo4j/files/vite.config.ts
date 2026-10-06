@@ -24,8 +24,12 @@ export default defineConfig({
     },
   },
   build: {
+    manifest: true,
     rollupOptions: {
       output: {
+        // Avoid pulling unrelated dependencies into a named chunk: that can
+        // create evaluation cycles and break the production entry.
+        onlyExplicitManualChunks: true,
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
           // Match on the PACKAGE, not the path: pnpm's store directories
@@ -34,6 +38,15 @@ export default defineConfig({
           // whichever peer name the rules met first, and "react" matched
           // half the store. The last node_modules segment is the package.
           const pkg = id.slice(id.lastIndexOf("node_modules/") + "node_modules/".length);
+          // Keep Mermaid's shared modules separate; grouping them back into
+          // its entry exceeds the budget and collapses useful lazy boundaries.
+          const mermaidShared = pkg.match(
+            /^mermaid\/dist\/chunks\/mermaid\.core\/(chunk-[^/]+)\.mjs$/,
+          );
+          if (mermaidShared) return `vendor-mermaid-${mermaidShared[1]}`;
+          // This upstream parser ships as one prebuilt module. It is loaded
+          // only by Mermaid; the smoke test checks its separate lazy budget.
+          if (pkg.startsWith("@mermaid-js/parser/")) return "vendor-mermaid-parser";
           // The force engine and its d3 stack, in one chunk of their own.
           // ORDER MATTERS: "react-force-graph-2d" and "react-kapsule" would
           // otherwise be caught by a react rule and load on first paint.

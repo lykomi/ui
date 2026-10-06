@@ -19,6 +19,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { checkStarterChunks } from "./lib/check-starter-chunks.mjs";
+
 import {
   applyLocalPacks,
   assertNoAssistantUiPins,
@@ -98,6 +100,8 @@ run(pnpm.command, [...pnpm.prefixArgs, "install", "--frozen-lockfile=false"], {
 
 step("Typechecking and building the generated app");
 run(pnpm.command, [...pnpm.prefixArgs, "build"], { cwd: appDir, timeoutMs: 5 * 60_000 });
+
+checkStarterChunks(join(appDir, "dist"));
 
 const assetsDir = join(appDir, "dist", "assets");
 const assets = readdirSync(assetsDir);

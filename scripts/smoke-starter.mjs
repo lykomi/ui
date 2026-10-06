@@ -12,6 +12,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { checkStarterChunks } from "./lib/check-starter-chunks.mjs";
+
 import {
   applyLocalPacks,
   assertNoAssistantUiPins,
@@ -179,7 +181,7 @@ function createHelloWorldEvents(requestBody) {
   const messageId = `${runId}-assistant`;
   const toolCallId = `${runId}-hello-world`;
   const answer =
-    "Hello from the hello_world tool. Your Foundry UI starter is rendering an AG-UI streamed response.";
+    "Hello from the hello_world tool. Your Foundry UI starter is rendering an AG-UI streamed response.\n\n```mermaid\nflowchart TD\nA[Draft]-->B[Review]\n```";
 
   return [
     { type: "RUN_STARTED", threadId, runId },
@@ -248,7 +250,7 @@ async function runBrowserStarterSmoke() {
   const port = await getFreePort();
   const url = `http://127.0.0.1:${port}/`;
   const serverProcess = spawnPnpm(
-    ["dev:web", "--host", "127.0.0.1", "--port", `${port}`, "--strictPort"],
+    ["preview", "--host", "127.0.0.1", "--port", `${port}`, "--strictPort"],
     {
       cwd: appDir,
     },
@@ -274,6 +276,10 @@ async function runBrowserStarterSmoke() {
         : { viewport: { width: 1280, height: 900 } },
     );
     let sawAgentRequest = false;
+    let parserRequests = 0;
+    page.on("request", (request) => {
+      if (/\/vendor-mermaid-parser-[\w-]+\.js(?:\?|$)/.test(request.url())) parserRequests += 1;
+    });
 
     page.on("pageerror", (error) => pageErrors.push(error.message));
     page.on("console", (message) => {
@@ -330,8 +336,19 @@ async function runBrowserStarterSmoke() {
     await page
       .getByRole("heading", { name: "What would you like to get done?" })
       .waitFor({ timeout: 10_000 });
+    if (parserRequests !== 0)
+      throw new Error("Mermaid parser loaded before a diagram was requested.");
     await page.getByRole("button", { name: "Say hello world using the hello_world tool" }).click();
     await page.getByText("Hello from the", { exact: false }).first().waitFor({ timeout: 10_000 });
+
+    if (!screenshotPath) {
+      const diagram = page.frameLocator('iframe[title="Mermaid diagram"]');
+      await diagram.locator("svg").waitFor({ timeout: 15_000 });
+      await diagram.getByText("Draft", { exact: true }).waitFor();
+      await diagram.getByText("Review", { exact: true }).waitFor();
+      if (parserRequests !== 0)
+        throw new Error("Flowchart unexpectedly loaded the newer-diagram parser.");
+    }
 
     if (screenshotPath) {
       // Let streaming settle and the composer lose focus so the capture has no
@@ -359,6 +376,9 @@ async function runBrowserStarterSmoke() {
     }
 
     console.log(`Starter browser smoke passed at ${url}`);
+  } catch (error) {
+    console.error("Browser diagnostics:", [...pageErrors, ...consoleErrors].join("\n"));
+    throw error;
   } finally {
     await Promise.race([browser.close().catch(() => undefined), sleep(5_000)]);
     if (serverProcess.exitCode === null) {
@@ -389,14 +409,12 @@ await runPnpmLiveOutput(["install", "--frozen-lockfile=false"], {
   cwd: appDir,
   timeoutMs: 5 * 60_000,
 });
-const buildOutput = await runPnpmLiveOutput(["build"], {
+await runPnpmLiveOutput(["build"], {
   cwd: appDir,
   timeoutMs: 3 * 60_000,
 });
 
-if (buildOutput.includes("Some chunks are larger than 500 kB")) {
-  throw new Error("Starter production build emitted Vite's large chunk warning.");
-}
+checkStarterChunks(join(appDir, "dist"));
 
 // Read the DEFAULT build before anything overwrites it. This is the assertion
 // that "optional" means what the README says: with the feature unset, none of
@@ -430,14 +448,12 @@ for (const marker of ["VoiceLiveAvatar", "createVoiceModule", "getUserMedia", "A
 // does not exist — which is how a missing Tailwind @source for the voice
 // package survived review: with the feature off, none of its classes are
 // referenced, so none are missing. Build it again with the feature ON.
-const voiceBuild = await runPnpmLiveOutput(["build"], {
+await runPnpmLiveOutput(["build"], {
   cwd: appDir,
   timeoutMs: 3 * 60_000,
   env: { ...process.env, VITE_VOICE_PROXY_URL: "ws://localhost:8080/ws" },
 });
-if (voiceBuild.includes("Some chunks are larger than 500 kB")) {
-  throw new Error("Voice-enabled starter build emitted Vite's large chunk warning.");
-}
+checkStarterChunks(join(appDir, "dist"));
 
 const css = readAssets(".css");
 const js = readAssets(".js");
@@ -459,6 +475,10 @@ for (const utility of ["object-cover", "ring-background"]) {
 }
 
 if (runBrowserSmoke) {
+  // Exercise the shipped chunks, not Vite's dev transform. Restore the
+  // non-voice build after the voice-enabled assertions above.
+  await runPnpmLiveOutput(["build"], { cwd: appDir, timeoutMs: 3 * 60_000 });
+  checkStarterChunks(join(appDir, "dist"));
   await runBrowserStarterSmoke();
 }
 
