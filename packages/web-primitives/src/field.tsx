@@ -1,7 +1,15 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
-
+import {
+  cloneElement,
+  isValidElement,
+  useId,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react";
+import { Input } from "./input.tsx";
+import { Textarea } from "./textarea.tsx";
 import { cn } from "./utils.ts";
 
+// A named control with associated help/error; actions stay outside its label.
 export function Field({
   label,
   hint,
@@ -19,22 +27,71 @@ export function Field({
   className?: string;
   children: ReactNode;
 }) {
+  const id = useId();
+  const child = isValidElement<{
+    id?: string;
+    "aria-describedby"?: string;
+    "aria-invalid"?: boolean | "true" | "false";
+  }>(children)
+    ? children
+    : null;
+  const singleControl =
+    child &&
+    (["input", "select", "textarea"].includes(String(child.type)) ||
+      child.type === Input ||
+      child.type === Textarea);
+  const controlId = htmlFor ?? child?.props.id ?? `${id}-control`;
+  const labelClass = "text-xs font-medium text-muted-foreground";
+  const descriptions =
+    [child?.props["aria-describedby"], hint && `${id}-hint`, error && `${id}-error`]
+      .filter(Boolean)
+      .join(" ") || undefined;
+  const control =
+    singleControl && child
+      ? cloneElement(child, {
+          id: controlId,
+          "aria-describedby": descriptions,
+          "aria-invalid": error ? true : child.props["aria-invalid"],
+        })
+      : children;
   return (
-    <label className={cn("block space-y-1.5", className)} htmlFor={htmlFor}>
-      {label || action ? (
-        <span className="flex items-center justify-between gap-3">
-          {label ? (
-            <span className="text-xs font-medium text-muted-foreground">{label}</span>
-          ) : (
-            <span />
+    <div className={cn("grid gap-1.5", className)}>
+      {singleControl || htmlFor ? (
+        <>
+          {(label || action) && (
+            <div className="flex items-center justify-between gap-3">
+              {label ? (
+                <label htmlFor={controlId} className={labelClass}>
+                  {label}
+                </label>
+              ) : (
+                <span />
+              )}
+              {action}
+            </div>
           )}
-          {action}
+          {control}
+        </>
+      ) : (
+        <>
+          {action && <div className="flex justify-end">{action}</div>}
+          <label className="grid gap-1.5">
+            {label && <span className={labelClass}>{label}</span>}
+            {control}
+          </label>
+        </>
+      )}
+      {hint && (
+        <span id={`${id}-hint`} className="block text-xs text-muted-foreground">
+          {hint}
         </span>
-      ) : null}
-      {children}
-      {hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
-      {error ? <span className="block text-xs text-destructive">{error}</span> : null}
-    </label>
+      )}
+      {error && (
+        <span id={`${id}-error`} className="block text-xs text-destructive">
+          {error}
+        </span>
+      )}
+    </div>
   );
 }
 

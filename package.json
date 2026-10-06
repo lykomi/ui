@@ -3,14 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "license": "MIT",
-  "description": "Open-source agent UI starter — AG-UI protocol, Microsoft Agent Framework, Azure Foundry. Cross-runtime transport + React shell.",
+  "description": "Open-source agent UI starter \u2014 AG-UI protocol, Microsoft Agent Framework, Azure Foundry. Cross-runtime transport + React shell.",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "packageManager": "pnpm@10.23.0",
   "scripts": {
-    "test": "pnpm check:sensitive && pnpm build && pnpm lint && pnpm typecheck && pnpm test:unit",
+    "test": "pnpm check:form-ux && pnpm check:sensitive && pnpm build && pnpm lint && pnpm typecheck && pnpm test:unit",
     "test:unit": "pnpm -r --if-present test:unit",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "prettier --check package.json README.md packages/*/package.json packages/*/README.md packages/create-foundry-ui-app/template/README.md",
@@ -28,7 +28,9 @@
     "changeset:version": "changeset version && node scripts/sync-template-versions.mjs",
     "changeset:publish": "changeset publish",
     "sync:template-versions": "node scripts/sync-template-versions.mjs",
-    "screenshot:starter": "node scripts/smoke-starter.mjs --screenshot docs/assets/starter.png"
+    "screenshot:starter": "node scripts/smoke-starter.mjs --screenshot docs/assets/starter.png",
+    "sync:form-ux": "node scripts/sync-form-ux.mjs",
+    "check:form-ux": "node scripts/sync-form-ux.mjs --check"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.10",

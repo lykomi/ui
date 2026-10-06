@@ -44,3 +44,9 @@ Check the current types in `@iloveagents/foundry-web-shell` (the package's
 — the module contract is pre-1.0 and evolves. If your change also touches
 `@assistant-ui/*` or `@ag-ui/*` APIs, run the `foundry-verify-agent-apis`
 skill first.
+
+## Shared form UX contract
+
+Before authoring form UI, read [the framework form UX contract](references/form-ux.md).
+Follow its defaults unless the user explicitly requests a different UX. This bundled
+reference is generated from `docs/FORM_UX.md`; do not duplicate its rules here.

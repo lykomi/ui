@@ -27,3 +27,9 @@ Training-data knowledge of this stack is unreliable. Before writing code, verify
 2. Fetch the closest current sample/doc for it (table above).
 3. Diff what you fetched against what you were about to write; prefer the fetched pattern.
 4. Only then write code.
+
+## Shared form UX contract
+
+Before authoring form UI, read [the framework form UX contract](references/form-ux.md).
+Follow its defaults unless the user explicitly requests a different UX. This bundled
+reference is generated from `docs/FORM_UX.md`; do not duplicate its rules here.

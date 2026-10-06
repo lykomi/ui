@@ -1,0 +1,61 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { Field, Input, ReadOnlyField } from "@iloveagents/foundry-web-primitives";
+
+it("associates help and errors while keeping field actions outside the control label", () => {
+  const html = renderToStaticMarkup(
+    <Field
+      label="Email"
+      hint="Work email"
+      error="Enter a valid email"
+      action={<button type="button">Use another address</button>}
+    >
+      <Input />
+    </Field>,
+  );
+  const id = html.match(/<input[^>]*\sid="([^"]+)"/)?.[1];
+  expect(id).toBeTruthy();
+  expect(html).toContain(`for="${id}"`);
+  expect(html).toContain('aria-invalid="true"');
+  expect(html).toMatch(/aria-describedby="[^"]+-hint [^"]+-error"/);
+  expect(html).not.toMatch(/<label[^>]*>[^<]*<button/);
+  expect(html).toMatch(/<\/label><button/);
+});
+
+describe("existing Field forms", () => {
+  it("retains an explicit target and existing descriptions", () => {
+    const html = renderToStaticMarkup(
+      <Field label="Name" htmlFor="person" hint="Team name">
+        <Input aria-describedby="extra" />
+      </Field>,
+    );
+    expect(html).toContain('id="person"');
+    expect(html).toContain('for="person"');
+    expect(html).toMatch(/aria-describedby="extra [^"]+-hint"/);
+  });
+});
+
+it("renders read-only content as a labelled, copyable value with usable links", () => {
+  const html = renderToStaticMarkup(
+    <ReadOnlyField label="Owner" hint="Responsible for the next step.">
+      <a href="mailto:alex@example.com">Alex Morgan</a>
+    </ReadOnlyField>,
+  );
+  expect(html).toContain("<dt");
+  expect(html).toContain("Owner</dt>");
+  expect(html).toContain('href="mailto:alex@example.com"');
+  expect(html).toContain("Responsible for the next step.");
+  expect(html).not.toMatch(/<(input|textarea|button|label)\b/);
+});
+
+it("read-only empty values are explicit while zero and false remain real values", () => {
+  expect(renderToStaticMarkup(<ReadOnlyField label="Owner">{null}</ReadOnlyField>)).toContain(
+    "Not set",
+  );
+  const zero = renderToStaticMarkup(<ReadOnlyField label="Count">{0}</ReadOnlyField>);
+  expect(zero).toContain(">0</dd>");
+  expect(zero).not.toContain("Not set");
+  expect(renderToStaticMarkup(<ReadOnlyField label="Enabled">{false}</ReadOnlyField>)).toContain(
+    ">false</dd>",
+  );
+});
