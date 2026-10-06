@@ -3,6 +3,7 @@ import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Check, Minus } from "lucide-react";
 
 import { cn } from "./utils.ts";
+import { markFieldControl } from "./field-control.ts";
 
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
@@ -39,5 +40,6 @@ const Checkbox = React.forwardRef<
   </CheckboxPrimitive.Root>
 ));
 Checkbox.displayName = CheckboxPrimitive.Root.displayName;
+markFieldControl(Checkbox);
 
 export { Checkbox };

@@ -8,7 +8,10 @@ import {
 import { cn } from "./utils.ts";
 
 function isEmptyValue(value: ReactNode): boolean {
-  if (isValidElement<{ children?: ReactNode }>(value) && value.type === Fragment)
+  if (
+    isValidElement<{ children?: ReactNode }>(value) &&
+    (value.type === Fragment || (typeof value.type === "string" && "children" in value.props))
+  )
     return isEmptyValue(value.props.children);
   return Array.isArray(value)
     ? value.every(isEmptyValue)
@@ -19,7 +22,10 @@ function isEmptyValue(value: ReactNode): boolean {
 function displayValue(value: ReactNode): ReactNode {
   if (typeof value === "boolean") return String(value);
   if (Array.isArray(value)) return value.map(displayValue);
-  if (isValidElement<{ children?: ReactNode }>(value))
+  if (
+    isValidElement<{ children?: ReactNode }>(value) &&
+    (value.type === Fragment || typeof value.type === "string")
+  )
     return cloneElement(value, {}, displayValue(value.props.children));
   return value;
 }

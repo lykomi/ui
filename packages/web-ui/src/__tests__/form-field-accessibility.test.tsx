@@ -1,6 +1,39 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Checkbox, Field, Input, ReadOnlyField } from "@iloveagents/foundry-web-primitives";
+import type { ReactNode } from "react";
+
+it("preserves custom value components' original boolean children", () => {
+  function Status({ children }: { children: ReactNode }) {
+    return <span>{children ? "Enabled" : "Disabled"}</span>;
+  }
+  expect(
+    renderToStaticMarkup(
+      <ReadOnlyField label="Status">
+        <Status>{false}</Status>
+      </ReadOnlyField>,
+    ),
+  ).toContain("Disabled");
+});
+
+it("detects empty styled host children without hiding meaningful childless values", () => {
+  for (const value of [null, undefined, "", [null, ""]]) {
+    expect(
+      renderToStaticMarkup(
+        <ReadOnlyField label="Teams" emptyLabel="No teams">
+          <span>{value}</span>
+        </ReadOnlyField>,
+      ),
+    ).toContain("No teams");
+  }
+  const image = renderToStaticMarkup(
+    <ReadOnlyField label="Photo">
+      <img src="/photo.png" alt="Alex" />
+    </ReadOnlyField>,
+  );
+  expect(image).toContain('alt="Alex"');
+  expect(image).not.toContain("Not set");
+});
 
 it("associates help and errors while keeping field actions outside the control label", () => {
   const html = renderToStaticMarkup(

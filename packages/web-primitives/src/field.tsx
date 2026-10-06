@@ -7,9 +7,7 @@ import {
   type ComponentPropsWithoutRef,
   type ReactNode,
 } from "react";
-import { Checkbox } from "./checkbox.tsx";
-import { Input } from "./input.tsx";
-import { Textarea } from "./textarea.tsx";
+import { isFieldControl } from "./field-control.ts";
 import { cn } from "./utils.ts";
 
 function unwrapSingleChild(children: ReactNode): ReactNode {
@@ -52,10 +50,7 @@ export function Field({
     : null;
   const singleControl =
     child &&
-    (["input", "select", "textarea"].includes(String(child.type)) ||
-      child.type === Checkbox ||
-      child.type === Input ||
-      child.type === Textarea);
+    (["input", "select", "textarea"].includes(String(child.type)) || isFieldControl(child.type));
   const controlId = htmlFor ?? child?.props.id ?? `${id}-control`;
   const required =
     child?.props.required ||

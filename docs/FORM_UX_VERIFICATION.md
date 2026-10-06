@@ -13,7 +13,7 @@ quiet requirement marker. Read-only access in the example is a simulation;
 the consuming application must enforce actual permissions.
 
 `pnpm test` passed: build, guidance drift, sensitive-term scan, format, typecheck
-and 1,119 unit tests. `pnpm pack:check` passed for all eight packages.
+and 1,121 unit tests. `pnpm pack:check` passed for all eight packages.
 
 ![Themed reading form](assets/form-ux/view.png)
 
@@ -22,3 +22,5 @@ and 1,119 unit tests. `pnpm pack:check` passed for all eight packages.
 This verifies the demonstrated flows, not every downstream application's
 accessibility or usability. New exports require the Changesets/npm release
 before downstream imports.
+
+The final reading-value regressions retain custom components' boolean props and detect empty intrinsic text wrappers. Field identifies controls through internal metadata without importing their implementations. A bundled Input/Field entry contains no Radix checkbox or Lucide glyph code (eight retained modules; 9,655 gzip bytes in the local external-React probe).
