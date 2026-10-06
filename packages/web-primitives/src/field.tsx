@@ -1,5 +1,7 @@
 import {
+  Children,
   cloneElement,
+  Fragment,
   isValidElement,
   useId,
   type ComponentPropsWithoutRef,
@@ -9,6 +11,15 @@ import { Checkbox } from "./checkbox.tsx";
 import { Input } from "./input.tsx";
 import { Textarea } from "./textarea.tsx";
 import { cn } from "./utils.ts";
+
+function unwrapSingleChild(children: ReactNode): ReactNode {
+  const nodes = Children.toArray(children);
+  if (nodes.length !== 1) return null;
+  const child = nodes[0];
+  return isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment
+    ? unwrapSingleChild(child.props.children)
+    : child;
+}
 
 // A named control with associated help/error; actions stay outside its label.
 export function Field({
@@ -29,14 +40,15 @@ export function Field({
   children: ReactNode;
 }) {
   const id = useId();
+  const singleChild = unwrapSingleChild(children);
   const child = isValidElement<{
     id?: string;
     required?: boolean;
     "aria-required"?: boolean | "true" | "false";
     "aria-describedby"?: string;
     "aria-invalid"?: boolean | "true" | "false";
-  }>(children)
-    ? children
+  }>(singleChild)
+    ? singleChild
     : null;
   const singleControl =
     child &&

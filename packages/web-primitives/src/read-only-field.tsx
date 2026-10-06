@@ -19,7 +19,7 @@ function isEmptyValue(value: ReactNode): boolean {
 function displayValue(value: ReactNode): ReactNode {
   if (typeof value === "boolean") return String(value);
   if (Array.isArray(value)) return value.map(displayValue);
-  if (isValidElement<{ children?: ReactNode }>(value) && value.type === Fragment)
+  if (isValidElement<{ children?: ReactNode }>(value))
     return cloneElement(value, {}, displayValue(value.props.children));
   return value;
 }

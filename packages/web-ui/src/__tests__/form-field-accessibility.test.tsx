@@ -22,6 +22,50 @@ it("associates help and errors while keeping field actions outside the control l
   expect(html).toMatch(/<\/label><button/);
 });
 
+it("associates single controls supplied through transparent arrays and fragments", () => {
+  for (const control of [
+    [<Input key="input" required />],
+    <>
+      <Input required />
+    </>,
+    <>
+      {[
+        null,
+        <>
+          <Input required />
+        </>,
+      ]}
+    </>,
+  ]) {
+    const html = renderToStaticMarkup(
+      <Field label="Name" hint="Team name" error="Enter a name">
+        {control}
+      </Field>,
+    );
+    const id = html.match(/<input[^>]*\sid="([^"]+)"/)?.[1];
+    expect(id).toBeTruthy();
+    expect(html).toContain(`for="${id}"`);
+    expect(html).toContain("(Required)");
+    expect(html).toContain('aria-invalid="true"');
+    expect(html).toMatch(/aria-describedby="[^"]+-hint [^"]+-error"/);
+  }
+});
+
+it("preserves boolean values inside ordinary styled and linked reading elements", () => {
+  for (const value of [false, true]) {
+    const html = renderToStaticMarkup(
+      <ReadOnlyField label="Enabled">
+        <a href="/details">
+          <span>{value}</span>
+        </a>
+      </ReadOnlyField>,
+    );
+    expect(html).toContain(`<span>${value}</span>`);
+    expect(html).toContain('href="/details"');
+    expect(html).not.toContain("Not set");
+  }
+});
+
 describe("existing Field forms", () => {
   it("shows a quiet requirement from the native control without adding it to the accessible name", () => {
     const html = renderToStaticMarkup(
