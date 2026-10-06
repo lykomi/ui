@@ -18,7 +18,7 @@ export function renderMermaid(source: string, themeVariables: MermaidConfig["the
           hex ? String.fromCodePoint(Math.min(parseInt(hex, 16), 0x10ffff)) : escaped,
       )
       .replace(/\/\*[\s\S]*?\*\//g, "");
-    if (/url\s*\(|@import|\b(?:img|icon)\s*:/i.test(resourceSource)) {
+    if (/url\s*\(|@import/i.test(resourceSource)) {
       throw new Error("External resources are not supported in diagrams.");
     }
     const { default: mermaid } = await import("mermaid");
@@ -47,6 +47,18 @@ export function renderMermaid(source: string, themeVariables: MermaidConfig["the
         ]),
       ],
     });
+    // Inspect parsed attributes, not labels. Mermaid's YAML parser decodes
+    // quoted/escaped keys (including \u0069mg) before creating image nodes.
+    const diagram = await mermaid.mermaidAPI.getDiagramFromText(source);
+    if (diagram.type.startsWith("flowchart")) {
+      const db = diagram.db as { getVertices(): Map<string, { img?: string; icon?: string }> };
+      const vertices = db.getVertices();
+      for (const vertex of vertices.values()) {
+        if (vertex.img || vertex.icon) {
+          throw new Error("External resources are not supported in diagrams.");
+        }
+      }
+    }
     const host = document.createElement("div");
     host.style.visibility = "hidden";
     host.style.position = "fixed";

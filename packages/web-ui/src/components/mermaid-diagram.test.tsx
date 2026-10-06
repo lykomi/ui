@@ -104,3 +104,25 @@ it("places the optional edit action in the diagram toolbar and omits it for read
   await act(async () => root.render(<MermaidDiagram source="flowchart TD\nA-->B" />));
   expect(container.textContent).not.toContain("Edit source");
 });
+
+it("never submits a host form when using the diagram toolbar", async () => {
+  const submit = vi.fn();
+  await act(async () =>
+    root.render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <MermaidDiagram source="flowchart TD\nA-->B" onEditSource={() => {}} />
+      </form>,
+    ),
+  );
+  await draw();
+  for (const button of container.querySelectorAll("button")) {
+    expect(button.type).toBe("button");
+    act(() => button.click());
+  }
+  expect(submit).not.toHaveBeenCalled();
+});

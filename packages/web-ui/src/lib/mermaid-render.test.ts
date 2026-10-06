@@ -5,6 +5,10 @@ const mermaid = vi.hoisted(() => ({
   initialize: vi.fn(),
   render: vi.fn(),
   mermaidAPI: {
+    getDiagramFromText: vi.fn(async () => ({
+      type: "flowchart-v2",
+      db: { getVertices: () => new Map() },
+    })),
     defaultConfig: { sequence: {}, flowchart: {}, fontFamily: "", securityLevel: "strict" },
   },
 }));
@@ -31,6 +35,10 @@ it("sanitizes SVG and isolates preview CSS from network access", async () => {
 });
 it("rejects resource-fetching source and bounded oversize input before rendering", async () => {
   const before = mermaid.render.mock.calls.length;
+  mermaid.mermaidAPI.getDiagramFromText.mockResolvedValueOnce({
+    type: "flowchart-v2",
+    db: { getVertices: () => new Map([["A", { img: "https://example.com/x" }]]) },
+  });
   for (const source of [
     "x".repeat(MAX_MERMAID_LENGTH + 1),
     "flowchart TD\nclassDef x fill:url(https://example.com)",
@@ -62,4 +70,23 @@ it("serializes initialization with each render and recovers after a failure", as
   await expect(first).rejects.toThrow("invalid");
   await second;
   expect(order).toEqual(["one", "bad", "two", "good"]);
+});
+
+it("renders ordinary icon/image labels and rejects resource attributes parsed from escaped keys", async () => {
+  mermaid.render.mockResolvedValue({ svg: "<svg/>" });
+  await expect(renderMermaid('flowchart TD\nA["Icon: settings"]', {})).resolves.toContain("svg");
+  await expect(renderMermaid('flowchart TD\nA["img: thumbnail"]', {})).resolves.toContain("svg");
+  const before = mermaid.render.mock.calls.length;
+  mermaid.mermaidAPI.getDiagramFromText.mockResolvedValueOnce({
+    type: "flowchart-v2",
+    db: { getVertices: () => new Map([["A", { img: "https://example.invalid/image" }]]) },
+  });
+  await expect(
+    renderMermaid(
+      String.raw`flowchart TD
+A@{"\u0069mg":"https://example.invalid/image"}`,
+      {},
+    ),
+  ).rejects.toThrow("External resources");
+  expect(mermaid.render.mock.calls.length).toBe(before);
 });

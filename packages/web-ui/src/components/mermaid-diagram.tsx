@@ -89,6 +89,7 @@ export function MermaidDiagram({
       <div className="mb-2 flex items-center justify-between gap-2">
         <div role="group" aria-label="Diagram view" className="flex gap-1">
           <Button
+            type="button"
             variant={showSource ? "ghost" : "secondary"}
             size="sm"
             aria-pressed={!showSource}
@@ -97,6 +98,7 @@ export function MermaidDiagram({
             Diagram
           </Button>
           <Button
+            type="button"
             variant={showSource ? "secondary" : "ghost"}
             size="sm"
             aria-pressed={showSource}
@@ -107,11 +109,12 @@ export function MermaidDiagram({
         </div>
         <div className="flex items-center gap-1">
           {onEditSource && (
-            <Button variant="ghost" size="sm" onClick={onEditSource}>
+            <Button type="button" variant="ghost" size="sm" onClick={onEditSource}>
               <Code className="size-4" /> Edit source
             </Button>
           )}
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             aria-label="Copy Mermaid source"
