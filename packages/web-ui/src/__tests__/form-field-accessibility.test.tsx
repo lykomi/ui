@@ -128,3 +128,13 @@ it("uses the empty label for fragment-wrapped collections while retaining popula
     ),
   ).toContain("Platform");
 });
+
+it("preserves boolean data and zero through arrays and fragments", () => {
+  for (const value of [false, true, 0]) {
+    for (const wrapped of [[value], <>{value}</>, [<>{[value]}</>]]) {
+      const html = renderToStaticMarkup(<ReadOnlyField label="Value">{wrapped}</ReadOnlyField>);
+      expect(html).toContain(`>${String(value)}</dd>`);
+      expect(html).not.toContain("Not set");
+    }
+  }
+});

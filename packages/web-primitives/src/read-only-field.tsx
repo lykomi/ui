@@ -1,4 +1,10 @@
-import { Fragment, isValidElement, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import {
+  cloneElement,
+  Fragment,
+  isValidElement,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react";
 import { cn } from "./utils.ts";
 
 function isEmptyValue(value: ReactNode): boolean {
@@ -7,6 +13,15 @@ function isEmptyValue(value: ReactNode): boolean {
   return Array.isArray(value)
     ? value.every(isEmptyValue)
     : value === null || value === undefined || value === "";
+}
+
+// Boolean data must survive the arrays/fragments React otherwise suppresses.
+function displayValue(value: ReactNode): ReactNode {
+  if (typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(displayValue);
+  if (isValidElement<{ children?: ReactNode }>(value) && value.type === Fragment)
+    return cloneElement(value, {}, displayValue(value.props.children));
+  return value;
 }
 
 /** Readable label/value pair; keeps the Field rhythm without a disabled input. */
@@ -36,10 +51,8 @@ export function ReadOnlyField({
       >
         {empty ? (
           <span className="text-muted-foreground">{emptyLabel}</span>
-        ) : typeof children === "boolean" ? (
-          String(children)
         ) : (
-          children
+          displayValue(children)
         )}
       </dd>
       {hint && <dd className="m-0 text-xs text-muted-foreground">{hint}</dd>}
