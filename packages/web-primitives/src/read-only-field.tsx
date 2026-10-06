@@ -1,6 +1,12 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { cn } from "./utils.ts";
 
+function isEmptyValue(value: ReactNode): boolean {
+  return Array.isArray(value)
+    ? value.every(isEmptyValue)
+    : value === null || value === undefined || value === "";
+}
+
 /** Readable label/value pair; keeps the Field rhythm without a disabled input. */
 export function ReadOnlyField({
   label,
@@ -16,7 +22,7 @@ export function ReadOnlyField({
   hint?: ReactNode;
   emptyLabel?: ReactNode;
 }) {
-  const empty = children === null || children === undefined || children === "";
+  const empty = isEmptyValue(children);
   return (
     <dl {...props} className={cn("grid min-w-0 gap-1.5", className)}>
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>

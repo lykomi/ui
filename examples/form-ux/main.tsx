@@ -36,6 +36,11 @@ function Demo() {
     else if (wasEditing.current) editButton.current?.focus();
     wasEditing.current = edit;
   }, [edit]);
+  const cancel = () => {
+    setDraft(saved);
+    setEditing(false);
+    setMessage("");
+  };
   return (
     <main
       className={`${dark ? "dark" : ""} min-h-screen bg-background p-6 text-foreground sm:p-10`}
@@ -43,6 +48,18 @@ function Demo() {
       <div className="mx-auto max-w-2xl">
         <SurfaceCard radius="md" padding="lg">
           <form
+            onKeyDown={(event) => {
+              if (
+                edit &&
+                event.key === "Escape" &&
+                !event.defaultPrevented &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                event.stopPropagation();
+                cancel();
+              }
+            }}
             onSubmit={(event) => {
               event.preventDefault();
               if (!edit) return;
@@ -141,15 +158,7 @@ function Demo() {
               )}
               {edit && (
                 <FormActions className="justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setDraft(saved);
-                      setEditing(false);
-                      setMessage("");
-                    }}
-                  >
+                  <Button type="button" variant="outline" onClick={cancel}>
                     Cancel
                   </Button>
                   <Button type="submit">Save</Button>

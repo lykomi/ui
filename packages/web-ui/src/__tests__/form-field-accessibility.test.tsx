@@ -76,3 +76,19 @@ it("read-only empty values are explicit while zero and false remain real values"
     ">false</dd>",
   );
 });
+
+it("shows an explicit empty label for empty and nested child collections", () => {
+  for (const value of [[], [null, undefined, ""], [[], [null]]]) {
+    const html = renderToStaticMarkup(
+      <ReadOnlyField label="Teams" emptyLabel="No teams">
+        {value}
+      </ReadOnlyField>,
+    );
+    expect(html).toContain("No teams");
+  }
+  expect(
+    renderToStaticMarkup(
+      <ReadOnlyField label="Teams">{[<span key="team">Platform</span>]}</ReadOnlyField>,
+    ),
+  ).toContain("Platform");
+});
