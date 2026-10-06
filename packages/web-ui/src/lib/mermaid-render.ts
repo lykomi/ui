@@ -68,10 +68,17 @@ export function renderMermaid(source: string, themeVariables: MermaidConfig["the
     document.body.appendChild(host);
     try {
       const { svg } = await mermaid.render(`foundry-mermaid-${++nextId}`, source, host);
-      return DOMPurify.sanitize(svg, {
+      const purifier = DOMPurify(window);
+      purifier.addHook("uponSanitizeAttribute", (_node, attribute) => {
+        if (attribute.attrName === "href" || attribute.attrName === "xlink:href") {
+          attribute.keepAttr = /^#[A-Za-z_][\w:.-]*$/.test(attribute.attrValue);
+        }
+      });
+      return purifier.sanitize(svg, {
         USE_PROFILES: { svg: true, svgFilters: true },
         FORBID_TAGS: ["foreignObject", "script", "a", "image"],
-        FORBID_ATTR: ["href", "xlink:href"],
+        // Built-in icons reference symbols in this SVG; external URLs stay blocked.
+        ADD_TAGS: ["use"],
       });
     } finally {
       host.remove();

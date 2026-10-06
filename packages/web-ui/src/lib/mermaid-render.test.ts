@@ -90,3 +90,14 @@ A@{"\u0069mg":"https://example.invalid/image"}`,
   ).rejects.toThrow("External resources");
   expect(mermaid.render.mock.calls.length).toBe(before);
 });
+
+it("preserves local SVG icon references while stripping external resource URLs", async () => {
+  mermaid.render.mockResolvedValue({
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><symbol id="tv-icon-file"><path d="M0 0L10 10"/></symbol></defs><use xlink:href="#tv-icon-file"/><use href="#tv-icon-file"/><use href="https://example.invalid/icon.svg#file"/><use xlink:href="data:image/svg+xml,test"/><use href="javascript:alert(1)"/></svg>',
+  });
+  const svg = await renderMermaid("treeView-beta\nRoot", {});
+  expect(svg).toContain('xlink:href="#tv-icon-file"');
+  expect(svg).toContain('href="#tv-icon-file"');
+  expect(svg).toContain('d="M0 0L10 10"');
+  expect(svg).not.toMatch(/example\.invalid|data:image|javascript:/);
+});

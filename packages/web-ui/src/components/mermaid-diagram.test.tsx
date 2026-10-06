@@ -88,21 +88,23 @@ it("shows source after a parser error and recovers on the next edit", async () =
   expect(container.querySelector("iframe")).not.toBeNull();
 });
 
-it("places the optional edit action in the diagram toolbar and omits it for read-only diagrams", async () => {
+it("uses Source as the single editor action and keeps read-only source viewing", async () => {
   const edit = vi.fn();
   await act(async () =>
     root.render(<MermaidDiagram source="flowchart TD\nA-->B" onEditSource={edit} />),
   );
   await draw();
-  const button = Array.from(container.querySelectorAll("button")).find(
-    (item) => item.textContent === " Edit source",
-  );
-  expect(button).toBeDefined();
-  expect(button?.parentElement?.querySelector('[aria-label="Copy Mermaid source"]')).not.toBeNull();
-  act(() => button?.click());
-  expect(edit).toHaveBeenCalledOnce();
-  await act(async () => root.render(<MermaidDiagram source="flowchart TD\nA-->B" />));
+  const sourceButton = () =>
+    Array.from(container.querySelectorAll("button")).find((item) => item.textContent === "Source");
+  expect(container.querySelectorAll("button")).toHaveLength(3);
   expect(container.textContent).not.toContain("Edit source");
+  act(() => sourceButton()?.click());
+  expect(edit).toHaveBeenCalledOnce();
+  expect(container.querySelector("pre")).toBeNull();
+  await act(async () => root.render(<MermaidDiagram source="flowchart TD\nA-->B" />));
+  act(() => sourceButton()?.click());
+  expect(container.querySelector("pre")?.textContent).toContain("A-->B");
+  expect(edit).toHaveBeenCalledOnce();
 });
 
 it("never submits a host form when using the diagram toolbar", async () => {

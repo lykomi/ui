@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { Check, Code, Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 import { useThemeRuntime } from "./theme-runtime-provider.tsx";
 import { mermaidDocument, mermaidTheme, renderMermaid } from "../lib/mermaid-render.ts";
@@ -18,7 +18,7 @@ export function MermaidDiagram({
   title?: string;
   isStreaming?: boolean;
   className?: string;
-  /** Present only when the host permits editing; chat remains read-only. */
+  /** Opens the host editor from Source; omit for a read-only source view. */
   onEditSource?: () => void;
 }) {
   const streamingContext = useContext(MermaidStreamingContext);
@@ -102,17 +102,12 @@ export function MermaidDiagram({
             variant={showSource ? "secondary" : "ghost"}
             size="sm"
             aria-pressed={showSource}
-            onClick={() => setShowSource(true)}
+            onClick={() => (onEditSource ? onEditSource() : setShowSource(true))}
           >
             Source
           </Button>
         </div>
         <div className="flex items-center gap-1">
-          {onEditSource && (
-            <Button type="button" variant="ghost" size="sm" onClick={onEditSource}>
-              <Code className="size-4" /> Edit source
-            </Button>
-          )}
           <Button
             type="button"
             variant="ghost"
