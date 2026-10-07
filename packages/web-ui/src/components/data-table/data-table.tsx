@@ -311,11 +311,19 @@ export function DataTable<T>({
         if (rect.top < visibleTop + headerHeight)
           scroller.scrollTop += rect.top - visibleTop - headerHeight;
         else if (rect.bottom > visibleBottom) scroller.scrollTop += rect.bottom - visibleBottom;
-      } else {
-        const left = scroller.scrollLeft;
-        element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-        scroller.scrollLeft = left;
       }
+      // The local viewport can itself be clipped by a scrolled host pane.
+      // Let the browser reveal through every ancestor, retaining each horizontal
+      // position so navigating rows never changes the visible columns.
+      const horizontal = new Map<HTMLElement, number>();
+      for (let parent: HTMLElement | null = scroller; parent; parent = parent.parentElement) {
+        horizontal.set(parent, parent.scrollLeft);
+      }
+      const windowLeft = window.scrollX;
+      element.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
+      horizontal.forEach((left, parent) => { parent.scrollLeft = left; });
+      if (window.scrollX !== windowLeft)
+        window.scrollTo({ left: windowLeft, top: window.scrollY, behavior: "instant" });
     }
     // Take the keyboard along, but only when it is on a ROW: arrows move the
     // active row, and leaving focus on the row it left means the next Enter

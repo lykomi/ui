@@ -1725,12 +1725,27 @@ it("reveals keyboard-active rows above a non-overlay scrollbar without moving ho
   row.getBoundingClientRect = () => ({ top: 85 - scroller.scrollTop, bottom: 115 - scroller.scrollTop, height: 30 }) as DOMRect;
   const header = container.querySelector("thead") as HTMLElement;
   header.getBoundingClientRect = () => ({ height: 20 }) as DOMRect;
+  const ancestor = document.createElement("div");
+  ancestor.style.overflowY = "auto";
+  container.parentElement!.append(ancestor);
+  ancestor.append(container);
+  ancestor.scrollLeft = 28;
+  ancestor.scrollTop = 90;
+  row.scrollIntoView = vi.fn(() => {
+    // Native reveal can move several scroll ancestors, including horizontally.
+    ancestor.scrollTop = 40;
+    ancestor.scrollLeft = 0;
+    scroller.scrollLeft = 0;
+  });
   act(() =>
     container!
       .querySelector("table")!
       .dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
   );
   expect(active).toBe("t1");
+  expect(row.scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest", behavior: "instant" });
+  expect(ancestor.scrollTop).toBe(40);
+  expect(ancestor.scrollLeft).toBe(28);
   expect(scroller.scrollTop).toBe(13);
   expect(scroller.scrollLeft).toBe(84);
   height = 60;
@@ -1738,6 +1753,7 @@ it("reveals keyboard-active rows above a non-overlay scrollbar without moving ho
   expect(active).toBe("t1");
   expect(scroller.scrollTop).toBe(53);
   expect(scroller.scrollLeft).toBe(84);
+  ancestor.replaceWith(container!);
 });
 
 
