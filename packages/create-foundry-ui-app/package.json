@@ -1,6 +1,6 @@
 {
   "name": "create-foundry-ui-app",
-  "version": "0.8.24",
+  "version": "0.8.25",
   "license": "MIT",
   "description": "Scaffold a new Foundry UI app — AG-UI protocol + Microsoft Agent Framework + Azure Foundry, ready to run.",
   "keywords": [

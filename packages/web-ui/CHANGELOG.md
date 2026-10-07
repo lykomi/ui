@@ -1,5 +1,17 @@
 # @iloveagents/foundry-web-ui
 
+## 0.37.0
+
+### Minor Changes
+
+- 1743d39: Add bounded, keyboard-accessible column resizing and persisted user widths to DataTable. Use fixed column tracks so long titles cannot consume the table, keep declared column bounds, and offer one native horizontal scrollport with reachable arrow controls. Preserve horizontal position during vertical row navigation and allow shared column defaults through useDataTable.
+
+### Patch Changes
+
+- Updated dependencies [a404c05]
+  - @iloveagents/foundry-web-primitives@0.37.0
+  - @iloveagents/foundry-agent@0.37.0
+
 ## 0.36.0
 
 ### Minor Changes

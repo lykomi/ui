@@ -1,6 +1,6 @@
 {
   "name": "@iloveagents/foundry-web-3d",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "license": "MIT",
   "description": "Optional preview GLB viewer with part hierarchy and AG-UI model tools for Foundry UI.",
   "type": "module",

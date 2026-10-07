@@ -1,5 +1,11 @@
 # @iloveagents/foundry-web-primitives
 
+## 0.37.0
+
+### Minor Changes
+
+- a404c05: Add a content appearance to ReadOnlyField for fixed information without input borders, while preserving framed values by default.
+
 ## 0.36.0
 
 ### Minor Changes

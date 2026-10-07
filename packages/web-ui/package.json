@@ -1,6 +1,6 @@
 {
   "name": "@iloveagents/foundry-web-ui",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "license": "MIT",
   "description": "React agent UI core for Foundry UI — chat, composer, AG-UI adapter for assistant-ui, tool cards, panels, sidebar, theme runtime, and UI stores.",
   "keywords": [
