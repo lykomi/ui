@@ -1127,6 +1127,9 @@ describe("useDataTable + DataTable", () => {
           );
         });
       render();
+      const viewport = container!.querySelector("[data-list-scroller]")!;
+      let viewportWidth = 600;
+      Object.defineProperty(viewport, "clientWidth", { get: () => viewportWidth });
       const headers = () =>
         Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")) as HTMLElement[];
       headers()
@@ -1145,6 +1148,12 @@ describe("useDataTable + DataTable", () => {
       // the second pinned column starts where the first one ends
       expect(headers()[0]!.style.left).toBe("0px");
       expect(headers()[1]!.style.left).toBe("40px");
+      // A narrow viewport releases wide frozen content so other columns can be reached.
+      viewportWidth = 200;
+      act(() => callbacks.forEach((callback) => callback()));
+      expect(headers().every((header) => !header.hasAttribute("data-pinned"))).toBe(true);
+      viewportWidth = 600;
+      act(() => callbacks.forEach((callback) => callback()));
       // pinned body cells are marked so the shipped CSS can keep them opaque
       const cell = container!.querySelector("tbody tr td") as HTMLElement;
       expect(cell.getAttribute("data-pinned")).toBe("cell");
@@ -1614,4 +1623,242 @@ it("routes tool results into focus and leaves the underlying panel open on Escap
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   expect(useToolPanelStore.getState().isOpen).toBe(true);
   act(() => useToolPanelStore.getState().closePanel());
+});
+
+describe("column sizing", () => {
+  it("resizes independently of sorting and pagination, clamps widths and resets to declared sizes", () => {
+    const h = mount({
+      pageSize: 1,
+      initialState: { pagination: { pageIndex: 2, pageSize: 1 } },
+      columns: [
+        { accessorKey: "title", header: "Title", size: 240, minSize: 160, maxSize: 400 },
+        selectionColumn<Task>(),
+      ],
+    });
+    const resize = container!.querySelector('[aria-label="Resize Title column"]')!;
+    const key = (key: string, shiftKey = false) =>
+      act(() =>
+        resize.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey, bubbles: true })),
+      );
+    key("ArrowRight");
+    expect(h.table.getColumn("title")!.getSize()).toBe(250);
+    expect(h.table.getState().pagination.pageIndex).toBe(2);
+    expect(h.table.getState().sorting).toEqual([]);
+    key("ArrowRight", true);
+    expect(h.table.getColumn("title")!.getSize()).toBe(300);
+    key("Home");
+    expect(h.table.getColumn("title")!.getSize()).toBe(160);
+    key("ArrowLeft");
+    expect(h.table.getColumn("title")!.getSize()).toBe(160);
+    key("End");
+    expect(h.table.getColumn("title")!.getSize()).toBe(400);
+    key("ArrowRight");
+    expect(h.table.getColumn("title")!.getSize()).toBe(400);
+    key("Enter");
+    expect(h.table.getColumn("title")!.getSize()).toBe(240);
+    expect(container!.querySelectorAll("[data-column-resize]")).toHaveLength(1);
+    expect(h.table.getColumn("__select")!.getSize()).toBe(36);
+  });
+
+  it("round-trips namespaced user widths, preserves defaults and rejects malformed sizes", () => {
+    const options = { prefix: "risk.", defaults: { columnSizing: { title: 300 } } };
+    expect(parseDataTableState(new URLSearchParams(), options).columnSizing).toEqual({
+      title: 300,
+    });
+    const encoded = serializeDataTableState(
+      { columnSizing: { title: 440, "odd,id": 160 } },
+      options,
+    );
+    expect(parseDataTableState(encoded, options).columnSizing).toEqual({
+      title: 440,
+      "odd,id": 160,
+    });
+    const reset = serializeDataTableState({ columnSizing: {} }, options);
+    expect(reset.has("risk.widths")).toBe(true);
+    expect(parseDataTableState(reset, options).columnSizing).toEqual({});
+    const invalid = new URLSearchParams({
+      "risk.widths": JSON.stringify({
+        title: 220,
+        negative: -1,
+        zero: 0,
+        string: "400",
+        huge: Infinity,
+      }),
+    });
+    expect(parseDataTableState(invalid, options).columnSizing).toEqual({ title: 220 });
+    expect(
+      parseDataTableState(new URLSearchParams({ "risk.widths": "oops" }), options).columnSizing,
+    ).toEqual({});
+  });
+});
+
+it("reveals keyboard-active rows above a non-overlay scrollbar without moving horizontally", () => {
+  let height = 100;
+  let active: string | undefined;
+  const render = () =>
+    act(() =>
+      root!.render(
+        <Harness
+          tableProps={{ maxHeight: height }}
+          activeRowId={active}
+          onActiveRowChange={(row) => {
+            active = row?.id;
+            render();
+          }}
+          onTable={() => {}}
+        />,
+      ),
+    );
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  render();
+  const scroller = container.querySelector("[data-list-scroller]") as HTMLElement;
+  Object.defineProperties(scroller, {
+    clientTop: { value: 2 },
+    clientHeight: { get: () => height },
+    scrollHeight: { value: 500 },
+  });
+  scroller.scrollLeft = 84;
+  scroller.getBoundingClientRect = () => ({ top: 0, bottom: 120, height: 120 }) as DOMRect;
+  const row = container.querySelector("tbody tr[data-row-id]") as HTMLElement;
+  row.getBoundingClientRect = () =>
+    ({ top: 85 - scroller.scrollTop, bottom: 115 - scroller.scrollTop, height: 30 }) as DOMRect;
+  const header = container.querySelector("thead") as HTMLElement;
+  header.getBoundingClientRect = () => ({ height: 20 }) as DOMRect;
+  const ancestor = document.createElement("div");
+  ancestor.style.overflowY = "auto";
+  container.parentElement!.append(ancestor);
+  ancestor.append(container);
+  ancestor.scrollLeft = 28;
+  ancestor.scrollTop = 90;
+  row.scrollIntoView = vi.fn(() => {
+    // Native reveal can move several scroll ancestors, including horizontally.
+    ancestor.scrollTop = 40;
+    ancestor.scrollLeft = 0;
+    scroller.scrollLeft = 0;
+  });
+  act(() =>
+    container!
+      .querySelector("table")!
+      .dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
+  );
+  expect(active).toBe("t1");
+  expect(row.scrollIntoView).toHaveBeenCalledWith({
+    block: "nearest",
+    inline: "nearest",
+    behavior: "instant",
+  });
+  expect(ancestor.scrollTop).toBe(40);
+  expect(ancestor.scrollLeft).toBe(28);
+  expect(scroller.scrollTop).toBe(13);
+  expect(scroller.scrollLeft).toBe(84);
+  height = 60;
+  render();
+  expect(active).toBe("t1");
+  expect(scroller.scrollTop).toBe(53);
+  expect(scroller.scrollLeft).toBe(84);
+  ancestor.replaceWith(container!);
+});
+
+it("keeps ordinary columns readable at Home and allows explicit compact bounds", () => {
+  const h = mount({
+    columns: [
+      { accessorKey: "title", header: "Title" },
+      { accessorKey: "status", header: "Status", size: 40, minSize: 24, maxSize: 80 },
+    ],
+  });
+  const home = (label: string) =>
+    act(() =>
+      container!
+        .querySelector(`[aria-label="Resize ${label} column"]`)!
+        .dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })),
+    );
+  home("Title");
+  expect(h.table.getColumn("title")!.getSize()).toBe(80);
+  home("Status");
+  expect(h.table.getColumn("status")!.getSize()).toBe(24);
+});
+
+it("starts a new page at its top without moving horizontal position or resetting on resize", () => {
+  const instance = mount({
+    initialState: { pagination: { pageIndex: 0, pageSize: 2 } },
+    tableProps: { maxHeight: 300, stableHeight: true },
+  });
+  const scroller =
+    container!.querySelector<HTMLElement>("[data-table-scroll]") ??
+    container!.querySelector<HTMLElement>(".overflow-auto");
+  expect(scroller).not.toBeNull();
+  scroller!.scrollTop = 60;
+  scroller!.scrollLeft = 84;
+  act(() => instance.table.setPageIndex(1));
+  expect(scroller!.scrollTop).toBe(0);
+  expect(scroller!.scrollLeft).toBe(84);
+  expect(scroller!.style.height).toBe("300px");
+  scroller!.scrollTop = 60;
+  act(() => instance.table.setColumnSizing({ title: 300 }));
+  expect(scroller!.scrollTop).toBe(60);
+});
+
+it("keeps bounded headers opaque even inside host translucent-header styles", () => {
+  mount({ tableProps: { maxHeight: 300, className: "[&_thead]:bg-muted/40" } });
+  const header = container!.querySelector("thead")!;
+  expect(header.style.backgroundColor).toBe("var(--card)");
+});
+
+it.each([false, true])(
+  "releases a wide pinned boundary while preserving only a leading selection utility (%s)",
+  (selection) => {
+    const callbacks: Array<() => void> = [];
+    const previous = window.ResizeObserver;
+    Object.defineProperty(window, "ResizeObserver", {
+      writable: true,
+      value: class {
+        constructor(callback: () => void) {
+          callbacks.push(callback);
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    });
+    try {
+      mount({
+        columns: [
+          ...(selection ? [selectionColumn<Task>()] : []),
+          { accessorKey: "title", header: "Title", size: 80 },
+          { accessorKey: "status", header: "Status", size: 80 },
+          { accessorKey: "priority", header: "Priority", size: 320, meta: { pinned: "left" } },
+          { accessorKey: "tags", header: "Tags", size: 200 },
+        ],
+      });
+      const scroller = container!.querySelector("[data-list-scroller]")!;
+      Object.defineProperty(scroller, "clientWidth", { get: () => 400 });
+      act(() => callbacks.forEach((callback) => callback()));
+      expect(container!.querySelectorAll("thead [data-pinned]")).toHaveLength(selection ? 1 : 0);
+      if (selection)
+        expect(
+          container!
+            .querySelector('[aria-label="Select all"]')
+            ?.closest("th")
+            ?.hasAttribute("data-pinned"),
+        ).toBe(true);
+    } finally {
+      Object.defineProperty(window, "ResizeObserver", { writable: true, value: previous });
+    }
+  },
+);
+
+it("contains the terminal resize target only when no trailing spacer exists", () => {
+  mount({
+    tableProps: { spacer: false },
+    columns: [
+      { accessorKey: "title", header: "Title" },
+      { accessorKey: "status", header: "Status" },
+    ],
+  });
+  expect(container!.querySelectorAll("[data-column-resize-terminal]")).toHaveLength(1);
+  expect(
+    container!.querySelector("[data-column-resize-terminal]")!.getAttribute("aria-label"),
+  ).toBe("Resize Status column");
 });

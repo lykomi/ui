@@ -59,6 +59,7 @@ export const DataTableFrame = forwardRef<HTMLDivElement, DataTableFrameProps>(
       <div
         {...rest}
         ref={ref}
+        data-table-layout=""
         data-focused={focused ? "" : undefined}
         data-focus-title={rest["aria-label"] || "Focused content"}
         className={

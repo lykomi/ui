@@ -202,3 +202,76 @@ value, not the current page mode, so fixed content stays content in View and Edi
 Content remains selectable and links stay usable; do not replace it with a
 disabled input. Appearance does not grant or revoke edit permission. Keep
 permission enforcement and pending-change review independent of presentation.
+
+## Lists and data tables
+
+Use the shared `useDataTable` / `DataTableFrame` / `DataTableToolbar` /
+`DataTable` / `DataTablePagination` family. Start with the person's task:
+identify records, compare values, find exceptions or review a queue. Put the
+identity column first and keep the fields needed for that task visible. Keep
+metadata secondary; do not size columns alphabetically or from the longest
+raw value. Long names must not push status and dates off-screen.
+
+Define each column's `size`, `minSize` and `maxSize` in its `ColumnDef`.
+Give identity/narrative columns more room than dates, states and numeric
+values. The shared defaults are 80px minimum and 1200px maximum. The hook's
+`defaultColumn` configures shared bounds; individual
+columns override them. Mark selection and action columns
+`enableResizing: false` and give them fixed bounds. Use `meta.align` for
+numbers and short comparable values, with consistent formatting and units.
+Do not apply a nested fixed `max-width` to text that should benefit from
+resizing. Use truncation for long identity text, expose the full value on
+hover, and make the item inspector the place to read/edit long content.
+
+Users can resize a header's separate separator by dragging, use arrow keys
+(Shift for larger steps), Home/End for bounds, and Enter or double-click to
+reset. The resize target must not also sort. Honor `enableResizing` and
+individual bounds. User widths are part of `DataTableState.columnSizing`;
+URL state stores them under a namespaced `widths` key. Each list on a page
+needs a stable unique URL prefix. User choices override author defaults;
+reset widths separately from filters and sorting.
+
+For an ordinary bounded list, pass `maxHeight` (a responsive value such as
+`min(70vh, 42rem)`) and keep the header sticky. The table owns one row
+viewport, while toolbar and paging controls stay outside it. Focus mode
+uses `fill` to occupy the available panel height. Preserve horizontal
+position while navigating rows vertically. Keep native wheel, trackpad,
+touch and keyboard scrolling; never translate all vertical wheel events
+into sideways scrolling. Bounded tables fit the current viewport and leave room for their scrollbar and
+action row. Compose `DataTableFrame` with `DataTablePagination` so wrapped paging
+controls contribute their actual height. `fitViewport={false}` opts out for a host that deliberately owns
+that sizing. The native horizontal scrollbar and bottom arrow controls remain
+reachable without first scrolling through every row.
+Honor reduced motion. Keep essential information visible before overflow.
+A frozen identity column must leave room for the scrolling columns. At narrow
+widths the shared table releases a wide frozen prefix while keeping narrow
+leading utility columns fixed when they fit; column widths remain unchanged.
+
+`spacer={false}` lets the first content column use spare width, up to its
+maximum. A user-resized column keeps its chosen width. The default spacer
+keeps declared column widths and leaves spare room at the end. Explicit
+responsive column gates are separate from persisted visibility; shrinking
+the panel must never overwrite the user's column choices.
+
+Configure default sorting, filters, visibility and page size through
+`initialState` for an uncontrolled table, or through the URL adapter's
+`defaults` when controlled. Use real schema values and stable IDs. Choose
+a default sort meaningful to the workflow (for example latest activity,
+nearest deadline, or priority), and show the active sort/filter controls.
+An explicitly cleared filter or sort must stay cleared after reload. Do
+not silently reapply author defaults over the user's state.
+
+Check long/empty/mixed values, pointer and keyboard resizing, width reset,
+filter/sort defaults and overrides, both scroll axes, sticky/frozen columns,
+and light/dark themes in wide and narrow containers. Tests and screenshots
+verify behavior; claims of improved enjoyment require task-based user testing.
+
+This contract draws on [NN/g's table task research](https://www.nngroup.com/articles/data-tables/),
+[React Spectrum's column resizing and persistence](https://react-spectrum.adobe.com/v3/TableView.html),
+[WAI's keyboard interaction patterns](https://www.w3.org/WAI/ARIA/apg/patterns/grid/),
+and [TanStack's column sizing contract](https://tanstack.com/table/v8/docs/guide/column-sizing).
+These are complementary references, not a single design-system benchmark.
+
+Paged bounded tables reserve a stable viewport when standard pagination has multiple pages, so the next/previous controls do not jump on a short final page. `stableHeight` explicitly overrides this behavior. Page changes return to the top while preserving the horizontal position; resizing columns preserves the current reading position.
+
+Use a single native horizontal scrollport per table. Bottom arrows provide additional access to off-screen columns; do not duplicate the horizontal scrollbar with a synchronized second track.

@@ -27,6 +27,7 @@ export function CollectionSurface({
         className,
       )}
       {...props}
+      data-table-layout=""
     >
       {toolbar ? (
         <div

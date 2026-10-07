@@ -9,6 +9,7 @@
  */
 import type {
   ColumnFiltersState,
+  ColumnSizingState,
   ExpandedState,
   PaginationState,
   RowSelectionState,
@@ -24,6 +25,7 @@ export interface DataTableState {
   rowSelection: RowSelectionState;
   pagination: PaginationState;
   expanded: ExpandedState;
+  columnSizing: ColumnSizingState;
 }
 
 export const DEFAULT_PAGE_SIZE = 20;
@@ -36,10 +38,11 @@ export const EMPTY_DATA_TABLE_STATE: DataTableState = {
   rowSelection: {},
   pagination: { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE },
   expanded: true,
+  columnSizing: {},
 };
 
 const FILTER_PREFIX = "f_";
-const OWN_KEYS = ["q", "sort", "hide", "page", "size"] as const;
+const OWN_KEYS = ["q", "sort", "hide", "page", "size", "widths"] as const;
 
 /** `prefix` namespaces every key (`risks.q`, `risks.f_status`) so two lists can share a page. */
 export function isDataTableUrlKey(key: string, prefix = ""): boolean {
@@ -132,6 +135,11 @@ export function serializeDataTableState(
   ) {
     params.set(`${prefix}hide`, hiddenKey(state.columnVisibility));
   }
+  if (
+    state.columnSizing !== undefined &&
+    JSON.stringify(state.columnSizing) !== JSON.stringify(defaults.columnSizing ?? {})
+  )
+    params.set(`${prefix}widths`, JSON.stringify(state.columnSizing));
   const pagination = state.pagination;
   if (pagination) {
     const defaultIndex = defaults.pagination?.pageIndex ?? 0;
@@ -185,6 +193,23 @@ export function parseDataTableState(
     for (const id of hideRaw.split(",").filter(Boolean).map(decodePart))
       columnVisibility[id] = false;
   }
+  let columnSizing = defaults.columnSizing;
+  const widthsRaw = params.get(`${prefix}widths`);
+  if (widthsRaw !== null) {
+    columnSizing = {};
+    try {
+      const parsed: unknown = JSON.parse(widthsRaw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        columnSizing = Object.fromEntries(
+          Object.entries(parsed).filter(
+            ([, value]) => typeof value === "number" && Number.isFinite(value) && value > 0,
+          ),
+        );
+      }
+    } catch {
+      /* A malformed link uses the declared column widths. */
+    }
+  }
   const pageRaw = params.get(`${prefix}page`);
   const page = Number.parseInt(pageRaw ?? "", 10);
   const size = Number.parseInt(params.get(`${prefix}size`) ?? "", 10);
@@ -194,6 +219,7 @@ export function parseDataTableState(
       ? (params.get(`${prefix}q`) ?? "")
       : defaults.globalFilter,
     sorting,
+    columnSizing,
     columnFilters,
     columnVisibility,
     pagination: {

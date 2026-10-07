@@ -270,3 +270,54 @@ tr[data-active] > [data-pinned="cell"] {
     font-family: var(--font-heading, inherit);
   }
 }
+
+/* Resize is a separate target, with a theme-colored preview rather than a sort action. */
+[data-column-resize] {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: -5px;
+  width: 10px;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+[data-column-resize] > span {
+  position: absolute;
+  inset-block: 8px;
+  inset-inline-start: 4px;
+  width: 2px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+[data-column-resize]:is(:hover, :focus-visible, [data-resizing]) > span {
+  background: var(--ring);
+}
+[data-column-resize]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+[data-column-resize][data-resizing] > span {
+  inset-block: 0;
+}
+[data-list-scroller] {
+  overscroll-behavior-x: contain;
+}
+@media (pointer: coarse) {
+  [data-column-resize] {
+    width: 24px;
+    inset-inline-end: -12px;
+  }
+  [data-column-resize] > span {
+    inset-inline-start: 11px;
+  }
+}
+
+/* The final hitbox stays inside the table, including on touch screens. */
+[data-column-resize-terminal] {
+  inset-inline-end: 0;
+}
+[data-column-resize-terminal] > span {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+}

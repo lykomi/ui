@@ -1,3 +1,4 @@
+import { DEFAULT_COLUMN_MIN_SIZE, DEFAULT_COLUMN_MAX_SIZE } from "./column-sizing.ts";
 /**
  * One hook that turns rows + columns into a fully wired TanStack table:
  * token search, faceted filters, sorting, column visibility, selection,
@@ -45,6 +46,8 @@ export interface UseDataTableOptions<T> {
   enableMultiRowSelection?: boolean;
   /** Replace the default AND-of-tokens search. */
   globalFilterFn?: FilterFn<T>;
+  /** Defaults for content columns; individual definitions override them. */
+  defaultColumn?: TableOptions<T>["defaultColumn"];
 }
 
 const PAGE_RESET_KEYS = new Set<keyof DataTableState>(["globalFilter", "columnFilters", "sorting"]);
@@ -106,6 +109,7 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
     enableRowSelection = false,
     enableMultiRowSelection = true,
     globalFilterFn,
+    defaultColumn,
   } = options;
   const controlled = controlledState !== undefined && onStateChange !== undefined;
 
@@ -162,11 +166,13 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   const tableOptions: TableOptions<T> = {
     data,
     columns,
+    defaultColumn: { minSize: DEFAULT_COLUMN_MIN_SIZE, maxSize: DEFAULT_COLUMN_MAX_SIZE, ...defaultColumn },
     getRowId,
     state: { ...state, grouping: groupBy ? [groupBy] : [] },
     onGlobalFilterChange: (updater) => update("globalFilter", updater),
     onColumnFiltersChange: (updater) => update("columnFilters", updater),
     onSortingChange: (updater) => update("sorting", updater),
+    onColumnSizingChange: (updater) => update("columnSizing", updater),
     onColumnVisibilityChange: (updater) => update("columnVisibility", updater),
     onRowSelectionChange: (updater) => update("rowSelection", updater),
     onPaginationChange: (updater) => update("pagination", updater),

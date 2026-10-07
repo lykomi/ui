@@ -5,7 +5,10 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 
-export function useElementWidth(ref: RefObject<HTMLElement | null>): number | undefined {
+export function useElementWidth(
+  ref: RefObject<HTMLElement | null>,
+  box: "border" | "client" = "border",
+): number | undefined {
   const [width, setWidth] = useState<number | undefined>(undefined);
   // The ref OBJECT is stable while the node it holds may not be: a caller
   // that swaps the element keeps the same ref, and an observer bound once
@@ -21,7 +24,7 @@ export function useElementWidth(ref: RefObject<HTMLElement | null>): number | un
   useEffect(() => {
     if (!element || typeof ResizeObserver === "undefined") return;
     const read = () => {
-      const next = element.getBoundingClientRect().width;
+      const next = box === "client" ? element.clientWidth : element.getBoundingClientRect().width;
       // A zero width means "not laid out yet" (or a test environment); treat
       // it as unmeasured so nothing is hidden on a guess.
       setWidth((current) => (next > 0 && Math.abs((current ?? -1) - next) > 0.5 ? next : current));
@@ -30,6 +33,6 @@ export function useElementWidth(ref: RefObject<HTMLElement | null>): number | un
     observer.observe(element);
     read();
     return () => observer.disconnect();
-  }, [element]);
+  }, [element, box]);
   return width;
 }

@@ -12,7 +12,7 @@ it("navigates overflowing columns and updates the available directions", async (
   const root = createRoot(host);
   try {
     await act(async () => root.render(<DataTableOverflow scroller={{ current: element }} />));
-    expect(host.textContent).toContain("More columns");
+    expect(host.textContent).toContain("Scroll to see more columns");
     expect(
       (host.querySelector('[aria-label="Previous columns"]') as HTMLButtonElement).disabled,
     ).toBe(true);
@@ -30,6 +30,30 @@ it("navigates overflowing columns and updates the available directions", async (
     expect(
       (host.querySelector('[aria-label="Previous columns"]') as HTMLButtonElement).disabled,
     ).toBe(false);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+it("adds navigation without a second horizontal scrollport", async () => {
+  const element = document.createElement("div");
+  Object.defineProperties(element, { clientWidth: { value: 400 }, scrollWidth: { value: 1000 } });
+  element.scrollTop = 180;
+  element.scrollBy = vi.fn(({ left }: { left: number }) => {
+    element.scrollLeft += left;
+  });
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<DataTableOverflow scroller={{ current: element }} />));
+    expect(host.querySelector('[aria-label="Horizontal column scrollbar"]')).toBeNull();
+    expect(host.querySelector("[data-list-scroller]")).toBeNull();
+    await act(async () =>
+      (host.querySelector('[aria-label="Next columns"]') as HTMLButtonElement).click(),
+    );
+    expect(element.scrollLeft).toBe(280);
+    expect(element.scrollTop).toBe(180);
   } finally {
     await act(async () => root.unmount());
     host.remove();
