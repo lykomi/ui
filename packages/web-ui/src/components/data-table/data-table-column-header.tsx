@@ -27,7 +27,7 @@ export function DataTableColumnHeader<T>({
   const sorted = column.getIsSorted();
   const align = column.columnDef.meta?.align;
   return (
-    <div className={cn("flex items-center", align === "right" && "justify-end", className)}>
+    <div className={cn("flex min-w-0 items-center", align === "right" && "justify-end", className)}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -35,10 +35,11 @@ export function DataTableColumnHeader<T>({
             variant="ghost"
             size="sm"
             aria-label={`${title}: ${sorted === "asc" ? "sorted ascending" : sorted === "desc" ? "sorted descending" : "not sorted"}`}
+            title={title}
             data-sorted={sorted || undefined}
-            className="-ml-3 h-8 gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground data-[state=open]:bg-accent data-[sorted]:text-foreground"
+            className="h-8 min-w-0 max-w-full gap-1.5 rounded-lg px-0 text-xs font-medium text-muted-foreground data-[state=open]:bg-accent data-[sorted]:text-foreground"
           >
-            <span>{title}</span>
+            <span className="truncate">{title}</span>
             {sorted === "desc" ? (
               <ArrowDown className="size-3.5" />
             ) : sorted === "asc" ? (

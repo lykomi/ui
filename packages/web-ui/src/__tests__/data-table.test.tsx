@@ -1691,3 +1691,45 @@ describe("column sizing", () => {
     ).toEqual({});
   });
 });
+
+it("reveals keyboard-active rows above a non-overlay scrollbar without moving horizontally", () => {
+  let active: string | undefined;
+  const render = () =>
+    act(() =>
+      root!.render(
+        <Harness
+          tableProps={{ maxHeight: 100 }}
+          activeRowId={active}
+          onActiveRowChange={(row) => {
+            active = row?.id;
+            render();
+          }}
+          onTable={() => {}}
+        />,
+      ),
+    );
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  render();
+  const scroller = container.querySelector("[data-list-scroller]") as HTMLElement;
+  Object.defineProperties(scroller, {
+    clientTop: { value: 2 },
+    clientHeight: { value: 100 },
+    scrollHeight: { value: 500 },
+  });
+  scroller.scrollLeft = 84;
+  scroller.getBoundingClientRect = () => ({ top: 0, bottom: 120, height: 120 }) as DOMRect;
+  const row = container.querySelector("tbody tr[data-row-id]") as HTMLElement;
+  row.getBoundingClientRect = () => ({ top: 85, bottom: 115, height: 30 }) as DOMRect;
+  const header = container.querySelector("thead") as HTMLElement;
+  header.getBoundingClientRect = () => ({ height: 20 }) as DOMRect;
+  act(() =>
+    container!
+      .querySelector("table")!
+      .dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
+  );
+  expect(active).toBe("t1");
+  expect(scroller.scrollTop).toBe(13);
+  expect(scroller.scrollLeft).toBe(84);
+});

@@ -294,13 +294,15 @@ export function DataTable<T>({
     if (element && scroller) {
       if (scroller.scrollHeight > scroller.clientHeight) {
         const viewport = scroller.getBoundingClientRect();
+        const visibleTop = viewport.top + scroller.clientTop;
+        const visibleBottom = visibleTop + scroller.clientHeight;
         const rect = element.getBoundingClientRect();
         const headerHeight = sticky
           ? (scroller.querySelector("thead")?.getBoundingClientRect().height ?? 0)
           : 0;
-        if (rect.top < viewport.top + headerHeight)
-          scroller.scrollTop += rect.top - viewport.top - headerHeight;
-        else if (rect.bottom > viewport.bottom) scroller.scrollTop += rect.bottom - viewport.bottom;
+        if (rect.top < visibleTop + headerHeight)
+          scroller.scrollTop += rect.top - visibleTop - headerHeight;
+        else if (rect.bottom > visibleBottom) scroller.scrollTop += rect.bottom - visibleBottom;
       } else {
         const left = scroller.scrollLeft;
         element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
@@ -447,9 +449,11 @@ export function DataTable<T>({
                         meta?.headerClassName,
                       )}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      <div className="-m-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap p-1">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </div>
                       {!header.isPlaceholder &&
                         !header.subHeaders.length &&
                         header.column.getCanResize() && (
@@ -462,7 +466,7 @@ export function DataTable<T>({
                     </th>
                   );
                 })}
-                {trailingSpace ? <th aria-hidden="true" className="w-full p-0" /> : null}
+                {trailingSpace ? <th aria-hidden="true" className="p-0" /> : null}
               </tr>
             ))}
           </thead>
@@ -580,7 +584,7 @@ export function DataTable<T>({
                         </td>
                       );
                     })}
-                    {trailingSpace ? <td aria-hidden="true" className="w-full p-0" /> : null}
+                    {trailingSpace ? <td aria-hidden="true" className="p-0" /> : null}
                   </tr>
                 ),
               )

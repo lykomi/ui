@@ -29,7 +29,8 @@ export function DataTableColumnResize<T>({
   const finish = (event: PointerEvent<HTMLButtonElement>, cancelled = false) => {
     const start = drag.current;
     if (!start || start.pointerId !== event.pointerId) return;
-    if (!cancelled) commit(start.width + (event.clientX - start.x) * start.direction);
+    const next = clamp(start.width + (event.clientX - start.x) * start.direction);
+    if (!cancelled && next !== Math.round(start.width)) commit(next);
     drag.current = null;
     setDelta(null);
     if (event.currentTarget.hasPointerCapture(event.pointerId))
