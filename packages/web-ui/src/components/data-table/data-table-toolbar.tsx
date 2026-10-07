@@ -275,8 +275,8 @@ export function DataTableToolbar<T>({
   const rightGroup =
     actions || viewOptions || focusButton || filtersToggle ? (
       <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-        {filtersToggle}
         {actions}
+        {filtersToggle}
         {viewOptions ? <DataTableViewOptions table={table} /> : null}
         {focusButton}
       </div>
