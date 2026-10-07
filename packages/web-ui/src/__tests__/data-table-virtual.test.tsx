@@ -226,3 +226,67 @@ it("measures cells rather than inflated native table-row bounds", async () => {
   expect(parseFloat(spacer.style.height)).toBeLessThan(250 * 48);
   expect(parseFloat(spacer.style.height)).toBeGreaterThan(200 * 48);
 });
+
+it("keeps automatically bounded tables below the fold at a positive height", async () => {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+    const height = this.matches("thead") ? 40 : 48;
+    return {
+      height,
+      width: 800,
+      x: 0,
+      y: 2000,
+      top: 2000,
+      left: 0,
+      right: 800,
+      bottom: 2000 + height,
+      toJSON() {
+        return {};
+      },
+    };
+  });
+  await mount(items.slice(0, 250));
+  expect(host.querySelector<HTMLElement>("[data-list-scroller]")!.style.maxHeight).toBe("70vh");
+});
+it("provides roving keyboard navigation when the host supplies only row opening", async () => {
+  const open = vi.fn();
+  function Uncontrolled() {
+    const instance = useDataTable({
+      data: items,
+      columns,
+      getRowId: (item) => item.id,
+      pageSize: false,
+    });
+    return <DataTable table={instance} onRowOpen={open} aria-label="Uncontrolled items" />;
+  }
+  await act(async () => root.render(<Uncontrolled />));
+  expect(host.querySelectorAll('tr[data-row-id][tabindex="0"]')).toHaveLength(1);
+  await act(async () => {
+    const scroller = host.querySelector<HTMLElement>("[data-list-scroller]")!;
+    scroller.scrollTop = 20000;
+    scroller.dispatchEvent(new Event("scroll"));
+  });
+  expect(host.querySelectorAll('tr[data-row-id][tabindex="0"]')).toHaveLength(1);
+  const first = host.querySelector<HTMLElement>('tr[data-row-id][tabindex="0"]')!;
+  const initialId = first.dataset.rowId!;
+  expect(initialId).not.toBe("item-0");
+  await act(async () => first.focus());
+  await act(async () =>
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
+  );
+  expect(document.activeElement?.getAttribute("data-row-id")).toBe(
+    `item-${Number(initialId.slice(5)) + 1}`,
+  );
+  await act(async () => {
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    );
+  });
+  const last = host.querySelector<HTMLElement>('[data-row-id="item-9999"]')!;
+  expect(last).not.toBeNull();
+  expect(document.activeElement).toBe(last);
+  await act(async () =>
+    last.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })),
+  );
+  expect(open).toHaveBeenCalledOnce();
+  expect(open.mock.calls[0][0].id).toBe("item-9999");
+});

@@ -153,8 +153,8 @@ export function DataTable<T>({
   table,
   onRowClick,
   onRowOpen,
-  activeRowId,
-  onActiveRowChange,
+  activeRowId: controlledActiveRowId,
+  onActiveRowChange: controlledOnActiveRowChange,
   rowClassName,
   renderGroup,
   groupOrder,
@@ -181,6 +181,19 @@ export function DataTable<T>({
     () => orderedRows(table, groupOrder),
     [table, rowModel, grouping, expanded, groupOrder],
   );
+  const [localActiveRowId, setLocalActiveRowId] = useState<string | null>(null);
+  useEffect(() => setLocalActiveRowId(null), [controlledActiveRowId]);
+  const setLocalActiveRow = useCallback(
+    (row: Row<T> | null) => setLocalActiveRowId(row?.id ?? null),
+    [],
+  );
+  const internalNavigation =
+    !controlledOnActiveRowChange && rows.length > 200 && Boolean(onRowClick || onRowOpen);
+  const onActiveRowChange =
+    controlledOnActiveRowChange ?? (internalNavigation ? setLocalActiveRow : undefined);
+  const activeRowId = controlledOnActiveRowChange
+    ? controlledActiveRowId
+    : (localActiveRowId ?? controlledActiveRowId);
   const effectiveMaxHeight = maxHeight ?? (rows.length > 200 ? "70vh" : undefined);
   const bounded = !filling && effectiveMaxHeight !== undefined;
   // A header only sticks inside a scroll container — which is exactly what
@@ -189,7 +202,8 @@ export function DataTable<T>({
   const dataRows = useMemo(() => rows.filter((row) => !row.getIsGrouped()), [rows]);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const viewport = useTableViewport(scrollerRef, bounded, fitViewport);
+  // Automatic bounds must contribute height even below the page fold.
+  const viewport = useTableViewport(scrollerRef, bounded, fitViewport && maxHeight !== undefined);
   const availableHeight = viewport.height;
   const keepHeight = stableHeight ?? (viewport.paginated && table.getPageCount() > 1);
   const { pageIndex, pageSize } = table.getState().pagination;
@@ -392,6 +406,10 @@ export function DataTable<T>({
   useEffect(() => {
     renderedRef.current?.(renderedIdsRef.current);
   }, [renderedKey]);
+  const rovingEntryId =
+    activeIndex >= 0
+      ? activeRowId
+      : virtual.items.map((item) => rows[item.index]).find((row) => !row.getIsGrouped())?.id;
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
   const activate = (
@@ -641,13 +659,30 @@ export function DataTable<T>({
                         data-focusable={
                           onRowClick || onRowOpen || onActiveRowChange ? "" : undefined
                         }
-                        tabIndex={onRowClick || onRowOpen || onActiveRowChange ? 0 : undefined}
+                        tabIndex={
+                          internalNavigation && virtual.enabled
+                            ? row.id === rovingEntryId
+                              ? 0
+                              : -1
+                            : onRowClick || onRowOpen || onActiveRowChange
+                              ? 0
+                              : undefined
+                        }
                         // `detail` counts the clicks in the sequence: the second
                         // one belongs to the double-click that follows, and
                         // letting it through would toggle a selection off again
                         // right before the row opens.
+                        onFocus={(event) => {
+                          if (internalNavigation && event.target === event.currentTarget)
+                            setLocalActiveRow(row);
+                        }}
                         onClick={(event) => {
                           if (event.detail > 1) return;
+                          if (
+                            internalNavigation &&
+                            !(event.target as HTMLElement).closest(INTERACTIVE)
+                          )
+                            setLocalActiveRow(row);
                           activate(row, event, onRowClick);
                         }}
                         onDoubleClick={(event) => activate(row, event, onRowOpen)}
