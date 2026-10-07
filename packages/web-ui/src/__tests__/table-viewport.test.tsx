@@ -68,9 +68,9 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
   footer.getBoundingClientRect = () => rect(700, 20);
   const host = document.createElement("div");
   const root = createRoot(host);
-  function Probe({ enabled = true }: { enabled?: boolean }) {
+  function Probe({ enabled = true, fit = true }: { enabled?: boolean; fit?: boolean }) {
     const ref = useRef(scroller);
-    const viewport = useTableViewport(ref, enabled);
+    const viewport = useTableViewport(ref, enabled, fit);
     return <output data-paginated={viewport.paginated}>{viewport.height ?? "unbounded"}</output>;
   }
   try {
@@ -127,6 +127,10 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
     });
     expect(host.textContent).toBe("130");
     expect(observed.has(paging)).toBe(true);
+    await act(async () => root.render(<Probe fit={false} />));
+    expect(host.textContent).toBe("unbounded");
+    expect(host.firstElementChild?.getAttribute("data-paginated")).toBe("true");
+    await act(async () => root.render(<Probe />));
     expect(host.firstElementChild?.getAttribute("data-paginated")).toBe("true");
     pagingHeight = 120;
     await act(async () => {

@@ -1,7 +1,11 @@
 import { useLayoutEffect, useState, type RefObject } from "react";
 
 /** Keep a bounded list's footer inside the visible viewport, including in a pane. */
-export function useTableViewport(scroller: RefObject<HTMLDivElement | null>, enabled: boolean) {
+export function useTableViewport(
+  scroller: RefObject<HTMLDivElement | null>,
+  enabled: boolean,
+  fitViewport = true,
+) {
   const [viewport, setViewport] = useState<{ height?: number; paginated: boolean }>({
     paginated: false,
   });
@@ -80,7 +84,9 @@ export function useTableViewport(scroller: RefObject<HTMLDivElement | null>, ena
               actions.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom + 16,
             )
           : 48;
-      const next = Math.max(0, Math.floor(bottom - rect.top - footer - actionSpace));
+      const next = fitViewport
+        ? Math.max(0, Math.floor(bottom - rect.top - footer - actionSpace))
+        : undefined;
       const paginated = Boolean(
         actions?.matches("[data-table-pagination]") ||
         actions?.querySelector("[data-table-pagination]"),
@@ -110,6 +116,6 @@ export function useTableViewport(scroller: RefObject<HTMLDivElement | null>, ena
       document.removeEventListener("scroll", schedule, true);
       if (pending !== undefined) cancelAnimationFrame(pending);
     };
-  }, [scroller, enabled]);
+  }, [scroller, enabled, fitViewport]);
   return enabled ? viewport : { height: undefined, paginated: false };
 }

@@ -179,7 +179,7 @@ export function DataTable<T>({
   const dataRows = rows.filter((row) => !row.getIsGrouped());
   const rootRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const viewport = useTableViewport(scrollerRef, bounded && fitViewport);
+  const viewport = useTableViewport(scrollerRef, bounded, fitViewport);
   const availableHeight = viewport.height;
   const keepHeight = stableHeight ?? (viewport.paginated && table.getPageCount() > 1);
   const { pageIndex, pageSize } = table.getState().pagination;
