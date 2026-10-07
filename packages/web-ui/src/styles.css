@@ -321,3 +321,31 @@ tr[data-active] > [data-pinned="cell"] {
   inset-inline-start: auto;
   inset-inline-end: 0;
 }
+
+/* Printed tables include every row, rather than only the scroll viewport. */
+@media print {
+  [data-list-root],
+  [data-table-layout],
+  [data-list-scroller] {
+    display: block !important;
+    flex: none !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+  [role="dialog"]:has([data-table-layout][data-focused]) {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+}
+
+@media print {
+  body:has([data-table-layout][data-focused]) [data-dialog-overlay] {
+    display: none !important;
+  }
+}
