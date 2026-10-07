@@ -24,6 +24,7 @@ export function useVirtualTableRows<T>({
   bounded,
   dense,
   activeRowId,
+  hasTabTargets,
 }: {
   rows: Row<T>[];
   scroller: RefObject<HTMLDivElement | null>;
@@ -31,6 +32,7 @@ export function useVirtualTableRows<T>({
   bounded: boolean;
   dense: boolean;
   activeRowId?: string | null;
+  hasTabTargets: boolean;
 }) {
   const [pendingTab, setPendingTab] = useState<{
     index: number;
@@ -121,6 +123,7 @@ export function useVirtualTableRows<T>({
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (
         !enabled ||
+        !hasTabTargets ||
         event.key !== "Tab" ||
         event.altKey ||
         event.ctrlKey ||
@@ -152,7 +155,7 @@ export function useVirtualTableRows<T>({
       event.preventDefault();
       setPendingTab({ index, direction, rows, anchor: target });
     },
-    [enabled, rows, body, scroller],
+    [enabled, hasTabTargets, rows, body, scroller],
   );
   useEffect(() => {
     if (!pendingTab) return;
@@ -183,8 +186,15 @@ export function useVirtualTableRows<T>({
       }
     }
     if (index >= 0 && index < rows.length) {
-      const frame = requestAnimationFrame(() => setPendingTab({ ...pendingTab, index }));
-      return () => cancelAnimationFrame(frame);
+      // Let React schedule the next bounded commit without adding a fixed
+      // animation-frame delay for every chunk of empty rows.
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (!cancelled) setPendingTab({ ...pendingTab, index });
+      });
+      return () => {
+        cancelled = true;
+      };
     }
     // No remaining cell targets: continue into the surrounding native tab order.
     const table = body.current?.parentElement;
@@ -211,6 +221,7 @@ export function useVirtualTableRows<T>({
   }, [pendingTab, enabled, rows, items, body]);
   return {
     enabled,
+    hasTabTargets,
     items,
     measureElement: enabled ? virtualizer.measureElement : undefined,
     before: (index: number) =>

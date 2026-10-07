@@ -413,3 +413,26 @@ it("finds off-window controls when entering from either table boundary", async (
     expect(document.activeElement?.getAttribute("aria-label")).toBe("Only control"),
   );
 });
+
+it("leaves large plain read-only tables in native Tab order without probing rows", async () => {
+  function Plain() {
+    const instance = useDataTable({
+      data: items,
+      columns: [{ accessorKey: "name", enableSorting: false, enableResizing: false }],
+      getRowId: (item) => item.id,
+      pageSize: false,
+    });
+    return <DataTable table={instance} />;
+  }
+  await act(async () => root.render(<Plain />));
+  const scroller = host.querySelector<HTMLElement>("[data-list-scroller]")!;
+  const count = host.querySelectorAll("tr[data-virtual-row-id]").length;
+  const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+  await act(async () => {
+    scroller.focus();
+    scroller.dispatchEvent(event);
+  });
+  expect(event.defaultPrevented).toBe(false);
+  expect(host.querySelector("[data-virtual-boundary]")).toBeNull();
+  expect(host.querySelectorAll("tr[data-virtual-row-id]")).toHaveLength(count);
+});

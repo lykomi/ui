@@ -311,6 +311,21 @@ export function DataTable<T>({
 
   // Keyboard: the active row moves with the arrows and stays in view, so a
   // long list can be walked without touching the mouse.
+  const hasCustomCells = useMemo(() => {
+    const visit = (definitions: typeof table.options.columns): boolean =>
+      definitions.some(
+        (definition) =>
+          Boolean(definition.cell) || ("columns" in definition && visit(definition.columns ?? [])),
+      );
+    return Boolean(table.options.defaultColumn?.cell) || visit(table.options.columns);
+  }, [table.options.columns, table.options.defaultColumn]);
+  const hasTabTargets = Boolean(
+    onRowClick ||
+    onRowOpen ||
+    onActiveRowChange ||
+    hasCustomCells ||
+    rows.length !== dataRows.length,
+  );
   const bodyRef = useRef<HTMLTableSectionElement | null>(null);
   const virtual = useVirtualTableRows({
     rows,
@@ -319,6 +334,7 @@ export function DataTable<T>({
     bounded: bounded || filling,
     dense,
     activeRowId: navigationRowId,
+    hasTabTargets,
   });
 
   const moveActive = useCallback(
@@ -755,7 +771,7 @@ export function DataTable<T>({
             ) : null}
           </tbody>
         </table>
-        {virtual.enabled ? (
+        {virtual.enabled && virtual.hasTabTargets ? (
           <span
             tabIndex={0}
             data-virtual-boundary=""
