@@ -10,6 +10,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -174,13 +175,18 @@ export function DataTable<T>({
   // remaining height (`min-h-0` lets a flex item shrink below its content)
   // and scrolls in both directions, so the toolbar above stays put.
   const filling = fill ?? frame?.focused ?? false;
-  const rows = orderedRows(table, groupOrder);
+  const rowModel = table.getRowModel().rows;
+  const { grouping, expanded } = table.getState();
+  const rows = useMemo(
+    () => orderedRows(table, groupOrder),
+    [table, rowModel, grouping, expanded, groupOrder],
+  );
   const effectiveMaxHeight = maxHeight ?? (rows.length > 200 ? "70vh" : undefined);
   const bounded = !filling && effectiveMaxHeight !== undefined;
   // A header only sticks inside a scroll container — which is exactly what
   // `fill` and `maxHeight` create.
   const sticky = stickyHeader || filling || bounded;
-  const dataRows = rows.filter((row) => !row.getIsGrouped());
+  const dataRows = useMemo(() => rows.filter((row) => !row.getIsGrouped()), [rows]);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const viewport = useTableViewport(scrollerRef, bounded, fitViewport);
@@ -321,7 +327,10 @@ export function DataTable<T>({
   // Sorting, filtering or a late-arriving page moves the active row without
   // changing its id, and an id restored before the rows load points at nothing
   // yet — so the position is part of what this watches.
-  const activeIndex = dataRows.findIndex((row) => row.id === activeRowId);
+  const activeIndex = useMemo(
+    () => (activeRowId == null ? -1 : dataRows.findIndex((row) => row.id === activeRowId)),
+    [dataRows, activeRowId],
+  );
   useEffect(() => {
     if (!activeRowId || activeIndex < 0) return;
     const element = Array.from(bodyRef.current?.querySelectorAll("tr[data-row-id]") ?? []).find(
@@ -434,15 +443,16 @@ export function DataTable<T>({
           aria-rowcount={virtual.enabled ? rows.length + table.getHeaderGroups().length : undefined}
           onFocusCapture={(event) =>
             virtual.setFocusedRowId(
-              (event.target as HTMLElement).closest<HTMLTableRowElement>("tr[data-row-id]")?.dataset
-                .rowId ?? null,
+              (event.target as HTMLElement).closest<HTMLTableRowElement>("tr[data-virtual-row-id]")
+                ?.dataset.virtualRowId ?? null,
             )
           }
           onBlurCapture={(event) => {
             const next = event.relatedTarget;
             virtual.setFocusedRowId(
               next instanceof HTMLElement && event.currentTarget.contains(next)
-                ? (next.closest<HTMLTableRowElement>("tr[data-row-id]")?.dataset.rowId ?? null)
+                ? (next.closest<HTMLTableRowElement>("tr[data-virtual-row-id]")?.dataset
+                    .virtualRowId ?? null)
                 : null,
             );
           }}
@@ -576,6 +586,7 @@ export function DataTable<T>({
                             ? item.index + table.getHeaderGroups().length + 1
                             : undefined
                         }
+                        data-virtual-row-id={row.id}
                         data-group-row=""
                         className="border-t border-border/45 bg-muted/35 text-sm font-medium"
                       >
@@ -618,6 +629,7 @@ export function DataTable<T>({
                             : undefined
                         }
                         data-row-id={row.id}
+                        data-virtual-row-id={row.id}
                         data-state={row.getIsSelected() ? "selected" : undefined}
                         data-active={activeRowId != null && row.id === activeRowId ? "" : undefined}
                         aria-current={

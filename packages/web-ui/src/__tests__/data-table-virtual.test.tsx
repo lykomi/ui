@@ -30,12 +30,21 @@ let host: HTMLDivElement;
 let root: Root;
 let printChange: (() => void) | undefined;
 let printing = false;
-function Harness({ data = items }: { data?: Item[] }) {
+function Harness({ data = items, grouped = false }: { data?: Item[]; grouped?: boolean }) {
   const [active, setActive] = useState<string | null>(null);
-  table = useDataTable({ data, columns, getRowId: (item) => item.id, pageSize: false });
+  table = useDataTable({
+    data,
+    columns,
+    getRowId: (item) => item.id,
+    pageSize: false,
+    groupBy: grouped ? "name" : null,
+  });
   return (
     <DataTable
       table={table}
+      renderGroup={
+        grouped ? (row) => <input aria-label={`Group ${row.id}`} defaultValue="draft" /> : undefined
+      }
       activeRowId={active}
       onActiveRowChange={(row) => setActive(row?.id ?? null)}
       onRowOpen={() => {}}
@@ -163,4 +172,57 @@ it("does not snap back to the active row during manual scrolling", async () => {
   });
   expect(reveal.mock.calls.length).toBe(before);
   expect(host.querySelector<HTMLElement>("[data-list-scroller]")!.scrollTop).toBe(20000);
+});
+
+it("keeps a focused grouped-row draft mounted outside the window", async () => {
+  await act(async () => root.render(<Harness grouped />));
+  const input = host.querySelector<HTMLInputElement>("tr[data-group-row] input")!;
+  expect(input).not.toBeNull();
+  await act(async () => {
+    input.focus();
+    input.value = "group draft";
+  });
+  await act(async () => {
+    const scroller = host.querySelector<HTMLElement>("[data-list-scroller]")!;
+    scroller.scrollTop = 20000;
+    scroller.dispatchEvent(new Event("scroll"));
+  });
+  expect(input.isConnected).toBe(true);
+  expect(document.activeElement).toBe(input);
+  expect(input.value).toBe("group draft");
+});
+it("commits every row synchronously during the native beforeprint event", async () => {
+  await mount(items.slice(0, 250));
+  let countDuringEvent = 0;
+  const capture = () => {
+    countDuringEvent = host.querySelectorAll("tr[data-row-id]").length;
+  };
+  window.addEventListener("beforeprint", capture);
+  await act(async () => window.dispatchEvent(new Event("beforeprint")));
+  window.removeEventListener("beforeprint", capture);
+  expect(countDuringEvent).toBe(250);
+  await act(async () => window.dispatchEvent(new Event("afterprint")));
+  expect(host.querySelectorAll("tr[data-row-id]").length).toBeLessThan(50);
+});
+it("measures cells rather than inflated native table-row bounds", async () => {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+    const height = this.matches("tr") ? 96 : this.matches("thead") ? 40 : 48;
+    return {
+      height,
+      width: 800,
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      right: 800,
+      bottom: height,
+      toJSON() {
+        return {};
+      },
+    };
+  });
+  await mount(items.slice(0, 250));
+  const spacer = host.querySelector<HTMLTableCellElement>("tbody tr:last-child td")!;
+  expect(parseFloat(spacer.style.height)).toBeLessThan(250 * 48);
+  expect(parseFloat(spacer.style.height)).toBeGreaterThan(200 * 48);
 });

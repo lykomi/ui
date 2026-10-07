@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
+import { flushSync } from "react-dom";
 import type { Row } from "@tanstack/react-table";
 
 /** Window the rendered rows, retaining native table layout and a focused cell. */
@@ -22,12 +23,19 @@ export function useVirtualTableRows<T>({
   const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(40);
   useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const media = window.matchMedia("print");
-    const update = () => setPrinting(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+    const media = typeof window.matchMedia === "function" ? window.matchMedia("print") : null;
+    const beforePrint = () => flushSync(() => setPrinting(true));
+    const afterPrint = () => setPrinting(false);
+    const update = () => (media?.matches ? beforePrint() : afterPrint());
+    if (media?.matches) setPrinting(true);
+    media?.addEventListener("change", update);
+    window.addEventListener("beforeprint", beforePrint);
+    window.addEventListener("afterprint", afterPrint);
+    return () => {
+      media?.removeEventListener("change", update);
+      window.removeEventListener("beforeprint", beforePrint);
+      window.removeEventListener("afterprint", afterPrint);
+    };
   }, []);
   useEffect(() => {
     const header = body.current?.parentElement?.querySelector("thead");
@@ -40,8 +48,9 @@ export function useVirtualTableRows<T>({
     return () => observer.disconnect();
   }, [body]);
   const enabled = bounded && rows.length > 200 && !printing;
-  const activeIndex = rows.findIndex((row) => row.id === activeRowId);
-  const focusedIndex = rows.findIndex((row) => row.id === focusedRowId);
+  const rowIndexes = useMemo(() => new Map(rows.map((row, index) => [row.id, index])), [rows]);
+  const activeIndex = activeRowId == null ? -1 : (rowIndexes.get(activeRowId) ?? -1);
+  const focusedIndex = focusedRowId == null ? -1 : (rowIndexes.get(focusedRowId) ?? -1);
   const rangeExtractor = useCallback(
     (range: Parameters<typeof defaultRangeExtractor>[0]) => {
       const indexes = new Set(defaultRangeExtractor(range));
@@ -57,6 +66,11 @@ export function useVirtualTableRows<T>({
     getScrollElement: () => scroller.current,
     estimateSize: () => (dense ? 32 : 48),
     getItemKey,
+    // Native tr bounds include incorrect table-border heights in Firefox.
+    // Cells share the laid-out row height and retain wrapped-content measurement.
+    measureElement: (element) =>
+      Math.max(0, ...Array.from(element.cells, (cell) => cell.getBoundingClientRect().height)) ||
+      (dense ? 32 : 48),
     overscan: 8,
     scrollMargin: headerHeight,
     scrollPaddingStart: headerHeight,
