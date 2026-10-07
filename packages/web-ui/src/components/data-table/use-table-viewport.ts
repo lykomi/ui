@@ -25,31 +25,28 @@ export function useTableViewport(
     let mutationLayout: Element | null | undefined;
     const read = () => {
       const ancestors: HTMLElement[] = [];
-      for (
-        let parent = frame?.parentElement;
-        parent && parent !== document.body;
-        parent = parent.parentElement
-      ) {
+      for (let parent = frame; parent && parent !== document.body; parent = parent.parentElement) {
         ancestors.push(parent);
       }
-      const styleTargets = new Set<Element>([
-        ...(frame ? [frame] : []),
-        ...ancestors,
-        document.body,
-        document.documentElement,
-      ]);
-      if (
-        styleTargets.size !== styleObserved.size ||
-        [...styleTargets].some((target) => !styleObserved.has(target))
-      ) {
-        styleObserver?.disconnect();
-        styleObserved.clear();
-        styleTargets.forEach((target) => {
-          styleObserver?.observe(target, { attributes: true, attributeFilter: ["class", "style"] });
-          styleObserved.add(target);
-        });
-      }
       const layout = frame?.closest("[data-table-layout]");
+      const leading = [
+        ...new Set([
+          ...Array.from(layout?.children ?? []),
+          ...Array.from(
+            layout?.querySelectorAll(
+              '[data-slot="data-table-toolbar"], [data-slot="collection-toolbar"], [data-selection-bar]',
+            ) ?? [],
+          ),
+        ]),
+      ].filter(
+        (node): node is HTMLElement =>
+          node instanceof HTMLElement &&
+          frame !== null &&
+          node.closest("[data-table-layout]") === layout &&
+          !node.contains(frame) &&
+          !frame.contains(node) &&
+          Boolean(node.compareDocumentPosition(frame) & Node.DOCUMENT_POSITION_FOLLOWING),
+      );
       if (layout !== mutationLayout) {
         mutationObserver?.disconnect();
         if (layout) mutationObserver?.observe(layout, { childList: true, subtree: true });
@@ -70,8 +67,21 @@ export function useTableViewport(
       const targets = new Set([
         ...(frame ? [frame] : []),
         ...ancestors,
+        ...leading,
         ...(actions ? [actions] : []),
       ]);
+      const styleTargets = new Set<Element>([...targets, document.body, document.documentElement]);
+      if (
+        styleTargets.size !== styleObserved.size ||
+        [...styleTargets].some((target) => !styleObserved.has(target))
+      ) {
+        styleObserver?.disconnect();
+        styleObserved.clear();
+        styleTargets.forEach((target) => {
+          styleObserver?.observe(target, { attributes: true, attributeFilter: ["class", "style"] });
+          styleObserved.add(target);
+        });
+      }
       observed.forEach((target) => {
         if (!targets.has(target)) {
           observer?.unobserve(target);
@@ -96,12 +106,6 @@ export function useTableViewport(
       candidates.forEach((parent) => {
         if (parent.scrollHeight > parent.clientHeight + 1) panes.add(parent);
       });
-      const bottom = Math.min(
-        Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight),
-        ...[...panes].map(
-          (pane) => pane.getBoundingClientRect().top + pane.clientTop + pane.clientHeight,
-        ),
-      );
       const footer =
         frame?.querySelector("[data-table-overflow]")?.getBoundingClientRect().height ?? 0;
       // Pagination can wrap at narrow widths. Reserve its measured height and
@@ -113,9 +117,21 @@ export function useTableViewport(
               actions.getBoundingClientRect().bottom - frame.getBoundingClientRect().bottom + 16,
             )
           : 48;
-      const next = fitViewport
-        ? Math.max(0, Math.floor(bottom - rect.top - footer - actionSpace))
-        : undefined;
+      // The immediate frame clips only its own rows and overflow controls.
+      // External pagination belongs below it; subtracting that space inside
+      // an auto-height frame would shrink the frame again on every resize.
+      const bottom = Math.min(
+        Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight) -
+          actionSpace,
+        ...[...panes].map(
+          (pane) =>
+            pane.getBoundingClientRect().top +
+            pane.clientTop +
+            pane.clientHeight -
+            (pane === frame ? 0 : actionSpace),
+        ),
+      );
+      const next = fitViewport ? Math.max(0, Math.floor(bottom - rect.top - footer)) : undefined;
       const paginated = Boolean(
         actions?.matches("[data-table-pagination]") ||
         actions?.querySelector("[data-table-pagination]"),
@@ -139,13 +155,17 @@ export function useTableViewport(
     if (typeof MutationObserver !== "undefined") {
       styleObserver = new MutationObserver(schedule);
       mutationObserver = new MutationObserver((records) => {
-        const selector = "[data-table-footer], [data-table-pagination], [data-list-scroller]";
+        const selector =
+          '[data-table-footer], [data-table-pagination], [data-list-scroller], [data-slot="data-table-toolbar"], [data-slot="collection-toolbar"], [data-selection-bar]';
         if (
-          records.some((record) =>
-            [...record.addedNodes, ...record.removedNodes].some(
-              (node) =>
-                node instanceof Element && (node.matches(selector) || node.querySelector(selector)),
-            ),
+          records.some(
+            (record) =>
+              record.target === mutationLayout ||
+              [...record.addedNodes, ...record.removedNodes].some(
+                (node) =>
+                  node instanceof Element &&
+                  (node.matches(selector) || node.querySelector(selector)),
+              ),
           )
         )
           schedule();

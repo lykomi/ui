@@ -63,8 +63,9 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
     ({ top, bottom: top + height, height, width: 400 }) as DOMRect;
   pane.getBoundingClientRect = () => rect(100, paneHeight);
   let scrollerHeight = 500;
-  scroller.getBoundingClientRect = () => rect(200, scrollerHeight);
-  tableFrame.getBoundingClientRect = () => rect(200, scrollerHeight + 20);
+  let scrollerTop = 200;
+  scroller.getBoundingClientRect = () => rect(scrollerTop, scrollerHeight);
+  tableFrame.getBoundingClientRect = () => rect(scrollerTop, scrollerHeight + 20);
   footer.getBoundingClientRect = () => rect(700, 20);
   const host = document.createElement("div");
   const root = createRoot(host);
@@ -77,6 +78,29 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
     await act(async () => root.render(<Probe />));
     expect(host.textContent).toBe("732");
     expect(observed.has(pane)).toBe(true);
+    const toolbar = document.createElement("div");
+    toolbar.setAttribute("data-slot", "data-table-toolbar");
+    await act(async () => {
+      wrapper.insertBefore(toolbar, tableFrame);
+      await Promise.resolve();
+      frame?.(0);
+    });
+    expect(observed.has(toolbar)).toBe(true);
+    // Expanding filters moves the table, with unchanged frame/ancestor boxes.
+    scrollerTop = 240;
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("692");
+    await act(async () => {
+      scrollerTop = 200;
+      toolbar.remove();
+      await Promise.resolve();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("732");
+    expect(observed.has(toolbar)).toBe(false);
     paneHeight = 400;
     await act(async () => {
       resize();
@@ -189,6 +213,36 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
       await Promise.resolve();
       frame?.(0);
     });
+    let frameHeight = 240;
+    let frameContentHeight = 600;
+    Object.defineProperties(tableFrame, {
+      clientHeight: { get: () => frameHeight },
+      scrollHeight: { get: () => frameContentHeight },
+    });
+    await act(async () => {
+      tableFrame.style.overflowY = "hidden";
+      await Promise.resolve();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("220");
+    frameContentHeight = 240;
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("220");
+    frameHeight = 320;
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("300");
+    await act(async () => {
+      tableFrame.style.overflowY = "visible";
+      await Promise.resolve();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("732");
     const clientHeight = vi
       .spyOn(document.documentElement, "clientHeight", "get")
       .mockReturnValue(984);
