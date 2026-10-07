@@ -290,3 +290,64 @@ it("provides roving keyboard navigation when the host supplies only row opening"
   expect(open).toHaveBeenCalledOnce();
   expect(open.mock.calls[0][0].id).toBe("item-9999");
 });
+
+it("tabs through sparse cell controls beyond the mounted window and exits the table", async () => {
+  const blur = vi.fn();
+  function Controls() {
+    const instance = useDataTable({
+      data: items.slice(0, 250),
+      columns: [
+        {
+          accessorKey: "name",
+          cell: ({ row }) =>
+            row.index === 0 || row.index === 100 ? (
+              <input
+                aria-label={`Sparse ${row.index}`}
+                defaultValue="draft"
+                onBlur={(event) => blur(event.target.value)}
+              />
+            ) : (
+              row.original.name
+            ),
+        },
+      ],
+      getRowId: (item) => item.id,
+      pageSize: false,
+    });
+    return (
+      <>
+        <DataTable table={instance} />
+        <button>After table</button>
+      </>
+    );
+  }
+  await act(async () => root.render(<Controls />));
+  const first = host.querySelector<HTMLInputElement>('input[aria-label="Sparse 0"]')!;
+  await act(async () => {
+    first.focus();
+    first.value = "saved draft";
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+  });
+  await vi.waitFor(() =>
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Sparse 100"),
+  );
+  expect(blur).toHaveBeenCalledWith("saved draft");
+  await act(async () =>
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }),
+    ),
+  );
+  await vi.waitFor(() => expect(document.activeElement).toBe(first));
+  await act(async () =>
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })),
+  );
+  await vi.waitFor(() =>
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Sparse 100"),
+  );
+  await act(async () =>
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
+    ),
+  );
+  await vi.waitFor(() => expect(document.activeElement?.textContent).toBe("After table"));
+});

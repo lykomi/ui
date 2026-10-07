@@ -1,7 +1,20 @@
-import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+  type RefObject,
+} from "react";
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import { flushSync } from "react-dom";
+import { tabbable } from "tabbable";
 import type { Row } from "@tanstack/react-table";
+
+/** Include the roving row as well as native cell controls. */
+function tabTargets(root: HTMLElement) {
+  return tabbable(root, { includeContainer: true, displayCheck: "non-zero-area" });
+}
 
 /** Window the rendered rows, retaining native table layout and a focused cell. */
 export function useVirtualTableRows<T>({
@@ -19,6 +32,12 @@ export function useVirtualTableRows<T>({
   dense: boolean;
   activeRowId?: string | null;
 }) {
+  const [pendingTab, setPendingTab] = useState<{
+    index: number;
+    direction: 1 | -1;
+    rows: Row<T>[];
+    anchor: HTMLElement;
+  } | null>(null);
   const [printing, setPrinting] = useState(false);
   const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(40);
@@ -56,9 +75,14 @@ export function useVirtualTableRows<T>({
       const indexes = new Set(defaultRangeExtractor(range));
       if (activeIndex >= 0) indexes.add(activeIndex);
       if (focusedIndex >= 0) indexes.add(focusedIndex);
+      if (pendingTab?.rows === rows && pendingTab.index >= 0 && pendingTab.index < rows.length)
+        for (let offset = 0; offset < 32; offset++) {
+          const index = pendingTab.index + offset * pendingTab.direction;
+          if (index >= 0 && index < rows.length) indexes.add(index);
+        }
       return [...indexes].sort((a, b) => a - b);
     },
-    [activeIndex, focusedIndex],
+    [activeIndex, focusedIndex, pendingTab, rows],
   );
   const getItemKey = useCallback((index: number) => rows[index].id, [rows]);
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
@@ -93,6 +117,80 @@ export function useVirtualTableRows<T>({
         end: 0,
         key: rows[index].id,
       }));
+  const onKeyDownCapture = useCallback(
+    (event: KeyboardEvent<HTMLTableElement>) => {
+      if (
+        !enabled ||
+        event.key !== "Tab" ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.defaultPrevented
+      )
+        return;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const row = target.closest<HTMLTableRowElement>("tr[data-virtual-row-id]");
+      if (!row || !body.current?.contains(row)) return;
+      const targets = tabTargets(row);
+      const direction = event.shiftKey ? -1 : 1;
+      if (target !== targets[direction === 1 ? targets.length - 1 : 0]) return;
+      const index = Number(row.dataset.index) + direction;
+      if (!Number.isInteger(index) || index < 0 || index >= rows.length) return;
+      event.preventDefault();
+      setPendingTab({ index, direction, rows, anchor: target });
+    },
+    [enabled, rows, body],
+  );
+  useEffect(() => {
+    if (!pendingTab) return;
+    if (!enabled || pendingTab.rows !== rows || document.activeElement !== pendingTab.anchor) {
+      setPendingTab(null);
+      return;
+    }
+    const mounted = new Map(
+      Array.from(
+        body.current?.querySelectorAll<HTMLTableRowElement>("tr[data-virtual-row-id]") ?? [],
+      ).map((row) => [row.dataset.virtualRowId, row]),
+    );
+    let index = pendingTab.index;
+    for (
+      let offset = 0;
+      offset < 32 && index >= 0 && index < rows.length;
+      offset++, index += pendingTab.direction
+    ) {
+      const element = mounted.get(rows[index].id);
+      if (!element) return;
+      const targets = tabTargets(element);
+      for (const target of pendingTab.direction === 1 ? targets : [...targets].reverse()) {
+        target.focus();
+        if (document.activeElement === target) {
+          setPendingTab(null);
+          return;
+        }
+      }
+    }
+    if (index >= 0 && index < rows.length) {
+      const frame = requestAnimationFrame(() => setPendingTab({ ...pendingTab, index }));
+      return () => cancelAnimationFrame(frame);
+    }
+    // No remaining cell targets: continue into the surrounding native tab order.
+    const table = body.current?.parentElement;
+    if (table) {
+      const outside = tabTargets(document.body).filter(
+        (target) =>
+          !table.contains(target) &&
+          Boolean(
+            table.compareDocumentPosition(target) &
+            (pendingTab.direction === 1
+              ? Node.DOCUMENT_POSITION_FOLLOWING
+              : Node.DOCUMENT_POSITION_PRECEDING),
+          ),
+      );
+      (pendingTab.direction === 1 ? outside[0] : outside[outside.length - 1])?.focus();
+    }
+    setPendingTab(null);
+  }, [pendingTab, enabled, rows, items, body]);
   return {
     enabled,
     items,
@@ -107,5 +205,6 @@ export function useVirtualTableRows<T>({
         )
       : 0,
     setFocusedRowId,
+    onKeyDownCapture,
   };
 }

@@ -460,6 +460,7 @@ export function DataTable<T>({
           style={{ tableLayout: "fixed", width: Math.max(availableWidth, tableWidth) }}
           aria-label={ariaLabel}
           aria-rowcount={virtual.enabled ? rows.length + table.getHeaderGroups().length : undefined}
+          onKeyDownCapture={virtual.onKeyDownCapture}
           onFocusCapture={(event) =>
             virtual.setFocusedRowId(
               (event.target as HTMLElement).closest<HTMLTableRowElement>("tr[data-virtual-row-id]")
