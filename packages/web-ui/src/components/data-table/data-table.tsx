@@ -73,6 +73,8 @@ export interface DataTableProps<T> {
   maxHeight?: string | number;
   /** Keep a bounded viewport and its scroll controls on-screen (default true). */
   fitViewport?: boolean;
+  /** Keep paging controls stationary; defaults to true for multiple standard pages. */
+  stableHeight?: boolean;
   dense?: boolean;
   /**
    * The columns the table actually drew, whenever that set changes. Width and
@@ -158,6 +160,7 @@ export function DataTable<T>({
   fill,
   maxHeight,
   fitViewport = true,
+  stableHeight,
   dense = false,
   onRenderedColumnsChange,
   className,
@@ -176,10 +179,17 @@ export function DataTable<T>({
   const dataRows = rows.filter((row) => !row.getIsGrouped());
   const rootRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const availableHeight = useTableViewport(scrollerRef, bounded && fitViewport);
-  const viewportMaxHeight = availableHeight === undefined
-    ? maxHeight
-    : `min(${typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight}, ${availableHeight}px)`;
+  const viewport = useTableViewport(scrollerRef, bounded && fitViewport);
+  const availableHeight = viewport.height;
+  const keepHeight = stableHeight ?? (viewport.paginated && table.getPageCount() > 1);
+  const { pageIndex, pageSize } = table.getState().pagination;
+  useEffect(() => {
+    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+  }, [pageIndex, pageSize]);
+  const viewportMaxHeight =
+    availableHeight === undefined
+      ? maxHeight
+      : `min(${typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight}, ${availableHeight}px)`;
   const [scrolledX, setScrolledX] = useState(false);
   const width = useElementWidth(rootRef);
   const viewportWidth = useElementWidth(scrollerRef, "client");
@@ -321,7 +331,9 @@ export function DataTable<T>({
       }
       const windowLeft = window.scrollX;
       element.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
-      horizontal.forEach((left, parent) => { parent.scrollLeft = left; });
+      horizontal.forEach((left, parent) => {
+        parent.scrollLeft = left;
+      });
       if (window.scrollX !== windowLeft)
         window.scrollTo({ left: windowLeft, top: window.scrollY, behavior: "instant" });
     }
@@ -387,7 +399,11 @@ export function DataTable<T>({
         role="region"
         aria-label={`${ariaLabel ?? "Table"} scroll area`}
         tabIndex={0}
-        style={bounded ? { maxHeight: viewportMaxHeight } : undefined}
+        style={
+          bounded
+            ? { maxHeight: viewportMaxHeight, height: keepHeight ? viewportMaxHeight : undefined }
+            : undefined
+        }
         className={cn(
           filling ? "min-h-0 flex-1 overflow-auto" : bounded ? "overflow-auto" : "overflow-x-auto",
         )}

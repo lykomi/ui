@@ -25,7 +25,11 @@ export function DataTablePagination<T>({
   const iconButton =
     "size-8 rounded-lg border-border/45 bg-background/65 p-0 shadow-none hover:bg-muted/26";
   return (
-    <div className={cn("flex flex-wrap items-center gap-x-6 gap-y-2 text-sm", className)}>
+    <div
+      data-table-footer=""
+      data-table-pagination=""
+      className={cn("flex flex-wrap items-center gap-x-6 gap-y-2 text-sm", className)}
+    >
       <div className="flex-1 text-muted-foreground" aria-live="polite">
         {selected > 0 ? `${selected} of ${total} row(s) selected.` : `${total} row(s)`}
       </div>

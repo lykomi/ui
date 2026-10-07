@@ -238,7 +238,8 @@ uses `fill` to occupy the available panel height. Preserve horizontal
 position while navigating rows vertically. Keep native wheel, trackpad,
 touch and keyboard scrolling; never translate all vertical wheel events
 into sideways scrolling. Bounded tables fit the current viewport and leave room for their scrollbar and
-action row. `fitViewport={false}` opts out for a host that deliberately owns
+action row. Compose `DataTableFrame` with `DataTablePagination` so wrapped paging
+controls contribute their actual height. `fitViewport={false}` opts out for a host that deliberately owns
 that sizing. The bottom horizontal scrollbar and arrow controls remain
 reachable without first scrolling through every row.
 Honor reduced motion. Keep essential information visible before overflow.
@@ -270,3 +271,5 @@ This contract draws on [NN/g's table task research](https://www.nngroup.com/arti
 [WAI's keyboard interaction patterns](https://www.w3.org/WAI/ARIA/apg/patterns/grid/),
 and [TanStack's column sizing contract](https://tanstack.com/table/v8/docs/guide/column-sizing).
 These are complementary references, not a single design-system benchmark.
+
+Paged bounded tables reserve a stable viewport when standard pagination has multiple pages, so the next/previous controls do not jump on a short final page. `stableHeight` explicitly overrides this behavior. Page changes return to the top while preserving the horizontal position; resizing columns preserves the current reading position.

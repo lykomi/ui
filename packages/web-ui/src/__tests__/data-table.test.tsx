@@ -1722,7 +1722,8 @@ it("reveals keyboard-active rows above a non-overlay scrollbar without moving ho
   scroller.scrollLeft = 84;
   scroller.getBoundingClientRect = () => ({ top: 0, bottom: 120, height: 120 }) as DOMRect;
   const row = container.querySelector("tbody tr[data-row-id]") as HTMLElement;
-  row.getBoundingClientRect = () => ({ top: 85 - scroller.scrollTop, bottom: 115 - scroller.scrollTop, height: 30 }) as DOMRect;
+  row.getBoundingClientRect = () =>
+    ({ top: 85 - scroller.scrollTop, bottom: 115 - scroller.scrollTop, height: 30 }) as DOMRect;
   const header = container.querySelector("thead") as HTMLElement;
   header.getBoundingClientRect = () => ({ height: 20 }) as DOMRect;
   const ancestor = document.createElement("div");
@@ -1743,7 +1744,11 @@ it("reveals keyboard-active rows above a non-overlay scrollbar without moving ho
       .dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
   );
   expect(active).toBe("t1");
-  expect(row.scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest", behavior: "instant" });
+  expect(row.scrollIntoView).toHaveBeenCalledWith({
+    block: "nearest",
+    inline: "nearest",
+    behavior: "instant",
+  });
   expect(ancestor.scrollTop).toBe(40);
   expect(ancestor.scrollLeft).toBe(28);
   expect(scroller.scrollTop).toBe(13);
@@ -1756,17 +1761,41 @@ it("reveals keyboard-active rows above a non-overlay scrollbar without moving ho
   ancestor.replaceWith(container!);
 });
 
-
 it("keeps ordinary columns readable at Home and allows explicit compact bounds", () => {
-  const h = mount({ columns: [
-    { accessorKey: "title", header: "Title" },
-    { accessorKey: "status", header: "Status", size: 40, minSize: 24, maxSize: 80 },
-  ] });
-  const home = (label: string) => act(() => container!.querySelector(`[aria-label="Resize ${label} column"]`)!.dispatchEvent(
-    new KeyboardEvent("keydown", { key: "Home", bubbles: true }),
-  ));
+  const h = mount({
+    columns: [
+      { accessorKey: "title", header: "Title" },
+      { accessorKey: "status", header: "Status", size: 40, minSize: 24, maxSize: 80 },
+    ],
+  });
+  const home = (label: string) =>
+    act(() =>
+      container!
+        .querySelector(`[aria-label="Resize ${label} column"]`)!
+        .dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })),
+    );
   home("Title");
   expect(h.table.getColumn("title")!.getSize()).toBe(80);
   home("Status");
   expect(h.table.getColumn("status")!.getSize()).toBe(24);
+});
+
+it("starts a new page at its top without moving horizontal position or resetting on resize", () => {
+  const instance = mount({
+    initialState: { pagination: { pageIndex: 0, pageSize: 2 } },
+    tableProps: { maxHeight: 300, stableHeight: true },
+  });
+  const scroller =
+    container!.querySelector<HTMLElement>("[data-table-scroll]") ??
+    container!.querySelector<HTMLElement>(".overflow-auto");
+  expect(scroller).not.toBeNull();
+  scroller!.scrollTop = 60;
+  scroller!.scrollLeft = 84;
+  act(() => instance.table.setPageIndex(1));
+  expect(scroller!.scrollTop).toBe(0);
+  expect(scroller!.scrollLeft).toBe(84);
+  expect(scroller!.style.height).toBe("300px");
+  scroller!.scrollTop = 60;
+  act(() => instance.table.setColumnSizing({ title: 300 }));
+  expect(scroller!.scrollTop).toBe(60);
 });

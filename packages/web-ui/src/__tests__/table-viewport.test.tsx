@@ -16,6 +16,9 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
       observe(element: Element) {
         observed.add(element);
       }
+      unobserve(element: Element) {
+        observed.delete(element);
+      }
       disconnect() {
         observed.clear();
       }
@@ -32,6 +35,7 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
   const pane = document.createElement("div");
   pane.style.overflowY = "auto";
   const wrapper = document.createElement("div");
+  wrapper.setAttribute("data-table-layout", "");
   const tableFrame = document.createElement("div");
   const scroller = document.createElement("div");
   const footer = document.createElement("div");
@@ -55,17 +59,19 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
     clientHeight: { get: () => paneHeight },
     scrollHeight: { get: () => contentHeight },
   });
-  const rect = (top: number, height: number) => ({ top, height, width: 400 }) as DOMRect;
+  const rect = (top: number, height: number) =>
+    ({ top, bottom: top + height, height, width: 400 }) as DOMRect;
   pane.getBoundingClientRect = () => rect(100, paneHeight);
   let scrollerHeight = 500;
   scroller.getBoundingClientRect = () => rect(200, scrollerHeight);
+  tableFrame.getBoundingClientRect = () => rect(200, scrollerHeight + 20);
   footer.getBoundingClientRect = () => rect(700, 20);
   const host = document.createElement("div");
   const root = createRoot(host);
   function Probe({ enabled = true }: { enabled?: boolean }) {
     const ref = useRef(scroller);
-    const height = useTableViewport(ref, enabled);
-    return <output>{height ?? "unbounded"}</output>;
+    const viewport = useTableViewport(ref, enabled);
+    return <output data-paginated={viewport.paginated}>{viewport.height ?? "unbounded"}</output>;
   }
   try {
     await act(async () => root.render(<Probe />));
@@ -90,6 +96,52 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
       frame?.(0);
     });
     expect(host.textContent).toBe("182");
+    outer.style.overflowY = "visible";
+    await act(async () => {
+      window.dispatchEvent(new Event("resize"));
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("232");
+    pane.style.overflowY = "visible";
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("732");
+    outer.style.overflowY = overflow;
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("182");
+    const paging = document.createElement("div");
+    paging.setAttribute("data-table-footer", "");
+    paging.setAttribute("data-table-pagination", "");
+    let pagingHeight = 72;
+    paging.getBoundingClientRect = () =>
+      rect(tableFrame.getBoundingClientRect().bottom + 12, pagingHeight);
+    wrapper.append(paging);
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("130");
+    expect(observed.has(paging)).toBe(true);
+    expect(host.firstElementChild?.getAttribute("data-paginated")).toBe("true");
+    pagingHeight = 120;
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("82");
+    paging.remove();
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("182");
+    expect(observed.has(paging)).toBe(false);
+    expect(host.firstElementChild?.getAttribute("data-paginated")).toBe("false");
     outerHeight = 260;
     await act(async () => {
       resize();
