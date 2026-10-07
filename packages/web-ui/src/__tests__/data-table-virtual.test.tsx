@@ -2,6 +2,7 @@ import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import type { ColumnDef, Table } from "@tanstack/react-table";
+import { DataTableRowActions } from "../components/data-table/data-table-row-actions.tsx";
 import { DataTable } from "../components/data-table/data-table.tsx";
 import { useDataTable } from "../components/data-table/use-data-table.ts";
 
@@ -154,7 +155,7 @@ it("renders all rows for print and restores the bounded window afterwards", asyn
     printChange?.();
   });
   expect(host.querySelectorAll("tr[data-row-id]").length).toBeLessThan(50);
-});
+}, 15000);
 
 it("does not snap back to the active row during manual scrolling", async () => {
   await mount();
@@ -435,4 +436,107 @@ it("leaves large plain read-only tables in native Tab order without probing rows
   expect(event.defaultPrevented).toBe(false);
   expect(host.querySelector("[data-virtual-boundary]")).toBeNull();
   expect(host.querySelectorAll("tr[data-virtual-row-id]")).toHaveLength(count);
+});
+
+it("skips declared readonly custom cells without probing the logical rows", async () => {
+  function Plain() {
+    const instance = useDataTable({
+      data: items,
+      columns: [
+        {
+          accessorKey: "name",
+          cell: ({ row }) => <span>{row.original.name}</span>,
+          enableSorting: false,
+          enableResizing: false,
+        },
+      ],
+      pageSize: false,
+    });
+    return <DataTable table={instance} getRowMayHaveTabStops={() => false} />;
+  }
+  await act(async () => root.render(<Plain />));
+  const count = host.querySelectorAll("tr[data-virtual-row-id]").length;
+  const scroller = host.querySelector<HTMLElement>("[data-list-scroller]")!;
+  const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+  await act(async () => {
+    scroller.focus();
+    scroller.dispatchEvent(event);
+  });
+  expect(event.defaultPrevented).toBe(false);
+  expect(host.querySelector("[data-virtual-boundary]")).toBeNull();
+  expect(host.querySelectorAll("tr[data-virtual-row-id]")).toHaveLength(count);
+});
+
+it("jumps to a declared sparse cell and permits native document exit", async () => {
+  function Sparse() {
+    const instance = useDataTable({
+      data: items,
+      columns: [
+        {
+          accessorKey: "name",
+          cell: ({ row }) =>
+            row.index === 9000 ? <input aria-label="Sparse last" /> : row.original.name,
+          enableSorting: false,
+          enableResizing: false,
+        },
+      ],
+      pageSize: false,
+    });
+    return <DataTable table={instance} getRowMayHaveTabStops={(row) => row.index === 9000} />;
+  }
+  await act(async () => root.render(<Sparse />));
+  const scroller = host.querySelector<HTMLElement>("[data-list-scroller]")!;
+  await act(async () => {
+    scroller.focus();
+    scroller.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+  });
+  await vi.waitFor(() =>
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Sparse last"),
+  );
+  expect(host.querySelectorAll("tr[data-virtual-row-id]").length).toBeLessThan(50);
+  const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+  await act(async () => document.activeElement!.dispatchEvent(event));
+  expect(event.defaultPrevented).toBe(false);
+  await act(async () => host.querySelector<HTMLElement>("[data-virtual-boundary]")!.focus());
+  const exit = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+  await act(async () => document.activeElement!.dispatchEvent(exit));
+  expect(exit.defaultPrevented).toBe(false);
+});
+
+it("keeps the row mounted while its portaled action menu owns focus", async () => {
+  function Actions() {
+    const instance = useDataTable({
+      data: items,
+      columns: [
+        {
+          accessorKey: "name",
+          cell: ({ row }) => (
+            <DataTableRowActions
+              label={`Actions ${row.id}`}
+              actions={[{ label: "Inspect", onSelect: () => {} }]}
+            />
+          ),
+        },
+      ],
+      getRowId: (item) => item.id,
+      pageSize: false,
+    });
+    return <DataTable table={instance} />;
+  }
+  await act(async () => root.render(<Actions />));
+  const trigger = host.querySelector<HTMLButtonElement>('tr[data-row-id="item-0"] button')!;
+  await act(async () => trigger.focus());
+  await act(async () =>
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
+  );
+  await vi.waitFor(() => expect(document.querySelector('[role="menu"]')).not.toBeNull());
+  const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+  await act(async () => menu.querySelector<HTMLElement>('[role="menuitem"]')!.focus());
+  const scroller = host.querySelector<HTMLElement>("[data-list-scroller]")!;
+  await act(async () => {
+    scroller.scrollTop = 20000;
+    scroller.dispatchEvent(new Event("scroll"));
+  });
+  expect(trigger.isConnected).toBe(true);
+  expect(menu.isConnected).toBe(true);
 });

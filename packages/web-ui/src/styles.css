@@ -343,3 +343,9 @@ tr[data-active] > [data-pinned="cell"] {
     transform: none !important;
   }
 }
+
+@media print {
+  body:has([data-table-layout][data-focused]) [data-dialog-overlay] {
+    display: none !important;
+  }
+}

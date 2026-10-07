@@ -47,6 +47,9 @@ export interface DataTableProps<T> {
    * master list beside a detail pane. Needs `activeRowId`.
    */
   onActiveRowChange?: (row: Row<T> | null) => void;
+  /** Conservative cell-control capability. Return false only for rows without tabbable cells.
+   * Declare this for readonly or sparse custom cells to avoid probing empty rows. */
+  getRowMayHaveTabStops?: (row: Row<T>) => boolean;
   rowClassName?: (row: Row<T>) => string | undefined;
   /** Content of a group header row (default: label and count). */
   renderGroup?: (row: Row<T>) => ReactNode;
@@ -156,6 +159,7 @@ export function DataTable<T>({
   activeRowId: controlledActiveRowId,
   onActiveRowChange: controlledOnActiveRowChange,
   rowClassName,
+  getRowMayHaveTabStops,
   renderGroup,
   groupOrder,
   emptyState = "No results.",
@@ -319,12 +323,22 @@ export function DataTable<T>({
       );
     return Boolean(table.options.defaultColumn?.cell) || visit(table.options.columns);
   }, [table.options.columns, table.options.defaultColumn]);
-  const hasTabTargets = Boolean(
-    onRowClick ||
-    onRowOpen ||
-    onActiveRowChange ||
-    hasCustomCells ||
-    rows.length !== dataRows.length,
+  const mayHaveTabStops = useCallback(
+    (row: Row<T>) =>
+      row.getIsGrouped() ||
+      Boolean(
+        onActiveRowChange &&
+        (!internalNavigation || row.id === (navigationRowId ?? dataRows[0]?.id)),
+      ) ||
+      (getRowMayHaveTabStops ? getRowMayHaveTabStops(row) : hasCustomCells),
+    [
+      onActiveRowChange,
+      internalNavigation,
+      navigationRowId,
+      dataRows,
+      getRowMayHaveTabStops,
+      hasCustomCells,
+    ],
   );
   const bodyRef = useRef<HTMLTableSectionElement | null>(null);
   const virtual = useVirtualTableRows({
@@ -334,7 +348,7 @@ export function DataTable<T>({
     bounded: bounded || filling,
     dense,
     activeRowId: navigationRowId,
-    hasTabTargets,
+    mayHaveTabStops,
   });
 
   const moveActive = useCallback(
@@ -479,21 +493,6 @@ export function DataTable<T>({
           style={{ tableLayout: "fixed", width: Math.max(availableWidth, tableWidth) }}
           aria-label={ariaLabel}
           aria-rowcount={virtual.enabled ? rows.length + table.getHeaderGroups().length : undefined}
-          onFocusCapture={(event) =>
-            virtual.setFocusedRowId(
-              (event.target as HTMLElement).closest<HTMLTableRowElement>("tr[data-virtual-row-id]")
-                ?.dataset.virtualRowId ?? null,
-            )
-          }
-          onBlurCapture={(event) => {
-            const next = event.relatedTarget;
-            virtual.setFocusedRowId(
-              next instanceof HTMLElement && event.currentTarget.contains(next)
-                ? (next.closest<HTMLTableRowElement>("tr[data-virtual-row-id]")?.dataset
-                    .virtualRowId ?? null)
-                : null,
-            );
-          }}
           onKeyDown={
             onActiveRowChange
               ? (event) => {
