@@ -55,15 +55,18 @@ export function useTableViewport(
         if (layout) mutationObserver?.observe(layout, { childList: true, subtree: true });
         mutationLayout = layout;
       }
-      const actions = Array.from(
-        layout?.querySelectorAll<HTMLElement>("[data-table-footer]") ?? [],
+      // A footer belongs to the preceding table, never a later table in
+      // the same layout. Nested tables inside this frame are not siblings.
+      const following = Array.from(
+        layout?.querySelectorAll<HTMLElement>("[data-list-scroller], [data-table-footer]") ?? [],
       ).find(
-        (footer) =>
+        (node) =>
           frame !== null &&
-          footer.closest("[data-table-layout]") === layout &&
-          !frame.contains(footer) &&
-          Boolean(frame.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING),
+          node.closest("[data-table-layout]") === layout &&
+          !frame.contains(node) &&
+          Boolean(frame.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING),
       );
+      const actions = following?.matches("[data-table-footer]") ? following : undefined;
       const targets = new Set([
         ...(frame ? [frame] : []),
         ...ancestors,
@@ -136,7 +139,7 @@ export function useTableViewport(
     if (typeof MutationObserver !== "undefined") {
       styleObserver = new MutationObserver(schedule);
       mutationObserver = new MutationObserver((records) => {
-        const selector = "[data-table-footer], [data-table-pagination]";
+        const selector = "[data-table-footer], [data-table-pagination], [data-list-scroller]";
         if (
           records.some((record) =>
             [...record.addedNodes, ...record.removedNodes].some(

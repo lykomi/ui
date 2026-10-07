@@ -131,6 +131,26 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
     });
     expect(host.textContent).toBe("130");
     expect(observed.has(paging)).toBe(true);
+    // Another table between this frame and pagination owns that footer.
+    const laterTable = document.createElement("div");
+    const laterScroller = document.createElement("div");
+    laterScroller.setAttribute("data-list-scroller", "");
+    laterTable.append(laterScroller);
+    await act(async () => {
+      wrapper.insertBefore(laterTable, paging);
+      await Promise.resolve();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("182");
+    expect(host.firstElementChild?.getAttribute("data-paginated")).toBe("false");
+    expect(observed.has(paging)).toBe(false);
+    await act(async () => {
+      laterTable.remove();
+      await Promise.resolve();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("130");
+    expect(host.firstElementChild?.getAttribute("data-paginated")).toBe("true");
     await act(async () => root.render(<Probe fit={false} />));
     expect(host.textContent).toBe("unbounded");
     expect(host.firstElementChild?.getAttribute("data-paginated")).toBe("true");
