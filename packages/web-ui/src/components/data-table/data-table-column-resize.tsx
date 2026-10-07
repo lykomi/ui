@@ -28,7 +28,7 @@ export function DataTableColumnResize<T>({
     }));
   const finish = (event: PointerEvent<HTMLButtonElement>, cancelled = false) => {
     const start = drag.current;
-    if (!start) return;
+    if (!start || start.pointerId !== event.pointerId) return;
     if (!cancelled) commit(start.width + (event.clientX - start.x) * start.direction);
     drag.current = null;
     setDelta(null);
@@ -56,6 +56,7 @@ export function DataTableColumnResize<T>({
         if (event.button !== 0 || event.isPrimary === false) return;
         event.preventDefault();
         event.stopPropagation();
+        event.currentTarget.focus({ preventScroll: true });
         const direction = getComputedStyle(event.currentTarget).direction === "rtl" ? -1 : 1;
         drag.current = {
           x: event.clientX,
@@ -67,7 +68,7 @@ export function DataTableColumnResize<T>({
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={(event) => {
-        if (!drag.current) return;
+        if (!drag.current || drag.current.pointerId !== event.pointerId) return;
         const start = drag.current;
         const change =
           clamp(start.width + (event.clientX - start.x) * start.direction) - start.width;
