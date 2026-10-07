@@ -37,6 +37,6 @@ export function selectionColumn<T>(): ColumnDef<T, unknown> {
         className="translate-y-0.5"
       />
     ),
-    meta: { label: "Select", headerClassName: "w-9", className: "w-9" },
+    meta: { label: "Select", align: "center", headerClassName: "w-9 px-1", className: "w-9 px-1" },
   };
 }

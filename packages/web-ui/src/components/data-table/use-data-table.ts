@@ -1,3 +1,4 @@
+import { DEFAULT_COLUMN_MIN_SIZE, DEFAULT_COLUMN_MAX_SIZE } from "./column-sizing.ts";
 /**
  * One hook that turns rows + columns into a fully wired TanStack table:
  * token search, faceted filters, sorting, column visibility, selection,
@@ -165,7 +166,7 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   const tableOptions: TableOptions<T> = {
     data,
     columns,
-    defaultColumn: { maxSize: 1200, ...defaultColumn },
+    defaultColumn: { minSize: DEFAULT_COLUMN_MIN_SIZE, maxSize: DEFAULT_COLUMN_MAX_SIZE, ...defaultColumn },
     getRowId,
     state: { ...state, grouping: groupBy ? [groupBy] : [] },
     onGlobalFilterChange: (updater) => update("globalFilter", updater),

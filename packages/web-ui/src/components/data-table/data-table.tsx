@@ -578,7 +578,7 @@ export function DataTable<T>({
                             meta?.className,
                           )}
                         >
-                          <div data-cell-content="" className="min-w-0 overflow-hidden">
+                          <div data-cell-content="" className="-m-1 min-w-0 overflow-hidden p-1">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </div>
                         </td>

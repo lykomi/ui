@@ -1733,3 +1733,18 @@ it("reveals keyboard-active rows above a non-overlay scrollbar without moving ho
   expect(scroller.scrollTop).toBe(13);
   expect(scroller.scrollLeft).toBe(84);
 });
+
+
+it("keeps ordinary columns readable at Home and allows explicit compact bounds", () => {
+  const h = mount({ columns: [
+    { accessorKey: "title", header: "Title" },
+    { accessorKey: "status", header: "Status", size: 40, minSize: 24, maxSize: 80 },
+  ] });
+  const home = (label: string) => act(() => container!.querySelector(`[aria-label="Resize ${label} column"]`)!.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Home", bubbles: true }),
+  ));
+  home("Title");
+  expect(h.table.getColumn("title")!.getSize()).toBe(80);
+  home("Status");
+  expect(h.table.getColumn("status")!.getSize()).toBe(24);
+});

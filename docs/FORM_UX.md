@@ -214,7 +214,8 @@ raw value. Long names must not push status and dates off-screen.
 
 Define each column's `size`, `minSize` and `maxSize` in its `ColumnDef`.
 Give identity/narrative columns more room than dates, states and numeric
-values. The hook's `defaultColumn` configures shared bounds; individual
+values. The shared defaults are 80px minimum and 1200px maximum. The hook's
+`defaultColumn` configures shared bounds; individual
 columns override them. Mark selection and action columns
 `enableResizing: false` and give them fixed bounds. Use `meta.align` for
 numbers and short comparable values, with consistent formatting and units.
