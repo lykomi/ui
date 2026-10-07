@@ -19,6 +19,7 @@ import { DATA_TABLE_MIN_WIDTH, type DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { usePinnedOffsets } from "./use-pinned-offsets.ts";
 import { DataTableOverflow } from "./data-table-overflow.tsx";
+import { useTableViewport } from "./use-table-viewport.ts";
 import { boundedColumnWidth } from "./column-sizing.ts";
 import { DataTableColumnResize } from "./data-table-column-resize.tsx";
 import { useElementWidth } from "./use-element-width.ts";
@@ -70,6 +71,8 @@ export interface DataTableProps<T> {
    * while `fill` is on, which already bounds the height.
    */
   maxHeight?: string | number;
+  /** Keep a bounded viewport and its scroll controls on-screen (default true). */
+  fitViewport?: boolean;
   dense?: boolean;
   /**
    * The columns the table actually drew, whenever that set changes. Width and
@@ -154,6 +157,7 @@ export function DataTable<T>({
   stickyHeader = false,
   fill,
   maxHeight,
+  fitViewport = true,
   dense = false,
   onRenderedColumnsChange,
   className,
@@ -172,6 +176,10 @@ export function DataTable<T>({
   const dataRows = rows.filter((row) => !row.getIsGrouped());
   const rootRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const availableHeight = useTableViewport(scrollerRef, bounded && fitViewport);
+  const viewportMaxHeight = availableHeight === undefined
+    ? maxHeight
+    : `min(${typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight}, ${availableHeight}px)`;
   const [scrolledX, setScrolledX] = useState(false);
   const width = useElementWidth(rootRef);
   const viewportWidth = useElementWidth(scrollerRef, "client");
@@ -371,7 +379,7 @@ export function DataTable<T>({
         role="region"
         aria-label={`${ariaLabel ?? "Table"} scroll area`}
         tabIndex={0}
-        style={bounded ? { maxHeight } : undefined}
+        style={bounded ? { maxHeight: viewportMaxHeight } : undefined}
         className={cn(
           filling ? "min-h-0 flex-1 overflow-auto" : bounded ? "overflow-auto" : "overflow-x-auto",
         )}

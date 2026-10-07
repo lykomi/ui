@@ -54,7 +54,7 @@ export function DataTableOverflow({ scroller }: { scroller: RefObject<HTMLDivEle
     });
   };
   return (
-    <div className="flex shrink-0 items-center gap-2 border-t border-border bg-card px-3 py-1">
+    <div data-table-overflow="" className="flex shrink-0 items-center gap-2 border-t border-border bg-card px-3 py-1">
       <div
         ref={track}
         data-list-scroller=""

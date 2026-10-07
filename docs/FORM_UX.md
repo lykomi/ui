@@ -237,8 +237,10 @@ viewport, while toolbar and paging controls stay outside it. Focus mode
 uses `fill` to occupy the available panel height. Preserve horizontal
 position while navigating rows vertically. Keep native wheel, trackpad,
 touch and keyboard scrolling; never translate all vertical wheel events
-into sideways scrolling. The bottom horizontal scrollbar and arrow
-controls remain reachable without first scrolling through every row.
+into sideways scrolling. Bounded tables fit the current viewport and leave room for their scrollbar and
+action row. `fitViewport={false}` opts out for a host that deliberately owns
+that sizing. The bottom horizontal scrollbar and arrow controls remain
+reachable without first scrolling through every row.
 Honor reduced motion. Keep essential information visible before overflow.
 A frozen identity column must leave room for the scrolling columns. At narrow
 widths the shared table releases a wide frozen prefix while keeping narrow
