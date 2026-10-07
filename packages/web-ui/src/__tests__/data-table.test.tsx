@@ -1127,6 +1127,9 @@ describe("useDataTable + DataTable", () => {
           );
         });
       render();
+      const viewport = container!.querySelector("[data-list-scroller]")!;
+      let viewportWidth = 600;
+      Object.defineProperty(viewport, "clientWidth", { get: () => viewportWidth });
       const headers = () =>
         Array.from(container!.querySelectorAll("thead th:not([aria-hidden])")) as HTMLElement[];
       headers()
@@ -1145,6 +1148,12 @@ describe("useDataTable + DataTable", () => {
       // the second pinned column starts where the first one ends
       expect(headers()[0]!.style.left).toBe("0px");
       expect(headers()[1]!.style.left).toBe("40px");
+      // A narrow viewport releases wide frozen content so other columns can be reached.
+      viewportWidth = 200;
+      act(() => callbacks.forEach((callback) => callback()));
+      expect(headers().every((header) => !header.hasAttribute("data-pinned"))).toBe(true);
+      viewportWidth = 600;
+      act(() => callbacks.forEach((callback) => callback()));
       // pinned body cells are marked so the shipped CSS can keep them opaque
       const cell = container!.querySelector("tbody tr td") as HTMLElement;
       expect(cell.getAttribute("data-pinned")).toBe("cell");
@@ -1614,4 +1623,71 @@ it("routes tool results into focus and leaves the underlying panel open on Escap
   expect(document.querySelector('[role="dialog"]')).toBeNull();
   expect(useToolPanelStore.getState().isOpen).toBe(true);
   act(() => useToolPanelStore.getState().closePanel());
+});
+
+describe("column sizing", () => {
+  it("resizes independently of sorting and pagination, clamps widths and resets to declared sizes", () => {
+    const h = mount({
+      pageSize: 1,
+      initialState: { pagination: { pageIndex: 2, pageSize: 1 } },
+      columns: [
+        { accessorKey: "title", header: "Title", size: 240, minSize: 160, maxSize: 400 },
+        selectionColumn<Task>(),
+      ],
+    });
+    const resize = container!.querySelector('[aria-label="Resize Title column"]')!;
+    const key = (key: string, shiftKey = false) =>
+      act(() =>
+        resize.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey, bubbles: true })),
+      );
+    key("ArrowRight");
+    expect(h.table.getColumn("title")!.getSize()).toBe(250);
+    expect(h.table.getState().pagination.pageIndex).toBe(2);
+    expect(h.table.getState().sorting).toEqual([]);
+    key("ArrowRight", true);
+    expect(h.table.getColumn("title")!.getSize()).toBe(300);
+    key("Home");
+    expect(h.table.getColumn("title")!.getSize()).toBe(160);
+    key("ArrowLeft");
+    expect(h.table.getColumn("title")!.getSize()).toBe(160);
+    key("End");
+    expect(h.table.getColumn("title")!.getSize()).toBe(400);
+    key("ArrowRight");
+    expect(h.table.getColumn("title")!.getSize()).toBe(400);
+    key("Enter");
+    expect(h.table.getColumn("title")!.getSize()).toBe(240);
+    expect(container!.querySelectorAll("[data-column-resize]")).toHaveLength(1);
+    expect(h.table.getColumn("__select")!.getSize()).toBe(36);
+  });
+
+  it("round-trips namespaced user widths, preserves defaults and rejects malformed sizes", () => {
+    const options = { prefix: "risk.", defaults: { columnSizing: { title: 300 } } };
+    expect(parseDataTableState(new URLSearchParams(), options).columnSizing).toEqual({
+      title: 300,
+    });
+    const encoded = serializeDataTableState(
+      { columnSizing: { title: 440, "odd,id": 160 } },
+      options,
+    );
+    expect(parseDataTableState(encoded, options).columnSizing).toEqual({
+      title: 440,
+      "odd,id": 160,
+    });
+    const reset = serializeDataTableState({ columnSizing: {} }, options);
+    expect(reset.has("risk.widths")).toBe(true);
+    expect(parseDataTableState(reset, options).columnSizing).toEqual({});
+    const invalid = new URLSearchParams({
+      "risk.widths": JSON.stringify({
+        title: 220,
+        negative: -1,
+        zero: 0,
+        string: "400",
+        huge: Infinity,
+      }),
+    });
+    expect(parseDataTableState(invalid, options).columnSizing).toEqual({ title: 220 });
+    expect(
+      parseDataTableState(new URLSearchParams({ "risk.widths": "oops" }), options).columnSizing,
+    ).toEqual({});
+  });
 });

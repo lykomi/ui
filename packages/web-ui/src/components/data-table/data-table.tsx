@@ -19,6 +19,8 @@ import { DATA_TABLE_MIN_WIDTH, type DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { usePinnedOffsets } from "./use-pinned-offsets.ts";
 import { DataTableOverflow } from "./data-table-overflow.tsx";
+import { boundedColumnWidth } from "./column-sizing.ts";
+import { DataTableColumnResize } from "./data-table-column-resize.tsx";
 import { useElementWidth } from "./use-element-width.ts";
 import { cn } from "@iloveagents/foundry-web-primitives";
 
@@ -49,7 +51,8 @@ export interface DataTableProps<T> {
   /**
    * Keep the columns at their natural width and let the leftover room sit at
    * the end, the way a spreadsheet looks, instead of stretching a text column
-   * across the gap. Set `false` for a table whose last column should fill.
+   * across the gap. Set `false` to let the first content column use remaining
+   * room, up to its maxSize. An explicitly resized column keeps its width.
    */
   spacer?: boolean;
   /** Keep the header in place while the rows scroll (always on in focus mode). */
@@ -171,6 +174,7 @@ export function DataTable<T>({
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [scrolledX, setScrolledX] = useState(false);
   const width = useElementWidth(rootRef);
+  const viewportWidth = useElementWidth(scrollerRef, "client");
   // A column has to earn its place twice: the mode it is meant for, and the
   // width the list actually has.
   const fits = (meta?: { breakpoint?: DataTableBreakpoint; showIn?: "always" | "focus" }) => {
@@ -189,22 +193,28 @@ export function DataTable<T>({
   const renderedColumns = table
     .getVisibleLeafColumns()
     .filter((column) => fits(column.columnDef.meta));
-  // Width of the leaves that survive the gates; `undefined` when none of them
-  // declares one, so the column keeps its natural width.
-  const fittingLeafWidth = (header: Header<T, unknown>): number | undefined => {
-    // Walk `subHeaders` rather than `getLeafHeaders()`: the latter includes
-    // this header's own entry, whose size already sums the descendants, and
-    // the total would count everything twice.
-    const collect = (node: Header<T, unknown>): Array<Header<T, unknown>> =>
-      node.subHeaders.length
-        ? node.subHeaders.flatMap(collect)
-        : fits(node.column.columnDef.meta)
-          ? [node]
-          : [];
-    const sizes = collect(header).map((leaf) => leaf.getSize());
-    if (!sizes.length) return undefined;
-    return sizes.every((size) => size === 150) ? undefined : sizes.reduce((a, b) => a + b, 0);
-  };
+  // Fixed column tracks keep a long title from choosing the entire table width.
+  const sizes = new Map(
+    renderedColumns.map((column) => [column.id, boundedColumnWidth(column, column.getSize())]),
+  );
+  const availableWidth = viewportWidth ?? width ?? 0;
+  const first =
+    renderedColumns.find((column) => column.accessorFn && column.getCanResize()) ??
+    renderedColumns.find((column) => column.id !== "__select" && column.getCanResize());
+  const declaredWidth = [...sizes.values()].reduce((sum, size) => sum + size, 0);
+  const firstResized =
+    first && Object.prototype.hasOwnProperty.call(table.getState().columnSizing, first.id);
+  if (!spacer && first && !firstResized && availableWidth > declaredWidth)
+    sizes.set(
+      first.id,
+      boundedColumnWidth(first, first.getSize() + availableWidth - declaredWidth),
+    );
+  const tableWidth = [...sizes.values()].reduce((sum, size) => sum + size, 0);
+  const trailingSpace = spacer || availableWidth > tableWidth;
+  const fittingLeafWidth = (header: Header<T, unknown>): number =>
+    header.subHeaders.length
+      ? header.subHeaders.reduce((sum, child) => sum + fittingLeafWidth(child), 0)
+      : (sizes.get(header.column.id) ?? 0);
   const fittingLeafCount = (header: Header<T, unknown>): number =>
     header.subHeaders.length === 0
       ? fits(header.column.columnDef.meta)
@@ -217,10 +227,22 @@ export function DataTable<T>({
   // column comes along, so a leading checkbox never slides out from under the
   // rows it belongs to. A pinned column the width gate dropped is not in the
   // run at all — otherwise the seam would mark a column nobody can see.
-  const lastPinnedIndex = renderedColumns.reduce(
+  let lastPinnedIndex = renderedColumns.reduce(
     (last, column, index) => (column.columnDef.meta?.pinned === "left" ? index : last),
     -1,
   );
+  // A frozen identity must not cover the entire scrollable pane. Keep the
+  // leading utility run when possible; preserve widths and let the rest scroll.
+  if (availableWidth > 0 && tableWidth > availableWidth) {
+    const limit = Math.max(availableWidth * 0.5, availableWidth - 160);
+    while (
+      lastPinnedIndex >= 0 &&
+      renderedColumns
+        .slice(0, lastPinnedIndex + 1)
+        .reduce((sum, column) => sum + (sizes.get(column.id) ?? 0), 0) > limit
+    )
+      lastPinnedIndex--;
+  }
   const pinnedIds = renderedColumns.slice(0, lastPinnedIndex + 1).map((column) => column.id);
   const { offsets, lastPinned, measure } = usePinnedOffsets(pinnedIds);
   // A pinned cell is opaque — the other columns slide underneath it — and it
@@ -268,7 +290,23 @@ export function DataTable<T>({
     const element = Array.from(bodyRef.current?.querySelectorAll("tr[data-row-id]") ?? []).find(
       (row) => (row as HTMLElement).dataset.rowId === activeRowId,
     ) as HTMLElement | undefined;
-    element?.scrollIntoView?.({ block: "nearest" });
+    const scroller = scrollerRef.current;
+    if (element && scroller) {
+      if (scroller.scrollHeight > scroller.clientHeight) {
+        const viewport = scroller.getBoundingClientRect();
+        const rect = element.getBoundingClientRect();
+        const headerHeight = sticky
+          ? (scroller.querySelector("thead")?.getBoundingClientRect().height ?? 0)
+          : 0;
+        if (rect.top < viewport.top + headerHeight)
+          scroller.scrollTop += rect.top - viewport.top - headerHeight;
+        else if (rect.bottom > viewport.bottom) scroller.scrollTop += rect.bottom - viewport.bottom;
+      } else {
+        const left = scroller.scrollLeft;
+        element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+        scroller.scrollLeft = left;
+      }
+    }
     // Take the keyboard along, but only when it is on a ROW: arrows move the
     // active row, and leaving focus on the row it left means the next Enter
     // opens the wrong one. Focus inside a cell's own control stays there —
@@ -282,8 +320,8 @@ export function DataTable<T>({
     if (element && onARow && active !== element) {
       element.focus?.({ preventScroll: true });
     }
-  }, [activeRowId, activeIndex]);
-  const columnCount = renderedColumns.length + (spacer ? 1 : 0);
+  }, [activeRowId, activeIndex, sticky]);
+  const columnCount = renderedColumns.length + (trailingSpace ? 1 : 0);
   const renderedIds = renderedColumns.map((column) => column.id);
   // JSON, not a comma-joined string: a column id may contain a comma, and
   // splitting one back apart would report columns that do not exist (and let
@@ -337,7 +375,8 @@ export function DataTable<T>({
         )}
       >
         <table
-          className="w-full caption-bottom text-sm"
+          className="caption-bottom text-sm"
+          style={{ tableLayout: "fixed", width: Math.max(availableWidth, tableWidth) }}
           aria-label={ariaLabel}
           onKeyDown={
             onActiveRowChange
@@ -363,6 +402,12 @@ export function DataTable<T>({
               : undefined
           }
         >
+          <colgroup>
+            {renderedColumns.map((column) => (
+              <col key={column.id} style={{ width: sizes.get(column.id) }} />
+            ))}
+            {trailingSpace ? <col /> : null}
+          </colgroup>
           <thead className={cn(sticky && "sticky top-0 z-10 bg-card")}>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-border/45">
@@ -377,9 +422,7 @@ export function DataTable<T>({
                   // width gate just dropped, so a half-gated group would hold
                   // space for a column that is not there and push the table
                   // wider than its own columns.
-                  const sized = header.subHeaders.length
-                    ? fittingLeafWidth(header)
-                    : header.getSize();
+                  const sized = fittingLeafWidth(header);
                   return (
                     <th
                       key={header.id}
@@ -394,11 +437,11 @@ export function DataTable<T>({
                       }
                       {...pinnedProps(header.column.id, "header")}
                       style={{
-                        ...(sized !== undefined && sized !== 150 ? { width: sized } : {}),
+                        width: sized,
                         ...pinnedStyle(header.column.id),
                       }}
                       className={cn(
-                        "h-10 px-3 text-left align-middle text-xs font-medium text-muted-foreground",
+                        "relative h-10 px-3 text-left align-middle text-xs font-medium text-muted-foreground",
                         meta?.align === "right" && "text-right",
                         meta?.align === "center" && "text-center",
                         meta?.headerClassName,
@@ -407,10 +450,19 @@ export function DataTable<T>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
+                      {!header.isPlaceholder &&
+                        !header.subHeaders.length &&
+                        header.column.getCanResize() && (
+                          <DataTableColumnResize
+                            column={header.column}
+                            table={table}
+                            width={sized}
+                          />
+                        )}
                     </th>
                   );
                 })}
-                {spacer ? <th aria-hidden="true" className="w-full p-0" /> : null}
+                {trailingSpace ? <th aria-hidden="true" className="w-full p-0" /> : null}
               </tr>
             ))}
           </thead>
@@ -522,11 +574,13 @@ export function DataTable<T>({
                             meta?.className,
                           )}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <div data-cell-content="" className="min-w-0 overflow-hidden">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
                         </td>
                       );
                     })}
-                    {spacer ? <td aria-hidden="true" className="w-full p-0" /> : null}
+                    {trailingSpace ? <td aria-hidden="true" className="w-full p-0" /> : null}
                   </tr>
                 ),
               )

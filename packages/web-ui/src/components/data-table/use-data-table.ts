@@ -45,6 +45,8 @@ export interface UseDataTableOptions<T> {
   enableMultiRowSelection?: boolean;
   /** Replace the default AND-of-tokens search. */
   globalFilterFn?: FilterFn<T>;
+  /** Defaults for content columns; individual definitions override them. */
+  defaultColumn?: TableOptions<T>["defaultColumn"];
 }
 
 const PAGE_RESET_KEYS = new Set<keyof DataTableState>(["globalFilter", "columnFilters", "sorting"]);
@@ -106,6 +108,7 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
     enableRowSelection = false,
     enableMultiRowSelection = true,
     globalFilterFn,
+    defaultColumn,
   } = options;
   const controlled = controlledState !== undefined && onStateChange !== undefined;
 
@@ -162,11 +165,13 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   const tableOptions: TableOptions<T> = {
     data,
     columns,
+    defaultColumn: { maxSize: 1200, ...defaultColumn },
     getRowId,
     state: { ...state, grouping: groupBy ? [groupBy] : [] },
     onGlobalFilterChange: (updater) => update("globalFilter", updater),
     onColumnFiltersChange: (updater) => update("columnFilters", updater),
     onSortingChange: (updater) => update("sorting", updater),
+    onColumnSizingChange: (updater) => update("columnSizing", updater),
     onColumnVisibilityChange: (updater) => update("columnVisibility", updater),
     onRowSelectionChange: (updater) => update("rowSelection", updater),
     onPaginationChange: (updater) => update("pagination", updater),

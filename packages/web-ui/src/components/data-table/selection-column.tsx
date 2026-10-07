@@ -8,7 +8,10 @@ export function selectionColumn<T>(): ColumnDef<T, unknown> {
   return {
     id: SELECTION_COLUMN_ID,
     size: 36,
+    minSize: 36,
+    maxSize: 36,
     enableSorting: false,
+    enableResizing: false,
     enableHiding: false,
     enableGlobalFilter: false,
     header: ({ table }) => (

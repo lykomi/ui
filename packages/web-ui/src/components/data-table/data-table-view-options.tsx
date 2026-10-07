@@ -7,6 +7,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
+  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../ui/dropdown-menu.tsx";
@@ -19,7 +20,8 @@ export interface DataTableViewOptionsProps<T> {
 
 export function DataTableViewOptions<T>({ table, className }: DataTableViewOptionsProps<T>) {
   const columns = table.getAllLeafColumns().filter((column) => column.getCanHide());
-  if (!columns.length) return null;
+  const resizable = table.getAllLeafColumns().some((column) => column.getCanResize());
+  if (!columns.length && !resizable) return null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -41,6 +43,12 @@ export function DataTableViewOptions<T>({ table, className }: DataTableViewOptio
         className="w-48 rounded-xl border-border/45 bg-popover/95 shadow-lg"
       >
         <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {resizable && (
+          <DropdownMenuItem onSelect={() => table.resetColumnSizing()}>
+            Reset column widths
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         {columns.map((column) => (
           <DropdownMenuCheckboxItem
