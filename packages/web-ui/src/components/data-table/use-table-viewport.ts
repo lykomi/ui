@@ -17,19 +17,20 @@ export function useTableViewport(scroller: RefObject<HTMLDivElement | null>, ena
     }
     // Once an actual scrollport is identified, retain it even after fitting
     // removes its overflow; otherwise its bottom and the window would alternate.
-    let pane: HTMLElement | undefined;
+    const panes = new Set<HTMLElement>();
     let observer: ResizeObserver | undefined;
     let pending: number | undefined;
     const read = () => {
       const rect = element.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return;
-      if (!pane) {
-        pane = candidates.find((parent) => parent.scrollHeight > parent.clientHeight + 1);
-        if (pane) observer?.observe(pane);
-      }
+      candidates.forEach((parent) => {
+        if (parent.scrollHeight > parent.clientHeight + 1) panes.add(parent);
+      });
       const bottom = Math.min(
         window.innerHeight,
-        pane ? pane.getBoundingClientRect().top + pane.clientTop + pane.clientHeight : Infinity,
+        ...[...panes].map(
+          (pane) => pane.getBoundingClientRect().top + pane.clientTop + pane.clientHeight,
+        ),
       );
       const footer =
         frame?.querySelector("[data-table-overflow]")?.getBoundingClientRect().height ?? 0;

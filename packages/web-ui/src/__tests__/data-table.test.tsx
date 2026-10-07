@@ -1693,12 +1693,13 @@ describe("column sizing", () => {
 });
 
 it("reveals keyboard-active rows above a non-overlay scrollbar without moving horizontally", () => {
+  let height = 100;
   let active: string | undefined;
   const render = () =>
     act(() =>
       root!.render(
         <Harness
-          tableProps={{ maxHeight: 100 }}
+          tableProps={{ maxHeight: height }}
           activeRowId={active}
           onActiveRowChange={(row) => {
             active = row?.id;
@@ -1715,13 +1716,13 @@ it("reveals keyboard-active rows above a non-overlay scrollbar without moving ho
   const scroller = container.querySelector("[data-list-scroller]") as HTMLElement;
   Object.defineProperties(scroller, {
     clientTop: { value: 2 },
-    clientHeight: { value: 100 },
+    clientHeight: { get: () => height },
     scrollHeight: { value: 500 },
   });
   scroller.scrollLeft = 84;
   scroller.getBoundingClientRect = () => ({ top: 0, bottom: 120, height: 120 }) as DOMRect;
   const row = container.querySelector("tbody tr[data-row-id]") as HTMLElement;
-  row.getBoundingClientRect = () => ({ top: 85, bottom: 115, height: 30 }) as DOMRect;
+  row.getBoundingClientRect = () => ({ top: 85 - scroller.scrollTop, bottom: 115 - scroller.scrollTop, height: 30 }) as DOMRect;
   const header = container.querySelector("thead") as HTMLElement;
   header.getBoundingClientRect = () => ({ height: 20 }) as DOMRect;
   act(() =>
@@ -1731,6 +1732,11 @@ it("reveals keyboard-active rows above a non-overlay scrollbar without moving ho
   );
   expect(active).toBe("t1");
   expect(scroller.scrollTop).toBe(13);
+  expect(scroller.scrollLeft).toBe(84);
+  height = 60;
+  render();
+  expect(active).toBe("t1");
+  expect(scroller.scrollTop).toBe(53);
   expect(scroller.scrollLeft).toBe(84);
 });
 

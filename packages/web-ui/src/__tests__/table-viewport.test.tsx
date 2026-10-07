@@ -39,7 +39,16 @@ it("refits when a distant scroll pane shrinks before its first overflow", async 
   tableFrame.append(scroller, footer);
   wrapper.append(tableFrame);
   pane.append(wrapper);
-  document.body.append(pane);
+  const outer = document.createElement("div");
+  outer.style.overflowY = "auto";
+  outer.append(pane);
+  document.body.append(outer);
+  let outerHeight = 900;
+  Object.defineProperties(outer, {
+    clientHeight: { get: () => outerHeight },
+    scrollHeight: { get: () => 850 },
+  });
+  outer.getBoundingClientRect = () => ({ top: 0, width: 400, height: outerHeight }) as DOMRect;
   let paneHeight = 700;
   let contentHeight = 600;
   Object.defineProperties(pane, {
@@ -74,12 +83,18 @@ it("refits when a distant scroll pane shrinks before its first overflow", async 
       frame?.(0);
     });
     expect(host.textContent).toBe("232");
+    outerHeight = 450;
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("182");
     await act(async () => root.render(<Probe enabled={false} />));
     expect(host.textContent).toBe("unbounded");
     expect(observed.size).toBe(0);
   } finally {
     await act(async () => root.unmount());
-    pane.remove();
+    outer.remove();
     vi.unstubAllGlobals();
   }
 });

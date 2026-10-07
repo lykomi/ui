@@ -330,7 +330,7 @@ export function DataTable<T>({
     if (element && onARow && active !== element) {
       element.focus?.({ preventScroll: true });
     }
-  }, [activeRowId, activeIndex, sticky]);
+  }, [activeRowId, activeIndex, sticky, viewportMaxHeight]);
   const columnCount = renderedColumns.length + (trailingSpace ? 1 : 0);
   const renderedIds = renderedColumns.map((column) => column.id);
   // JSON, not a comma-joined string: a column id may contain a comma, and
