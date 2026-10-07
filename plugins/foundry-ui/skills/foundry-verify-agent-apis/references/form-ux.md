@@ -242,7 +242,7 @@ touch and keyboard scrolling; never translate all vertical wheel events
 into sideways scrolling. Bounded tables fit the current viewport and leave room for their scrollbar and
 action row. Compose `DataTableFrame` with `DataTablePagination` so wrapped paging
 controls contribute their actual height. `fitViewport={false}` opts out for a host that deliberately owns
-that sizing. The bottom horizontal scrollbar and arrow controls remain
+that sizing. The native horizontal scrollbar and bottom arrow controls remain
 reachable without first scrolling through every row.
 Honor reduced motion. Keep essential information visible before overflow.
 A frozen identity column must leave room for the scrolling columns. At narrow
@@ -275,3 +275,5 @@ and [TanStack's column sizing contract](https://tanstack.com/table/v8/docs/guide
 These are complementary references, not a single design-system benchmark.
 
 Paged bounded tables reserve a stable viewport when standard pagination has multiple pages, so the next/previous controls do not jump on a short final page. `stableHeight` explicitly overrides this behavior. Page changes return to the top while preserving the horizontal position; resizing columns preserves the current reading position.
+
+Use a single native horizontal scrollport per table. Bottom arrows provide additional access to off-screen columns; do not duplicate the horizontal scrollbar with a synchronized second track.

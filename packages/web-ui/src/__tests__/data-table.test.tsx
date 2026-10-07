@@ -1799,3 +1799,9 @@ it("starts a new page at its top without moving horizontal position or resetting
   act(() => instance.table.setColumnSizing({ title: 300 }));
   expect(scroller!.scrollTop).toBe(60);
 });
+
+it("keeps bounded headers opaque even inside host translucent-header styles", () => {
+  mount({ tableProps: { maxHeight: 300, className: "[&_thead]:bg-muted/40" } });
+  const header = container!.querySelector("thead")!;
+  expect(header.style.backgroundColor).toBe("var(--card)");
+});

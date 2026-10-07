@@ -442,7 +442,12 @@ export function DataTable<T>({
             ))}
             {trailingSpace ? <col /> : null}
           </colgroup>
-          <thead className={cn(sticky && "sticky top-0 z-10 bg-card")}>
+          <thead
+            className={cn(sticky && "sticky top-0 z-10 bg-card")}
+            // A sticky surface must cover rows even when a host applies a
+            // translucent header utility for ordinary, non-scrolling tables.
+            style={sticky ? { backgroundColor: "var(--card)" } : undefined}
+          >
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-border/45">
                 {headerGroup.headers.map((header) => {
