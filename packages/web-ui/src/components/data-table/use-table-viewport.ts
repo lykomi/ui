@@ -13,7 +13,7 @@ export function useTableViewport(scroller: RefObject<HTMLDivElement | null>, ena
       parent && parent !== document.body;
       parent = parent.parentElement
     ) {
-      if (/auto|scroll/.test(getComputedStyle(parent).overflowY)) candidates.push(parent);
+      if (/auto|scroll|hidden|clip/.test(getComputedStyle(parent).overflowY)) candidates.push(parent);
     }
     // Once an actual scrollport is identified, retain it even after fitting
     // removes its overflow; otherwise its bottom and the window would alternate.
@@ -22,7 +22,7 @@ export function useTableViewport(scroller: RefObject<HTMLDivElement | null>, ena
     let pending: number | undefined;
     const read = () => {
       const rect = element.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
+      if (rect.width <= 0) return;
       candidates.forEach((parent) => {
         if (parent.scrollHeight > parent.clientHeight + 1) panes.add(parent);
       });
@@ -35,7 +35,7 @@ export function useTableViewport(scroller: RefObject<HTMLDivElement | null>, ena
       const footer =
         frame?.querySelector("[data-table-overflow]")?.getBoundingClientRect().height ?? 0;
       // Leave one action row plus normal breathing room below the scrollbar.
-      const next = Math.max(128, Math.floor(bottom - rect.top - footer - 48));
+      const next = Math.max(0, Math.floor(bottom - rect.top - footer - 48));
       setHeight((current) => (current === next ? current : next));
     };
     const schedule = () => {

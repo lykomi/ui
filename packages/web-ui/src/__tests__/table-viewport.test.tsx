@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { useTableViewport } from "../components/data-table/use-table-viewport.ts";
 
-it("refits when a distant scroll pane shrinks before its first overflow", async () => {
+it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", async (overflow) => {
   const observed = new Set<Element>();
   let resize: () => void = () => {};
   let frame: FrameRequestCallback | undefined;
@@ -40,7 +40,7 @@ it("refits when a distant scroll pane shrinks before its first overflow", async 
   wrapper.append(tableFrame);
   pane.append(wrapper);
   const outer = document.createElement("div");
-  outer.style.overflowY = "auto";
+  outer.style.overflowY = overflow;
   outer.append(pane);
   document.body.append(outer);
   let outerHeight = 900;
@@ -57,7 +57,8 @@ it("refits when a distant scroll pane shrinks before its first overflow", async 
   });
   const rect = (top: number, height: number) => ({ top, height, width: 400 }) as DOMRect;
   pane.getBoundingClientRect = () => rect(100, paneHeight);
-  scroller.getBoundingClientRect = () => rect(200, 500);
+  let scrollerHeight = 500;
+  scroller.getBoundingClientRect = () => rect(200, scrollerHeight);
   footer.getBoundingClientRect = () => rect(700, 20);
   const host = document.createElement("div");
   const root = createRoot(host);
@@ -83,6 +84,19 @@ it("refits when a distant scroll pane shrinks before its first overflow", async 
       frame?.(0);
     });
     expect(host.textContent).toBe("232");
+    outerHeight = 450;
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("182");
+    outerHeight = 260;
+    await act(async () => {
+      resize();
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("0");
+    scrollerHeight = 0;
     outerHeight = 450;
     await act(async () => {
       resize();
