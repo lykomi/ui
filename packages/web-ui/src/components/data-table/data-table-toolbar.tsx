@@ -5,7 +5,7 @@
  *   row 1   search ……………………………… Filters (n) · actions · Columns · ⤢
  *   row 2   facet · facet · facet · + Filter · Reset
  *
- * Row one never wraps (its right group is fixed); filters live on their own
+ * Search and actions wrap within the containing pane; filters live on their own
  * row, and only the *pinned* facets (explicit `pinned`, else the first
  * `pinnedFacets`) sit there — the rest wait behind "+ Filter" and join once
  * chosen or active. On a dense, Excel-like screen the filter row collapses
@@ -161,7 +161,7 @@ export function DataTableToolbar<T>({
     return facet.title ?? (column ? columnLabel(column) : facet.columnId);
   };
   const searchNode = search ? (
-    <div className="relative">
+    <div className="relative min-w-0 flex-[1_1_160px] max-w-[250px]">
       <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="search"
@@ -169,7 +169,7 @@ export function DataTableToolbar<T>({
         onChange={(event) => table.setGlobalFilter(event.target.value)}
         placeholder={searchPlaceholder}
         aria-label={searchPlaceholder}
-        className="h-8 w-[160px] rounded-xl border-border/45 bg-background/72 pl-8 text-sm shadow-none lg:w-[250px]"
+        className="h-8 w-full rounded-xl border-border/45 bg-background/72 pl-8 text-sm shadow-none"
       />
     </div>
   ) : null;
@@ -274,7 +274,7 @@ export function DataTableToolbar<T>({
 
   const rightGroup =
     actions || viewOptions || focusButton || filtersToggle ? (
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
         {filtersToggle}
         {actions}
         {viewOptions ? <DataTableViewOptions table={table} /> : null}
@@ -289,7 +289,7 @@ export function DataTableToolbar<T>({
       // matching is how an assertion starts passing for the wrong reason
       // (review catch).
       <div data-slot="data-table-toolbar" className={cn("flex flex-col gap-2", className)}>
-        <div className="flex items-start gap-2">
+        <div className="flex flex-wrap items-start gap-2">
           {/* The selection bar TAKES this row rather than adding one below
               it. Appended, it grew the toolbar the moment the first row was
               ticked and shoved the table down under the cursor mid-click —
@@ -340,7 +340,7 @@ export function DataTableToolbar<T>({
               </>
             )}
           </div>
-          {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
+          {rightGroup ? <div className="ml-auto max-w-full">{rightGroup}</div> : null}
         </div>
       </div>
     );
@@ -348,9 +348,9 @@ export function DataTableToolbar<T>({
 
   return (
     <div data-slot="data-table-toolbar" className={cn("flex flex-col gap-2", className)}>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {searchNode}
-        {rightGroup ? <div className="ml-auto">{rightGroup}</div> : null}
+        {rightGroup ? <div className="ml-auto max-w-full">{rightGroup}</div> : null}
       </div>
       {showSelectionBar ? (
         <div data-selection-row="">{selectionBar}</div>
