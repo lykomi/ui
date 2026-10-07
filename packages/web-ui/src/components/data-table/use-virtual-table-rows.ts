@@ -118,7 +118,7 @@ export function useVirtualTableRows<T>({
         key: rows[index].id,
       }));
   const onKeyDownCapture = useCallback(
-    (event: KeyboardEvent<HTMLTableElement>) => {
+    (event: KeyboardEvent<HTMLDivElement>) => {
       if (
         !enabled ||
         event.key !== "Tab" ||
@@ -131,7 +131,19 @@ export function useVirtualTableRows<T>({
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
       const row = target.closest<HTMLTableRowElement>("tr[data-virtual-row-id]");
-      if (!row || !body.current?.contains(row)) return;
+      if (!row || !body.current?.contains(row)) {
+        if (event.shiftKey) return;
+        const header = body.current?.parentElement?.querySelector<HTMLElement>("thead");
+        const headers = header ? tabTargets(header) : [];
+        if (
+          (target === scroller.current && !headers.length) ||
+          target === headers[headers.length - 1]
+        ) {
+          event.preventDefault();
+          setPendingTab({ index: 0, direction: 1, rows, anchor: target });
+        }
+        return;
+      }
       const targets = tabTargets(row);
       const direction = event.shiftKey ? -1 : 1;
       if (target !== targets[direction === 1 ? targets.length - 1 : 0]) return;
@@ -140,7 +152,7 @@ export function useVirtualTableRows<T>({
       event.preventDefault();
       setPendingTab({ index, direction, rows, anchor: target });
     },
-    [enabled, rows, body],
+    [enabled, rows, body, scroller],
   );
   useEffect(() => {
     if (!pendingTab) return;
@@ -180,6 +192,7 @@ export function useVirtualTableRows<T>({
       const outside = tabTargets(document.body).filter(
         (target) =>
           !table.contains(target) &&
+          !target.hasAttribute("data-virtual-boundary") &&
           Boolean(
             table.compareDocumentPosition(target) &
             (pendingTab.direction === 1
@@ -187,7 +200,12 @@ export function useVirtualTableRows<T>({
               : Node.DOCUMENT_POSITION_PRECEDING),
           ),
       );
-      (pendingTab.direction === 1 ? outside[0] : outside[outside.length - 1])?.focus();
+      const header = table.querySelector<HTMLElement>("thead");
+      const headers = header ? tabTargets(header) : [];
+      (pendingTab.direction === 1
+        ? outside[0]
+        : (headers[headers.length - 1] ?? outside[outside.length - 1])
+      )?.focus();
     }
     setPendingTab(null);
   }, [pendingTab, enabled, rows, items, body]);
@@ -206,5 +224,12 @@ export function useVirtualTableRows<T>({
       : 0,
     setFocusedRowId,
     onKeyDownCapture,
+    onBoundaryFocus: (anchor: HTMLElement, direction: 1 | -1) =>
+      setPendingTab({
+        index: direction === 1 ? rows.length : rows.length - 1,
+        direction,
+        rows,
+        anchor,
+      }),
   };
 }

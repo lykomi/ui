@@ -191,9 +191,11 @@ export function DataTable<T>({
     !controlledOnActiveRowChange && rows.length > 200 && Boolean(onRowClick || onRowOpen);
   const onActiveRowChange =
     controlledOnActiveRowChange ?? (internalNavigation ? setLocalActiveRow : undefined);
-  const activeRowId = controlledOnActiveRowChange
-    ? controlledActiveRowId
-    : (localActiveRowId ?? controlledActiveRowId);
+  const activeRowId =
+    controlledActiveRowId !== undefined ? controlledActiveRowId : localActiveRowId;
+  const navigationRowId = internalNavigation
+    ? (localActiveRowId ?? controlledActiveRowId)
+    : controlledActiveRowId;
   const effectiveMaxHeight = maxHeight ?? (rows.length > 200 ? "70vh" : undefined);
   const bounded = !filling && effectiveMaxHeight !== undefined;
   // A header only sticks inside a scroll container — which is exactly what
@@ -316,13 +318,13 @@ export function DataTable<T>({
     body: bodyRef,
     bounded: bounded || filling,
     dense,
-    activeRowId,
+    activeRowId: navigationRowId,
   });
 
   const moveActive = useCallback(
     (delta: number | "first" | "last") => {
       if (!onActiveRowChange || dataRows.length === 0) return;
-      const index = dataRows.findIndex((row) => row.id === activeRowId);
+      const index = dataRows.findIndex((row) => row.id === navigationRowId);
       const next =
         delta === "first"
           ? 0
@@ -336,19 +338,19 @@ export function DataTable<T>({
       const row = dataRows[next];
       if (row) onActiveRowChange(row);
     },
-    [activeRowId, dataRows, onActiveRowChange],
+    [navigationRowId, dataRows, onActiveRowChange],
   );
   // Sorting, filtering or a late-arriving page moves the active row without
   // changing its id, and an id restored before the rows load points at nothing
   // yet — so the position is part of what this watches.
   const activeIndex = useMemo(
-    () => (activeRowId == null ? -1 : dataRows.findIndex((row) => row.id === activeRowId)),
-    [dataRows, activeRowId],
+    () => (navigationRowId == null ? -1 : dataRows.findIndex((row) => row.id === navigationRowId)),
+    [dataRows, navigationRowId],
   );
   useEffect(() => {
-    if (!activeRowId || activeIndex < 0) return;
+    if (!navigationRowId || activeIndex < 0) return;
     const element = Array.from(bodyRef.current?.querySelectorAll("tr[data-row-id]") ?? []).find(
-      (row) => (row as HTMLElement).dataset.rowId === activeRowId,
+      (row) => (row as HTMLElement).dataset.rowId === navigationRowId,
     ) as HTMLElement | undefined;
     const scroller = scrollerRef.current;
     if (element && scroller) {
@@ -392,7 +394,7 @@ export function DataTable<T>({
     if (element && onARow && active !== element) {
       element.focus?.({ preventScroll: true });
     }
-  }, [activeRowId, activeIndex, sticky, viewportMaxHeight]);
+  }, [navigationRowId, activeIndex, sticky, viewportMaxHeight]);
   const columnCount = renderedColumns.length + (trailingSpace ? 1 : 0);
   const renderedIds = renderedColumns.map((column) => column.id);
   // JSON, not a comma-joined string: a column id may contain a comma, and
@@ -408,7 +410,7 @@ export function DataTable<T>({
   }, [renderedKey]);
   const rovingEntryId =
     activeIndex >= 0
-      ? activeRowId
+      ? navigationRowId
       : virtual.items.map((item) => rows[item.index]).find((row) => !row.getIsGrouped())?.id;
   const cellPad = dense ? "px-3 py-1.5" : "px-3 py-2.5";
 
@@ -442,6 +444,7 @@ export function DataTable<T>({
           const next = Math.abs(event.currentTarget.scrollLeft) > 0;
           setScrolledX((current) => (current === next ? current : next));
         }}
+        onKeyDownCapture={virtual.onKeyDownCapture}
         data-list-scroller=""
         role="region"
         aria-label={`${ariaLabel ?? "Table"} scroll area`}
@@ -460,7 +463,6 @@ export function DataTable<T>({
           style={{ tableLayout: "fixed", width: Math.max(availableWidth, tableWidth) }}
           aria-label={ariaLabel}
           aria-rowcount={virtual.enabled ? rows.length + table.getHeaderGroups().length : undefined}
-          onKeyDownCapture={virtual.onKeyDownCapture}
           onFocusCapture={(event) =>
             virtual.setFocusedRowId(
               (event.target as HTMLElement).closest<HTMLTableRowElement>("tr[data-virtual-row-id]")
@@ -753,6 +755,21 @@ export function DataTable<T>({
             ) : null}
           </tbody>
         </table>
+        {virtual.enabled ? (
+          <span
+            tabIndex={0}
+            data-virtual-boundary=""
+            className="sr-only"
+            onFocus={(event) =>
+              virtual.onBoundaryFocus(
+                event.currentTarget,
+                bodyRef.current?.parentElement?.contains(event.relatedTarget as Node) ? 1 : -1,
+              )
+            }
+          >
+            End of table
+          </span>
+        ) : null}
       </div>
       <DataTableOverflow scroller={scrollerRef} />
     </div>

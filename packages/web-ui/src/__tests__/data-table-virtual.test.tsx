@@ -351,3 +351,65 @@ it("tabs through sparse cell controls beyond the mounted window and exits the ta
   );
   await vi.waitFor(() => expect(document.activeElement?.textContent).toBe("After table"));
 });
+
+it("keeps the host active row authoritative while moving internal keyboard focus", async () => {
+  function ControlledDisplay() {
+    const instance = useDataTable({
+      data: items,
+      columns,
+      getRowId: (item) => item.id,
+      pageSize: false,
+    });
+    return <DataTable table={instance} activeRowId="item-0" onRowOpen={() => {}} />;
+  }
+  await act(async () => root.render(<ControlledDisplay />));
+  const row = host.querySelector<HTMLElement>('[data-row-id="item-1"]')!;
+  await act(async () => row.focus());
+  await act(async () =>
+    row.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
+  );
+  expect(document.activeElement?.getAttribute("data-row-id")).toBe("item-2");
+  expect(host.querySelector("[data-active]")?.getAttribute("data-row-id")).toBe("item-0");
+  expect(host.querySelector('[aria-current="true"]')?.getAttribute("data-row-id")).toBe("item-0");
+});
+
+it("finds off-window controls when entering from either table boundary", async () => {
+  function Sparse() {
+    const instance = useDataTable({
+      data: items.slice(0, 250),
+      columns: [
+        {
+          accessorKey: "name",
+          enableResizing: false,
+          enableSorting: false,
+          cell: ({ row }) =>
+            row.index === 100 ? <input aria-label="Only control" /> : row.original.name,
+        },
+      ],
+      getRowId: (item) => item.id,
+      pageSize: false,
+    });
+    return (
+      <>
+        <button>Before</button>
+        <DataTable table={instance} />
+        <button>After</button>
+      </>
+    );
+  }
+  await act(async () => root.render(<Sparse />));
+  expect(host.querySelector('[aria-label="Only control"]')).toBeNull();
+  const scroller = host.querySelector<HTMLElement>("[data-list-scroller]")!;
+  await act(async () => {
+    scroller.focus();
+    scroller.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+  });
+  await vi.waitFor(() =>
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Only control"),
+  );
+  await act(async () => host.querySelector<HTMLElement>("button:last-child")!.focus());
+  await act(async () => host.querySelector<HTMLElement>("[data-virtual-boundary]")!.focus());
+  await vi.waitFor(() =>
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Only control"),
+  );
+});
