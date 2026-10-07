@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.38.0
+
+### Minor Changes
+
+- a43dcda: Window large table row sets within a bounded scroll viewport, preserving continuous hierarchy, measured row heights, pinned columns, keyboard navigation, focused controls and print output. Large unbounded lists receive a bounded viewport automatically.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.38.0
+- @iloveagents/foundry-web-primitives@0.38.0
+
 ## 0.37.0
 
 ### Minor Changes
