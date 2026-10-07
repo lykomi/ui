@@ -37,11 +37,14 @@ export function ReadOnlyField({
   emptyLabel = "Not set",
   children,
   multiline = false,
+  valueAppearance = "field",
   className,
   ...props
 }: ComponentPropsWithoutRef<"dl"> & {
   label: ReactNode;
   multiline?: boolean;
+  /** Field preserves an editable slot; content presents fixed information without input chrome. */
+  valueAppearance?: "field" | "content";
   hint?: ReactNode;
   emptyLabel?: ReactNode;
 }) {
@@ -50,9 +53,13 @@ export function ReadOnlyField({
     <dl {...props} className={cn("grid min-w-0 gap-1.5", className)}>
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
       <dd
+        data-value-appearance={valueAppearance}
         className={cn(
-          "m-0 min-h-10 min-w-0 break-words whitespace-pre-wrap rounded-xl border border-border bg-background px-3 py-2 text-sm leading-5 text-foreground",
-          multiline && "min-h-24 leading-6",
+          "m-0 min-w-0 break-words whitespace-pre-wrap text-sm text-foreground",
+          valueAppearance === "field"
+            ? "min-h-10 rounded-xl border border-border bg-background px-3 py-2 leading-5"
+            : "leading-6",
+          multiline && valueAppearance === "field" && "min-h-24 leading-6",
         )}
       >
         {empty ? (

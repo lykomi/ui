@@ -215,3 +215,30 @@ it("preserves boolean data and zero through arrays and fragments", () => {
     }
   }
 });
+
+it("renders fixed content without input chrome while retaining links and empty values", () => {
+  const html = renderToStaticMarkup(
+    <ReadOnlyField label="Question" valueAppearance="content" multiline hint="Reference question">
+      <a href="/reference">Read the reference</a>
+    </ReadOnlyField>,
+  );
+  expect(html).toContain('data-value-appearance="content"');
+  expect(html).toContain('href="/reference"');
+  expect(html).toContain("Reference question");
+  expect(html).not.toContain("border-border");
+  expect(html).not.toContain("min-h-24");
+  expect(
+    renderToStaticMarkup(
+      <ReadOnlyField label="Result" valueAppearance="content">
+        {false}
+      </ReadOnlyField>,
+    ),
+  ).toContain("false");
+  expect(
+    renderToStaticMarkup(
+      <ReadOnlyField label="Result" valueAppearance="content">
+        {null}
+      </ReadOnlyField>,
+    ),
+  ).toContain("Not set");
+});

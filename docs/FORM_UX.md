@@ -191,3 +191,14 @@ Field frames and editors use the same theme radius, including enum/select button
 ## Keeping skill guidance current
 
 Edit this document rather than reproducing the rules in plugin skills. Run `pnpm sync:form-ux` to regenerate their bundled `references/form-ux.md` resources. `pnpm check:form-ux` (part of `pnpm test` and CI) rejects stale resources. Skills read the bundled reference even when installed outside the framework checkout.
+
+## Fixed content versus editable values
+
+A catalogue question, instruction or computed explanation is content. Render it
+without input chrome: `ReadOnlyField valueAppearance="content"`. The default
+`valueAppearance="field"` preserves a framed value slot for records whose fields
+become editable through Edit. Choose the presentation from the meaning of the
+value, not the current page mode, so fixed content stays content in View and Edit.
+Content remains selectable and links stay usable; do not replace it with a
+disabled input. Appearance does not grant or revoke edit permission. Keep
+permission enforcement and pending-change review independent of presentation.
