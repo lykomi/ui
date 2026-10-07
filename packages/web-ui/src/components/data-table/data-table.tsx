@@ -408,6 +408,7 @@ export function DataTable<T>({
   return (
     <div
       ref={rootRef}
+      data-list-root=""
       // The frozen seam is a signal that content is hidden to the left, so it
       // only shows once the list is actually scrolled sideways.
       data-scrolled-x={scrolledX ? "" : undefined}
