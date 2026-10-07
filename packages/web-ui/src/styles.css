@@ -321,3 +321,12 @@ tr[data-active] > [data-pinned="cell"] {
   inset-inline-start: auto;
   inset-inline-end: 0;
 }
+
+/* Printed tables include every row, rather than only the scroll viewport. */
+@media print {
+  [data-list-scroller] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+}

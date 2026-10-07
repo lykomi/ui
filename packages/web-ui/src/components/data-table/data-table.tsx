@@ -7,6 +7,7 @@
 import { flexRender, type Header, type Row, type Table } from "@tanstack/react-table";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
+  Fragment,
   useCallback,
   useEffect,
   useRef,
@@ -24,6 +25,8 @@ import { boundedColumnWidth } from "./column-sizing.ts";
 import { DataTableColumnResize } from "./data-table-column-resize.tsx";
 import { useElementWidth } from "./use-element-width.ts";
 import { cn } from "@iloveagents/foundry-web-primitives";
+
+import { useVirtualTableRows } from "./use-virtual-table-rows.js";
 
 export interface DataTableProps<T> {
   table: Table<T>;
@@ -171,11 +174,12 @@ export function DataTable<T>({
   // remaining height (`min-h-0` lets a flex item shrink below its content)
   // and scrolls in both directions, so the toolbar above stays put.
   const filling = fill ?? frame?.focused ?? false;
-  const bounded = !filling && maxHeight !== undefined;
+  const rows = orderedRows(table, groupOrder);
+  const effectiveMaxHeight = maxHeight ?? (rows.length > 200 ? "70vh" : undefined);
+  const bounded = !filling && effectiveMaxHeight !== undefined;
   // A header only sticks inside a scroll container — which is exactly what
   // `fill` and `maxHeight` create.
   const sticky = stickyHeader || filling || bounded;
-  const rows = orderedRows(table, groupOrder);
   const dataRows = rows.filter((row) => !row.getIsGrouped());
   const rootRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -188,8 +192,8 @@ export function DataTable<T>({
   }, [pageIndex, pageSize]);
   const viewportMaxHeight =
     availableHeight === undefined
-      ? maxHeight
-      : `min(${typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight}, ${availableHeight}px)`;
+      ? effectiveMaxHeight
+      : `min(${typeof effectiveMaxHeight === "number" ? `${effectiveMaxHeight}px` : effectiveMaxHeight}, ${availableHeight}px)`;
   const [scrolledX, setScrolledX] = useState(false);
   const width = useElementWidth(rootRef);
   const viewportWidth = useElementWidth(scrollerRef, "client");
@@ -286,6 +290,15 @@ export function DataTable<T>({
   // Keyboard: the active row moves with the arrows and stays in view, so a
   // long list can be walked without touching the mouse.
   const bodyRef = useRef<HTMLTableSectionElement | null>(null);
+  const virtual = useVirtualTableRows({
+    rows,
+    scroller: scrollerRef,
+    body: bodyRef,
+    bounded: bounded || filling,
+    dense,
+    activeRowId,
+  });
+
   const moveActive = useCallback(
     (delta: number | "first" | "last") => {
       if (!onActiveRowChange || dataRows.length === 0) return;
@@ -418,6 +431,21 @@ export function DataTable<T>({
           className="caption-bottom text-sm"
           style={{ tableLayout: "fixed", width: Math.max(availableWidth, tableWidth) }}
           aria-label={ariaLabel}
+          aria-rowcount={virtual.enabled ? rows.length + table.getHeaderGroups().length : undefined}
+          onFocusCapture={(event) =>
+            virtual.setFocusedRowId(
+              (event.target as HTMLElement).closest<HTMLTableRowElement>("tr[data-row-id]")?.dataset
+                .rowId ?? null,
+            )
+          }
+          onBlurCapture={(event) => {
+            const next = event.relatedTarget;
+            virtual.setFocusedRowId(
+              next instanceof HTMLElement && event.currentTarget.contains(next)
+                ? (next.closest<HTMLTableRowElement>("tr[data-row-id]")?.dataset.rowId ?? null)
+                : null,
+            );
+          }}
           onKeyDown={
             onActiveRowChange
               ? (event) => {
@@ -528,114 +556,152 @@ export function DataTable<T>({
                 </td>
               </tr>
             ) : (
-              rows.map((row) =>
-                row.getIsGrouped() ? (
-                  <tr
-                    key={row.id}
-                    data-group-row=""
-                    className="border-t border-border/45 bg-muted/35 text-sm font-medium"
-                  >
-                    <td colSpan={columnCount} className="p-0">
-                      {/* The group's cell spans the whole (scrollable) width,
+              virtual.items.map((item, itemIndex) => {
+                const row = rows[item.index];
+                const gap = virtual.before(itemIndex);
+                return (
+                  <Fragment key={row.id}>
+                    {gap > 0 ? (
+                      <tr aria-hidden="true">
+                        <td colSpan={columnCount} style={{ height: gap, padding: 0, border: 0 }} />
+                      </tr>
+                    ) : null}
+                    {row.getIsGrouped() ? (
+                      <tr
+                        key={row.id}
+                        ref={virtual.measureElement}
+                        data-index={item.index}
+                        aria-rowindex={
+                          virtual.enabled
+                            ? item.index + table.getHeaderGroups().length + 1
+                            : undefined
+                        }
+                        data-group-row=""
+                        className="border-t border-border/45 bg-muted/35 text-sm font-medium"
+                      >
+                        <td colSpan={columnCount} className="p-0">
+                          {/* The group's cell spans the whole (scrollable) width,
                           so its content is pinned to the viewport instead —
                           the label and total stay put while the columns move. */}
-                      <div
-                        data-group-content=""
-                        style={width ? { width } : undefined}
-                        className="flex items-center gap-2 px-3 py-1.5"
-                      >
-                        <button
-                          type="button"
-                          onClick={row.getToggleExpandedHandler()}
-                          aria-expanded={row.getIsExpanded()}
-                          aria-label={row.getIsExpanded() ? "Collapse group" : "Expand group"}
-                          className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          {row.getIsExpanded() ? (
-                            <ChevronDown className="size-4" />
-                          ) : (
-                            <ChevronRight className="size-4" />
-                          )}
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          {renderGroup ? renderGroup(row) : <DefaultGroupLabel row={row} />}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr
-                    key={row.id}
-                    data-row-id={row.id}
-                    data-state={row.getIsSelected() ? "selected" : undefined}
-                    data-active={activeRowId != null && row.id === activeRowId ? "" : undefined}
-                    aria-current={
-                      activeRowId != null && row.id === activeRowId ? "true" : undefined
-                    }
-                    aria-selected={row.getIsSelected() || undefined}
-                    data-clickable={onRowClick || onRowOpen ? "" : undefined}
-                    data-focusable={onRowClick || onRowOpen || onActiveRowChange ? "" : undefined}
-                    tabIndex={onRowClick || onRowOpen || onActiveRowChange ? 0 : undefined}
-                    // `detail` counts the clicks in the sequence: the second
-                    // one belongs to the double-click that follows, and
-                    // letting it through would toggle a selection off again
-                    // right before the row opens.
-                    onClick={(event) => {
-                      if (event.detail > 1) return;
-                      activate(row, event, onRowClick);
-                    }}
-                    onDoubleClick={(event) => activate(row, event, onRowOpen)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
-                        event.preventDefault();
-                        activate(row, event, onRowOpen ?? onRowClick);
-                      } else if (event.key === " ") {
-                        if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
-                        event.preventDefault();
-                        activate(row, event, onRowClick);
-                      }
-                    }}
-                    className={cn(
-                      "group/row border-t border-border/35 transition-colors",
-                      (onRowClick || onRowOpen) && "cursor-pointer hover:bg-muted/30",
-                      // Anything focusable has to SHOW where the keyboard is —
-                      // a list navigated with the arrows is focusable without
-                      // being clickable, and silent focus leaves a keyboard
-                      // user guessing which row the next key belongs to.
-                      (onRowClick || onRowOpen || onActiveRowChange) &&
-                        "focus-visible:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
-                      "data-[state=selected]:bg-primary/6 data-[active]:bg-primary/8",
-                      rowClassName?.(row),
-                    )}
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const meta = cell.column.columnDef.meta;
-                      if (!fits(meta)) return null;
-                      return (
-                        <td
-                          key={cell.id}
-                          {...pinnedProps(cell.column.id, "cell")}
-                          style={pinnedStyle(cell.column.id)}
-                          className={cn(
-                            cellPad,
-                            "align-middle",
-                            meta?.align === "right" && "text-right",
-                            meta?.align === "center" && "text-center",
-                            meta?.className,
-                          )}
-                        >
-                          <div data-cell-content="" className="-m-1 min-w-0 overflow-hidden p-1">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <div
+                            data-group-content=""
+                            style={width ? { width } : undefined}
+                            className="flex items-center gap-2 px-3 py-1.5"
+                          >
+                            <button
+                              type="button"
+                              onClick={row.getToggleExpandedHandler()}
+                              aria-expanded={row.getIsExpanded()}
+                              aria-label={row.getIsExpanded() ? "Collapse group" : "Expand group"}
+                              className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                            >
+                              {row.getIsExpanded() ? (
+                                <ChevronDown className="size-4" />
+                              ) : (
+                                <ChevronRight className="size-4" />
+                              )}
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              {renderGroup ? renderGroup(row) : <DefaultGroupLabel row={row} />}
+                            </div>
                           </div>
                         </td>
-                      );
-                    })}
-                    {trailingSpace ? <td aria-hidden="true" className="p-0" /> : null}
-                  </tr>
-                ),
-              )
+                      </tr>
+                    ) : (
+                      <tr
+                        key={row.id}
+                        ref={virtual.measureElement}
+                        data-index={item.index}
+                        aria-rowindex={
+                          virtual.enabled
+                            ? item.index + table.getHeaderGroups().length + 1
+                            : undefined
+                        }
+                        data-row-id={row.id}
+                        data-state={row.getIsSelected() ? "selected" : undefined}
+                        data-active={activeRowId != null && row.id === activeRowId ? "" : undefined}
+                        aria-current={
+                          activeRowId != null && row.id === activeRowId ? "true" : undefined
+                        }
+                        aria-selected={row.getIsSelected() || undefined}
+                        data-clickable={onRowClick || onRowOpen ? "" : undefined}
+                        data-focusable={
+                          onRowClick || onRowOpen || onActiveRowChange ? "" : undefined
+                        }
+                        tabIndex={onRowClick || onRowOpen || onActiveRowChange ? 0 : undefined}
+                        // `detail` counts the clicks in the sequence: the second
+                        // one belongs to the double-click that follows, and
+                        // letting it through would toggle a selection off again
+                        // right before the row opens.
+                        onClick={(event) => {
+                          if (event.detail > 1) return;
+                          activate(row, event, onRowClick);
+                        }}
+                        onDoubleClick={(event) => activate(row, event, onRowOpen)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
+                            event.preventDefault();
+                            activate(row, event, onRowOpen ?? onRowClick);
+                          } else if (event.key === " ") {
+                            if ((event.target as HTMLElement).closest(INTERACTIVE)) return;
+                            event.preventDefault();
+                            activate(row, event, onRowClick);
+                          }
+                        }}
+                        className={cn(
+                          "group/row border-t border-border/35 transition-colors",
+                          (onRowClick || onRowOpen) && "cursor-pointer hover:bg-muted/30",
+                          // Anything focusable has to SHOW where the keyboard is —
+                          // a list navigated with the arrows is focusable without
+                          // being clickable, and silent focus leaves a keyboard
+                          // user guessing which row the next key belongs to.
+                          (onRowClick || onRowOpen || onActiveRowChange) &&
+                            "focus-visible:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
+                          "data-[state=selected]:bg-primary/6 data-[active]:bg-primary/8",
+                          rowClassName?.(row),
+                        )}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          const meta = cell.column.columnDef.meta;
+                          if (!fits(meta)) return null;
+                          return (
+                            <td
+                              key={cell.id}
+                              {...pinnedProps(cell.column.id, "cell")}
+                              style={pinnedStyle(cell.column.id)}
+                              className={cn(
+                                cellPad,
+                                "align-middle",
+                                meta?.align === "right" && "text-right",
+                                meta?.align === "center" && "text-center",
+                                meta?.className,
+                              )}
+                            >
+                              <div
+                                data-cell-content=""
+                                className="-m-1 min-w-0 overflow-hidden p-1"
+                              >
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </div>
+                            </td>
+                          );
+                        })}
+                        {trailingSpace ? <td aria-hidden="true" className="p-0" /> : null}
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })
             )}
+            {virtual.after > 0 ? (
+              <tr aria-hidden="true">
+                <td
+                  colSpan={columnCount}
+                  style={{ height: virtual.after, padding: 0, border: 0 }}
+                />
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
