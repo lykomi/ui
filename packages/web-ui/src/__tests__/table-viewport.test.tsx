@@ -96,21 +96,25 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
       frame?.(0);
     });
     expect(host.textContent).toBe("182");
-    outer.style.overflowY = "visible";
+    frame = undefined;
     await act(async () => {
-      window.dispatchEvent(new Event("resize"));
+      outer.style.overflowY = "visible";
+      await Promise.resolve();
+      expect(frame).toBeTypeOf("function");
       frame?.(0);
     });
     expect(host.textContent).toBe("232");
-    pane.style.overflowY = "visible";
     await act(async () => {
-      resize();
+      pane.style.overflowY = "visible";
+      await Promise.resolve();
       frame?.(0);
     });
     expect(host.textContent).toBe("732");
-    outer.style.overflowY = overflow;
+    frame = undefined;
     await act(async () => {
-      resize();
+      outer.style.overflowY = overflow;
+      await Promise.resolve();
+      expect(frame).toBeTypeOf("function");
       frame?.(0);
     });
     expect(host.textContent).toBe("182");
@@ -159,6 +163,21 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
       frame?.(0);
     });
     expect(host.textContent).toBe("182");
+    await act(async () => {
+      outer.style.overflowY = "visible";
+      pane.style.overflowY = "visible";
+      await Promise.resolve();
+      frame?.(0);
+    });
+    const clientHeight = vi
+      .spyOn(document.documentElement, "clientHeight", "get")
+      .mockReturnValue(984);
+    await act(async () => {
+      window.dispatchEvent(new Event("resize"));
+      frame?.(0);
+    });
+    expect(host.textContent).toBe("716");
+    clientHeight.mockRestore();
     await act(async () => root.render(<Probe enabled={false} />));
     expect(host.textContent).toBe("unbounded");
     expect(observed.size).toBe(0);

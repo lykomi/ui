@@ -20,6 +20,8 @@ export function useTableViewport(
     const observed = new Set<HTMLElement>();
     let pending: number | undefined;
     let mutationObserver: MutationObserver | undefined;
+    let styleObserver: MutationObserver | undefined;
+    const styleObserved = new Set<Element>();
     let mutationLayout: Element | null | undefined;
     const read = () => {
       const ancestors: HTMLElement[] = [];
@@ -29,6 +31,23 @@ export function useTableViewport(
         parent = parent.parentElement
       ) {
         ancestors.push(parent);
+      }
+      const styleTargets = new Set<Element>([
+        ...(frame ? [frame] : []),
+        ...ancestors,
+        document.body,
+        document.documentElement,
+      ]);
+      if (
+        styleTargets.size !== styleObserved.size ||
+        [...styleTargets].some((target) => !styleObserved.has(target))
+      ) {
+        styleObserver?.disconnect();
+        styleObserved.clear();
+        styleTargets.forEach((target) => {
+          styleObserver?.observe(target, { attributes: true, attributeFilter: ["class", "style"] });
+          styleObserved.add(target);
+        });
       }
       const layout = frame?.closest("[data-table-layout]");
       if (layout !== mutationLayout) {
@@ -75,7 +94,7 @@ export function useTableViewport(
         if (parent.scrollHeight > parent.clientHeight + 1) panes.add(parent);
       });
       const bottom = Math.min(
-        window.innerHeight,
+        Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight),
         ...[...panes].map(
           (pane) => pane.getBoundingClientRect().top + pane.clientTop + pane.clientHeight,
         ),
@@ -115,6 +134,7 @@ export function useTableViewport(
       observer = new ResizeObserver(schedule);
     }
     if (typeof MutationObserver !== "undefined") {
+      styleObserver = new MutationObserver(schedule);
       mutationObserver = new MutationObserver((records) => {
         const selector = "[data-table-footer], [data-table-pagination]";
         if (
@@ -134,6 +154,7 @@ export function useTableViewport(
     return () => {
       observer?.disconnect();
       mutationObserver?.disconnect();
+      styleObserver?.disconnect();
       window.removeEventListener("resize", schedule);
       document.removeEventListener("scroll", schedule, true);
       if (pending !== undefined) cancelAnimationFrame(pending);

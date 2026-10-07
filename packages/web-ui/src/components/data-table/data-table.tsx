@@ -263,7 +263,8 @@ export function DataTable<T>({
         lastPinnedIndex--;
       } while (
         lastPinnedIndex >= 0 &&
-        renderedColumns[lastPinnedIndex]?.columnDef.meta?.pinned !== "left"
+        renderedColumns[lastPinnedIndex]?.columnDef.meta?.pinned !== "left" &&
+        !(lastPinnedIndex === 0 && renderedColumns[0]?.id === "__select")
       );
   }
   const pinnedIds = renderedColumns.slice(0, lastPinnedIndex + 1).map((column) => column.id);
