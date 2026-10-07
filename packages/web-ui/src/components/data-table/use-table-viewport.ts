@@ -48,6 +48,7 @@ export function useTableViewport(scroller: RefObject<HTMLDivElement | null>, ena
       observer = new ResizeObserver(schedule);
       if (frame) observer.observe(frame);
       if (frame?.parentElement) observer.observe(frame.parentElement);
+      candidates.forEach((candidate) => observer!.observe(candidate));
     }
     window.addEventListener("resize", schedule);
     document.addEventListener("scroll", schedule, true);
