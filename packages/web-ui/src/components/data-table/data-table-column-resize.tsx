@@ -8,10 +8,12 @@ export function DataTableColumnResize<T>({
   column,
   table,
   width,
+  terminal = false,
 }: {
   column: Column<T, unknown>;
   table: Table<T>;
   width: number;
+  terminal?: boolean;
 }) {
   const drag = useRef<{ x: number; width: number; direction: number; pointerId: number } | null>(
     null,
@@ -47,6 +49,7 @@ export function DataTableColumnResize<T>({
       aria-valuemax={maximum}
       title="Drag to resize. Arrow keys adjust width; Enter or double-click resets."
       data-column-resize=""
+      data-column-resize-terminal={terminal ? "" : undefined}
       data-resizing={delta !== null ? "" : undefined}
       onClick={(event) => event.stopPropagation()}
       onDoubleClick={(event) => {

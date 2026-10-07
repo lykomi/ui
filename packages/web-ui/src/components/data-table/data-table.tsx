@@ -259,7 +259,12 @@ export function DataTable<T>({
         .slice(0, lastPinnedIndex + 1)
         .reduce((sum, column) => sum + (sizes.get(column.id) ?? 0), 0) > limit
     )
-      lastPinnedIndex--;
+      do {
+        lastPinnedIndex--;
+      } while (
+        lastPinnedIndex >= 0 &&
+        renderedColumns[lastPinnedIndex]?.columnDef.meta?.pinned !== "left"
+      );
   }
   const pinnedIds = renderedColumns.slice(0, lastPinnedIndex + 1).map((column) => column.id);
   const { offsets, lastPinned, measure } = usePinnedOffsets(pinnedIds);
@@ -498,6 +503,10 @@ export function DataTable<T>({
                             column={header.column}
                             table={table}
                             width={sized}
+                            terminal={
+                              !trailingSpace &&
+                              header.column.id === renderedColumns[renderedColumns.length - 1]?.id
+                            }
                           />
                         )}
                     </th>

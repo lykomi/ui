@@ -1805,3 +1805,49 @@ it("keeps bounded headers opaque even inside host translucent-header styles", ()
   const header = container!.querySelector("thead")!;
   expect(header.style.backgroundColor).toBe("var(--card)");
 });
+
+it("does not freeze ordinary predecessors when a wide pinned boundary is released", () => {
+  const callbacks: Array<() => void> = [];
+  const previous = window.ResizeObserver;
+  Object.defineProperty(window, "ResizeObserver", {
+    writable: true,
+    value: class {
+      constructor(callback: () => void) {
+        callbacks.push(callback);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  });
+  try {
+    mount({
+      columns: [
+        { accessorKey: "title", header: "Title", size: 80 },
+        { accessorKey: "status", header: "Status", size: 80 },
+        { accessorKey: "priority", header: "Priority", size: 320, meta: { pinned: "left" } },
+        { accessorKey: "tags", header: "Tags", size: 200 },
+      ],
+    });
+    const scroller = container!.querySelector("[data-list-scroller]")!;
+    Object.defineProperty(scroller, "clientWidth", { get: () => 400 });
+    act(() => callbacks.forEach((callback) => callback()));
+    expect(container!.querySelectorAll("[data-pinned]")).toHaveLength(0);
+  } finally {
+    Object.defineProperty(window, "ResizeObserver", { writable: true, value: previous });
+  }
+});
+
+it("contains the terminal resize target only when no trailing spacer exists", () => {
+  mount({
+    tableProps: { spacer: false },
+    columns: [
+      { accessorKey: "title", header: "Title" },
+      { accessorKey: "status", header: "Status" },
+    ],
+  });
+  expect(container!.querySelectorAll("[data-column-resize-terminal]")).toHaveLength(1);
+  expect(
+    container!.querySelector("[data-column-resize-terminal]")!.getAttribute("aria-label"),
+  ).toBe("Resize Status column");
+});

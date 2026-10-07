@@ -312,3 +312,12 @@ tr[data-active] > [data-pinned="cell"] {
     inset-inline-start: 11px;
   }
 }
+
+/* The final hitbox stays inside the table, including on touch screens. */
+[data-column-resize-terminal] {
+  inset-inline-end: 0;
+}
+[data-column-resize-terminal] > span {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+}

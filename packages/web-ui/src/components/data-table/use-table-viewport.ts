@@ -19,6 +19,8 @@ export function useTableViewport(
     let observer: ResizeObserver | undefined;
     const observed = new Set<HTMLElement>();
     let pending: number | undefined;
+    let mutationObserver: MutationObserver | undefined;
+    let mutationLayout: Element | null | undefined;
     const read = () => {
       const ancestors: HTMLElement[] = [];
       for (
@@ -29,6 +31,11 @@ export function useTableViewport(
         ancestors.push(parent);
       }
       const layout = frame?.closest("[data-table-layout]");
+      if (layout !== mutationLayout) {
+        mutationObserver?.disconnect();
+        if (layout) mutationObserver?.observe(layout, { childList: true, subtree: true });
+        mutationLayout = layout;
+      }
       const actions = Array.from(
         layout?.querySelectorAll<HTMLElement>("[data-table-footer]") ?? [],
       ).find(
@@ -107,11 +114,26 @@ export function useTableViewport(
     if (typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(schedule);
     }
+    if (typeof MutationObserver !== "undefined") {
+      mutationObserver = new MutationObserver((records) => {
+        const selector = "[data-table-footer], [data-table-pagination]";
+        if (
+          records.some((record) =>
+            [...record.addedNodes, ...record.removedNodes].some(
+              (node) =>
+                node instanceof Element && (node.matches(selector) || node.querySelector(selector)),
+            ),
+          )
+        )
+          schedule();
+      });
+    }
     window.addEventListener("resize", schedule);
     document.addEventListener("scroll", schedule, true);
     read();
     return () => {
       observer?.disconnect();
+      mutationObserver?.disconnect();
       window.removeEventListener("resize", schedule);
       document.removeEventListener("scroll", schedule, true);
       if (pending !== undefined) cancelAnimationFrame(pending);

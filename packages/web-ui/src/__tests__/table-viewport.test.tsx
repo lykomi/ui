@@ -120,9 +120,9 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
     let pagingHeight = 72;
     paging.getBoundingClientRect = () =>
       rect(tableFrame.getBoundingClientRect().bottom + 12, pagingHeight);
-    wrapper.append(paging);
     await act(async () => {
-      resize();
+      wrapper.append(paging);
+      await Promise.resolve();
       frame?.(0);
     });
     expect(host.textContent).toBe("130");
@@ -138,9 +138,9 @@ it.each(["auto", "hidden", "clip"])("refits through a distant %s boundary", asyn
       frame?.(0);
     });
     expect(host.textContent).toBe("82");
-    paging.remove();
     await act(async () => {
-      resize();
+      paging.remove();
+      await Promise.resolve();
       frame?.(0);
     });
     expect(host.textContent).toBe("182");
