@@ -315,3 +315,12 @@ it("honors native region labels and lets the explicit guide label take precedenc
   );
   expect(host.querySelector("section")?.getAttribute("aria-label")).toBe("Review workflow");
 });
+
+it("routes native naming attributes to the progress list", () => {
+  act(() => root.render(<ProcessSteps steps={steps} aria-label="Import progress" />));
+  expect(host.querySelector("ol")?.getAttribute("aria-label")).toBe("Import progress");
+  expect(host.querySelector(".foundry-process")?.hasAttribute("aria-label")).toBe(false);
+  act(() => root.render(<ProcessSteps steps={steps} aria-labelledby="workflow-heading" />));
+  expect(host.querySelector("ol")?.getAttribute("aria-labelledby")).toBe("workflow-heading");
+  expect(host.querySelector(".foundry-process")?.hasAttribute("aria-labelledby")).toBe(false);
+});

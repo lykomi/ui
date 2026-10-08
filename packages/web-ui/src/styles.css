@@ -461,7 +461,8 @@ tr[data-active] > [data-pinned="cell"] {
   color: var(--success-foreground);
 }
 .foundry-process-step[data-current] .foundry-process-marker {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--process-tone) 12%, transparent);
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
 }
 .foundry-process-copy {
   display: grid;
@@ -737,4 +738,24 @@ tr[data-active] > [data-pinned="cell"] {
   background: var(--popover);
   color: var(--popover-foreground);
   border: 1px solid var(--border);
+}
+
+/* Touch users need inline blockers because hover explanations are unavailable. */
+@media (hover: none), (pointer: coarse) {
+  .foundry-process-compact-blocker {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    color: var(--foreground);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .foundry-process[data-variant="compact"] .foundry-process-detail {
+    flex: 1;
+    min-width: 0;
+  }
 }

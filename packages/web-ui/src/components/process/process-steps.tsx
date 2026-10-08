@@ -64,7 +64,9 @@ export function ProcessSteps({
   onStepSelect,
   variant = "compact",
   orientation = "responsive",
-  label = "Process progress",
+  label,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   className,
   ...props
 }: ProcessStepsProps) {
@@ -81,7 +83,11 @@ export function ProcessSteps({
       data-orientation={orientation}
     >
       <TooltipProvider delayDuration={200}>
-        <ol className="foundry-process-steps" aria-label={label}>
+        <ol
+          className="foundry-process-steps"
+          aria-label={label ?? ariaLabel ?? "Process progress"}
+          aria-labelledby={ariaLabelledBy}
+        >
           {steps.map((step, index) => {
             const Icon = icons[step.status];
             const current = step.id === currentStepId;
@@ -164,7 +170,7 @@ export function ProcessSteps({
                         variant === "compact" &&
                         step.status === "blocked" &&
                         typeof step.message === "string"
-                          ? "foundry-process-sr"
+                          ? "foundry-process-sr foundry-process-compact-blocker"
                           : "foundry-process-message"
                       }
                     >
