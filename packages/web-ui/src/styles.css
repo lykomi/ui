@@ -425,7 +425,7 @@ tr[data-active] > [data-pinned="cell"] {
   outline-offset: 2px;
 }
 .foundry-process-step[data-selected] .foundry-process-target {
-  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-color: var(--primary);
   background: color-mix(in srgb, var(--primary) 5%, var(--background));
 }
 .foundry-process-detail {
