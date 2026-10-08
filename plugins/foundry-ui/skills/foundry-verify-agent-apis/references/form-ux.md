@@ -304,8 +304,9 @@ independent tasks belong in a task list rather than a misleading sequence.
 - Preserve unsaved values while guidance is folded. Hosts persist drafts when
   navigating between steps; folding is not saving. Use theme semantic tokens,
   the accessible disclosure and reduced-motion behavior provided by the component.
-- Verify exports in the installed package and renderer scope before use. New
-  framework APIs must be published before downstream production consumers import them.
+- Native TypeScript verifies published installed-package exports. Stored JSX
+  separately verifies the deployed renderer scope. New framework APIs must be
+  published before downstream production consumers import them.
 
 ### Shared component API for builders
 

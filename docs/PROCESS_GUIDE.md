@@ -95,7 +95,8 @@ meaningful sequence, use a task list instead of connecting them into a path.
 Persistence and async work stay outside the component. It never fetches, saves,
 runs validation, infers permissions or silently advances. Local source previews
 may exercise new components; production consumers must wait for their published
-package release and renderer scope exposure before using a new API.
+package release before native imports; stored JSX also requires renderer scope
+exposure before using a new API.
 
 ## Research
 
