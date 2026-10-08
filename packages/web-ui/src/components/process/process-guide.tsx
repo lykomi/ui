@@ -61,7 +61,7 @@ export function ProcessGuide({
     selectedIndex >= 0 ? selectedIndex : steps.findIndex((step) => step.id === currentStepId);
   const finished = steps.every((step) => step.status === "complete" || step.status === "skipped");
   const step = steps[index];
-  const liveStep = steps.find((candidate) => candidate.id === currentStepId) ?? step;
+  const liveStep = steps.find((candidate) => candidate.id === currentStepId);
   if (!steps.length) return null;
   return (
     <section

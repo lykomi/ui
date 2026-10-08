@@ -197,3 +197,49 @@ it("explains selectable blocked steps on keyboard focus without losing navigatio
   act(() => button.click());
   expect(select).toHaveBeenCalledWith("analysis");
 });
+
+it("associates overview descriptions and messages with selectable steps", () => {
+  act(() =>
+    root.render(
+      <ProcessSteps
+        variant="overview"
+        steps={[
+          {
+            ...steps[1],
+            description: "Verify the detected equipment",
+            message: "Check nominal force",
+          },
+        ]}
+        onStepSelect={() => {}}
+      />,
+    ),
+  );
+  const button = host.querySelector("button")!;
+  const description = button
+    .getAttribute("aria-describedby")!
+    .split(" ")
+    .map((id) => document.getElementById(id)?.textContent)
+    .join(" ");
+  expect(description).toContain("Verify the detected equipment");
+  expect(description).toContain("Check nominal force");
+});
+
+it("does not announce inspection as progress when the actual current step is absent", () => {
+  for (const currentStepId of [undefined, "removed"]) {
+    for (const selectedStepId of ["docs", "setup"]) {
+      act(() =>
+        root.render(
+          <ProcessGuide
+            steps={steps}
+            currentStepId={currentStepId}
+            selectedStepId={selectedStepId}
+          />,
+        ),
+      );
+      expect(host.querySelector("h3")?.textContent).toBe(
+        selectedStepId === "docs" ? "Documents" : "Setup",
+      );
+      expect(host.querySelector('[role="status"]')?.textContent).toBe("");
+    }
+  }
+});

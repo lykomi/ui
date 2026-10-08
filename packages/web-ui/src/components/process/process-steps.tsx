@@ -88,6 +88,11 @@ export function ProcessSteps({
             const selected = step.id === inspectedId;
             const status = step.statusLabel ?? processStatusLabels[step.status];
             const messageId = step.message ? `${messagePrefix}-message-${index}` : undefined;
+            const descriptionId =
+              variant === "overview" && step.description
+                ? `${messagePrefix}-description-${index}`
+                : undefined;
+            const describedBy = [descriptionId, messageId].filter(Boolean).join(" ") || undefined;
             const content = (
               <>
                 <span className="foundry-process-marker" aria-hidden="true">
@@ -103,7 +108,9 @@ export function ProcessSteps({
                   <span className="foundry-process-label">{step.label}</span>
                   <span className="foundry-process-status">{status}</span>
                   {variant === "overview" && step.description ? (
-                    <span className="foundry-process-description">{step.description}</span>
+                    <span id={descriptionId} className="foundry-process-description">
+                      {step.description}
+                    </span>
                   ) : null}
                   {step.message ? (
                     <span
@@ -128,7 +135,7 @@ export function ProcessSteps({
                   onClick={() => onStepSelect(step.id)}
                   aria-pressed={selected}
                   aria-label={`${step.label}: ${status}`}
-                  aria-describedby={messageId}
+                  aria-describedby={describedBy}
                 >
                   {content}
                 </button>
@@ -137,7 +144,7 @@ export function ProcessSteps({
                   className="foundry-process-target"
                   tabIndex={step.status === "blocked" && step.message ? 0 : undefined}
                   aria-label={step.status === "blocked" ? `${step.label}: ${status}` : undefined}
-                  aria-describedby={messageId}
+                  aria-describedby={describedBy}
                 >
                   {content}
                 </div>
