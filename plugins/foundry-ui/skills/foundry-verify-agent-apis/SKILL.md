@@ -28,6 +28,11 @@ Training-data knowledge of this stack is unreliable. Before writing code, verify
 3. Diff what you fetched against what you were about to write; prefer the fetched pattern.
 4. Only then write code.
 
+For multi-step forms or resumable processes, read the wizard/process guidance
+in [the bundled UX contract](references/form-ux.md). It covers the shared
+`ProcessSteps`/`ProcessGuide` pattern, host-authored actions, returning to
+completed steps, locked-state explanations and checking API availability.
+
 ## Shared form UX contract
 
 Before authoring form UI, read [the framework form UX contract](references/form-ux.md).

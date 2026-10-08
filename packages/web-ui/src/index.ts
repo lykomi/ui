@@ -321,3 +321,12 @@ export {
   removeChatRun,
   type ChatRun,
 } from "./lib/chat-runs-store.ts";
+
+export { ProcessSteps, processStatusLabels } from "./components/process/process-steps.tsx";
+export type {
+  ProcessStep,
+  ProcessStepStatus,
+  ProcessStepsProps,
+} from "./components/process/process-steps.tsx";
+export { ProcessGuide } from "./components/process/process-guide.tsx";
+export type { GuidedProcessStep, ProcessGuideProps } from "./components/process/process-guide.tsx";

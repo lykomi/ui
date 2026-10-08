@@ -45,6 +45,11 @@ Check the current types in `@iloveagents/foundry-web-shell` (the package's
 `@assistant-ui/*` or `@ag-ui/*` APIs, run the `foundry-verify-agent-apis`
 skill first.
 
+For multi-step forms or resumable processes, read the wizard/process guidance
+in [the bundled UX contract](references/form-ux.md). It covers the shared
+`ProcessSteps`/`ProcessGuide` pattern, host-authored actions, returning to
+completed steps, locked-state explanations and checking API availability.
+
 ## Shared form UX contract
 
 Before authoring form UI, read [the framework form UX contract](references/form-ux.md).

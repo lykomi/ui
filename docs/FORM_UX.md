@@ -275,3 +275,32 @@ These are complementary references, not a single design-system benchmark.
 Paged bounded tables reserve a stable viewport when standard pagination has multiple pages, so the next/previous controls do not jump on a short final page. `stableHeight` explicitly overrides this behavior. Page changes return to the top while preserving the horizontal position; resizing columns preserves the current reading position.
 
 Use a single native horizontal scrollport per table. Bottom arrows provide additional access to off-screen columns; do not duplicate the horizontal scrollbar with a synchronized second track.
+
+## Wizards and process guidance
+
+Use `ProcessSteps` for a connected status rail and `ProcessGuide` for that rail
+plus a focused guidance/action panel. See [the component contract](PROCESS_GUIDE.md).
+Use a wizard for sequential input and a process overview for resumable work;
+independent tasks belong in a task list rather than a misleading sequence.
+
+- Start with `variant="compact"` and `guidance="collapsible"` when the guide
+  accompanies page content. Use `framed` to make the rail and guidance read as
+  one component; omit a duplicate frame inside an existing panel. Vertical
+  rails center as a group while labels remain aligned to the start.
+- Separate actual progress (`currentStepId`) from the inspected step
+  (`selectedStepId`). Allow explicit navigation to completed steps so users can
+  revise earlier inputs. Supply Back actions when useful. The host owns
+  validation, persistence, permissions and invalidation of dependent results.
+- Author the panel's `content` and `actions` with standard forms and Buttons.
+  Use filled Buttons for the main forward transaction; outlined Buttons for
+  revising completed input and Back. The component must not invent actions,
+  choose their variants, or silently run jobs when a step is inspected.
+- Use explicit complete/ready/running/blocked/error/skipped/pending statuses.
+  Compact locked steps use a short status; a `message` explains prerequisites
+  on hover and keyboard focus, in detailed view and unfolded guidance. Errors
+  remain visible. Do not communicate state through color alone.
+- Preserve unsaved values while guidance is folded. Hosts persist drafts when
+  navigating between steps; folding is not saving. Use theme semantic tokens,
+  the accessible disclosure and reduced-motion behavior provided by the component.
+- Verify exports in the installed package and renderer scope before use. New
+  framework APIs must be published before downstream production consumers import them.
