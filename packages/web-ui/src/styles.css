@@ -453,6 +453,9 @@ tr[data-active] > [data-pinned="cell"] {
   font-size: 0.8125rem;
   font-weight: 600;
 }
+.foundry-process-step[data-status="ready"] .foundry-process-marker {
+  color: var(--foreground);
+}
 .foundry-process-marker svg {
   width: 1rem;
   height: 1rem;
