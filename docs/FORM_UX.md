@@ -327,7 +327,7 @@ string `label`, and explicit `status`: `pending`, `ready`, `running`, `complete`
 an `onStepSelect` callback navigate; callbacks never advance actual progress.
 A non-selectable blocked step with a message exposes a focusable tooltip.
 
-`ProcessGuide` accepts the same props and adds per-step `title`, `content` and
+`ProcessGuide` accepts the same props and adds per-step `title` (text), plus `content` and
 `actions` (React nodes), plus these guide-level props:
 
 | Prop                                         | Contract                                                                                    |
