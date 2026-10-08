@@ -279,7 +279,8 @@ Use a single native horizontal scrollport per table. Bottom arrows provide addit
 ## Wizards and process guidance
 
 Use `ProcessSteps` for a connected status rail and `ProcessGuide` for that rail
-plus a focused guidance/action panel. See [the component contract](PROCESS_GUIDE.md).
+plus a focused guidance/action panel. This section is the maintained component
+contract; the standalone process guide and skill resources are generated from it.
 Use a wizard for sequential input and a process overview for resumable work;
 independent tasks belong in a task list rather than a misleading sequence.
 
@@ -295,6 +296,10 @@ independent tasks belong in a task list rather than a misleading sequence.
   Use filled Buttons for the main forward transaction; outlined Buttons for
   revising completed input and Back. The component must not invent actions,
   choose their variants, or silently run jobs when a step is inspected.
+- Announce actual current-step status changes even while an earlier step is
+  inspected; do not announce whole forms or every progress tick. Running work
+  needs honest task-specific progress rather than a percentage inferred from
+  the step count. Use a task list for work without a meaningful sequence.
 - Use explicit complete/ready/running/blocked/error/skipped/pending statuses.
   Compact locked steps use a short status; a `message` explains prerequisites
   on hover and keyboard focus, in detailed view and unfolded guidance. Errors
@@ -325,16 +330,16 @@ A non-selectable blocked step with a message exposes a focusable tooltip.
 `ProcessGuide` accepts the same props and adds per-step `title`, `content` and
 `actions` (React nodes), plus these guide-level props:
 
-| Prop | Contract |
-| --- | --- |
-| `framed` | Optional themed frame; default false. |
-| `headingLevel` | 2, 3 or 4; default 3. |
-| `guidance` | `expanded` (default) or `collapsible`. |
-| `defaultGuidanceOpen` | Initial uncontrolled disclosure state; default false. |
-| `guidanceOpen`, `onGuidanceOpenChange(open)` | Optional host-controlled disclosure state. |
-| `guidanceToggleLabel` | Localized disclosure text; default `Guidance & actions`. |
-| `formatPosition(index, total)` | Localized position text; index is one-based. |
-| `completion` | Content shown only when no step is inspected/current and every step is complete or skipped. |
+| Prop                                         | Contract                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `framed`                                     | Optional themed frame; default false.                                                       |
+| `headingLevel`                               | 2, 3 or 4; default 3.                                                                       |
+| `guidance`                                   | `expanded` (default) or `collapsible`.                                                      |
+| `defaultGuidanceOpen`                        | Initial uncontrolled disclosure state; default false.                                       |
+| `guidanceOpen`, `onGuidanceOpenChange(open)` | Optional host-controlled disclosure state.                                                  |
+| `guidanceToggleLabel`                        | Localized disclosure text; default `Guidance & actions`.                                    |
+| `formatPosition(index, total)`               | Localized position text; index is one-based.                                                |
+| `completion`                                 | Content shown only when no step is inspected/current and every step is complete or skipped. |
 
 The selected step falls back to the current step if its ID is absent/invalid.
 Changing inspected steps remounts their content; hosts must retain drafts outside
@@ -353,13 +358,25 @@ Example composition, after availability is verified:
   onStepSelect={setInspectedStep}
   steps={[
     {
-      id: "documents", label: "Documents", status: "complete", selectable: true,
-      title: "Select the source documents", content: documentFields,
-      actions: <Button variant="outline" onClick={openDocumentEditor}>Change documents</Button>,
+      id: "documents",
+      label: "Documents",
+      status: "complete",
+      selectable: true,
+      title: "Select the source documents",
+      content: documentFields,
+      actions: (
+        <Button variant="outline" onClick={openDocumentEditor}>
+          Change documents
+        </Button>
+      ),
     },
     {
-      id: "review", label: "Review", status: "ready", selectable: true,
-      description: "Check the findings before confirming.", content: reviewFields,
+      id: "review",
+      label: "Review",
+      status: "ready",
+      selectable: true,
+      description: "Check the findings before confirming.",
+      content: reviewFields,
       actions: <Button onClick={validateAndSaveReview}>Confirm review</Button>,
     },
   ]}
@@ -370,3 +387,16 @@ The host supplies the fields and handlers in this example, including saving
 changes and invalidating results after source edits. In native TypeScript import
 from the published package and its stylesheet. In stored JSX use only verified
 scope symbols without imports.
+
+### Design references
+
+- [USWDS step indicator](https://designsystem.digital.gov/components/step-indicator/):
+  distinguish current/completed/pending and keep explicit headings/navigation.
+- [GOV.UK multiple tasks](https://design-system.service.gov.uk/patterns/complete-multiple-tasks/):
+  resumable work needs clear task statuses and prerequisites.
+- [Carbon progress indicator](https://www.carbondesignsystem.com/building-blocks/core/components/progress-indicator/guidelines):
+  a stable sequence and validation are prerequisites for linear task guidance.
+- [WAI disclosure pattern](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/):
+  keyboard operation and expanded state for unfolding guidance.
+
+These inform the design; usability with real users still needs validation.
