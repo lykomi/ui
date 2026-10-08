@@ -17,7 +17,9 @@ export interface GuidedProcessStep extends ProcessStep {
   actions?: ReactNode;
 }
 export interface ProcessGuideProps
-  extends ProcessGuidanceOptions, Omit<ComponentPropsWithoutRef<"section">, "onSelect" | "title"> {
+  extends
+    ProcessGuidanceOptions,
+    Omit<ComponentPropsWithoutRef<"section">, "onSelect" | "title" | "children"> {
   steps: readonly GuidedProcessStep[];
   currentStepId?: string;
   selectedStepId?: string;

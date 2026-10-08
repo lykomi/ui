@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { Check, CircleAlert, Clock3, Loader2, LockKeyhole, Minus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip.tsx";
 import { cn } from "@iloveagents/foundry-web-primitives";
@@ -42,7 +42,10 @@ const icons = {
   error: CircleAlert,
   skipped: Minus,
 };
-export interface ProcessStepsProps extends Omit<ComponentPropsWithoutRef<"div">, "onSelect"> {
+export interface ProcessStepsProps extends Omit<
+  ComponentPropsWithoutRef<"div">,
+  "onSelect" | "children"
+> {
   steps: readonly ProcessStep[];
   /** The actual current process step, independent of the step being inspected. */
   currentStepId?: string;
@@ -65,6 +68,7 @@ export function ProcessSteps({
   className,
   ...props
 }: ProcessStepsProps) {
+  const messagePrefix = useId();
   const inspectedId = steps.some((step) => step.id === selectedStepId)
     ? selectedStepId
     : currentStepId;
@@ -83,6 +87,7 @@ export function ProcessSteps({
             const current = step.id === currentStepId;
             const selected = step.id === inspectedId;
             const status = step.statusLabel ?? processStatusLabels[step.status];
+            const messageId = step.message ? `${messagePrefix}-message-${index}` : undefined;
             const content = (
               <>
                 <span className="foundry-process-marker" aria-hidden="true">
@@ -102,6 +107,7 @@ export function ProcessSteps({
                   ) : null}
                   {step.message ? (
                     <span
+                      id={messageId}
                       className={
                         variant === "compact" && step.status === "blocked"
                           ? "foundry-process-sr"
@@ -114,6 +120,28 @@ export function ProcessSteps({
                 </span>
               </>
             );
+            const target =
+              onStepSelect && step.selectable ? (
+                <button
+                  type="button"
+                  className="foundry-process-target"
+                  onClick={() => onStepSelect(step.id)}
+                  aria-pressed={selected}
+                  aria-label={`${step.label}: ${status}`}
+                  aria-describedby={messageId}
+                >
+                  {content}
+                </button>
+              ) : (
+                <div
+                  className="foundry-process-target"
+                  tabIndex={step.status === "blocked" && step.message ? 0 : undefined}
+                  aria-label={step.status === "blocked" ? `${step.label}: ${status}` : undefined}
+                  aria-describedby={messageId}
+                >
+                  {content}
+                </div>
+              );
             return (
               <li
                 key={step.id}
@@ -123,35 +151,15 @@ export function ProcessSteps({
                 data-selected={selected || undefined}
                 aria-current={current ? "step" : undefined}
               >
-                {(!onStepSelect || !step.selectable) &&
-                step.status === "blocked" &&
-                step.message ? (
+                {step.status === "blocked" && step.message ? (
                   <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div
-                        className="foundry-process-target"
-                        tabIndex={0}
-                        aria-label={`${step.label}: ${status}`}
-                      >
-                        {content}
-                      </div>
-                    </TooltipTrigger>
+                    <TooltipTrigger asChild>{target}</TooltipTrigger>
                     <TooltipContent className="foundry-process-tooltip">
                       {step.message}
                     </TooltipContent>
                   </Tooltip>
-                ) : onStepSelect && step.selectable ? (
-                  <button
-                    type="button"
-                    className="foundry-process-target"
-                    onClick={() => onStepSelect(step.id)}
-                    aria-pressed={selected}
-                    aria-label={`${step.label}: ${status}`}
-                  >
-                    {content}
-                  </button>
                 ) : (
-                  <div className="foundry-process-target">{content}</div>
+                  target
                 )}
               </li>
             );

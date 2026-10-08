@@ -182,3 +182,18 @@ it("announces actual progress changes while an earlier step is inspected", () =>
   expect(host.querySelector("h3")?.textContent).toBe("Documents");
   expect(host.querySelector('[role="status"]')?.textContent).toBe("Setup: Needs attention");
 });
+
+it("explains selectable blocked steps on keyboard focus without losing navigation", async () => {
+  const select = vi.fn();
+  act(() =>
+    root.render(<ProcessSteps steps={[{ ...steps[2], selectable: true }]} onStepSelect={select} />),
+  );
+  const button = host.querySelector<HTMLButtonElement>("button")!;
+  expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe(
+    "Confirm setup first.",
+  );
+  await act(async () => button.focus());
+  expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Confirm setup first.");
+  act(() => button.click());
+  expect(select).toHaveBeenCalledWith("analysis");
+});
