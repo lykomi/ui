@@ -272,7 +272,7 @@ it("keeps rich step guidance outside navigation buttons", () => {
   expect(select).not.toHaveBeenCalled();
 });
 
-it("reveals invalid folded fields without removing them from form data", () => {
+it("reveals invalid folded fields with native errors and preserves form data", async () => {
   act(() =>
     root.render(
       <form>
@@ -289,6 +289,7 @@ it("reveals invalid folded fields without removing them from form data", () => {
   );
   const form = host.querySelector("form")!;
   const input = host.querySelector<HTMLInputElement>("input")!;
+  const report = vi.spyOn(input, "reportValidity").mockReturnValue(false);
   expect(input.closest("[hidden]")).not.toBeNull();
   let valid = true;
   act(() => {
@@ -297,6 +298,9 @@ it("reveals invalid folded fields without removing them from form data", () => {
   expect(valid).toBe(false);
   expect(input.closest("[hidden]")).toBeNull();
   expect(host.querySelector("input")).toBe(input);
+  await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  expect(report).toHaveBeenCalledOnce();
+  expect(document.activeElement).toBe(input);
   input.value = "Saved value";
   expect(new FormData(form).get("requiredValue")).toBe("Saved value");
 });

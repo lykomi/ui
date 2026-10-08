@@ -39,9 +39,12 @@ export function ProcessGuidance({
     // Preserve form values and validation; reveal the field instead of silently excluding it.
     event.preventDefault();
     changeOpen(true);
-    const control = event.target as HTMLElement;
+    const control = event.target as HTMLElement & { reportValidity?: () => boolean };
     requestAnimationFrame(() => {
-      if (control.isConnected && !control.closest("[hidden]")) control.focus();
+      if (control.isConnected && !control.closest("[hidden]")) {
+        control.focus();
+        control.reportValidity?.();
+      }
     });
   }
   return (
