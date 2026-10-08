@@ -324,3 +324,9 @@ it("routes native naming attributes to the progress list", () => {
   expect(host.querySelector("ol")?.getAttribute("aria-labelledby")).toBe("workflow-heading");
   expect(host.querySelector(".foundry-process")?.hasAttribute("aria-labelledby")).toBe(false);
 });
+
+it("shares a heading-based guide name with the progress list", () => {
+  act(() => root.render(<ProcessGuide steps={steps} aria-labelledby="workflow-heading" />));
+  expect(host.querySelector("section")?.getAttribute("aria-labelledby")).toBe("workflow-heading");
+  expect(host.querySelector("ol")?.getAttribute("aria-labelledby")).toBe("workflow-heading");
+});

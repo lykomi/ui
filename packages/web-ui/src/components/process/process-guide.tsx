@@ -45,6 +45,7 @@ export function ProcessGuide({
   orientation,
   label,
   "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   headingLevel = 3,
   formatPosition = (index, total) => `Step ${index} of ${total}`,
   completion,
@@ -70,6 +71,7 @@ export function ProcessGuide({
       {...props}
       className={cn("foundry-process-guide", className)}
       aria-label={accessibleLabel}
+      aria-labelledby={ariaLabelledBy}
       data-framed={framed || undefined}
     >
       <ProcessSteps
@@ -80,6 +82,7 @@ export function ProcessGuide({
         variant={variant}
         orientation={orientation}
         label={accessibleLabel}
+        aria-labelledby={ariaLabelledBy}
       />
       {/* Announce state changes, not whole forms or high-frequency progress updates. */}
       <span className="foundry-process-sr" role="status" aria-atomic="true">
