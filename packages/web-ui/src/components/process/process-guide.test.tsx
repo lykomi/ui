@@ -330,3 +330,37 @@ it("shares a heading-based guide name with the progress list", () => {
   expect(host.querySelector("section")?.getAttribute("aria-labelledby")).toBe("workflow-heading");
   expect(host.querySelector("ol")?.getAttribute("aria-labelledby")).toBe("workflow-heading");
 });
+
+it("focuses only the first invalid control when revealing folded guidance", async () => {
+  act(() =>
+    root.render(
+      <form>
+        <ProcessGuide
+          steps={[
+            {
+              ...steps[1],
+              content: (
+                <>
+                  <input name="first" required />
+                  <input name="second" required />
+                </>
+              ),
+            },
+          ]}
+          currentStepId="setup"
+          guidance="collapsible"
+        />
+      </form>,
+    ),
+  );
+  const inputs = host.querySelectorAll<HTMLInputElement>("input");
+  const firstReport = vi.spyOn(inputs[0], "reportValidity").mockReturnValue(false);
+  const secondReport = vi.spyOn(inputs[1], "reportValidity").mockReturnValue(false);
+  act(() => {
+    host.querySelector("form")!.checkValidity();
+  });
+  await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  expect(document.activeElement).toBe(inputs[0]);
+  expect(firstReport).toHaveBeenCalledOnce();
+  expect(secondReport).not.toHaveBeenCalled();
+});

@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import type { GuidedProcessStep } from "./process-guide.tsx";
 
@@ -26,6 +26,7 @@ export function ProcessGuidance({
   headingLevel: 2 | 3 | 4;
 }) {
   const id = useId();
+  const revealPending = useRef(false);
   const [localOpen, setLocalOpen] = useState(defaultGuidanceOpen);
   const collapsible = guidance === "collapsible";
   const open = !collapsible || (guidanceOpen ?? localOpen);
@@ -35,12 +36,18 @@ export function ProcessGuidance({
     onGuidanceOpenChange?.(next);
   }
   function revealInvalid(event: FormEvent<HTMLDivElement>) {
+    if (revealPending.current) {
+      event.preventDefault();
+      return;
+    }
     if (open) return;
     // Preserve form values and validation; reveal the field instead of silently excluding it.
     event.preventDefault();
+    revealPending.current = true;
     changeOpen(true);
     const control = event.target as HTMLElement & { reportValidity?: () => boolean };
     requestAnimationFrame(() => {
+      revealPending.current = false;
       if (control.isConnected && !control.closest("[hidden]")) {
         control.focus();
         control.reportValidity?.();
