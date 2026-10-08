@@ -467,7 +467,7 @@ tr[data-active] > [data-pinned="cell"] {
 }
 .foundry-process-status {
   font-size: 0.75rem;
-  color: var(--process-tone);
+  color: var(--foreground);
 }
 .foundry-process-description {
   color: var(--muted-foreground);
@@ -475,7 +475,7 @@ tr[data-active] > [data-pinned="cell"] {
   line-height: 1.5;
 }
 .foundry-process-message {
-  color: var(--process-tone);
+  color: var(--foreground);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
@@ -681,10 +681,10 @@ tr[data-active] > [data-pinned="cell"] {
 }
 
 .foundry-process-guidance-message[data-status="blocked"] {
-  color: var(--warning);
+  color: var(--foreground);
 }
 .foundry-process-guidance-message[data-status="error"] {
-  color: var(--destructive);
+  color: var(--foreground);
 }
 
 .foundry-process-target[tabindex]:focus-visible {
@@ -719,4 +719,14 @@ tr[data-active] > [data-pinned="cell"] {
     max-width: 100%;
     margin-inline: auto;
   }
+}
+
+.foundry-process-step[data-status="blocked"] .foundry-process-marker,
+.foundry-process-step[data-status="error"] .foundry-process-marker {
+  color: var(--foreground);
+}
+.foundry-process-tooltip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
 }

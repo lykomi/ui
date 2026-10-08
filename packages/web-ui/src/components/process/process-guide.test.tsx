@@ -25,7 +25,7 @@ it("exposes current process state independently of the inspected step", () => {
   );
   expect(host.querySelector('[aria-current="step"]')?.textContent).toContain("Setup");
   expect(host.querySelector("h3")?.textContent).toBe("Documents");
-  expect(host.querySelector('[role="status"]')?.textContent).toBe("Documents: Completed");
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("Setup: Ready");
 });
 it("only explicitly selectable steps navigate, and clicks do not advance the process", () => {
   const onStepSelect = vi.fn();
@@ -164,4 +164,21 @@ it("resets uncontrolled disclosure to the initial state when changing inspected 
     ),
   );
   expect(host.querySelector("button[aria-controls]")?.getAttribute("aria-expanded")).toBe("false");
+});
+
+it("announces actual progress changes while an earlier step is inspected", () => {
+  act(() =>
+    root.render(<ProcessGuide steps={steps} currentStepId="setup" selectedStepId="docs" />),
+  );
+  act(() =>
+    root.render(
+      <ProcessGuide
+        steps={steps.map((s) => (s.id === "setup" ? { ...s, status: "error" } : s))}
+        currentStepId="setup"
+        selectedStepId="docs"
+      />,
+    ),
+  );
+  expect(host.querySelector("h3")?.textContent).toBe("Documents");
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("Setup: Needs attention");
 });

@@ -4,7 +4,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../
 import { cn } from "@iloveagents/foundry-web-primitives";
 
 export type ProcessStepStatus =
-  "pending" | "ready" | "running" | "complete" | "blocked" | "error" | "skipped";
+  | "pending"
+  | "ready"
+  | "running"
+  | "complete"
+  | "blocked"
+  | "error"
+  | "skipped";
 export interface ProcessStep {
   /** Stable key, independent of the label or position. */
   id: string;
