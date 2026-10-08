@@ -153,12 +153,12 @@ export function ProcessSteps({
                 )}
                 <div className="foundry-process-detail">
                   {variant === "overview" && step.description ? (
-                    <span id={descriptionId} className="foundry-process-description">
+                    <div id={descriptionId} className="foundry-process-description">
                       {step.description}
-                    </span>
+                    </div>
                   ) : null}
                   {step.message ? (
-                    <span
+                    <div
                       id={messageId}
                       className={
                         variant === "compact" &&
@@ -169,7 +169,7 @@ export function ProcessSteps({
                       }
                     >
                       {step.message}
-                    </span>
+                    </div>
                   ) : null}
                 </div>
               </li>

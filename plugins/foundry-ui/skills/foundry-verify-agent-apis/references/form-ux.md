@@ -373,7 +373,7 @@ Example composition, after availability is verified:
       title: "Select the source documents",
       content: documentFields,
       actions: (
-        <Button variant="outline" onClick={openDocumentEditor}>
+        <Button type="button" variant="outline" onClick={openDocumentEditor}>
           Change documents
         </Button>
       ),
@@ -385,7 +385,11 @@ Example composition, after availability is verified:
       selectable: true,
       description: "Check the findings before confirming.",
       content: reviewFields,
-      actions: <Button onClick={validateAndSaveReview}>Confirm review</Button>,
+      actions: (
+        <Button type="button" onClick={validateAndSaveReview}>
+          Confirm review
+        </Button>
+      ),
     },
   ]}
 />
