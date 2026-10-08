@@ -38,6 +38,12 @@ components are generated:
 @source "../node_modules/@iloveagents/foundry-web-ui/dist";
 ```
 
+## Process guidance
+
+`ProcessSteps` provides a connected status rail. `ProcessGuide` adds focused
+guidance, content and actions for controlled wizards or resumable processes.
+See the [process guidance contract and examples](https://github.com/iLoveAgents/foundry-ui/blob/main/docs/PROCESS_GUIDE.md).
+
 ## Lists
 
 Every list renders through one `DataTable` family (TanStack Table underneath):
