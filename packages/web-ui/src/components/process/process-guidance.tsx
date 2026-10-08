@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import type { GuidedProcessStep } from "./process-guide.tsx";
 
@@ -30,9 +30,19 @@ export function ProcessGuidance({
   const collapsible = guidance === "collapsible";
   const open = !collapsible || (guidanceOpen ?? localOpen);
   const Heading = `h${headingLevel}` as "h2" | "h3" | "h4";
-  function toggle() {
-    if (guidanceOpen === undefined) setLocalOpen(!open);
-    onGuidanceOpenChange?.(!open);
+  function changeOpen(next: boolean) {
+    if (guidanceOpen === undefined) setLocalOpen(next);
+    onGuidanceOpenChange?.(next);
+  }
+  function revealInvalid(event: FormEvent<HTMLDivElement>) {
+    if (open) return;
+    // Preserve form values and validation; reveal the field instead of silently excluding it.
+    event.preventDefault();
+    changeOpen(true);
+    const control = event.target as HTMLElement;
+    requestAnimationFrame(() => {
+      if (control.isConnected && !control.closest("[hidden]")) control.focus();
+    });
   }
   return (
     <div
@@ -55,7 +65,7 @@ export function ProcessGuidance({
             className="foundry-process-disclosure"
             aria-expanded={open}
             aria-controls={`${id}-body`}
-            onClick={toggle}
+            onClick={() => changeOpen(!open)}
           >
             {guidanceToggleLabel}
             <ChevronDown aria-hidden="true" />
@@ -63,7 +73,12 @@ export function ProcessGuidance({
         ) : null}
       </div>
       {/* Keep forms mounted so folding guidance never discards unsaved input. */}
-      <div id={`${id}-body`} className="foundry-process-guidance-body" hidden={!open}>
+      <div
+        id={`${id}-body`}
+        className="foundry-process-guidance-body"
+        hidden={!open}
+        onInvalidCapture={revealInvalid}
+      >
         {step.message ? (
           <div className="foundry-process-guidance-message" data-status={step.status}>
             {step.message}

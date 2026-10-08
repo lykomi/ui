@@ -243,3 +243,60 @@ it("does not announce inspection as progress when the actual current step is abs
     }
   }
 });
+
+it("keeps rich step guidance outside navigation buttons", () => {
+  const select = vi.fn();
+  const follow = vi.fn();
+  act(() =>
+    root.render(
+      <ProcessSteps
+        variant="overview"
+        steps={[
+          {
+            ...steps[1],
+            description: (
+              <a href="#help" onClick={follow}>
+                Help
+              </a>
+            ),
+            message: <button>Resolve</button>,
+          },
+        ]}
+        onStepSelect={select}
+      />,
+    ),
+  );
+  expect(host.querySelector("button a, button button")).toBeNull();
+  act(() => host.querySelector<HTMLAnchorElement>("a")!.click());
+  expect(follow).toHaveBeenCalled();
+  expect(select).not.toHaveBeenCalled();
+});
+
+it("reveals invalid folded fields without removing them from form data", () => {
+  act(() =>
+    root.render(
+      <form>
+        <ProcessGuide
+          steps={[
+            { ...steps[1], content: <input name="requiredValue" required defaultValue="" /> },
+          ]}
+          currentStepId="setup"
+          guidance="collapsible"
+        />
+        <button type="submit">Save</button>
+      </form>,
+    ),
+  );
+  const form = host.querySelector("form")!;
+  const input = host.querySelector<HTMLInputElement>("input")!;
+  expect(input.closest("[hidden]")).not.toBeNull();
+  let valid = true;
+  act(() => {
+    valid = form.checkValidity();
+  });
+  expect(valid).toBe(false);
+  expect(input.closest("[hidden]")).toBeNull();
+  expect(host.querySelector("input")).toBe(input);
+  input.value = "Saved value";
+  expect(new FormData(form).get("requiredValue")).toBe("Saved value");
+});

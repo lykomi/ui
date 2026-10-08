@@ -424,9 +424,18 @@ tr[data-active] > [data-pinned="cell"] {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.foundry-process-step[data-selected] .foundry-process-target {
-  border-color: color-mix(in srgb, var(--process-tone) 35%, var(--border));
-  background: color-mix(in srgb, var(--process-tone) 5%, var(--background));
+.foundry-process-step[data-selected] .foundry-process-target::before {
+  content: "";
+  position: absolute;
+  inset-block: 6px;
+  inset-inline-start: 0;
+  width: var(--selection-marker-width, 2px);
+  background: var(--selection-marker-color, color-mix(in srgb, var(--primary) 55%, transparent));
+}
+.foundry-process-detail {
+  display: grid;
+  gap: calc(var(--spacing, 0.25rem) * 1);
+  padding-inline: calc(var(--spacing, 0.25rem) * 3);
 }
 .foundry-process-marker {
   position: relative;

@@ -42,7 +42,7 @@ components are generated:
 
 `ProcessSteps` provides a connected status rail. `ProcessGuide` adds focused
 guidance, content and actions for controlled wizards or resumable processes.
-See the [process guidance contract and examples](../../docs/PROCESS_GUIDE.md).
+See the [process guidance contract and examples](https://github.com/iLoveAgents/foundry-ui/blob/main/docs/PROCESS_GUIDE.md).
 
 ## Lists
 

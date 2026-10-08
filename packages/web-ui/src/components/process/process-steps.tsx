@@ -107,23 +107,6 @@ export function ProcessSteps({
                 <span className="foundry-process-copy">
                   <span className="foundry-process-label">{step.label}</span>
                   <span className="foundry-process-status">{status}</span>
-                  {variant === "overview" && step.description ? (
-                    <span id={descriptionId} className="foundry-process-description">
-                      {step.description}
-                    </span>
-                  ) : null}
-                  {step.message ? (
-                    <span
-                      id={messageId}
-                      className={
-                        variant === "compact" && step.status === "blocked"
-                          ? "foundry-process-sr"
-                          : "foundry-process-message"
-                      }
-                    >
-                      {step.message}
-                    </span>
-                  ) : null}
                 </span>
               </>
             );
@@ -158,7 +141,7 @@ export function ProcessSteps({
                 data-selected={selected || undefined}
                 aria-current={current ? "step" : undefined}
               >
-                {step.status === "blocked" && step.message ? (
+                {step.status === "blocked" && typeof step.message === "string" && step.message ? (
                   <Tooltip>
                     <TooltipTrigger asChild>{target}</TooltipTrigger>
                     <TooltipContent className="foundry-process-tooltip">
@@ -168,6 +151,27 @@ export function ProcessSteps({
                 ) : (
                   target
                 )}
+                <div className="foundry-process-detail">
+                  {variant === "overview" && step.description ? (
+                    <span id={descriptionId} className="foundry-process-description">
+                      {step.description}
+                    </span>
+                  ) : null}
+                  {step.message ? (
+                    <span
+                      id={messageId}
+                      className={
+                        variant === "compact" &&
+                        step.status === "blocked" &&
+                        typeof step.message === "string"
+                          ? "foundry-process-sr"
+                          : "foundry-process-message"
+                      }
+                    >
+                      {step.message}
+                    </span>
+                  ) : null}
+                </div>
               </li>
             );
           })}
