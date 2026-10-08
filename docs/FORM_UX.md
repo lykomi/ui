@@ -304,3 +304,68 @@ independent tasks belong in a task list rather than a misleading sequence.
   the accessible disclosure and reduced-motion behavior provided by the component.
 - Verify exports in the installed package and renderer scope before use. New
   framework APIs must be published before downstream production consumers import them.
+
+### Shared component API for builders
+
+This self-contained contract is available in the bundled skill reference;
+no framework repository checkout is needed. Verify the installed/deployed API
+before authoring because a host may expose an earlier version.
+
+`ProcessSteps` accepts `steps`, `currentStepId`, `selectedStepId`,
+`onStepSelect(id)`, `variant` (`compact` or `overview`, default `compact`),
+`orientation` (`responsive` or `vertical`, default `responsive`) and an accessible
+`label` (default `Process progress`). Each step has a stable unique string `id`,
+string `label`, and explicit `status`: `pending`, `ready`, `running`, `complete`,
+`blocked`, `error` or `skipped`. Optional fields are `statusLabel` (localized text),
+`description`, `message` and `selectable`. Only explicitly selectable steps with
+an `onStepSelect` callback navigate; callbacks never advance actual progress.
+A non-selectable blocked step with a message exposes a focusable tooltip.
+
+`ProcessGuide` accepts the same props and adds per-step `title`, `content` and
+`actions` (React nodes), plus these guide-level props:
+
+| Prop | Contract |
+| --- | --- |
+| `framed` | Optional themed frame; default false. |
+| `headingLevel` | 2, 3 or 4; default 3. |
+| `guidance` | `expanded` (default) or `collapsible`. |
+| `defaultGuidanceOpen` | Initial uncontrolled disclosure state; default false. |
+| `guidanceOpen`, `onGuidanceOpenChange(open)` | Optional host-controlled disclosure state. |
+| `guidanceToggleLabel` | Localized disclosure text; default `Guidance & actions`. |
+| `formatPosition(index, total)` | Localized position text; index is one-based. |
+| `completion` | Content shown only when no step is inspected/current and every step is complete or skipped. |
+
+The selected step falls back to the current step if its ID is absent/invalid.
+Changing inspected steps remounts their content; hosts must retain drafts outside
+that content. Folding guidance keeps the same inputs mounted. Empty arrays render
+nothing. The component never fetches, saves, authorizes, validates or runs a job.
+
+Example composition, after availability is verified:
+
+```jsx
+<ProcessGuide
+  framed
+  variant="compact"
+  guidance="collapsible"
+  currentStepId="review"
+  selectedStepId={inspectedStep}
+  onStepSelect={setInspectedStep}
+  steps={[
+    {
+      id: "documents", label: "Documents", status: "complete", selectable: true,
+      title: "Select the source documents", content: documentFields,
+      actions: <Button variant="outline" onClick={openDocumentEditor}>Change documents</Button>,
+    },
+    {
+      id: "review", label: "Review", status: "ready", selectable: true,
+      description: "Check the findings before confirming.", content: reviewFields,
+      actions: <Button onClick={validateAndSaveReview}>Confirm review</Button>,
+    },
+  ]}
+/>
+```
+
+The host supplies the fields and handlers in this example, including saving
+changes and invalidating results after source edits. In native TypeScript import
+from the published package and its stylesheet. In stored JSX use only verified
+scope symbols without imports.
