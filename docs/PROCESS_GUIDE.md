@@ -12,6 +12,10 @@ independent tasks belong in a task list rather than a misleading sequence.
   accompanies page content. Use `framed` to make the rail and guidance read as
   one component; omit a duplicate frame inside an existing panel. Vertical
   rails center as a group while labels remain aligned to the start.
+- Highlight the inspected wizard step with a primary-themed border and subtle
+  fill, making its connection to the guidance panel easy to recognize. Keep
+  semantic status colors on the status markers and connectors; inspection never
+  changes status. This boxed navigation treatment is intentional.
 - Separate actual progress (`currentStepId`) from the inspected step
   (`selectedStepId`). Allow explicit navigation to completed steps so users can
   revise earlier inputs. Supply Back actions when useful. The host owns

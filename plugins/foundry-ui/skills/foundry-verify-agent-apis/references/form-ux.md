@@ -159,7 +159,9 @@ Use one quiet leading marker for selected blocks, fields, tabs and item panels:
 to the theme. Selection changes no layout geometry and adds no colored outer
 frame, fill or shadow. Workbench chrome uses a neutral theme border. Keyboard
 focus, input validation, drop targets and pending-review frames keep their
-respective semantics. Temporary windows remain identifiable through the unpinned
+respective semantics. A process wizard uses a boxed primary highlight for its
+inspected step, as specified below; that task-navigation control is the explicit
+exception to the leading marker. Temporary windows remain identifiable through the unpinned
 icon, accessible name and tooltip.
 
 `ReadOnlyField label hint emptyLabel` renders a semantic label/value pair with
@@ -290,6 +292,10 @@ independent tasks belong in a task list rather than a misleading sequence.
   accompanies page content. Use `framed` to make the rail and guidance read as
   one component; omit a duplicate frame inside an existing panel. Vertical
   rails center as a group while labels remain aligned to the start.
+- Highlight the inspected wizard step with a primary-themed border and subtle
+  fill, making its connection to the guidance panel easy to recognize. Keep
+  semantic status colors on the status markers and connectors; inspection never
+  changes status. This boxed navigation treatment is intentional.
 - Separate actual progress (`currentStepId`) from the inspected step
   (`selectedStepId`). Allow explicit navigation to completed steps so users can
   revise earlier inputs. Supply Back actions when useful. The host owns
