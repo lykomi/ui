@@ -43,7 +43,8 @@ export function ProcessGuide({
   onStepSelect,
   variant,
   orientation,
-  label = "Process progress",
+  label,
+  "aria-label": ariaLabel,
   headingLevel = 3,
   formatPosition = (index, total) => `Step ${index} of ${total}`,
   completion,
@@ -56,6 +57,7 @@ export function ProcessGuide({
   className,
   ...props
 }: ProcessGuideProps) {
+  const accessibleLabel = label ?? ariaLabel ?? "Process progress";
   const selectedIndex = steps.findIndex((step) => step.id === selectedStepId);
   const index =
     selectedIndex >= 0 ? selectedIndex : steps.findIndex((step) => step.id === currentStepId);
@@ -67,7 +69,7 @@ export function ProcessGuide({
     <section
       {...props}
       className={cn("foundry-process-guide", className)}
-      aria-label={label}
+      aria-label={accessibleLabel}
       data-framed={framed || undefined}
     >
       <ProcessSteps
@@ -77,7 +79,7 @@ export function ProcessGuide({
         onStepSelect={onStepSelect}
         variant={variant}
         orientation={orientation}
-        label={label}
+        label={accessibleLabel}
       />
       {/* Announce state changes, not whole forms or high-frequency progress updates. */}
       <span className="foundry-process-sr" role="status" aria-atomic="true">

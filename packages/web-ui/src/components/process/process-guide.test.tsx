@@ -304,3 +304,14 @@ it("reveals invalid folded fields with native errors and preserves form data", a
   input.value = "Saved value";
   expect(new FormData(form).get("requiredValue")).toBe("Saved value");
 });
+
+it("honors native region labels and lets the explicit guide label take precedence", () => {
+  act(() => root.render(<ProcessGuide steps={steps} aria-label="Import workflow" />));
+  expect(host.querySelector("section")?.getAttribute("aria-label")).toBe("Import workflow");
+  act(() =>
+    root.render(
+      <ProcessGuide steps={steps} aria-label="Import workflow" label="Review workflow" />,
+    ),
+  );
+  expect(host.querySelector("section")?.getAttribute("aria-label")).toBe("Review workflow");
+});
