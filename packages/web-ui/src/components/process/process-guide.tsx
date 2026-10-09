@@ -27,6 +27,7 @@ export interface ProcessGuideProps
   variant?: ProcessStepsProps["variant"];
   orientation?: ProcessStepsProps["orientation"];
   density?: ProcessStepsProps["density"];
+  showChevrons?: ProcessStepsProps["showChevrons"];
   /** Show the numeric position in guidance; off when the rail already conveys it. */
   showPosition?: boolean;
   label?: string;
@@ -47,6 +48,7 @@ export function ProcessGuide({
   variant,
   orientation,
   density,
+  showChevrons,
   showPosition = false,
   label,
   "aria-label": ariaLabel,
@@ -87,6 +89,7 @@ export function ProcessGuide({
         variant={variant}
         orientation={orientation}
         density={density}
+        showChevrons={showChevrons}
         label={accessibleLabel}
         aria-labelledby={ariaLabelledBy}
       />

@@ -843,3 +843,43 @@ tr[data-active] > [data-pinned="cell"] {
     inset-inline-start: calc(var(--spacing, 0.25rem) * 4 + 2px);
   }
 }
+
+/* Optional chevrons occupy their own gap; progress stays on the rail above. */
+.foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons] {
+  --process-chevron-gap: calc(var(--spacing, 0.25rem) * 8);
+  --process-chevron-size: calc(var(--spacing, 0.25rem) * 2);
+}
+.foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons][data-density="compact"] {
+  --process-chevron-gap: calc(var(--spacing, 0.25rem) * 6);
+  --process-chevron-size: calc(var(--spacing, 0.25rem) * 1.25);
+}
+@container (min-width: 38.001rem) {
+  .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
+    .foundry-process-step:not(:last-child)
+    .foundry-process-target {
+    width: calc(100% - var(--process-chevron-gap));
+  }
+  .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
+    .foundry-process-step:not(:last-child)
+    .foundry-process-target::after {
+    content: "";
+    display: block;
+    position: absolute;
+    pointer-events: none;
+    width: var(--process-chevron-size);
+    height: var(--process-chevron-size);
+    top: 50%;
+    inset-inline-start: auto;
+    inset-inline-end: calc((var(--process-chevron-gap) + var(--process-chevron-size)) / -2);
+    background: transparent;
+    border-right: 1px solid var(--muted-foreground);
+    border-bottom: 1px solid var(--muted-foreground);
+    transform: translateY(-50%) rotate(-45deg);
+    opacity: 0.65;
+  }
+  .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]:dir(rtl)
+    .foundry-process-step:not(:last-child)
+    .foundry-process-target::after {
+    transform: translateY(-50%) rotate(135deg);
+  }
+}

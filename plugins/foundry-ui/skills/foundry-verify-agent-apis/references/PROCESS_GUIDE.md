@@ -51,13 +51,19 @@ before authoring because a host may expose an earlier version.
 `ProcessSteps` accepts `steps`, `currentStepId`, `selectedStepId`,
 `onStepSelect(id)`, `variant` (`compact` or `overview`, default `compact`),
 `orientation` (`responsive` or `vertical`, default `responsive`),
-`density` (`comfortable` or `compact`, default `comfortable`) and an accessible
+`density` (`comfortable` or `compact`, default `comfortable`), optional
+`showChevrons` (boolean, default false) and an accessible
 `label` (default `Process progress`). Each step has a stable unique string `id`,
 string `label`, and explicit `status`: `pending`, `ready`, `running`, `complete`,
 `blocked`, `error` or `skipped`. Optional fields are `statusLabel` (localized text),
 `description`, `message` and `selectable`. Only explicitly selectable steps with
 an `onStepSelect` callback navigate; callbacks never advance actual progress.
 A non-selectable blocked step with a message exposes a focusable tooltip.
+
+`showChevrons` adds decorative separators only to horizontal `compact` navigation.
+Their size and reserved gap follow `density`; the progress track stays above the
+steps. Narrow or explicitly vertical layouts retain their connected vertical
+track, and `overview` is unchanged. Chevrons convey sequence, never status.
 
 Use standalone `ProcessSteps density="compact"` for progress-only display: one
 marker and label per step, with accessible status text. There is no guidance

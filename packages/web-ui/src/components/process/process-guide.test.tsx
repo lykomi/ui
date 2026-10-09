@@ -420,3 +420,10 @@ it("expanded guidance omits redundant counts and keeps the owning step label", (
   expect(host.querySelector(".foundry-process-guidance-body")?.hasAttribute("hidden")).toBe(false);
   expect(host.querySelector(".foundry-process-disclosure")).toBeNull();
 });
+
+it("keeps chevrons opt-in and forwards the option from guidance to progress", () => {
+  act(() => root.render(<ProcessGuide steps={steps} currentStepId="setup" />));
+  expect(host.querySelector("[data-chevrons]")).toBeNull();
+  act(() => root.render(<ProcessGuide steps={steps} currentStepId="setup" showChevrons />));
+  expect(host.querySelector(".foundry-process")?.hasAttribute("data-chevrons")).toBe(true);
+});
