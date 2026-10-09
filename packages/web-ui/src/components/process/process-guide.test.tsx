@@ -90,6 +90,7 @@ it("supports translated statuses and position labels", () => {
         steps={[{ ...steps[1], statusLabel: "Bereit" }]}
         currentStepId="setup"
         headingLevel={2}
+        showPosition
         formatPosition={(n, total) => `Schritt ${n} von ${total}`}
       />,
     ),
@@ -388,4 +389,26 @@ it("marks connections complete only when both adjacent steps are complete", () =
     ),
   );
   expect(host.querySelectorAll("li")[2].hasAttribute("data-connection-complete")).toBe(true);
+});
+
+it("compact standalone progress delegates clicks to the host and retains accessible status", () => {
+  const action = vi.fn();
+  act(() => root.render(<ProcessSteps steps={steps} density="compact" onStepSelect={action} />));
+  const button = host.querySelector(
+    'button[aria-label="Documents: Completed"]',
+  ) as HTMLButtonElement;
+  act(() => button.click());
+  expect(action).toHaveBeenCalledWith("docs");
+  expect(host.querySelector(".foundry-process-focus")).toBeNull();
+  expect(host.querySelector('[aria-current="step"]')).toBeNull();
+});
+it("expanded guidance omits redundant counts and keeps the owning step label", () => {
+  const guided = [
+    { ...steps[0], title: "Choose source files", content: <input aria-label="Source" /> },
+  ];
+  act(() => root.render(<ProcessGuide steps={guided} currentStepId="docs" />));
+  expect(host.querySelector(".foundry-process-position")?.textContent).toBe("Documents");
+  expect(host.textContent).not.toContain("Step 1 of 1");
+  expect(host.querySelector(".foundry-process-guidance-body")?.hasAttribute("hidden")).toBe(false);
+  expect(host.querySelector(".foundry-process-disclosure")).toBeNull();
 });

@@ -807,3 +807,41 @@ tr[data-active] > [data-pinned="cell"] {
     min-width: 0;
   }
 }
+
+/* Progress-only density: retain status in accessible text without a second row. */
+.foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-target {
+  padding: calc(var(--spacing, 0.25rem) * 2);
+  align-items: center;
+  min-height: calc(var(--spacing, 0.25rem) * 10);
+}
+.foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@container (min-width: 38.001rem) {
+  .foundry-process[data-variant="compact"][data-density="compact"][data-orientation="responsive"]
+    .foundry-process-step {
+    padding-block-start: calc(var(--spacing, 0.25rem) * 2);
+  }
+}
+.foundry-process[data-variant="compact"][data-density="compact"][data-orientation="vertical"]
+  .foundry-process-step:not(:last-child)::after {
+  top: calc(var(--spacing, 0.25rem) * 8);
+  bottom: calc(var(--spacing, 0.25rem) * -3);
+  inset-inline-start: calc(var(--spacing, 0.25rem) * 4 + 2px);
+}
+@container (max-width: 38rem) {
+  .foundry-process[data-variant="compact"][data-density="compact"]
+    .foundry-process-step:not(:last-child)::after {
+    top: calc(var(--spacing, 0.25rem) * 8);
+    bottom: calc(var(--spacing, 0.25rem) * -3);
+    inset-inline-start: calc(var(--spacing, 0.25rem) * 4 + 2px);
+  }
+}
