@@ -1,26 +1,21 @@
 import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import {
-  Check,
+  CircleCheck,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
   Clock3,
   Loader2,
   LockKeyhole,
-  Minus,
+  CircleMinus,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip.tsx";
 import { useProcessScroll } from "./use-process-scroll.ts";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 
 export type ProcessStepStatus =
-  | "pending"
-  | "ready"
-  | "running"
-  | "complete"
-  | "blocked"
-  | "error"
-  | "skipped";
+  /** Awaiting availability or scheduling; not yet ready to execute. */
+  "pending" | "ready" | "running" | "complete" | "blocked" | "error" | "skipped";
 export interface ProcessStep {
   /** Stable key, independent of the label or position. */
   id: string;
@@ -28,6 +23,10 @@ export interface ProcessStep {
   status: ProcessStepStatus;
   /** Override the visible, accessible status label (also for localization). */
   statusLabel?: string;
+  /** Optionality is independent of prerequisites and execution status. */
+  optional?: boolean;
+  /** Localized optionality label; defaults to Optional. */
+  optionalLabel?: string;
   description?: ReactNode;
   /** Explain a prerequisite or failure. Never hide this behind a tooltip. */
   message?: ReactNode;
@@ -35,7 +34,7 @@ export interface ProcessStep {
   selectable?: boolean;
 }
 export const processStatusLabels: Record<ProcessStepStatus, string> = {
-  pending: "Not started",
+  pending: "Waiting",
   ready: "Ready",
   running: "In progress",
   complete: "Completed",
@@ -43,15 +42,29 @@ export const processStatusLabels: Record<ProcessStepStatus, string> = {
   error: "Needs attention",
   skipped: "Skipped",
 };
-const icons = {
+const statusIcons = {
   pending: Clock3,
-  ready: null,
   running: Loader2,
-  complete: Check,
+  complete: CircleCheck,
   blocked: LockKeyhole,
   error: CircleAlert,
-  skipped: Minus,
+  skipped: CircleMinus,
 };
+
+/** Status remains visible when a completed or skipped step is inspected again. */
+function ProcessStatusIcon({ status, selected }: { status: ProcessStepStatus; selected: boolean }) {
+  if (status === "ready") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="10" />
+        {selected ? <circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" /> : null}
+      </svg>
+    );
+  }
+  const Icon = statusIcons[status];
+  return <Icon className={status === "running" ? "foundry-process-spinner" : undefined} />;
+}
+
 export interface ProcessStepsProps extends Omit<
   ComponentPropsWithoutRef<"div">,
   "onSelect" | "children"
@@ -59,6 +72,7 @@ export interface ProcessStepsProps extends Omit<
   steps: readonly ProcessStep[];
   /** The actual current process step, independent of the step being inspected. */
   currentStepId?: string;
+  /** Step being inspected; selection never changes execution status. */
   selectedStepId?: string;
   onStepSelect?: (id: string) => void;
   variant?: "compact" | "overview";
@@ -164,10 +178,13 @@ export function ProcessSteps({
               aria-labelledby={ariaLabelledBy}
             >
               {steps.map((step, index) => {
-                const Icon = icons[step.status];
                 const current = step.id === currentStepId;
                 const selected = step.id === inspectedId;
                 const status = step.statusLabel ?? processStatusLabels[step.status];
+                const optionalLabel = step.optional
+                  ? (step.optionalLabel ?? "Optional")
+                  : undefined;
+                const accessibleStatus = `${step.label}: ${status}${optionalLabel ? `, ${optionalLabel}` : ""}`;
                 const messageId = step.message ? `${messagePrefix}-message-${index}` : undefined;
                 const descriptionId =
                   variant === "overview" && step.description
@@ -178,18 +195,15 @@ export function ProcessSteps({
                 const content = (
                   <>
                     <span className="foundry-process-marker" aria-hidden="true">
-                      {Icon ? (
-                        <Icon
-                          className={
-                            step.status === "running" ? "foundry-process-spinner" : undefined
-                          }
-                        />
-                      ) : (
-                        index + 1
-                      )}
+                      <ProcessStatusIcon status={step.status} selected={selected} />
                     </span>
                     <span className="foundry-process-copy">
-                      <span className="foundry-process-label">{step.label}</span>
+                      <span className="foundry-process-name">
+                        <span className="foundry-process-label">{step.label}</span>
+                        {optionalLabel ? (
+                          <span className="foundry-process-optional">{optionalLabel}</span>
+                        ) : null}
+                      </span>
                       <span className="foundry-process-status">{status}</span>
                     </span>
                   </>
@@ -201,7 +215,7 @@ export function ProcessSteps({
                       className="foundry-process-target"
                       onClick={() => onStepSelect(step.id)}
                       aria-pressed={selectedStepId !== undefined ? selected : undefined}
-                      aria-label={`${step.label}: ${status}`}
+                      aria-label={accessibleStatus}
                       aria-describedby={describedBy}
                     >
                       {content}
@@ -210,9 +224,7 @@ export function ProcessSteps({
                     <div
                       className="foundry-process-target"
                       tabIndex={step.status === "blocked" && step.message ? 0 : undefined}
-                      aria-label={
-                        step.status === "blocked" ? `${step.label}: ${status}` : undefined
-                      }
+                      aria-label={step.status === "blocked" ? accessibleStatus : undefined}
                       aria-describedby={describedBy}
                     >
                       {content}

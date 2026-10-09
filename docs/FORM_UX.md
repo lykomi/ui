@@ -320,6 +320,26 @@ independent tasks belong in a task list rather than a misleading sequence.
   separately verifies the deployed renderer scope. New framework APIs must be
   published before downstream production consumers import them.
 
+### Status symbols, selection and optionality
+
+Use these exact `ProcessStepStatus` values; do not infer execution state from selection or optionality.
+
+| `status` | Default label | Symbol | Meaning |
+| --- | --- | --- | --- |
+| `pending` | Waiting | Outlined clock | Awaiting availability or scheduling; not ready yet. Use `blocked` for a known preventing condition. |
+| `ready` | Ready | Open circle | Available to start, but not started. The inspected ready step adds a centered dot. |
+| `running` | In progress | Spinner | Execution has actually started; honor reduced motion. |
+| `complete` | Completed | Outlined check-circle | Work was completed and accepted by the host. |
+| `blocked` | Blocked | Standalone lock | A prerequisite or permission prevents execution; explain it with `message`. |
+| `error` | Needs attention | Outlined alert-circle | Failure or invalid result requires correction or retry; keep `message` visible. |
+| `skipped` | Skipped | Outlined minus-circle | The host recorded an explicit skip decision; do not present it as completed work. |
+
+`currentStepId` is the actual process position. `selectedStepId` is the step being inspected; its surface highlights which guidance belongs to it. The dot is an additional selection cue only for `ready`: inspecting a completed, running, blocked or skipped step preserves its status symbol. Without a valid selection, the component inspects the current step. Avoid an ambiguous `active` or `disabled` boolean for these distinct concepts.
+
+`selectable` explicitly permits inspection when `onStepSelect` is provided. It never means executable: a host can allow inspection of a blocked step without permitting its action. Status and `optional` never authorize navigation by themselves.
+
+Set `optional: true` independently of status. The default visible label is `Optional`; localize it using `optionalLabel`. It remains visible at compact density and is included in interactive accessible names. An optional step can still be blocked. Provide host-owned Skip/Back actions through the guidance `actions` slot: the host checks policy, persists the decision, sets `status: "skipped"`, and chooses the new `currentStepId`. There is no automatic skip, persistence or prerequisite resolution in this component. Completion accepts both `complete` and `skipped`, but neither selection nor optionality alone marks a process finished.
+
 ### Shared component API for builders
 
 This self-contained contract is available in the bundled skill reference;
@@ -334,7 +354,7 @@ before authoring because a host may expose an earlier version.
 `label` (default `Process progress`). Each step has a stable unique string `id`,
 string `label`, and explicit `status`: `pending`, `ready`, `running`, `complete`,
 `blocked`, `error` or `skipped`. Optional fields are `statusLabel` (localized text),
-`description`, `message` and `selectable`. Only explicitly selectable steps with
+`description`, `message`, `selectable`, `optional` and `optionalLabel`. Only explicitly selectable steps with
 an `onStepSelect` callback navigate; callbacks never advance actual progress.
 A non-selectable blocked step with a message exposes a focusable tooltip.
 
