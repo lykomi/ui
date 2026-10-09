@@ -157,9 +157,9 @@ Use one quiet leading marker for selected blocks, fields, tabs and item panels:
 to the theme. Selection changes no layout geometry and adds no colored outer
 frame, fill or shadow. Workbench chrome uses a neutral theme border. Keyboard
 focus, input validation, drop targets and pending-review frames keep their
-respective semantics. A process wizard uses a subtle primary surface for its
-inspected step, as specified below; that task-navigation control is the explicit
-exception to the leading marker. Temporary windows remain identifiable through the unpinned
+respective semantics. Compact process navigation uses a subtle primary surface for its
+inspected step; overview navigation retains a primary border and subtle fill.
+These task-navigation controls are the explicit exception to the leading marker. Temporary windows remain identifiable through the unpinned
 icon, accessible name and tooltip.
 
 `ReadOnlyField label hint emptyLabel` renders a semantic label/value pair with
