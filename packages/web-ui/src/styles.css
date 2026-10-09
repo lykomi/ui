@@ -567,15 +567,16 @@ tr[data-active] > [data-pinned="cell"] {
   width: 1px;
 }
 @container (max-width: 38rem) {
-  .foundry-process-steps {
+  .foundry-process:not([data-orientation="horizontal"]) .foundry-process-steps {
     flex-direction: column;
     gap: calc(var(--spacing, 0.25rem) * 2);
   }
-  .foundry-process-target {
+  .foundry-process:not([data-orientation="horizontal"]) .foundry-process-target {
     flex-direction: row;
     align-items: flex-start;
   }
-  .foundry-process-step:not(:last-child)::after {
+  .foundry-process:not([data-orientation="horizontal"])
+    .foundry-process-step:not(:last-child)::after {
     top: calc(var(--spacing, 0.25rem) * 11);
     bottom: calc(var(--spacing, 0.25rem) * -5);
     inset-inline-start: calc(var(--spacing, 0.25rem) * 7 + 1px);
@@ -706,10 +707,12 @@ tr[data-active] > [data-pinned="cell"] {
   display: none;
 }
 @container (max-width: 38rem) {
-  .foundry-process[data-variant="compact"] .foundry-process-steps {
+  .foundry-process:not([data-orientation="horizontal"])[data-variant="compact"]
+    .foundry-process-steps {
     gap: calc(var(--spacing, 0.25rem) * 2);
   }
-  .foundry-process[data-variant="compact"] .foundry-process-step::before {
+  .foundry-process:not([data-orientation="horizontal"])[data-variant="compact"]
+    .foundry-process-step::before {
     display: none;
   }
 }
@@ -724,7 +727,8 @@ tr[data-active] > [data-pinned="cell"] {
   height: auto;
 }
 @container (max-width: 38rem) {
-  .foundry-process[data-variant="compact"] .foundry-process-step:not(:last-child)::after {
+  .foundry-process:not([data-orientation="horizontal"])[data-variant="compact"]
+    .foundry-process-step:not(:last-child)::after {
     display: block;
     top: calc(var(--spacing, 0.25rem) * 9);
     bottom: calc(var(--spacing, 0.25rem) * -4);
@@ -769,7 +773,7 @@ tr[data-active] > [data-pinned="cell"] {
   margin-inline: auto;
 }
 @container (max-width: 38rem) {
-  .foundry-process-steps {
+  .foundry-process:not([data-orientation="horizontal"]) .foundry-process-steps {
     width: fit-content;
     max-width: 100%;
     margin-inline: auto;
@@ -836,7 +840,9 @@ tr[data-active] > [data-pinned="cell"] {
   inset-inline-start: calc(var(--spacing, 0.25rem) * 4 + 2px);
 }
 @container (max-width: 38rem) {
-  .foundry-process[data-variant="compact"][data-density="compact"]
+  .foundry-process:not(
+      [data-orientation="horizontal"]
+    )[data-variant="compact"][data-density="compact"]
     .foundry-process-step:not(:last-child)::after {
     top: calc(var(--spacing, 0.25rem) * 8);
     bottom: calc(var(--spacing, 0.25rem) * -3);
@@ -845,11 +851,17 @@ tr[data-active] > [data-pinned="cell"] {
 }
 
 /* Optional chevrons occupy their own gap; progress stays on the rail above. */
-.foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons] {
+.foundry-process[data-variant="compact"]:is(
+    [data-orientation="responsive"],
+    [data-orientation="horizontal"]
+  )[data-chevrons] {
   --process-chevron-gap: calc(var(--spacing, 0.25rem) * 8);
   --process-chevron-size: calc(var(--spacing, 0.25rem) * 2);
 }
-.foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons][data-density="compact"] {
+.foundry-process[data-variant="compact"]:is(
+    [data-orientation="responsive"],
+    [data-orientation="horizontal"]
+  )[data-chevrons][data-density="compact"] {
   --process-chevron-gap: calc(var(--spacing, 0.25rem) * 6);
   --process-chevron-size: calc(var(--spacing, 0.25rem) * 1.25);
 }
@@ -881,5 +893,159 @@ tr[data-active] > [data-pinned="cell"] {
     .foundry-process-step:not(:last-child)
     .foundry-process-target::after {
     transform: translateY(-50%) rotate(135deg);
+  }
+}
+
+/* Horizontal overflow preserves readable steps without widening the host page. */
+
+.foundry-process[data-variant="compact"][data-orientation="horizontal"] .foundry-process-step {
+  padding-block-start: calc(var(--spacing, 0.25rem) * 3);
+}
+.foundry-process[data-variant="compact"][data-orientation="horizontal"] .foundry-process-target {
+  height: 100%;
+  width: calc(100% - var(--spacing, 0.25rem) * 2);
+  min-height: calc(var(--spacing, 0.25rem) * 16);
+}
+.foundry-process[data-variant="compact"][data-orientation="horizontal"]
+  .foundry-process-step:last-child
+  .foundry-process-target {
+  width: 100%;
+}
+.foundry-process[data-variant="compact"][data-orientation="horizontal"]
+  .foundry-process-step::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 2px;
+  background: var(--border);
+}
+.foundry-process[data-variant="compact"][data-orientation="horizontal"]
+  .foundry-process-step[data-status="complete"]::before {
+  background: var(--primary);
+}
+
+.foundry-process[data-variant="compact"][data-density="compact"][data-orientation="horizontal"]
+  .foundry-process-step {
+  padding-block-start: calc(var(--spacing, 0.25rem) * 2);
+}
+
+.foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]
+  .foundry-process-step:not(:last-child)
+  .foundry-process-target {
+  width: calc(100% - var(--process-chevron-gap));
+}
+.foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]
+  .foundry-process-step:not(:last-child)
+  .foundry-process-target::after {
+  content: "";
+  display: block;
+  position: absolute;
+  pointer-events: none;
+  width: var(--process-chevron-size);
+  height: var(--process-chevron-size);
+  top: 50%;
+  inset-inline-start: auto;
+  inset-inline-end: calc((var(--process-chevron-gap) + var(--process-chevron-size)) / -2);
+  background: transparent;
+  border-right: 1px solid var(--muted-foreground);
+  border-bottom: 1px solid var(--muted-foreground);
+  transform: translateY(-50%) rotate(-45deg);
+  opacity: 0.65;
+}
+.foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]:dir(rtl)
+  .foundry-process-step:not(:last-child)
+  .foundry-process-target::after {
+  transform: translateY(-50%) rotate(135deg);
+}
+
+.foundry-process {
+  --process-step-width: calc(var(--spacing, 0.25rem) * 56);
+}
+.foundry-process[data-density="compact"] {
+  --process-step-width: calc(var(--spacing, 0.25rem) * 48);
+}
+.foundry-process-scroller {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: calc(var(--spacing, 0.25rem) * 1);
+}
+.foundry-process-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  padding: calc(var(--spacing, 0.25rem) * 1.5);
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+.foundry-process-viewport::-webkit-scrollbar {
+  display: none;
+}
+.foundry-process-viewport:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  border-radius: var(--radius);
+}
+.foundry-process-scroll-button {
+  flex-shrink: 0;
+  width: calc(var(--spacing, 0.25rem) * 8);
+  height: calc(var(--spacing, 0.25rem) * 8);
+}
+.foundry-process-viewport {
+  --process-fade-left: 0px;
+  --process-fade-right: 0px;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--process-fade-left),
+    black calc(100% - var(--process-fade-right)),
+    transparent
+  );
+}
+.foundry-process-viewport[data-previous] {
+  --process-fade-left: calc(var(--spacing, 0.25rem) * 5);
+}
+.foundry-process-viewport[data-next] {
+  --process-fade-right: calc(var(--spacing, 0.25rem) * 5);
+}
+.foundry-process-viewport:dir(rtl)[data-previous] {
+  --process-fade-right: calc(var(--spacing, 0.25rem) * 5);
+  --process-fade-left: 0px;
+}
+.foundry-process-viewport:dir(rtl)[data-next] {
+  --process-fade-left: calc(var(--spacing, 0.25rem) * 5);
+}
+.foundry-process-viewport:dir(rtl):not([data-previous]) {
+  --process-fade-right: 0px;
+}
+.foundry-process-viewport:focus-within {
+  mask-image: none;
+}
+.foundry-process[data-orientation="horizontal"] .foundry-process-step {
+  flex: 1 0 var(--process-step-width);
+  min-width: var(--process-step-width);
+}
+@container (min-width: 38.001rem) {
+  .foundry-process[data-orientation="responsive"] .foundry-process-step {
+    flex: 1 0 var(--process-step-width);
+    min-width: var(--process-step-width);
+  }
+}
+@media (pointer: coarse) {
+  .foundry-process-scroll-button {
+    width: calc(var(--spacing, 0.25rem) * 11);
+    height: calc(var(--spacing, 0.25rem) * 11);
+  }
+}
+
+.foundry-process[data-orientation="horizontal"] .foundry-process-steps::after {
+  content: "";
+  flex: 0 0 calc(var(--spacing, 0.25rem) * 1.5);
+}
+@container (min-width: 38.001rem) {
+  .foundry-process[data-orientation="responsive"] .foundry-process-steps::after {
+    content: "";
+    flex: 0 0 calc(var(--spacing, 0.25rem) * 1.5);
   }
 }
