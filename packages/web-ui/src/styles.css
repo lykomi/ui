@@ -600,7 +600,7 @@ tr[data-active] > [data-pinned="cell"] {
   background: color-mix(in srgb, var(--muted) 50%, var(--background));
 }
 .foundry-process[data-variant="compact"] .foundry-process-target:is(button):hover {
-  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  background: var(--muted);
 }
 .foundry-process[data-variant="compact"]
   .foundry-process-step[data-selected]

@@ -399,6 +399,7 @@ it("compact standalone progress delegates clicks to the host and retains accessi
   ) as HTMLButtonElement;
   act(() => button.click());
   expect(action).toHaveBeenCalledWith("docs");
+  expect(button.hasAttribute("aria-pressed")).toBe(false);
   expect(host.querySelector(".foundry-process-focus")).toBeNull();
   expect(host.querySelector('[aria-current="step"]')).toBeNull();
 });
