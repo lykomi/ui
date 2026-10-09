@@ -1,5 +1,24 @@
 # @iloveagents/foundry-web-ui
 
+## 0.39.0
+
+### Minor Changes
+
+- 0d9d424: Add ProcessSteps and ProcessGuide for accessible, themed wizard progress and resumable process guidance, with explicit navigation, running and blocked states, and responsive layouts.
+
+  Provide a slim compact rail and optional accessible guidance disclosure that keeps forms mounted.
+
+### Patch Changes
+
+- 5d17d5d: Add optional theme-based chevron separators to horizontal compact process navigation, sized for comfortable and compact density. Expose showChevrons on ProcessSteps and ProcessGuide, off by default.
+- db9fcf2: Keep process steps readable in overflowing rails, with accessible scroll controls, edge hints, contained selection reveal and an optional horizontal mobile layout.
+- 042c963: Use consistent status icons for process rails, distinguish waiting from ready, and support independent, localized optional-step labels. Selected ready steps use a centered dot; other states retain their own symbols.
+- 87b3a7e: Refine compact process guidance with a continuous primary progress track, outlined completion markers, subtle step surfaces and an unfilled guidance header. Keep unfinished vertical connections neutral and remove the redundant Ready marker ring.
+
+  Add compact density for standalone host-controlled progress navigation and make numeric guidance position opt-in.
+  - @iloveagents/foundry-agent@0.39.0
+  - @iloveagents/foundry-web-primitives@0.39.0
+
 ## 0.38.0
 
 ### Minor Changes
