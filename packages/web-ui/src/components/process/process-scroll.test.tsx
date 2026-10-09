@@ -34,6 +34,7 @@ beforeEach(() => {
   vi.stubGlobal("getComputedStyle", (element: HTMLElement) => ({
     flexDirection: element.closest('[data-orientation="vertical"]') ? "column" : "row",
     direction: rtl ? "rtl" : "ltr",
+    paddingLeft: "6px",
   }));
   vi.stubGlobal("matchMedia", () => ({ matches: true }));
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function () {
@@ -127,5 +128,38 @@ it("supports RTL and keyboard scrolling of passive progress without moving the p
 it("does not turn a vertical rail into a horizontal scroller", () => {
   act(() => root.render(<ProcessSteps steps={steps} orientation="vertical" currentStepId="2" />));
   expect(host.querySelector(".foundry-process-scroll-button")).toBeNull();
+  expect(scrollBy).not.toHaveBeenCalled();
+});
+
+it("scroll controls never submit an enclosing wizard form and preserve its heading label", () => {
+  const submit = vi.fn((event) => event.preventDefault());
+  act(() =>
+    root.render(
+      <form onSubmit={submit}>
+        <h2 id="process-heading">Application progress</h2>
+        <ProcessSteps steps={steps} aria-labelledby="process-heading" />
+      </form>,
+    ),
+  );
+  const region = host.querySelector('[role="region"]');
+  expect(region?.getAttribute("aria-labelledby")).toBe("process-heading");
+  expect(region?.getAttribute("aria-label")).toBeNull();
+  act(() => host.querySelector<HTMLButtonElement>('[aria-label="Show next steps"]')!.click());
+  expect(submit).not.toHaveBeenCalled();
+  act(() => host.querySelector(".foundry-process-viewport")!.dispatchEvent(new Event("scroll")));
+  act(() => host.querySelector<HTMLButtonElement>('[aria-label="Show previous steps"]')!.click());
+  expect(submit).not.toHaveBeenCalled();
+});
+it("keeps manual browsing through size changes and overflow toggles", () => {
+  act(() => root.render(<ProcessSteps steps={steps} currentStepId="0" />));
+  act(() => host.querySelector<HTMLButtonElement>('[aria-label="Show next steps"]')!.click());
+  act(() => host.querySelector(".foundry-process-viewport")!.dispatchEvent(new Event("scroll")));
+  scrollBy.mockClear();
+  width = 650;
+  act(() => resize());
+  width = 1200;
+  act(() => resize());
+  width = 600;
+  act(() => resize());
   expect(scrollBy).not.toHaveBeenCalled();
 });

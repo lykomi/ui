@@ -8,6 +8,9 @@ export function useProcessScroll(inspectedId: string | undefined, layoutKey: str
   const viewport = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLOListElement>(null);
   const [edges, setEdges] = useState(empty);
+  const lastReveal = useRef<{ id: string | undefined; layout: string; overflow: boolean }>(
+    undefined,
+  );
   const horizontal = () =>
     !!track.current && getComputedStyle(track.current).flexDirection === "row";
   const reducedMotion = () =>
@@ -18,7 +21,7 @@ export function useProcessScroll(inspectedId: string | undefined, layoutKey: str
     const bounds = view.getBoundingClientRect();
     const item = element.getBoundingClientRect();
     const rtl = getComputedStyle(view).direction === "rtl";
-    const inset = 8;
+    const inset = (Number.parseFloat(getComputedStyle(view).paddingLeft) || 0) + 2;
     const left = item.left - bounds.left - inset;
     const right = item.right - bounds.right + inset;
     const delta =
@@ -73,35 +76,31 @@ export function useProcessScroll(inspectedId: string | undefined, layoutKey: str
           : next,
       );
     };
-    const revealSelected = () => {
-      const selected = list.querySelector<HTMLElement>("[data-selected] .foundry-process-target");
-      if (selected) reveal(selected);
-    };
-    const resize = () => {
-      revealSelected();
-      read();
-    };
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(() => {
-            revealSelected();
-            read();
-          });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(read);
     observer?.observe(view);
     observer?.observe(list);
     observer?.observe(outer);
     view.addEventListener("scroll", read, { passive: true });
-    window.addEventListener("resize", resize);
+    window.addEventListener("resize", read);
     read();
     return () => {
       observer?.disconnect();
       view.removeEventListener("scroll", read);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", read);
     };
   }, [layoutKey, inspectedId]);
 
   useEffect(() => {
+    const previous = lastReveal.current;
+    // Reveal again once controls first appear, since they reduce the viewport.
+    // Later resizes or overflow toggles must preserve manual browsing.
+    if (
+      previous?.id === inspectedId &&
+      previous?.layout === layoutKey &&
+      (previous.overflow || !edges.overflow)
+    )
+      return;
+    lastReveal.current = { id: inspectedId, layout: layoutKey, overflow: edges.overflow };
     const selected = track.current?.querySelector<HTMLElement>(
       "[data-selected] .foundry-process-target",
     );

@@ -960,22 +960,22 @@ tr[data-active] > [data-pinned="cell"] {
 }
 
 .foundry-process {
-  --process-step-width: 14rem;
+  --process-step-width: calc(var(--spacing, 0.25rem) * 56);
 }
 .foundry-process[data-density="compact"] {
-  --process-step-width: 12rem;
+  --process-step-width: calc(var(--spacing, 0.25rem) * 48);
 }
 .foundry-process-scroller {
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: 4px;
+  gap: calc(var(--spacing, 0.25rem) * 1);
 }
 .foundry-process-viewport {
   flex: 1;
   min-width: 0;
   overflow-x: auto;
-  padding: 6px;
+  padding: calc(var(--spacing, 0.25rem) * 1.5);
   scrollbar-width: none;
   overscroll-behavior-inline: contain;
 }
@@ -989,8 +989,8 @@ tr[data-active] > [data-pinned="cell"] {
 }
 .foundry-process-scroll-button {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: calc(var(--spacing, 0.25rem) * 8);
+  height: calc(var(--spacing, 0.25rem) * 8);
 }
 .foundry-process-viewport {
   --process-fade-left: 0px;
@@ -1004,17 +1004,17 @@ tr[data-active] > [data-pinned="cell"] {
   );
 }
 .foundry-process-viewport[data-previous] {
-  --process-fade-left: 20px;
+  --process-fade-left: calc(var(--spacing, 0.25rem) * 5);
 }
 .foundry-process-viewport[data-next] {
-  --process-fade-right: 20px;
+  --process-fade-right: calc(var(--spacing, 0.25rem) * 5);
 }
 .foundry-process-viewport:dir(rtl)[data-previous] {
-  --process-fade-right: 20px;
+  --process-fade-right: calc(var(--spacing, 0.25rem) * 5);
   --process-fade-left: 0px;
 }
 .foundry-process-viewport:dir(rtl)[data-next] {
-  --process-fade-left: 20px;
+  --process-fade-left: calc(var(--spacing, 0.25rem) * 5);
 }
 .foundry-process-viewport:dir(rtl):not([data-previous]) {
   --process-fade-right: 0px;
@@ -1034,18 +1034,18 @@ tr[data-active] > [data-pinned="cell"] {
 }
 @media (pointer: coarse) {
   .foundry-process-scroll-button {
-    width: 44px;
-    height: 44px;
+    width: calc(var(--spacing, 0.25rem) * 11);
+    height: calc(var(--spacing, 0.25rem) * 11);
   }
 }
 
 .foundry-process[data-orientation="horizontal"] .foundry-process-steps::after {
   content: "";
-  flex: 0 0 6px;
+  flex: 0 0 calc(var(--spacing, 0.25rem) * 1.5);
 }
 @container (min-width: 38.001rem) {
   .foundry-process[data-orientation="responsive"] .foundry-process-steps::after {
     content: "";
-    flex: 0 0 6px;
+    flex: 0 0 calc(var(--spacing, 0.25rem) * 1.5);
   }
 }

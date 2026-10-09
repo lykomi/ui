@@ -110,6 +110,7 @@ export function ProcessSteps({
       <div ref={scroll.frame} className="foundry-process-scroller">
         {scroll.edges.overflow ? (
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="foundry-process-scroll-button"
@@ -125,8 +126,11 @@ export function ProcessSteps({
           className="foundry-process-viewport"
           tabIndex={scroll.edges.overflow ? 0 : undefined}
           role={scroll.edges.overflow ? "region" : undefined}
+          aria-labelledby={scroll.edges.overflow ? ariaLabelledBy : undefined}
           aria-label={
-            scroll.edges.overflow ? (label ?? ariaLabel ?? "Process progress") : undefined
+            scroll.edges.overflow && !ariaLabelledBy
+              ? (label ?? ariaLabel ?? "Process progress")
+              : undefined
           }
           data-previous={scroll.edges.previous || undefined}
           data-next={scroll.edges.next || undefined}
@@ -268,6 +272,7 @@ export function ProcessSteps({
         </div>
         {scroll.edges.overflow ? (
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="foundry-process-scroll-button"
