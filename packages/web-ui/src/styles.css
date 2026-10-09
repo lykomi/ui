@@ -845,15 +845,15 @@ tr[data-active] > [data-pinned="cell"] {
 }
 
 /* Optional chevrons occupy their own gap; progress stays on the rail above. */
+.foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons] {
+  --process-chevron-gap: calc(var(--spacing, 0.25rem) * 8);
+  --process-chevron-size: calc(var(--spacing, 0.25rem) * 2);
+}
+.foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons][data-density="compact"] {
+  --process-chevron-gap: calc(var(--spacing, 0.25rem) * 6);
+  --process-chevron-size: calc(var(--spacing, 0.25rem) * 1.25);
+}
 @container (min-width: 38.001rem) {
-  .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons] {
-    --process-chevron-gap: calc(var(--spacing, 0.25rem) * 8);
-    --process-chevron-size: calc(var(--spacing, 0.25rem) * 2);
-  }
-  .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons][data-density="compact"] {
-    --process-chevron-gap: calc(var(--spacing, 0.25rem) * 6);
-    --process-chevron-size: calc(var(--spacing, 0.25rem) * 1.25);
-  }
   .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
     .foundry-process-step:not(:last-child)
     .foundry-process-target {
@@ -870,7 +870,7 @@ tr[data-active] > [data-pinned="cell"] {
     height: var(--process-chevron-size);
     top: 50%;
     inset-inline-start: auto;
-    inset-inline-end: calc((var(--process-chevron-size) - var(--process-chevron-gap)) / 2);
+    inset-inline-end: calc((var(--process-chevron-gap) + var(--process-chevron-size)) / -2);
     background: transparent;
     border-right: 1px solid var(--muted-foreground);
     border-bottom: 1px solid var(--muted-foreground);
