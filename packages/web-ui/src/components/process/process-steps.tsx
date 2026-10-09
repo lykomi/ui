@@ -55,6 +55,8 @@ export interface ProcessStepsProps extends Omit<
   orientation?: "responsive" | "vertical";
   /** Compact density keeps only marker and label visible; status stays accessible. */
   density?: "comfortable" | "compact";
+  /** Decorative separators for horizontal compact navigation; off by default. */
+  showChevrons?: boolean;
   label?: string;
 }
 
@@ -67,6 +69,7 @@ export function ProcessSteps({
   variant = "compact",
   orientation = "responsive",
   density = "comfortable",
+  showChevrons = false,
   label,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
@@ -85,6 +88,7 @@ export function ProcessSteps({
       data-variant={variant}
       data-orientation={orientation}
       data-density={density}
+      data-chevrons={showChevrons || undefined}
     >
       <TooltipProvider delayDuration={200}>
         <ol
