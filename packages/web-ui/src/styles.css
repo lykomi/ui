@@ -460,10 +460,8 @@ tr[data-active] > [data-pinned="cell"] {
   background: transparent;
   color: var(--primary);
 }
-.foundry-process-step[data-current]:not([data-selected]):not([data-status="ready"])
-  .foundry-process-marker {
-  outline: 2px solid var(--foreground);
-  outline-offset: 3px;
+.foundry-process-step[data-current] .foundry-process-marker {
+  border-width: 2px;
 }
 .foundry-process-copy {
   display: grid;
@@ -601,7 +599,7 @@ tr[data-active] > [data-pinned="cell"] {
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--muted) 50%, var(--background));
 }
-.foundry-process[data-variant="compact"] .foundry-process-target:hover {
+.foundry-process[data-variant="compact"] .foundry-process-target:is(button):hover {
   background: color-mix(in srgb, var(--muted) 50%, transparent);
 }
 .foundry-process[data-variant="compact"]
@@ -612,7 +610,7 @@ tr[data-active] > [data-pinned="cell"] {
 .foundry-process[data-variant="compact"]
   .foundry-process-step[data-selected]
   .foundry-process-label {
-  color: var(--primary);
+  color: color-mix(in srgb, var(--primary) 70%, var(--foreground));
 }
 .foundry-process[data-variant="compact"] .foundry-process-status {
   color: var(--muted-foreground);
@@ -657,7 +655,7 @@ tr[data-active] > [data-pinned="cell"] {
   }
 }
 .foundry-process-guide .foundry-process-position {
-  color: var(--primary);
+  color: color-mix(in srgb, var(--primary) 70%, var(--foreground));
 }
 .foundry-process[data-variant="compact"]
   .foundry-process-step[data-status="complete"]
