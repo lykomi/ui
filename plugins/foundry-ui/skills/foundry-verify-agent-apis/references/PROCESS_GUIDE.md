@@ -50,7 +50,7 @@ before authoring because a host may expose an earlier version.
 
 `ProcessSteps` accepts `steps`, `currentStepId`, `selectedStepId`,
 `onStepSelect(id)`, `variant` (`compact` or `overview`, default `compact`),
-`orientation` (`responsive` or `vertical`, default `responsive`),
+`orientation` (`responsive`, `vertical` or `horizontal`, default `responsive`),
 `density` (`comfortable` or `compact`, default `comfortable`), optional
 `showChevrons` (boolean, default false) and an accessible
 `label` (default `Process progress`). Each step has a stable unique string `id`,
@@ -62,8 +62,12 @@ A non-selectable blocked step with a message exposes a focusable tooltip.
 
 `showChevrons` adds decorative separators only to horizontal `compact` navigation.
 Their size and reserved gap follow `density`; the progress track stays above the
-steps. Narrow or explicitly vertical layouts retain their connected vertical
+steps. Responsive narrow or explicitly vertical layouts retain their connected vertical
 track, and `overview` is unchanged. Chevrons convey sequence, never status.
+
+Horizontal rails retain readable minimum step widths and scroll inside their own viewport when needed. Overflow alone reveals previous/next buttons and subtle edge fades; swiping, trackpad scrolling and keyboard navigation also work. Scrolling never selects a step or advances progress. Selecting or focusing a step brings it into the rail viewport without scrolling the host page. Manual scrolling is not snapped back to the selected step. Buttons respect reduced motion and RTL. Localize their names with `scrollLabels={{ previous: "Previous steps", next: "Next steps" }}`.
+
+Keep default `orientation="responsive"` for a full wizard: it stacks vertically in narrow containers. Use `orientation="horizontal"` for an embedded progress strip that should remain horizontal even on mobile. Guidance and host content remain outside the scroll viewport. Do not hide steps, truncate essential labels or make the entire page scroll sideways.
 
 Use standalone `ProcessSteps density="compact"` for progress-only display: one
 marker and label per step, with accessible status text. There is no guidance
