@@ -26,6 +26,9 @@ export interface ProcessGuideProps
   onStepSelect?: ProcessStepsProps["onStepSelect"];
   variant?: ProcessStepsProps["variant"];
   orientation?: ProcessStepsProps["orientation"];
+  density?: ProcessStepsProps["density"];
+  /** Show the numeric position in guidance; off when the rail already conveys it. */
+  showPosition?: boolean;
   label?: string;
   /** Visually group the rail and guidance when embedded in a larger page. */
   framed?: boolean;
@@ -43,6 +46,8 @@ export function ProcessGuide({
   onStepSelect,
   variant,
   orientation,
+  density,
+  showPosition = false,
   label,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
@@ -77,10 +82,11 @@ export function ProcessGuide({
       <ProcessSteps
         steps={steps}
         currentStepId={currentStepId}
-        selectedStepId={selectedStepId}
+        selectedStepId={step?.id}
         onStepSelect={onStepSelect}
         variant={variant}
         orientation={orientation}
+        density={density}
         label={accessibleLabel}
         aria-labelledby={ariaLabelledBy}
       />
@@ -95,7 +101,7 @@ export function ProcessGuide({
           key={step.id}
           step={step}
           headingLevel={headingLevel}
-          position={formatPosition(index + 1, steps.length)}
+          position={showPosition ? formatPosition(index + 1, steps.length) : undefined}
           guidance={guidance}
           defaultGuidanceOpen={defaultGuidanceOpen}
           guidanceOpen={guidanceOpen}

@@ -157,9 +157,9 @@ Use one quiet leading marker for selected blocks, fields, tabs and item panels:
 to the theme. Selection changes no layout geometry and adds no colored outer
 frame, fill or shadow. Workbench chrome uses a neutral theme border. Keyboard
 focus, input validation, drop targets and pending-review frames keep their
-respective semantics. A process wizard uses a boxed primary highlight for its
-inspected step, as specified below; that task-navigation control is the explicit
-exception to the leading marker. Temporary windows remain identifiable through the unpinned
+respective semantics. Compact process navigation uses a subtle primary surface for its
+inspected step; overview navigation retains a primary border and subtle fill.
+These task-navigation controls are the explicit exception to the leading marker. Temporary windows remain identifiable through the unpinned
 icon, accessible name and tooltip.
 
 `ReadOnlyField label hint emptyLabel` renders a semantic label/value pair with
@@ -286,14 +286,17 @@ contract; the standalone process guide and skill resources are generated from it
 Use a wizard for sequential input and a process overview for resumable work;
 independent tasks belong in a task list rather than a misleading sequence.
 
-- Start with `variant="compact"` and `guidance="collapsible"` when the guide
-  accompanies page content. Use `framed` to make the rail and guidance read as
+- Start with `variant="compact"` and expanded guidance for an active task.
+  Collapse only genuinely secondary help; do not hide the required next action. Use `framed` to make the rail and guidance read as
   one component; omit a duplicate frame inside an existing panel. Vertical
   rails center as a group while labels remain aligned to the start.
-- Highlight the inspected wizard step with a primary-themed border and subtle
-  fill, making its connection to the guidance panel easy to recognize. Keep
-  semantic status colors on the status markers and connectors; inspection never
-  changes status. This boxed navigation treatment is intentional.
+- Highlight the inspected compact step with a subtle primary fill and primary
+  label; other steps use a quiet neutral surface. Keep the guidance unfilled,
+  with a primary step label identifying its owner. The compact horizontal rail
+  sits above the labels: completed segments and outlined checks use primary,
+  unfinished segments stay neutral. Vertical connectors advance only between
+  two completed steps. Reserve semantic warning/error colors for those states;
+  inspection never changes status. Overview steps retain their selected border.
 - Separate actual progress (`currentStepId`) from the inspected step
   (`selectedStepId`). Allow explicit navigation to completed steps so users can
   revise earlier inputs. Supply Back actions when useful. The host owns
@@ -325,13 +328,20 @@ before authoring because a host may expose an earlier version.
 
 `ProcessSteps` accepts `steps`, `currentStepId`, `selectedStepId`,
 `onStepSelect(id)`, `variant` (`compact` or `overview`, default `compact`),
-`orientation` (`responsive` or `vertical`, default `responsive`) and an accessible
+`orientation` (`responsive` or `vertical`, default `responsive`),
+`density` (`comfortable` or `compact`, default `comfortable`) and an accessible
 `label` (default `Process progress`). Each step has a stable unique string `id`,
 string `label`, and explicit `status`: `pending`, `ready`, `running`, `complete`,
 `blocked`, `error` or `skipped`. Optional fields are `statusLabel` (localized text),
 `description`, `message` and `selectable`. Only explicitly selectable steps with
 an `onStepSelect` callback navigate; callbacks never advance actual progress.
 A non-selectable blocked step with a message exposes a focusable tooltip.
+
+Use standalone `ProcessSteps density="compact"` for progress-only display: one
+marker and label per step, with accessible status text. There is no guidance
+panel. `onStepSelect(id)` is entirely host-owned: open a document picker,
+navigate to a page or trigger another permitted action; it need not inspect
+inline guidance. Omit the callback for a passive progress indicator.
 
 `ProcessGuide` accepts the same props and adds per-step `title` (text), plus `content` and
 `actions` (React nodes), plus these guide-level props:
@@ -344,7 +354,8 @@ A non-selectable blocked step with a message exposes a focusable tooltip.
 | `defaultGuidanceOpen`                        | Initial uncontrolled disclosure state; default false.                                       |
 | `guidanceOpen`, `onGuidanceOpenChange(open)` | Optional host-controlled disclosure state.                                                  |
 | `guidanceToggleLabel`                        | Localized disclosure text; default `Guidance & actions`.                                    |
-| `formatPosition(index, total)`               | Localized position text; index is one-based.                                                |
+| `showPosition`                              | Optional numeric position in guidance; default false. The owning step label remains when the task title differs. |
+| `formatPosition(index, total)`               | Localized position text when `showPosition` is true; index is one-based.                                                |
 | `completion`                                 | Content shown only when no step is inspected/current and every step is complete or skipped. |
 
 The selected step falls back to the current step if its ID is absent/invalid.
@@ -358,7 +369,7 @@ Example composition, after availability is verified:
 <ProcessGuide
   framed
   variant="compact"
-  guidance="collapsible"
+  guidance="expanded"
   currentStepId="review"
   selectedStepId={inspectedStep}
   onStepSelect={setInspectedStep}

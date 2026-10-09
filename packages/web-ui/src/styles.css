@@ -370,7 +370,7 @@ tr[data-active] > [data-pinned="cell"] {
   color: var(--foreground);
 }
 .foundry-process-step[data-status="complete"] {
-  --process-tone: var(--success);
+  --process-tone: var(--primary);
 }
 .foundry-process-step[data-status="error"] {
   --process-tone: var(--destructive);
@@ -396,8 +396,8 @@ tr[data-active] > [data-pinned="cell"] {
   inset-inline-start: calc(var(--spacing, 0.25rem) * 14);
   inset-inline-end: calc(var(--spacing, 0.25rem) * -2);
 }
-.foundry-process-step[data-status="complete"]::after {
-  background: var(--success);
+.foundry-process-step[data-connection-complete]::after {
+  background: var(--primary);
 }
 .foundry-process-target {
   position: relative;
@@ -457,12 +457,11 @@ tr[data-active] > [data-pinned="cell"] {
   height: 1rem;
 }
 .foundry-process-step[data-status="complete"] .foundry-process-marker {
-  background: var(--success);
-  color: var(--success-foreground);
+  background: transparent;
+  color: var(--primary);
 }
 .foundry-process-step[data-current] .foundry-process-marker {
-  outline: 2px solid var(--foreground);
-  outline-offset: 3px;
+  border-width: 2px;
 }
 .foundry-process-copy {
   display: grid;
@@ -586,42 +585,83 @@ tr[data-active] > [data-pinned="cell"] {
   }
 }
 
-/* A compact rail keeps labels and real status visible beside each marker. */
+/* A monochrome process rail uses brand color for progress. Selection is a
+   subtle surface treatment, independent of completion and semantic success. */
 .foundry-process[data-variant="compact"] .foundry-process-steps {
-  gap: calc(var(--spacing, 0.25rem) * 2);
-}
-.foundry-process[data-variant="compact"] .foundry-process-step {
-  display: flex;
-  align-items: flex-start;
-  gap: calc(var(--spacing, 0.25rem) * 2);
+  gap: 0;
 }
 .foundry-process[data-variant="compact"] .foundry-process-target {
   flex-direction: row;
   align-items: flex-start;
-  width: auto;
-  flex: 0 1 auto;
-  min-width: 0;
-  padding: calc(var(--spacing, 0.25rem) * 2);
+  gap: calc(var(--spacing, 0.25rem) * 3);
+  padding: calc(var(--spacing, 0.25rem) * 3);
+  border: 0;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--muted) 50%, var(--background));
+}
+.foundry-process[data-variant="compact"] .foundry-process-target:is(button):hover {
+  background: var(--muted);
+}
+.foundry-process[data-variant="compact"]
+  .foundry-process-step[data-selected]
+  .foundry-process-target {
+  background: color-mix(in srgb, var(--primary) 6%, var(--background));
+}
+.foundry-process[data-variant="compact"]
+  .foundry-process-step[data-selected]
+  .foundry-process-label {
+  color: color-mix(in srgb, var(--primary) 70%, var(--foreground));
+}
+.foundry-process[data-variant="compact"] .foundry-process-status {
+  color: var(--muted-foreground);
 }
 .foundry-process[data-variant="compact"] .foundry-process-marker {
-  width: calc(var(--spacing, 0.25rem) * 6);
-  height: calc(var(--spacing, 0.25rem) * 6);
+  width: calc(var(--spacing, 0.25rem) * 5);
+  height: calc(var(--spacing, 0.25rem) * 5);
+}
+.foundry-process[data-variant="compact"] .foundry-process-marker svg {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 .foundry-process[data-variant="compact"] .foundry-process-step::after {
   display: none;
 }
-.foundry-process[data-variant="compact"] .foundry-process-step:not(:last-child)::before {
-  content: "";
-  order: 1;
-  flex: 1;
-  min-width: calc(var(--spacing, 0.25rem) * 2);
-  margin-top: calc(var(--spacing, 0.25rem) * 5 + 1px);
-  margin-inline-end: calc(var(--spacing, 0.25rem) * -2);
-  height: 1px;
-  background: var(--border);
+@container (min-width: 38.001rem) {
+  .foundry-process[data-variant="compact"][data-orientation="responsive"] .foundry-process-step {
+    padding-block-start: calc(var(--spacing, 0.25rem) * 3);
+  }
+  .foundry-process[data-variant="compact"][data-orientation="responsive"] .foundry-process-target {
+    height: 100%;
+    width: calc(100% - var(--spacing, 0.25rem) * 2);
+    min-height: calc(var(--spacing, 0.25rem) * 16);
+  }
+  .foundry-process[data-variant="compact"][data-orientation="responsive"]
+    .foundry-process-step:last-child
+    .foundry-process-target {
+    width: 100%;
+  }
+  .foundry-process[data-variant="compact"][data-orientation="responsive"]
+    .foundry-process-step::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: 2px;
+    background: var(--border);
+  }
+  .foundry-process[data-variant="compact"][data-orientation="responsive"]
+    .foundry-process-step[data-status="complete"]::before {
+    background: var(--primary);
+  }
 }
-.foundry-process[data-variant="compact"] .foundry-process-step[data-status="complete"]::before {
-  background: var(--success);
+.foundry-process-guide .foundry-process-position {
+  color: color-mix(in srgb, var(--primary) 70%, var(--foreground));
+}
+.foundry-process[data-variant="compact"]
+  .foundry-process-step[data-status="complete"]
+  .foundry-process-marker {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 .foundry-process-guidance-body {
   display: grid;
@@ -658,11 +698,17 @@ tr[data-active] > [data-pinned="cell"] {
 .foundry-process-disclosure[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
+.foundry-process[data-variant="compact"][data-orientation="vertical"] .foundry-process-steps {
+  gap: calc(var(--spacing, 0.25rem) * 2);
+}
 .foundry-process[data-variant="compact"][data-orientation="vertical"]
   .foundry-process-step::before {
   display: none;
 }
 @container (max-width: 38rem) {
+  .foundry-process[data-variant="compact"] .foundry-process-steps {
+    gap: calc(var(--spacing, 0.25rem) * 2);
+  }
   .foundry-process[data-variant="compact"] .foundry-process-step::before {
     display: none;
   }
@@ -670,9 +716,9 @@ tr[data-active] > [data-pinned="cell"] {
 .foundry-process[data-variant="compact"][data-orientation="vertical"]
   .foundry-process-step:not(:last-child)::after {
   display: block;
-  top: calc(var(--spacing, 0.25rem) * 8 + 1px);
-  bottom: calc(var(--spacing, 0.25rem) * -6);
-  inset-inline-start: calc(var(--spacing, 0.25rem) * 5 + 1px);
+  top: calc(var(--spacing, 0.25rem) * 9);
+  bottom: calc(var(--spacing, 0.25rem) * -4);
+  inset-inline-start: calc(var(--spacing, 0.25rem) * 5 + 2px);
   inset-inline-end: auto;
   width: 1px;
   height: auto;
@@ -680,9 +726,9 @@ tr[data-active] > [data-pinned="cell"] {
 @container (max-width: 38rem) {
   .foundry-process[data-variant="compact"] .foundry-process-step:not(:last-child)::after {
     display: block;
-    top: calc(var(--spacing, 0.25rem) * 8 + 1px);
+    top: calc(var(--spacing, 0.25rem) * 9);
     bottom: calc(var(--spacing, 0.25rem) * -4);
-    inset-inline-start: calc(var(--spacing, 0.25rem) * 5 + 1px);
+    inset-inline-start: calc(var(--spacing, 0.25rem) * 5 + 2px);
     inset-inline-end: auto;
     width: 1px;
     height: auto;
@@ -757,5 +803,43 @@ tr[data-active] > [data-pinned="cell"] {
   .foundry-process[data-variant="compact"] .foundry-process-detail {
     flex: 1;
     min-width: 0;
+  }
+}
+
+/* Progress-only density: retain status in accessible text without a second row. */
+.foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-target {
+  padding: calc(var(--spacing, 0.25rem) * 2);
+  align-items: center;
+  min-height: calc(var(--spacing, 0.25rem) * 10);
+}
+.foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@container (min-width: 38.001rem) {
+  .foundry-process[data-variant="compact"][data-density="compact"][data-orientation="responsive"]
+    .foundry-process-step {
+    padding-block-start: calc(var(--spacing, 0.25rem) * 2);
+  }
+}
+.foundry-process[data-variant="compact"][data-density="compact"][data-orientation="vertical"]
+  .foundry-process-step:not(:last-child)::after {
+  top: calc(var(--spacing, 0.25rem) * 8);
+  bottom: calc(var(--spacing, 0.25rem) * -3);
+  inset-inline-start: calc(var(--spacing, 0.25rem) * 4 + 2px);
+}
+@container (max-width: 38rem) {
+  .foundry-process[data-variant="compact"][data-density="compact"]
+    .foundry-process-step:not(:last-child)::after {
+    top: calc(var(--spacing, 0.25rem) * 8);
+    bottom: calc(var(--spacing, 0.25rem) * -3);
+    inset-inline-start: calc(var(--spacing, 0.25rem) * 4 + 2px);
   }
 }

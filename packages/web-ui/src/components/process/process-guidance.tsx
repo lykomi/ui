@@ -22,7 +22,7 @@ export function ProcessGuidance({
   guidanceToggleLabel = "Guidance & actions",
 }: ProcessGuidanceOptions & {
   step: GuidedProcessStep;
-  position: string;
+  position?: string;
   headingLevel: 2 | 3 | 4;
 }) {
   const id = useId();
@@ -62,9 +62,11 @@ export function ProcessGuidance({
     >
       <div className="foundry-process-focus-header">
         <div className="foundry-process-focus-summary">
-          <p className="foundry-process-position">
-            {position} · {step.label}
-          </p>
+          {position || (step.title && step.title !== step.label) ? (
+            <p className="foundry-process-position">
+              {position ? `${position} · ${step.label}` : step.label}
+            </p>
+          ) : null}
           <Heading id={`${id}-title`} className="foundry-process-title">
             {step.title ?? step.label}
           </Heading>

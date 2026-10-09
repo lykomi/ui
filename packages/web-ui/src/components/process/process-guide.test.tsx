@@ -90,6 +90,7 @@ it("supports translated statuses and position labels", () => {
         steps={[{ ...steps[1], statusLabel: "Bereit" }]}
         currentStepId="setup"
         headingLevel={2}
+        showPosition
         formatPosition={(n, total) => `Schritt ${n} von ${total}`}
       />,
     ),
@@ -363,4 +364,59 @@ it("focuses only the first invalid control when revealing folded guidance", asyn
   expect(document.activeElement).toBe(inputs[0]);
   expect(firstReport).toHaveBeenCalledOnce();
   expect(secondReport).not.toHaveBeenCalled();
+});
+
+it("marks connections complete only when both adjacent steps are complete", () => {
+  const progress = [
+    { id: "docs", label: "Documents", status: "complete" as const },
+    { id: "setup", label: "Setup", status: "complete" as const },
+    { id: "analysis", label: "Analysis", status: "complete" as const },
+    { id: "review", label: "Review", status: "ready" as const },
+  ];
+  act(() =>
+    root.render(<ProcessSteps steps={progress} currentStepId="review" selectedStepId="docs" />),
+  );
+  const items = host.querySelectorAll("li");
+  expect(items[0].hasAttribute("data-connection-complete")).toBe(true);
+  expect(items[1].hasAttribute("data-connection-complete")).toBe(true);
+  expect(items[2].hasAttribute("data-connection-complete")).toBe(false);
+  act(() =>
+    root.render(
+      <ProcessSteps
+        steps={progress.map((s) => ({ ...s, status: "complete" as const }))}
+        selectedStepId="docs"
+      />,
+    ),
+  );
+  expect(host.querySelectorAll("li")[2].hasAttribute("data-connection-complete")).toBe(true);
+});
+
+it("compact standalone progress delegates clicks to the host and retains accessible status", () => {
+  const action = vi.fn();
+  act(() => root.render(<ProcessSteps steps={steps} density="compact" onStepSelect={action} />));
+  const button = host.querySelector(
+    'button[aria-label="Documents: Completed"]',
+  ) as HTMLButtonElement;
+  act(() => button.click());
+  expect(action).toHaveBeenCalledWith("docs");
+  expect(button.hasAttribute("aria-pressed")).toBe(false);
+  expect(host.querySelector(".foundry-process-focus")).toBeNull();
+  expect(host.querySelector('[aria-current="step"]')).toBeNull();
+  act(() =>
+    root.render(
+      <ProcessSteps steps={steps} density="compact" currentStepId="setup" onStepSelect={action} />,
+    ),
+  );
+  expect(host.querySelector("button[aria-pressed]")).toBeNull();
+  expect(host.querySelector('[aria-current="step"]')?.textContent).toContain("Setup");
+});
+it("expanded guidance omits redundant counts and keeps the owning step label", () => {
+  const guided = [
+    { ...steps[0], title: "Choose source files", content: <input aria-label="Source" /> },
+  ];
+  act(() => root.render(<ProcessGuide steps={guided} currentStepId="docs" />));
+  expect(host.querySelector(".foundry-process-position")?.textContent).toBe("Documents");
+  expect(host.textContent).not.toContain("Step 1 of 1");
+  expect(host.querySelector(".foundry-process-guidance-body")?.hasAttribute("hidden")).toBe(false);
+  expect(host.querySelector(".foundry-process-disclosure")).toBeNull();
 });

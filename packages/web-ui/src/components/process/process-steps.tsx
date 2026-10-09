@@ -53,6 +53,8 @@ export interface ProcessStepsProps extends Omit<
   onStepSelect?: (id: string) => void;
   variant?: "compact" | "overview";
   orientation?: "responsive" | "vertical";
+  /** Compact density keeps only marker and label visible; status stays accessible. */
+  density?: "comfortable" | "compact";
   label?: string;
 }
 
@@ -64,6 +66,7 @@ export function ProcessSteps({
   onStepSelect,
   variant = "compact",
   orientation = "responsive",
+  density = "comfortable",
   label,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
@@ -81,6 +84,7 @@ export function ProcessSteps({
       className={cn("foundry-process", className)}
       data-variant={variant}
       data-orientation={orientation}
+      data-density={density}
     >
       <TooltipProvider delayDuration={200}>
         <ol
@@ -122,7 +126,7 @@ export function ProcessSteps({
                   type="button"
                   className="foundry-process-target"
                   onClick={() => onStepSelect(step.id)}
-                  aria-pressed={selected}
+                  aria-pressed={selectedStepId !== undefined ? selected : undefined}
                   aria-label={`${step.label}: ${status}`}
                   aria-describedby={describedBy}
                 >
@@ -143,6 +147,10 @@ export function ProcessSteps({
                 key={step.id}
                 className="foundry-process-step"
                 data-status={step.status}
+                data-connection-complete={
+                  (step.status === "complete" && steps[index + 1]?.status === "complete") ||
+                  undefined
+                }
                 data-current={current || undefined}
                 data-selected={selected || undefined}
                 aria-current={current ? "step" : undefined}
