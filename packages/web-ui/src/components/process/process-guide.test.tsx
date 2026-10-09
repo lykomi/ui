@@ -364,3 +364,28 @@ it("focuses only the first invalid control when revealing folded guidance", asyn
   expect(firstReport).toHaveBeenCalledOnce();
   expect(secondReport).not.toHaveBeenCalled();
 });
+
+it("marks connections complete only when both adjacent steps are complete", () => {
+  const progress = [
+    { id: "docs", label: "Documents", status: "complete" as const },
+    { id: "setup", label: "Setup", status: "complete" as const },
+    { id: "analysis", label: "Analysis", status: "complete" as const },
+    { id: "review", label: "Review", status: "ready" as const },
+  ];
+  act(() =>
+    root.render(<ProcessSteps steps={progress} currentStepId="review" selectedStepId="docs" />),
+  );
+  const items = host.querySelectorAll("li");
+  expect(items[0].hasAttribute("data-connection-complete")).toBe(true);
+  expect(items[1].hasAttribute("data-connection-complete")).toBe(true);
+  expect(items[2].hasAttribute("data-connection-complete")).toBe(false);
+  act(() =>
+    root.render(
+      <ProcessSteps
+        steps={progress.map((s) => ({ ...s, status: "complete" as const }))}
+        selectedStepId="docs"
+      />,
+    ),
+  );
+  expect(host.querySelectorAll("li")[2].hasAttribute("data-connection-complete")).toBe(true);
+});

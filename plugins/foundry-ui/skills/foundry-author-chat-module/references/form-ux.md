@@ -159,7 +159,7 @@ Use one quiet leading marker for selected blocks, fields, tabs and item panels:
 to the theme. Selection changes no layout geometry and adds no colored outer
 frame, fill or shadow. Workbench chrome uses a neutral theme border. Keyboard
 focus, input validation, drop targets and pending-review frames keep their
-respective semantics. A process wizard uses a boxed primary highlight for its
+respective semantics. A process wizard uses a subtle primary surface for its
 inspected step, as specified below; that task-navigation control is the explicit
 exception to the leading marker. Temporary windows remain identifiable through the unpinned
 icon, accessible name and tooltip.
@@ -292,10 +292,13 @@ independent tasks belong in a task list rather than a misleading sequence.
   accompanies page content. Use `framed` to make the rail and guidance read as
   one component; omit a duplicate frame inside an existing panel. Vertical
   rails center as a group while labels remain aligned to the start.
-- Highlight the inspected wizard step with a primary-themed border and subtle
-  fill, making its connection to the guidance panel easy to recognize. Keep
-  semantic status colors on the status markers and connectors; inspection never
-  changes status. This boxed navigation treatment is intentional.
+- Highlight the inspected compact step with a subtle primary fill and primary
+  label; other steps use a quiet neutral surface. Keep the guidance unfilled,
+  with a primary step label identifying its owner. The compact horizontal rail
+  sits above the labels: completed segments and outlined checks use primary,
+  unfinished segments stay neutral. Vertical connectors advance only between
+  two completed steps. Reserve semantic warning/error colors for those states;
+  inspection never changes status. Overview steps retain their selected border.
 - Separate actual progress (`currentStepId`) from the inspected step
   (`selectedStepId`). Allow explicit navigation to completed steps so users can
   revise earlier inputs. Supply Back actions when useful. The host owns

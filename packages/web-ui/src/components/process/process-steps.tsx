@@ -143,6 +143,10 @@ export function ProcessSteps({
                 key={step.id}
                 className="foundry-process-step"
                 data-status={step.status}
+                data-connection-complete={
+                  (step.status === "complete" && steps[index + 1]?.status === "complete") ||
+                  undefined
+                }
                 data-current={current || undefined}
                 data-selected={selected || undefined}
                 aria-current={current ? "step" : undefined}
