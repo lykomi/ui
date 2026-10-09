@@ -427,3 +427,51 @@ it("keeps chevrons opt-in and forwards the option from guidance to progress", ()
   act(() => root.render(<ProcessGuide steps={steps} currentStepId="setup" showChevrons />));
   expect(host.querySelector(".foundry-process")?.hasAttribute("data-chevrons")).toBe(true);
 });
+it("keeps optionality independent of navigation and localizes compact optional labels", () => {
+  const onStepSelect = vi.fn();
+  act(() =>
+    root.render(
+      <ProcessSteps
+        density="compact"
+        currentStepId="required"
+        steps={[
+          { id: "required", label: "Required", status: "ready", selectable: true },
+          {
+            id: "extra",
+            label: "Extra",
+            status: "ready",
+            optional: true,
+            optionalLabel: "Optionaler Schritt",
+            selectable: true,
+          },
+          {
+            id: "locked",
+            label: "Locked",
+            status: "blocked",
+            optional: true,
+            message: "Requires access.",
+          },
+        ]}
+        onStepSelect={onStepSelect}
+      />,
+    ),
+  );
+  const extra = host.querySelector(
+    'button[aria-label="Extra: Ready, Optionaler Schritt"]',
+  ) as HTMLButtonElement;
+  expect(extra).not.toBeNull();
+  expect(extra.textContent).toContain("Optionaler Schritt");
+  expect(host.querySelectorAll("button")).toHaveLength(2);
+  act(() => extra.click());
+  expect(onStepSelect).toHaveBeenCalledExactlyOnceWith("extra");
+  expect(host.querySelector('[aria-current="step"]')?.textContent).toContain("Required");
+});
+it("only completes optional steps after the host records completion or a skip", () => {
+  const extra: GuidedProcessStep = { id: "extra", label: "Extra", status: "ready", optional: true };
+  act(() => root.render(<ProcessGuide steps={[extra]} completion="Finished!" />));
+  expect(host.textContent).not.toContain("Finished!");
+  act(() =>
+    root.render(<ProcessGuide steps={[{ ...extra, status: "skipped" }]} completion="Finished!" />),
+  );
+  expect(host.textContent).toContain("Finished!");
+});

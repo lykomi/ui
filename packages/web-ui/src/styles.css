@@ -442,26 +442,21 @@ tr[data-active] > [data-pinned="cell"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--process-tone);
+  border: 0;
   border-radius: 50%;
   color: var(--process-tone);
-  background: var(--background);
+  background: transparent;
   font-size: 0.8125rem;
   font-weight: 600;
 }
-.foundry-process-step[data-status="ready"] .foundry-process-marker {
-  color: var(--foreground);
-}
 .foundry-process-marker svg {
-  width: 1rem;
-  height: 1rem;
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.5;
 }
 .foundry-process-step[data-status="complete"] .foundry-process-marker {
   background: transparent;
   color: var(--primary);
-}
-.foundry-process-step[data-current] .foundry-process-marker {
-  border-width: 2px;
 }
 .foundry-process-copy {
   display: grid;
@@ -620,19 +615,18 @@ tr[data-active] > [data-pinned="cell"] {
   width: calc(var(--spacing, 0.25rem) * 5);
   height: calc(var(--spacing, 0.25rem) * 5);
 }
-.foundry-process[data-variant="compact"] .foundry-process-marker svg {
-  width: 0.875rem;
-  height: 0.875rem;
-}
 .foundry-process[data-variant="compact"] .foundry-process-step::after {
   display: none;
 }
 @container (min-width: 38.001rem) {
   .foundry-process[data-variant="compact"][data-orientation="responsive"] .foundry-process-step {
+    display: flex;
+    flex-direction: column;
     padding-block-start: calc(var(--spacing, 0.25rem) * 3);
   }
   .foundry-process[data-variant="compact"][data-orientation="responsive"] .foundry-process-target {
-    height: 100%;
+    flex: 1;
+    height: auto;
     width: calc(100% - var(--spacing, 0.25rem) * 2);
     min-height: calc(var(--spacing, 0.25rem) * 16);
   }
@@ -780,9 +774,8 @@ tr[data-active] > [data-pinned="cell"] {
   }
 }
 
-.foundry-process-step[data-status="blocked"] .foundry-process-marker,
-.foundry-process-step[data-status="error"] .foundry-process-marker {
-  color: var(--foreground);
+.foundry-process-step[data-status="blocked"] .foundry-process-marker {
+  color: var(--muted-foreground);
 }
 .foundry-process-tooltip {
   background: var(--popover);
@@ -899,10 +892,13 @@ tr[data-active] > [data-pinned="cell"] {
 /* Horizontal overflow preserves readable steps without widening the host page. */
 
 .foundry-process[data-variant="compact"][data-orientation="horizontal"] .foundry-process-step {
+  display: flex;
+  flex-direction: column;
   padding-block-start: calc(var(--spacing, 0.25rem) * 3);
 }
 .foundry-process[data-variant="compact"][data-orientation="horizontal"] .foundry-process-target {
-  height: 100%;
+  flex: 1;
+  height: auto;
   width: calc(100% - var(--spacing, 0.25rem) * 2);
   min-height: calc(var(--spacing, 0.25rem) * 16);
 }
@@ -1048,4 +1044,29 @@ tr[data-active] > [data-pinned="cell"] {
     content: "";
     flex: 0 0 calc(var(--spacing, 0.25rem) * 1.5);
   }
+}
+
+.foundry-process-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: calc(var(--spacing, 0.25rem) * 2);
+}
+.foundry-process-optional {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.foundry-process-step[data-status="ready"] .foundry-process-marker {
+  border: 0;
+  color: var(--process-tone);
+}
+.foundry-process-step[data-status="ready"] .foundry-process-marker svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.5;
+}
+
+.foundry-process-step[data-status="ready"][data-selected] .foundry-process-marker {
+  color: var(--primary);
 }
