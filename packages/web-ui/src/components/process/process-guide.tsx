@@ -82,7 +82,7 @@ export function ProcessGuide({
       <ProcessSteps
         steps={steps}
         currentStepId={currentStepId}
-        selectedStepId={selectedStepId}
+        selectedStepId={step?.id}
         onStepSelect={onStepSelect}
         variant={variant}
         orientation={orientation}

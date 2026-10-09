@@ -402,6 +402,13 @@ it("compact standalone progress delegates clicks to the host and retains accessi
   expect(button.hasAttribute("aria-pressed")).toBe(false);
   expect(host.querySelector(".foundry-process-focus")).toBeNull();
   expect(host.querySelector('[aria-current="step"]')).toBeNull();
+  act(() =>
+    root.render(
+      <ProcessSteps steps={steps} density="compact" currentStepId="setup" onStepSelect={action} />,
+    ),
+  );
+  expect(host.querySelector("button[aria-pressed]")).toBeNull();
+  expect(host.querySelector('[aria-current="step"]')?.textContent).toContain("Setup");
 });
 it("expanded guidance omits redundant counts and keeps the owning step label", () => {
   const guided = [

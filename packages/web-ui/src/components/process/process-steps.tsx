@@ -126,7 +126,7 @@ export function ProcessSteps({
                   type="button"
                   className="foundry-process-target"
                   onClick={() => onStepSelect(step.id)}
-                  aria-pressed={inspectedId ? selected : undefined}
+                  aria-pressed={selectedStepId !== undefined ? selected : undefined}
                   aria-label={`${step.label}: ${status}`}
                   aria-describedby={describedBy}
                 >
