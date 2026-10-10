@@ -466,6 +466,18 @@ it("keeps optionality independent of navigation and localizes compact optional l
   expect(onStepSelect).toHaveBeenCalledExactlyOnceWith("extra");
   expect(host.querySelector('[aria-current="step"]')?.textContent).toContain("Required");
 });
+it("shows a dashed circle only while an optional step is unstarted", () => {
+  const optional = { id: "extra", label: "Extra", optional: true };
+  act(() => root.render(<ProcessSteps steps={[{ ...optional, status: "pending" }]} />));
+  expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).not.toBeNull();
+
+  act(() => root.render(<ProcessSteps steps={[{ ...optional, status: "complete" }]} />));
+  expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).toBeNull();
+  expect(host.querySelector('.foundry-process-step[data-status="complete"] svg')).not.toBeNull();
+
+  act(() => root.render(<ProcessSteps steps={[{ id: "required", label: "Required", status: "pending" }]} />));
+  expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).toBeNull();
+});
 it("only completes optional steps after the host records completion or a skip", () => {
   const extra: GuidedProcessStep = { id: "extra", label: "Extra", status: "ready", optional: true };
   act(() => root.render(<ProcessGuide steps={[extra]} completion="Finished!" />));
