@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.41.0
+
+### Minor Changes
+
+- 78637b7: Add opt-in live process context to ProcessGuide. The With control and AG-UI share actual and inspected steps, statuses and blockers, with client tools to read current context and inspect selectable steps through the host callback.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.41.0
+- @iloveagents/foundry-web-primitives@0.41.0
+
 ## 0.40.1
 
 ### Patch Changes
