@@ -53,7 +53,17 @@ const statusIcons = {
 };
 
 /** Status remains visible when a completed or skipped step is inspected again. */
-function ProcessStatusIcon({ status, selected }: { status: ProcessStepStatus; selected: boolean }) {
+function ProcessStatusIcon({ status, selected, optional }: { status: ProcessStepStatus; selected: boolean; optional?: boolean }) {
+  // Optionality changes the *unstarted* marker only. Running, completed,
+  // blocked and failed steps keep their actual status symbols.
+  if (optional && (status === "pending" || status === "ready")) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="10" strokeDasharray="3 3" />
+        {status === "ready" && selected ? <circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" /> : null}
+      </svg>
+    );
+  }
   if (status === "ready") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -205,7 +215,7 @@ export function ProcessSteps({
                 const content = (
                   <>
                     <span className="foundry-process-marker" aria-hidden="true">
-                      <ProcessStatusIcon status={step.status} selected={selected} />
+                        <ProcessStatusIcon status={step.status} selected={selected} optional={step.optional} />
                     </span>
                     <span className="foundry-process-copy">
                       <span className="foundry-process-name">
