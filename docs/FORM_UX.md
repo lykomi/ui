@@ -320,6 +320,16 @@ independent tasks belong in a task list rather than a misleading sequence.
   separately verifies the deployed renderer scope. New framework APIs must be
   published before downstream production consumers import them.
 
+### Shared process and chat context
+
+Opt in with `ProcessGuide agentContext={{ id, label, sourcePage, active }}`. Use a stable process-instance ID scoped by its canonical source page; use a readable process label. `active` is required: the host must set it to `false` for inactive tabs, background panels and builder previews, or unmount the guide. A mounted guide without this prop remains presentation-only. With multiple active guides, pointer or keyboard interaction determines which process the With control highlights; all active process snapshots remain available to the agent.
+
+The same committed host props supply the guide, the With control and the next AG-UI request. Context carries `currentStepId` (execution position), `selectedStepId` (inspected guidance) and each step's identity, status, optionality, selectability, description and blocker. Plain string description/message values are included automatically; for JSX, provide `contextText={{ description, message }}` with the equivalent plain-text guidance. React nodes, input values and callbacks are never scraped or serialized. Expose relevant form data through the normal field/context APIs.
+
+`ui_process_get_context` reads current active processes and identifies the focused process. `ui_process_select_step` takes `processId`, `sourcePage` and `stepId`, validates the live registration and explicit selectability, then calls the same selection handler as a user click. Its `requested` result acknowledges dispatch, not a completed host transition: read live context afterward. It never executes, skips, approves, publishes or completes work. Those transactions remain host-owned, permission-checked tools. The existing `ui_get_context` includes process references too.
+
+Context is refreshed on each user request and by the live read tools; it is not a continuous stream of browser changes into a response already being generated. After navigation or an action, refresh context before giving the next guidance. Sent-message context retains the original snapshot. Automatic live process context is separate from optional user pins and survives the user switching into chat, while inactive/unmounted guides are excluded.
+
 ### Status symbols, selection and optionality
 
 Use these exact `ProcessStepStatus` values; do not infer execution state from selection or optionality.

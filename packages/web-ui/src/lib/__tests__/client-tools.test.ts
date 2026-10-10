@@ -28,6 +28,8 @@ describe("Global tool registration", () => {
       "ui_highlight",
       "ui_navigate",
       "ui_open_panel",
+      "ui_process_get_context",
+      "ui_process_select_step",
       "ui_select_item",
       "ui_set_theme",
       "ui_update_content",

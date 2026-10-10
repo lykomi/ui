@@ -7,11 +7,16 @@ import {
   type ProcessStepsProps,
 } from "./process-steps.tsx";
 
+import { useProcessAgentContext } from "./use-process-agent-context.ts";
+import type { ProcessAgentContext } from "./process-agent-context.ts";
+
 import { ProcessGuidance, type ProcessGuidanceOptions } from "./process-guidance.tsx";
 
 export interface GuidedProcessStep extends ProcessStep {
   /** User-facing title, for example “Confirm the detected equipment”. */
   title?: string;
+  /** Plain-text guidance for the agent when description/message contain JSX. */
+  contextText?: { description?: string; message?: string };
   content?: ReactNode;
   /** Host-owned actions: validate and persist in the host, not this component. */
   actions?: ReactNode;
@@ -21,6 +26,8 @@ export interface ProcessGuideProps
     ProcessGuidanceOptions,
     Omit<ComponentPropsWithoutRef<"section">, "onSelect" | "title" | "children"> {
   steps: readonly GuidedProcessStep[];
+  /** Share this active process with chat and AG-UI client tools. */
+  agentContext?: ProcessAgentContext;
   currentStepId?: string;
   selectedStepId?: string;
   onStepSelect?: ProcessStepsProps["onStepSelect"];
@@ -45,6 +52,7 @@ export interface ProcessGuideProps
 /** Shared guide for sequential wizards and resumable background processes. */
 export function ProcessGuide({
   steps,
+  agentContext,
   currentStepId,
   selectedStepId,
   onStepSelect,
@@ -68,6 +76,8 @@ export function ProcessGuide({
   guidanceToggleLabel,
   guidanceTogglePlacement = "guidance",
   className,
+  onPointerDownCapture,
+  onFocusCapture,
   ...props
 }: ProcessGuideProps) {
   const guidanceId = useId();
@@ -88,10 +98,31 @@ export function ProcessGuide({
   const finished = steps.every((step) => step.status === "complete" || step.status === "skipped");
   const step = steps[index];
   const liveStep = steps.find((candidate) => candidate.id === currentStepId);
+  const selectStep = onStepSelect
+    ? (id: string) => {
+        if (stepDisclosure) changeOpen(true);
+        onStepSelect(id);
+      }
+    : undefined;
+  const focusContext = useProcessAgentContext(
+    agentContext,
+    steps,
+    currentStepId,
+    step?.id,
+    selectStep,
+  );
   if (!steps.length) return null;
   return (
     <section
       {...props}
+      onPointerDownCapture={(event) => {
+        focusContext();
+        onPointerDownCapture?.(event);
+      }}
+      onFocusCapture={(event) => {
+        focusContext();
+        onFocusCapture?.(event);
+      }}
       className={cn("foundry-process-guide", className)}
       aria-label={accessibleLabel}
       aria-labelledby={ariaLabelledBy}
@@ -101,14 +132,7 @@ export function ProcessGuide({
         steps={steps}
         currentStepId={currentStepId}
         selectedStepId={step?.id}
-        onStepSelect={
-          onStepSelect
-            ? (id) => {
-                if (stepDisclosure) changeOpen(true);
-                onStepSelect(id);
-              }
-            : undefined
-        }
+        onStepSelect={selectStep}
         stepDisclosure={
           stepDisclosure && step
             ? {

@@ -274,6 +274,30 @@ describe("AGUIAdapterSDK", () => {
     expect(appStoreMock.consumedMessageIds).toEqual(["u-1"]);
   });
 
+  it("forwards live process state through both AG-UI state and context with inspection semantics", async () => {
+    appStoreMock.agentState = {
+      navigation: { contextInstructions: null },
+      contextItems: [
+        {
+          type: "ref",
+          refType: "process",
+          refId: "assessment",
+          sourcePage: "/assessment",
+          meta: { process: { currentStepId: "review", selectedStepId: "docs" } },
+        },
+      ],
+    };
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
+    const adapter = new AGUIAdapterSDK();
+    for await (const _ of adapter.run(makeRunInput())) {
+      /* Drain the actual adapter boundary. */
+    }
+    const request = runMock.mock.calls[0][0];
+    expect(request.state.contextItems).toEqual(appStoreMock.agentState.contextItems);
+    expect(JSON.parse(request.context[0].value)).toEqual(appStoreMock.agentState.contextItems[0]);
+    expect(request.context[0].description).toContain("Selection does not execute or advance work");
+  });
+
   it("includes completed text attachment content in outbound AG-UI messages", async () => {
     runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
 

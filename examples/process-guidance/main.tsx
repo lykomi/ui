@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { MemoryRouter } from "react-router";
+import { ChatContext } from "../../packages/web-ui/src/components/chat-context.tsx";
+import { useAppStore } from "../../packages/web-ui/src/lib/app-store.ts";
 import { createRoot } from "react-dom/client";
 import {
   ProcessGuide,
@@ -11,6 +14,10 @@ function Preview() {
   const [selected, setSelected] = useState("review");
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    return () => document.documentElement.classList.remove("dark");
+  }, [dark]);
   const [note, setNote] = useState("Check the detected findings");
   const steps: GuidedProcessStep[] = [
     {
@@ -50,18 +57,22 @@ function Preview() {
     },
   ];
   return (
-    <main className={dark ? "dark" : ""}>
+    <main>
       <div className="preview-shell">
         <header>
           <div>
-            <small>Foundry UI · origin/main</small>
+            <small>Foundry UI · local preview</small>
             <h1>Process guidance</h1>
           </div>
           <Button variant="outline" onClick={() => setDark(!dark)}>
             {dark ? "Light theme" : "Dark theme"}
           </Button>
         </header>
+        <div className="preview-context">
+          <ChatContext />
+        </div>
         <ProcessGuide
+          agentContext={{ id: "assessment", label: "Assessment", sourcePage: "/", active: true }}
           framed
           variant="compact"
           showChevrons
@@ -79,4 +90,11 @@ function Preview() {
     </main>
   );
 }
-createRoot(document.getElementById("root")!).render(<Preview />);
+useAppStore
+  .getState()
+  .setNavContext({ ...useAppStore.getInitialState().navContext, label: "Process guidance" });
+createRoot(document.getElementById("root")!).render(
+  <MemoryRouter>
+    <Preview />
+  </MemoryRouter>,
+);
