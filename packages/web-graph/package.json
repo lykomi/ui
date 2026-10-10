@@ -1,6 +1,6 @@
 {
   "name": "@iloveagents/foundry-web-graph",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "license": "MIT",
   "description": "Graph visualization for Foundry UI — a Bloom-like force-directed graph view, a source-agnostic graph payload contract, and an optional assistant-ui tool card + panel renderer.",
   "keywords": [

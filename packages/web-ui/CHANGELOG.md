@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.40.0
+
+### Minor Changes
+
+- 83e34f0: Add an optional compact step disclosure: guidance can start collapsed, explicit step selection opens it, and an independent chevron folds it without changing process state or discarding input.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.40.0
+- @iloveagents/foundry-web-primitives@0.40.0
+
 ## 0.39.0
 
 ### Minor Changes
