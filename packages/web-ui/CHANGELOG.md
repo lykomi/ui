@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.41.1
+
+### Patch Changes
+
+- a0264ae: Show a dashed-circle marker for optional process steps before they start, while preserving status markers after they run or complete.
+  - @iloveagents/foundry-agent@0.41.1
+  - @iloveagents/foundry-web-primitives@0.41.1
+
 ## 0.41.0
 
 ### Minor Changes
