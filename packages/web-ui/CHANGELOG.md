@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.40.1
+
+### Patch Changes
+
+- 4609ef7: Align vertical process steps with their guidance and use the available width for each step, including responsive mobile layouts.
+  - @iloveagents/foundry-agent@0.40.1
+  - @iloveagents/foundry-web-primitives@0.40.1
+
 ## 0.40.0
 
 ### Minor Changes
