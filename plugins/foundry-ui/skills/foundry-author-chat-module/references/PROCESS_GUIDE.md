@@ -106,6 +106,7 @@ inline guidance. Omit the callback for a passive progress indicator.
 | `defaultGuidanceOpen`                        | Initial uncontrolled disclosure state; default false.                                       |
 | `guidanceOpen`, `onGuidanceOpenChange(open)` | Optional host-controlled disclosure state.                                                  |
 | `guidanceToggleLabel`                        | Localized disclosure text; default `Guidance & actions`.                                    |
+| `guidanceTogglePlacement`                    | `guidance` (default) or `step`; compact collapsible guides can place the disclosure in the inspected step. Explicit step selection opens guidance, including reselection. Initial open state remains configurable. |
 | `showPosition`                              | Optional numeric position in guidance; default false. The owning step label remains when the task title differs. |
 | `formatPosition(index, total)`               | Localized position text when `showPosition` is true; index is one-based.                                                |
 | `completion`                                 | Content shown only when no step is inspected/current and every step is complete or skipped. |

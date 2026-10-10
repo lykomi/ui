@@ -1,4 +1,4 @@
-import { type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { useId, useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
   ProcessSteps,
@@ -31,6 +31,8 @@ export interface ProcessGuideProps
   showChevrons?: ProcessStepsProps["showChevrons"];
   /** Show the numeric position in guidance; off when the rail already conveys it. */
   showPosition?: boolean;
+  /** In compact guides, place the disclosure in the selected step; selecting opens guidance. */
+  guidanceTogglePlacement?: "guidance" | "step";
   label?: string;
   /** Visually group the rail and guidance when embedded in a larger page. */
   framed?: boolean;
@@ -64,9 +66,21 @@ export function ProcessGuide({
   guidanceOpen,
   onGuidanceOpenChange,
   guidanceToggleLabel,
+  guidanceTogglePlacement = "guidance",
   className,
   ...props
 }: ProcessGuideProps) {
+  const guidanceId = useId();
+  const [localGuidanceOpen, setLocalGuidanceOpen] = useState(defaultGuidanceOpen ?? false);
+  const stepDisclosure =
+    guidance === "collapsible" &&
+    guidanceTogglePlacement === "step" &&
+    (variant ?? "compact") === "compact";
+  const open = guidanceOpen ?? localGuidanceOpen;
+  function changeOpen(next: boolean) {
+    if (guidanceOpen === undefined) setLocalGuidanceOpen(next);
+    onGuidanceOpenChange?.(next);
+  }
   const accessibleLabel = label ?? ariaLabel ?? "Process progress";
   const selectedIndex = steps.findIndex((step) => step.id === selectedStepId);
   const index =
@@ -87,7 +101,25 @@ export function ProcessGuide({
         steps={steps}
         currentStepId={currentStepId}
         selectedStepId={step?.id}
-        onStepSelect={onStepSelect}
+        onStepSelect={
+          onStepSelect
+            ? (id) => {
+                if (stepDisclosure) changeOpen(true);
+                onStepSelect(id);
+              }
+            : undefined
+        }
+        stepDisclosure={
+          stepDisclosure && step
+            ? {
+                stepId: step.id,
+                open,
+                controls: guidanceId,
+                label: guidanceToggleLabel ?? (open ? "Collapse guidance" : "Expand guidance"),
+                onOpenChange: changeOpen,
+              }
+            : undefined
+        }
         variant={variant}
         orientation={orientation}
         density={density}
@@ -110,8 +142,10 @@ export function ProcessGuide({
           position={showPosition ? formatPosition(index + 1, steps.length) : undefined}
           guidance={guidance}
           defaultGuidanceOpen={defaultGuidanceOpen}
-          guidanceOpen={guidanceOpen}
-          onGuidanceOpenChange={onGuidanceOpenChange}
+          guidanceOpen={stepDisclosure ? open : guidanceOpen}
+          onGuidanceOpenChange={stepDisclosure ? changeOpen : onGuidanceOpenChange}
+          bodyId={stepDisclosure ? guidanceId : undefined}
+          disclosureInStep={stepDisclosure}
           guidanceToggleLabel={guidanceToggleLabel}
         />
       ) : finished ? (
