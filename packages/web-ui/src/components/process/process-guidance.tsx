@@ -20,10 +20,14 @@ export function ProcessGuidance({
   guidanceOpen,
   onGuidanceOpenChange,
   guidanceToggleLabel = "Guidance & actions",
+  bodyId,
+  disclosureInStep = false,
 }: ProcessGuidanceOptions & {
   step: GuidedProcessStep;
   position?: string;
   headingLevel: 2 | 3 | 4;
+  bodyId?: string;
+  disclosureInStep?: boolean;
 }) {
   const id = useId();
   const revealPending = useRef(false);
@@ -59,6 +63,7 @@ export function ProcessGuidance({
       className="foundry-process-focus"
       aria-labelledby={`${id}-title`}
       data-status={step.status}
+      hidden={disclosureInStep && !open}
     >
       <div className="foundry-process-focus-header">
         <div className="foundry-process-focus-summary">
@@ -71,7 +76,7 @@ export function ProcessGuidance({
             {step.title ?? step.label}
           </Heading>
         </div>
-        {collapsible ? (
+        {collapsible && !disclosureInStep ? (
           <button
             type="button"
             className="foundry-process-disclosure"
@@ -86,7 +91,7 @@ export function ProcessGuidance({
       </div>
       {/* Keep forms mounted so folding guidance never discards unsaved input. */}
       <div
-        id={`${id}-body`}
+        id={bodyId ?? `${id}-body`}
         className="foundry-process-guidance-body"
         hidden={!open}
         onInvalidCapture={revealInvalid}

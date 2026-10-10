@@ -624,7 +624,8 @@ tr[data-active] > [data-pinned="cell"] {
     flex-direction: column;
     padding-block-start: calc(var(--spacing, 0.25rem) * 3);
   }
-  .foundry-process[data-variant="compact"][data-orientation="responsive"] .foundry-process-target {
+  .foundry-process[data-variant="compact"][data-orientation="responsive"]
+    .foundry-process-step-surface {
     flex: 1;
     height: auto;
     width: calc(100% - var(--spacing, 0.25rem) * 2);
@@ -632,7 +633,7 @@ tr[data-active] > [data-pinned="cell"] {
   }
   .foundry-process[data-variant="compact"][data-orientation="responsive"]
     .foundry-process-step:last-child
-    .foundry-process-target {
+    .foundry-process-step-surface {
     width: 100%;
   }
   .foundry-process[data-variant="compact"][data-orientation="responsive"]
@@ -861,12 +862,12 @@ tr[data-active] > [data-pinned="cell"] {
 @container (min-width: 38.001rem) {
   .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
     .foundry-process-step:not(:last-child)
-    .foundry-process-target {
+    .foundry-process-step-surface {
     width: calc(100% - var(--process-chevron-gap));
   }
   .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
     .foundry-process-step:not(:last-child)
-    .foundry-process-target::after {
+    .foundry-process-step-surface::after {
     content: "";
     display: block;
     position: absolute;
@@ -884,7 +885,7 @@ tr[data-active] > [data-pinned="cell"] {
   }
   .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]:dir(rtl)
     .foundry-process-step:not(:last-child)
-    .foundry-process-target::after {
+    .foundry-process-step-surface::after {
     transform: translateY(-50%) rotate(135deg);
   }
 }
@@ -896,7 +897,8 @@ tr[data-active] > [data-pinned="cell"] {
   flex-direction: column;
   padding-block-start: calc(var(--spacing, 0.25rem) * 3);
 }
-.foundry-process[data-variant="compact"][data-orientation="horizontal"] .foundry-process-target {
+.foundry-process[data-variant="compact"][data-orientation="horizontal"]
+  .foundry-process-step-surface {
   flex: 1;
   height: auto;
   width: calc(100% - var(--spacing, 0.25rem) * 2);
@@ -904,7 +906,7 @@ tr[data-active] > [data-pinned="cell"] {
 }
 .foundry-process[data-variant="compact"][data-orientation="horizontal"]
   .foundry-process-step:last-child
-  .foundry-process-target {
+  .foundry-process-step-surface {
   width: 100%;
 }
 .foundry-process[data-variant="compact"][data-orientation="horizontal"]
@@ -928,12 +930,12 @@ tr[data-active] > [data-pinned="cell"] {
 
 .foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]
   .foundry-process-step:not(:last-child)
-  .foundry-process-target {
+  .foundry-process-step-surface {
   width: calc(100% - var(--process-chevron-gap));
 }
 .foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]
   .foundry-process-step:not(:last-child)
-  .foundry-process-target::after {
+  .foundry-process-step-surface::after {
   content: "";
   display: block;
   position: absolute;
@@ -951,7 +953,7 @@ tr[data-active] > [data-pinned="cell"] {
 }
 .foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]:dir(rtl)
   .foundry-process-step:not(:last-child)
-  .foundry-process-target::after {
+  .foundry-process-step-surface::after {
   transform: translateY(-50%) rotate(135deg);
 }
 
@@ -1069,4 +1071,88 @@ tr[data-active] > [data-pinned="cell"] {
 
 .foundry-process-step[data-status="ready"][data-selected] .foundry-process-marker {
   color: var(--primary);
+}
+
+/* One shared surface owns geometry; selection and disclosure are grid siblings. */
+.foundry-process-step-surface {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-width: 0;
+  border-radius: var(--radius);
+}
+.foundry-process[data-variant="compact"] .foundry-process-step-surface {
+  background: color-mix(in srgb, var(--muted) 50%, var(--background));
+}
+.foundry-process[data-variant="compact"]
+  .foundry-process-step[data-selected]
+  .foundry-process-step-surface {
+  background: color-mix(in srgb, var(--primary) 6%, var(--background));
+}
+.foundry-process[data-variant="compact"] .foundry-process-step-surface .foundry-process-target {
+  background: transparent;
+  width: 100%;
+  min-width: 0;
+}
+.foundry-process-step-disclosure {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: calc(var(--spacing, 0.25rem) * 10);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
+.foundry-process-step-disclosure svg {
+  width: 1rem;
+  height: 1rem;
+}
+.foundry-process-step-disclosure[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.foundry-process-step-disclosure:hover {
+  background: var(--muted);
+}
+.foundry-process-step-disclosure:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.foundry-process-focus[hidden] {
+  display: none;
+}
+@media (pointer: coarse) {
+  .foundry-process-step-disclosure {
+    width: 44px;
+    min-height: 44px;
+  }
+}
+.foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-step-surface {
+  min-height: calc(var(--spacing, 0.25rem) * 10);
+}
+
+/* The track stays continuous; only the final completed segment has a small inset. */
+.foundry-process[data-variant="compact"]
+  .foundry-process-step[data-status="complete"]:not([data-connection-complete]):not(
+    :last-child
+  )::before {
+  background: linear-gradient(
+    to right,
+    var(--primary) calc(100% - var(--spacing, 0.25rem) * 4),
+    var(--border) calc(100% - var(--spacing, 0.25rem) * 4)
+  );
+}
+.foundry-process[data-variant="compact"]:dir(rtl)
+  .foundry-process-step[data-status="complete"]:not([data-connection-complete]):not(
+    :last-child
+  )::before {
+  background: linear-gradient(
+    to left,
+    var(--primary) calc(100% - var(--spacing, 0.25rem) * 4),
+    var(--border) calc(100% - var(--spacing, 0.25rem) * 4)
+  );
 }

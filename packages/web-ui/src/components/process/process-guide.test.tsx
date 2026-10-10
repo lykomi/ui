@@ -475,3 +475,70 @@ it("only completes optional steps after the host records completion or a skip", 
   );
   expect(host.textContent).toContain("Finished!");
 });
+
+it("keeps compact guidance folded initially and separates selection from disclosure", () => {
+  const select = vi.fn();
+  act(() =>
+    root.render(
+      <ProcessGuide
+        steps={steps}
+        currentStepId="setup"
+        guidance="collapsible"
+        guidanceTogglePlacement="step"
+        onStepSelect={select}
+      />,
+    ),
+  );
+  const disclosure = () =>
+    host.querySelector<HTMLButtonElement>(".foundry-process-step-disclosure")!;
+  const body = () => document.getElementById(disclosure().getAttribute("aria-controls")!)!;
+  expect(disclosure().getAttribute("aria-expanded")).toBe("false");
+  expect(body().hidden).toBe(true);
+  expect(host.querySelector(".foundry-process-disclosure")).toBeNull();
+  act(() => disclosure().click());
+  expect(select).not.toHaveBeenCalled();
+  expect(body().hidden).toBe(false);
+  act(() => disclosure().click());
+  expect(body().hidden).toBe(true);
+  act(() =>
+    host.querySelector<HTMLButtonElement>("li[data-selected] .foundry-process-target")!.click(),
+  );
+  expect(select).toHaveBeenCalledWith("setup");
+  expect(body().hidden).toBe(false);
+  expect(host.querySelector('[aria-current="step"]')?.textContent).toContain("Setup");
+});
+
+it("respects host-controlled compact disclosure and retains fields while folded", () => {
+  const change = vi.fn();
+  const withInput = steps.map((step) =>
+    step.id === "setup" ? { ...step, content: <input defaultValue="Draft" /> } : step,
+  );
+  const render = (open: boolean) =>
+    act(() =>
+      root.render(
+        <ProcessGuide
+          steps={withInput}
+          currentStepId="setup"
+          guidance="collapsible"
+          guidanceTogglePlacement="step"
+          guidanceOpen={open}
+          onGuidanceOpenChange={change}
+          onStepSelect={() => {}}
+        />,
+      ),
+    );
+  render(false);
+  const input = host.querySelector("input")!;
+  act(() =>
+    host.querySelector<HTMLButtonElement>("li[data-selected] .foundry-process-target")!.click(),
+  );
+  expect(change).toHaveBeenCalledWith(true);
+  expect(host.querySelector(".foundry-process-focus")?.hasAttribute("hidden")).toBe(true);
+  render(true);
+  input.value = "Unsaved";
+  act(() => host.querySelector<HTMLButtonElement>(".foundry-process-step-disclosure")!.click());
+  expect(change).toHaveBeenLastCalledWith(false);
+  render(false);
+  expect(host.querySelector("input")).toBe(input);
+  expect(input.value).toBe("Unsaved");
+});

@@ -2,6 +2,7 @@ import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import {
   CircleCheck,
   ChevronLeft,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   Clock3,
@@ -84,6 +85,14 @@ export interface ProcessStepsProps extends Omit<
   /** Localized labels for overflow navigation buttons. */
   scrollLabels?: { previous: string; next: string };
   label?: string;
+  /** Optional independent disclosure for the inspected step's guidance. */
+  stepDisclosure?: {
+    stepId: string;
+    open: boolean;
+    controls: string;
+    label: string;
+    onOpenChange: (open: boolean) => void;
+  };
 }
 
 /** Controlled status visualization. No persistence, validation or automatic advancement. */
@@ -96,6 +105,7 @@ export function ProcessSteps({
   orientation = "responsive",
   density = "comfortable",
   showChevrons = false,
+  stepDisclosure,
   scrollLabels = { previous: "Show previous steps", next: "Show next steps" },
   label,
   "aria-label": ariaLabel,
@@ -235,6 +245,7 @@ export function ProcessSteps({
                     key={step.id}
                     className="foundry-process-step"
                     data-status={step.status}
+                    data-disclosure={stepDisclosure?.stepId === step.id || undefined}
                     data-connection-complete={
                       (step.status === "complete" && steps[index + 1]?.status === "complete") ||
                       undefined
@@ -243,18 +254,39 @@ export function ProcessSteps({
                     data-selected={selected || undefined}
                     aria-current={current ? "step" : undefined}
                   >
-                    {step.status === "blocked" &&
-                    typeof step.message === "string" &&
-                    step.message ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>{target}</TooltipTrigger>
-                        <TooltipContent className="foundry-process-tooltip">
-                          {step.message}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      target
-                    )}
+                    <div className="foundry-process-step-surface">
+                      {step.status === "blocked" &&
+                      typeof step.message === "string" &&
+                      step.message ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>{target}</TooltipTrigger>
+                          <TooltipContent className="foundry-process-tooltip">
+                            {step.message}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        target
+                      )}
+                      {stepDisclosure?.stepId === step.id ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="foundry-process-step-disclosure"
+                              aria-label={`${stepDisclosure.label}: ${step.label}`}
+                              aria-expanded={stepDisclosure.open}
+                              aria-controls={stepDisclosure.controls}
+                              onClick={() => stepDisclosure.onOpenChange(!stepDisclosure.open)}
+                            >
+                              <ChevronDown aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="foundry-process-tooltip">
+                            {stepDisclosure.label}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : null}
+                    </div>
                     <div className="foundry-process-detail">
                       {variant === "overview" && step.description ? (
                         <div id={descriptionId} className="foundry-process-description">

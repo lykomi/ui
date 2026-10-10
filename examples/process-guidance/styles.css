@@ -1,0 +1,78 @@
+@import "tailwindcss";
+@import "../../packages/web-ui/src/styles.css";
+@source "../../packages/web-primitives/src";
+:root {
+  --background: #fff;
+  --foreground: #24242b;
+  --muted: #f5f5f8;
+  --muted-foreground: #646471;
+  --border: #e0e0e9;
+  --primary: #5b13ef;
+  --primary-foreground: #fff;
+  --heading: #5b13ef;
+  --warning: #a46500;
+  --destructive: #cb2345;
+  --ring: #5b13ef;
+  --input: #e0e0e9;
+  --radius: 0.75rem;
+  --spacing: 0.25rem;
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+}
+.dark {
+  --background: #101014;
+  --foreground: #ececf2;
+  --muted: #1c1c24;
+  --muted-foreground: #a1a1b0;
+  --border: #34343e;
+  --primary: #ab97ff;
+  --primary-foreground: #161020;
+  --heading: #ab97ff;
+  --warning: #ecc06b;
+  --destructive: #ff8090;
+  --ring: #ab97ff;
+  --input: #34343e;
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+}
+main {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 32px 20px;
+}
+.preview-shell {
+  max-width: 880px;
+  margin: auto;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 6px 0;
+}
+small {
+  color: var(--muted-foreground);
+}
+.preview-option {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.foundry-process-guidance-body {
+  display: grid;
+  gap: 20px;
+}
+.foundry-process-guidance-body[hidden] {
+  display: none;
+}
