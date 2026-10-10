@@ -22,6 +22,7 @@ export function summarizeChatContext(state: AgentStateProjection) {
   const selected = references.find(
     (item) => item.type === "selection" || item.meta.selectionScope === "text",
   );
+  const process = references.find((item) => item.meta.processFocus === "active");
   const target = field && record(field.target ?? field.meta.jsonTarget);
   const detail = selected
     ? "Selected text"
@@ -29,7 +30,11 @@ export function summarizeChatContext(state: AgentStateProjection) {
       ? text(target?.label) || text(field.meta.fieldLabel) || text(field.label)
       : component
         ? text(component.meta.componentLabel) || text(component.label)
-        : "";
+        : process
+          ? [text(process.meta.processLabel), text(process.meta.selectedStepLabel)]
+              .filter(Boolean)
+              .join(" › ")
+          : "";
   const pageLabel =
     nav.label && !nav.label.startsWith("/") && !/^\/?chat$/i.test(nav.label)
       ? nav.label
@@ -41,6 +46,21 @@ export function summarizeChatContext(state: AgentStateProjection) {
     detail: detail === label ? "" : detail,
     focused: Boolean(focused.title),
     path: nav.page,
+    processes: references
+      .filter((item) => item.refType === "process")
+      .map((item) => {
+        const snapshot = record(item.meta.process);
+        const steps = Array.isArray(snapshot.steps) ? snapshot.steps.map(record) : [];
+        const describe = (id: unknown) => {
+          const step = steps.find((step) => step.id === id);
+          return step ? `${text(step.label)} (${text(step.statusLabel)})` : "None";
+        };
+        return {
+          label: text(snapshot.label),
+          current: describe(snapshot.currentStepId),
+          selected: describe(snapshot.selectedStepId),
+        };
+      }),
     field: Boolean(field),
     selectedText: text(selected?.text) || text(record(field?.meta.caret).selectedText),
     references: open.map((item) => text(item.label)).filter(Boolean),

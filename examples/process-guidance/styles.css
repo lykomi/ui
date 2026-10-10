@@ -76,3 +76,8 @@ small {
 .foundry-process-guidance-body[hidden] {
   display: none;
 }
+
+@source "../../packages/web-ui/src";
+.preview-context {
+  margin-bottom: 16px;
+}

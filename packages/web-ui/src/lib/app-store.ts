@@ -1,4 +1,5 @@
 import { createUiId } from "./create-ui-id.ts";
+import { collectProcessContextItems } from "../components/process/process-agent-context.ts";
 import { collectFocusContext } from "./focus-context.ts";
 /**
  * App Store — unified shared state for the AG-UI multi-page application.
@@ -421,9 +422,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   consumeContextForMessage: (messageId) => {
     const { contextItems, sentContext } = get();
-    if (contextItems.length === 0) return [];
+    const liveProcessItems = collectProcessContextItems();
+    if (contextItems.length === 0 && liveProcessItems.length === 0) return [];
 
-    const snapshot = [...contextItems];
+    const snapshot = [...contextItems, ...liveProcessItems];
 
     // Keep persistent, remove ephemeral — except context that TRACKS the UI
     // (a keyed item, e.g. a live list selection). Those rows are still
@@ -470,38 +472,40 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedItemId: s.selectedItemId,
       content: toAgentData(s.content),
       highlights: s.highlights,
-      contextItems: s.contextItems.map(({ type, label, payload, sourcePage }) => {
-        switch (payload.kind) {
-          case "text":
-            return {
-              type,
-              label: label.slice(0, 200),
-              text: payload.text.slice(0, 500),
-              sourcePage,
-            };
-          case "page":
-            return { type, label, path: payload.path, sourcePage };
-          case "ref":
-            return {
-              type,
-              label: label.slice(0, 200),
-              refType: payload.refType,
-              refId: payload.refId,
-              preview: payload.preview?.slice(0, 100),
-              target: compactReferenceTarget(payload.target),
-              meta: payload.meta ? toAgentData(payload.meta) : payload.meta,
-              targetPath:
-                typeof payload.target?.path === "string"
-                  ? payload.target.path
-                  : typeof payload.meta?.targetPath === "string"
-                    ? payload.meta.targetPath
-                    : undefined,
-              sourcePage,
-            };
-          default:
-            return { type, label, sourcePage };
-        }
-      }),
+      contextItems: [...s.contextItems, ...collectProcessContextItems()].map(
+        ({ type, label, payload, sourcePage }) => {
+          switch (payload.kind) {
+            case "text":
+              return {
+                type,
+                label: label.slice(0, 200),
+                text: payload.text.slice(0, 500),
+                sourcePage,
+              };
+            case "page":
+              return { type, label, path: payload.path, sourcePage };
+            case "ref":
+              return {
+                type,
+                label: label.slice(0, 200),
+                refType: payload.refType,
+                refId: payload.refId,
+                preview: payload.preview?.slice(0, 100),
+                target: compactReferenceTarget(payload.target),
+                meta: payload.meta ? toAgentData(payload.meta) : payload.meta,
+                targetPath:
+                  typeof payload.target?.path === "string"
+                    ? payload.target.path
+                    : typeof payload.meta?.targetPath === "string"
+                      ? payload.meta.targetPath
+                      : undefined,
+                sourcePage,
+              };
+            default:
+              return { type, label, sourcePage };
+          }
+        },
+      ),
     };
   },
 

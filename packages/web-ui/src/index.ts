@@ -330,3 +330,8 @@ export type {
 } from "./components/process/process-steps.tsx";
 export { ProcessGuide } from "./components/process/process-guide.tsx";
 export type { GuidedProcessStep, ProcessGuideProps } from "./components/process/process-guide.tsx";
+
+export type {
+  ProcessAgentContext,
+  ProcessContextSnapshot,
+} from "./components/process/process-agent-context.ts";

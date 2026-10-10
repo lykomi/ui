@@ -1,3 +1,4 @@
+import { processContextStore } from "./process/process-agent-context.ts";
 import { useEffect, useState } from "react";
 import { ChevronDown, FileText, Maximize2, TextCursorInput } from "lucide-react";
 import { useAppStore } from "../lib/app-store.ts";
@@ -35,6 +36,7 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
       });
     };
     const unsubscribe = useAppStore.subscribe(refresh);
+    const unsubscribeProcess = processContextStore.subscribe(refresh);
     // Modules already track field/caret events. Read after those listeners,
     // rather than keeping a competing focus state inside the chat UI.
     const events = ["focusin", "pointerup", "input", "selectionchange"];
@@ -82,6 +84,7 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
     return () => {
       cancelAnimationFrame(frame);
       unsubscribe();
+      unsubscribeProcess();
       observer?.disconnect();
       for (const event of events) document.removeEventListener(event, refresh);
     };
@@ -157,6 +160,18 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
             {isPinned ? "Unpin this page" : "Keep this page in context"}
           </button>
         )}
+        {context.processes.map((process, index) => (
+          <section
+            key={index}
+            className="border-t border-border px-2 pt-3 text-xs"
+            aria-label="Process context"
+          >
+            <h3 className="font-medium">{process.label}</h3>
+            <p className="mt-1 text-muted-foreground">
+              Current: {process.current} · Viewing: {process.selected}
+            </p>
+          </section>
+        ))}
         <ChatContextItems items={items} onNavigate={() => setOpen(false)} />
         <ChatContextDetailsSlot onDismiss={() => setOpen(false)} />
         {memory && <ConversationMemory usage={memory} />}
