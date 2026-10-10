@@ -761,20 +761,6 @@ tr[data-active] > [data-pinned="cell"] {
 .foundry-process-guide[data-framed] .foundry-process-focus {
   margin-top: calc(var(--spacing, 0.25rem) * 2);
 }
-/* Center the vertical rail as one group while preserving label alignment. */
-.foundry-process[data-orientation="vertical"] .foundry-process-steps {
-  width: fit-content;
-  max-width: 100%;
-  margin-inline: auto;
-}
-@container (max-width: 38rem) {
-  .foundry-process:not([data-orientation="horizontal"]) .foundry-process-steps {
-    width: fit-content;
-    max-width: 100%;
-    margin-inline: auto;
-  }
-}
-
 .foundry-process-step[data-status="blocked"] .foundry-process-marker {
   color: var(--muted-foreground);
 }
