@@ -248,6 +248,22 @@ it("keeps automatically bounded tables below the fold at a positive height", asy
   await mount(items.slice(0, 250));
   expect(host.querySelector<HTMLElement>("[data-list-scroller]")!.style.maxHeight).toBe("70vh");
 });
+it("lets a dedicated page own scrolling and offset its sticky header", async () => {
+  function PageList() {
+    const instance = useDataTable({
+      data: items.slice(0, 120),
+      columns,
+      getRowId: (item) => item.id,
+      pageSize: false,
+    });
+    return <DataTable table={instance} scrollMode="page" stickyHeaderOffset={96} />;
+  }
+  await act(async () => root.render(<PageList />));
+  expect(host.querySelector("[data-list-root]")?.className).toContain("overflow-visible");
+  expect(host.querySelector("[data-list-scroller]")?.className).toContain("overflow-visible");
+  expect(host.querySelector<HTMLElement>("thead")?.style.top).toBe("96px");
+  expect(host.querySelectorAll("tr[data-row-id]")).toHaveLength(120);
+});
 it("provides roving keyboard navigation when the host supplies only row opening", async () => {
   const open = vi.fn();
   function Uncontrolled() {

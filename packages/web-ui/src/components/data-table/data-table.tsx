@@ -66,6 +66,14 @@ export interface DataTableProps<T> {
   /** Keep the header in place while the rows scroll (always on in focus mode). */
   stickyHeader?: boolean;
   /**
+   * Let the containing page own vertical scrolling. Use this for a dedicated
+   * working-list view with columns that fit its width; focus mode remains a
+   * bounded, virtualized table for very large datasets.
+   */
+  scrollMode?: "table" | "page";
+  /** Offset below the page's own sticky navigation and filters. */
+  stickyHeaderOffset?: number | string;
+  /**
    * Make the table the scroll region of its flex-column parent, on both
    * axes, instead of growing the page. Defaults to true inside a focused
    * `DataTableFrame`.
@@ -165,6 +173,8 @@ export function DataTable<T>({
   emptyState = "No results.",
   spacer = true,
   stickyHeader = false,
+  scrollMode = "table",
+  stickyHeaderOffset = 0,
   fill,
   maxHeight,
   fitViewport = true,
@@ -179,6 +189,7 @@ export function DataTable<T>({
   // remaining height (`min-h-0` lets a flex item shrink below its content)
   // and scrolls in both directions, so the toolbar above stays put.
   const filling = fill ?? frame?.focused ?? false;
+  const pageScrolling = scrollMode === "page" && !filling;
   const rowModel = table.getRowModel().rows;
   const { grouping, expanded } = table.getState();
   const rows = useMemo(
@@ -200,11 +211,13 @@ export function DataTable<T>({
   const navigationRowId = internalNavigation
     ? (localActiveRowId ?? controlledActiveRowId)
     : controlledActiveRowId;
-  const effectiveMaxHeight = maxHeight ?? (rows.length > 200 ? "70vh" : undefined);
+  const effectiveMaxHeight = pageScrolling
+    ? undefined
+    : (maxHeight ?? (rows.length > 200 ? "70vh" : undefined));
   const bounded = !filling && effectiveMaxHeight !== undefined;
   // A header only sticks inside a scroll container — which is exactly what
   // `fill` and `maxHeight` create.
-  const sticky = stickyHeader || filling || bounded;
+  const sticky = stickyHeader || pageScrolling || filling || bounded;
   const dataRows = useMemo(() => rows.filter((row) => !row.getIsGrouped()), [rows]);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -258,6 +271,10 @@ export function DataTable<T>({
       boundedColumnWidth(first, first.getSize() + availableWidth - declaredWidth),
     );
   const tableWidth = [...sizes.values()].reduce((sum, size) => sum + size, 0);
+  // A page-sticky header needs every ancestor to allow visible vertical
+  // overflow. Fall back to the horizontal table scroller if a host shows more
+  // columns than fit; its overflow controls keep those columns reachable.
+  const pageFits = pageScrolling && (availableWidth === 0 || tableWidth <= availableWidth + 1);
   const trailingSpace = spacer || availableWidth > tableWidth;
   const fittingLeafWidth = (header: Header<T, unknown>): number =>
     header.subHeaders.length
@@ -463,7 +480,9 @@ export function DataTable<T>({
       // only shows once the list is actually scrolled sideways.
       data-scrolled-x={scrolledX ? "" : undefined}
       className={cn(
-        "overflow-hidden rounded-2xl border border-border/45 bg-card/60",
+        "rounded-2xl border border-border/45 bg-card/60",
+        pageScrolling && "min-w-0 w-full",
+        pageFits ? "overflow-visible" : "overflow-hidden",
         filling && "flex min-h-0 flex-1 flex-col",
         className,
       )}
@@ -485,7 +504,14 @@ export function DataTable<T>({
             : undefined
         }
         className={cn(
-          filling ? "min-h-0 flex-1 overflow-auto" : bounded ? "overflow-auto" : "overflow-x-auto",
+          pageScrolling && "min-w-0 w-full",
+          filling
+            ? "min-h-0 flex-1 overflow-auto"
+            : bounded
+              ? "overflow-auto"
+              : pageFits
+                ? "overflow-visible"
+                : "overflow-x-auto",
         )}
       >
         <table
@@ -527,7 +553,14 @@ export function DataTable<T>({
             className={cn(sticky && "sticky top-0 z-10 bg-card")}
             // A sticky surface must cover rows even when a host applies a
             // translucent header utility for ordinary, non-scrolling tables.
-            style={sticky ? { backgroundColor: "var(--card)" } : undefined}
+            style={
+              sticky
+                ? {
+                    backgroundColor: "var(--card)",
+                    top: pageScrolling ? stickyHeaderOffset : 0,
+                  }
+                : undefined
+            }
           >
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b border-border/45">
