@@ -68,47 +68,50 @@ agent sits on a finished review indefinitely, or asks for it again.
 
 ## The loop: one complete batch per round
 
-1. **Prepare a reviewable change.** Keep one concern per PR. State the intended
-   behavior, affected callers, risks and validation in the PR description.
-   Run the repository's required local checks before the first review.
-2. **Use draft during fixes.** Batch the whole round into one locally tested
-   push. Draft status does not suppress this repository's full CI jobs. Inspect
-   `.github/workflows/ci.yml` before assuming any draft savings. Mark ready
-   after review fixes are complete; return to draft while preparing another
-   fix when appropriate.
-3. **Review each new head once.** Check for completed evidence and an existing
-   request before triggering `@codex review`. Automatic review may already
-   cover PR open or ready-for-review. Do not add a manual request for the same
-   head while it is pending or already reviewed. Explicitly request review
-   after a push when no automatic trigger or existing request covers it.
-4. **Triage the entire round before editing.** Read review bodies, issue
+1. **Publish a reviewable starting head.** Keep one concern per PR. State the
+   intended behavior, affected callers, risks and validation. Run required
+   local checks, push the prepared commit, and open the PR as a draft. The
+   reviewer must be able to inspect the remote commit, not unpublished edits.
+2. **Request review of the pushed head once.** Check both verdict surfaces and
+   existing requests before triggering `@codex review`. Use an automatic
+   trigger when it covers this head; do not add a duplicate manual request.
+   Run the independent high-risk pass alongside Codex where practical.
+3. **Triage the entire round before editing.** Read review bodies, issue
    comments and every thread, including outdated ones. Check claims against
    code and actual callers. Fix likely defects; decline unsupported claims
-   with evidence. Do not make speculative patches to silence a reviewer.
-   Preserve the exception for irreversible data loss, ownership violations
-   and widened credential scope, even on uncommon triggers.
-5. **Fix and validate as one batch.** Prefer the smallest correct fix. For a
+   with evidence. Preserve scrutiny for irreversible data loss, ownership
+   violations and widened credential scope, even on uncommon triggers.
+4. **Prepare and validate one fix batch in draft.** If the PR is ready, return
+   it to draft before pushing fixes. Prefer the smallest correct fix. For a
    behavioral defect, add a regression that fails before the fix and checks
    the reported path; also check affected callers and the original behavior.
-   Run the required suite once after the batch. Repeat only for new changes,
-   failures or unresolved concerns. Cross-npm changes still need standalone
-   or CI validation against the published artifact.
-6. **Push the tested batch once.** Verify the fixing commit is reachable on
-   the PR branch before marking its findings addressed. If the push fails,
-   retain the local commit and leave the affected threads open.
-7. **Reply, resolve, then request review.** For a fix, cite the pushed commit
+   Run required checks after the batch; repeat only for changes, failures or
+   unresolved concerns. Cross-npm changes still require standalone or CI
+   validation against the published artifact.
+5. **Push the tested batch once.** Verify the fixing commit is reachable on
+   the PR branch before marking findings addressed. If the push fails,
+   retain the local commit and leave affected threads open. If all findings
+   are declined and the code is unchanged, no fix push is needed.
+6. **Reply with evidence, then resolve.** For a fix, cite the pushed commit
    and test. For a decline, state the actual behavior and evidence. Leave a
    disagreement requiring adjudication open and explain why. Never resolve
-   unread findings. Request review of the new head after these replies;
-   include the previous reviewed SHA, changes, tests and declined findings.
-   Prioritize fixes and affected paths without excluding the full PR from
-   regression review.
-8. **Stop on evidence, not round count.** Routine PRs may merge when required
-   CI passes on the final head, that head has completed Codex review, every
-   finding is fixed or declined with evidence, and required approvals are
-   satisfied. One clean pass can suffice; repeated clean passes on an unchanged
-   head are not required. A completed review with findings is not approval.
-   Blocking defects cannot be deferred merely because they need a large fix.
+   unread findings or findings whose fixing commit has not been pushed.
+7. **Review a changed head; repeat as needed.** After the push and thread
+   replies, return to step 2 for the new head. Include the previous reviewed
+   SHA, changes, tests and declined findings. Prioritize fixes and affected
+   paths without excluding the full PR from regression review. An unchanged
+   head with addressed findings does not need another clean pass.
+8. **Mark ready only after final-head review and fixes are complete.** The
+   reviewed head must be pushed and all findings fixed or declined with
+   evidence before the ready transition. Then wait for required CI and
+   approvals on that head and recheck findings before merging. A ready event
+   may itself trigger automatic review; do not add a duplicate manual request.
+   Routine PRs may merge when these conditions hold; high-risk PRs additionally
+   require the independent pass. Blocking defects cannot be deferred merely
+   because they need a large fix. If a new fix is needed, return to step 4.
+
+Draft status does not suppress this repository's full CI jobs. Inspect
+`.github/workflows/ci.yml` before assuming any draft savings.
 
 If a round creates more findings, determine whether they are regressions in
 our fixes, previously missed defects, or unsupported claims. After three
