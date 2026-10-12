@@ -287,11 +287,13 @@ it("keeps the page-owned header outside a horizontal column scroller", async () 
   const mirror = host.querySelector("[data-page-table-header]");
   expect(mirror?.parentElement).toBe(host.querySelector("[data-list-root]"));
   expect(mirror?.querySelector("table")?.textContent).toContain("Status");
-  expect((mirror as HTMLElement).style.top).toBe("calc(140px)");
+  expect((mirror as HTMLElement).style.top).toBe("96px");
   const overflow = host.querySelector<HTMLElement>("[data-table-overflow]");
   expect(overflow?.parentElement).toBe(host.querySelector("[data-list-root]"));
   expect(overflow?.style.top).toBe("96px");
-  expect(overflow?.style.height).toBe("44px");
+  expect(overflow?.style.height).toBe("40px");
+  expect(overflow?.style.marginBottom).toBe("-40px");
+  expect(host.querySelector<HTMLElement>("[data-list-scroller]")?.style.paddingRight).toBe("96px");
   expect(overflow?.querySelector('[aria-label="Next columns"]')).not.toBeNull();
   expect(host.querySelector("[data-list-scroller] thead")?.className).not.toContain("sticky");
 });

@@ -20,7 +20,7 @@ import {
 import { DATA_TABLE_MIN_WIDTH, type DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { usePinnedOffsets } from "./use-pinned-offsets.ts";
-import { DataTableOverflow, DATA_TABLE_PAGE_OVERFLOW_HEIGHT } from "./data-table-overflow.tsx";
+import { DataTableOverflow, DATA_TABLE_PAGE_OVERFLOW_WIDTH } from "./data-table-overflow.tsx";
 import { DataTablePageHeader } from "./data-table-page-header.tsx";
 import { useTableViewport } from "./use-table-viewport.ts";
 import { boundedColumnWidth } from "./column-sizing.ts";
@@ -299,7 +299,9 @@ export function DataTable<T>({
   // overflow. Fall back to the horizontal table scroller if a host shows more
   // columns than fit; its overflow controls keep those columns reachable.
   const pageFits = pageScrolling && (availableWidth === 0 || tableWidth <= availableWidth + 1);
-  const pageHeaderOffset = `calc(${typeof stickyHeaderOffset === "number" ? `${stickyHeaderOffset}px` : stickyHeaderOffset} + ${DATA_TABLE_PAGE_OVERFLOW_HEIGHT}px)`;
+  // The compact overflow controls share the header's row instead of taking a
+  // second sticky row above it. Keep both surfaces on the same offset.
+  const pageHeaderOffset = stickyHeaderOffset;
   // A horizontal scrollport becomes the sticky containing block of its thead.
   // The page mirror owns stickiness in that case; keep the source header in
   // normal flow so it cannot drift over rows inside the horizontal scroller.
@@ -555,11 +557,13 @@ export function DataTable<T>({
         role="region"
         aria-label={`${ariaLabel ?? "Table"} scroll area`}
         tabIndex={0}
-        style={
-          bounded
+        style={{
+          ...(bounded
             ? { maxHeight: viewportMaxHeight, height: keepHeight ? viewportMaxHeight : undefined }
-            : undefined
-        }
+            : {}),
+          // The final column can scroll clear of the compact controls.
+          ...(pageScrolling && !pageFits ? { paddingRight: DATA_TABLE_PAGE_OVERFLOW_WIDTH } : {}),
+        }}
         className={cn(
           pageScrolling && "min-w-0 w-full",
           filling
