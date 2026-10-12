@@ -155,44 +155,22 @@ and is missing for everyone else until it is released.
 - **Every change needs a changeset.** No changeset, no release, and a
   consumer waiting on it waits forever.
 
-# Bot code review (do not skip, do not merge around)
+# Bot code review
 
-Every PR here is reviewed by **Codex**. (GitHub Copilot's reviewer is not used
-here — do not request it.) Its findings are not advisory noise: they have caught defects that
-green CI and a passing local suite did not, including fixes of ours that broke
-the case they were written for.
+Codex reviews every PR; do not request Copilot. Read [the review manual](docs/BOT_CODE_REVIEW.md).
+Batch verified fixes into one tested push per round; review each new head once via an automatic trigger or `@codex review`, without duplicate requests. Check both verdict surfaces against the current SHA. Read and answer every finding; verify claims, fix likely defects and decline unsupported claims with evidence. Preserve scrutiny for irreversible harm and take regressions in our fixes most seriously.
+Routine PRs may merge after final-head review, required CI and approvals, and findings are addressed; high-risk PRs also require independent review. After three fix rounds, reassess scope rather than continuing patch churn. Never merge unread findings or force-push over them.
 
-The loop, in full — how to trigger the bot, where a verdict actually lands,
-how to tell a running review from a finished one, and how to judge a finding —
-is **[`docs/BOT_CODE_REVIEW.md`](docs/BOT_CODE_REVIEW.md)**. Read it before
-your first round; the traps in it are ones this repo has already paid for.
+## Code Review Rules
 
-The non-negotiables:
-
-- **Ask Codex every round** (`@codex review`), and re-ask after every push.
-- **High-risk PRs get a second, independent review** before merge. See the
-  review manual for what counts as high-risk.
-- **A verdict is not always a review object.** A clean Codex pass is an issue
-  comment. Query both surfaces, match on the bot's numeric id, and compare
-  against the head SHA — or you will call a finished review missing.
-- **Read every finding and answer it in the thread.** "Fixed" and "declined,
-  because…" are both finished; "unread" is not.
-- **Verify a claim against the code before acting on it**, and take the
-  findings on your own fixes most seriously — they are the ones nobody else
-  will catch.
-- **Fix the likely; decline the hypothetical — except where it destroys.** A
-  finding needing a contrived chain of failures gets an answer in the thread,
-  not a patch: speculative fixes are new code, and new code is what the next
-  round finds defects in. Judge the exception by what a mistake COSTS, not by
-  which verb the code uses — an outcome nobody can undo (a resource someone
-  still depends on deleted or purged, unreproducible state overwritten, a
-  credential's scope widened) is worth fixing on an uncommon trigger; a temp
-  file or a cache is not.
-- **Rounds do not converge monotonically.** A round that goes up is the process
-  working. Do not merge on the first green.
-
-Never merge with unread findings, and never close a thread by force-pushing
-over it.
+- Runtime exports must reach published JavaScript, declarations and required
+  assets. Safe path: check packed artifacts and consumer builds; source-only
+  exports and a green workspace build are insufficient.
+- Agent transport remains cross-runtime and module-agnostic. Safe path: put
+  React/DOM bindings in UI packages and application behavior in extension points.
+- Declared dependency ranges must install outside the workspace. Safe path:
+  pack/release through the documented pnpm workflow and verify the packed
+  manifest; do not ship unresolved workspace protocols.
 
 # Opinionated form and renderer UX
 
