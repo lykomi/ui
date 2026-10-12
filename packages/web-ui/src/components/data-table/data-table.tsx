@@ -299,6 +299,10 @@ export function DataTable<T>({
   // overflow. Fall back to the horizontal table scroller if a host shows more
   // columns than fit; its overflow controls keep those columns reachable.
   const pageFits = pageScrolling && (availableWidth === 0 || tableWidth <= availableWidth + 1);
+  // A horizontal scrollport becomes the sticky containing block of its thead.
+  // The page mirror owns stickiness in that case; keep the source header in
+  // normal flow so it cannot drift over rows inside the horizontal scroller.
+  const sourceSticky = sticky && !(pageScrolling && !pageFits);
   const trailingSpace = spacer || availableWidth > tableWidth;
   const fittingLeafWidth = (header: Header<T, unknown>): number =>
     header.subHeaders.length
@@ -590,11 +594,11 @@ export function DataTable<T>({
           </colgroup>
           <thead
             ref={headerRef}
-            className={cn(sticky && "sticky top-0 z-10 bg-card")}
+            className={cn(sourceSticky && "sticky top-0 z-10 bg-card")}
             // A sticky surface must cover rows even when a host applies a
             // translucent header utility for ordinary, non-scrolling tables.
             style={
-              sticky
+              sourceSticky
                 ? {
                     backgroundColor: "var(--card)",
                     top: pageScrolling ? stickyHeaderOffset : 0,

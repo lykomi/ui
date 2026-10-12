@@ -42,6 +42,13 @@ export function DataTablePageHeader({
     mirror.style.width =
       sourceTable?.style.width || `${sourceTable?.getBoundingClientRect().width ?? 0}px`;
     const pinned = [...clonedHeader.querySelectorAll<HTMLElement>('[data-pinned="header"]')];
+    // The mirror has no horizontal scrollport of its own. Disable native
+    // sticky positioning here and counter-translate the copied cells exactly
+    // once; otherwise their CSS stickiness can add a second offset.
+    for (const cell of pinned) {
+      cell.style.position = "relative";
+      cell.style.left = "0px";
+    }
 
     let frame = 0;
     const read = () => {
@@ -91,6 +98,7 @@ export function DataTablePageHeader({
         marginBottom: -40,
         visibility: "hidden",
         pointerEvents: "none",
+        overflowAnchor: "none",
       }}
     >
       <div className="w-full overflow-hidden border-b border-border/45 bg-card shadow-sm">

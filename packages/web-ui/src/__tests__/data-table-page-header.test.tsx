@@ -92,9 +92,10 @@ it("keeps a visual page header aligned with horizontally scrolling columns", asy
       flush();
     });
     expect(table.style.transform).toBe("translate3d(-220px, 0, 0)");
-    expect(table.querySelector<HTMLElement>('[data-pinned="header"]')?.style.transform).toBe(
-      "translate3d(220px, 0, 0)",
-    );
+    const pinned = table.querySelector<HTMLElement>('[data-pinned="header"]');
+    expect(pinned?.style.position).toBe("relative");
+    expect(pinned?.style.left).toBe("0px");
+    expect(pinned?.style.transform).toBe("translate3d(220px, 0, 0)");
 
     headerBottom = 140;
     await act(async () => {

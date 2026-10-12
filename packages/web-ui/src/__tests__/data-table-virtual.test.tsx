@@ -285,6 +285,7 @@ it("keeps the page-owned header outside a horizontal column scroller", async () 
   const mirror = host.querySelector("[data-page-table-header]");
   expect(mirror?.parentElement).toBe(host.querySelector("[data-list-root]"));
   expect(mirror?.querySelector("table")?.textContent).toContain("Status");
+  expect(host.querySelector("[data-list-scroller] thead")?.className).not.toContain("sticky");
 });
 it("returns to the page-owned list start after changing pages", async () => {
   let pagedTable: Table<Item>;
