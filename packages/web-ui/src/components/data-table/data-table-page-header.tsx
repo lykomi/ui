@@ -37,7 +37,20 @@ export function DataTablePageHeader({
     clonedHeader.classList.remove("sticky", "top-0", "z-10");
     clonedHeader.style.position = "static";
     clonedHeader.style.top = "auto";
+    // The mirror is paint only. `aria-hidden` removes it from the accessibility
+    // tree but does not stop cloned anchors, labels, summaries or editable
+    // content from handling input. Keep the host as a pointer shield over rows.
+    clonedHeader.setAttribute("inert", "");
     clonedHeader.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    clonedHeader.querySelectorAll("*").forEach((node) => {
+      for (const attribute of [...node.attributes]) {
+        if (
+          /^(?:href|tabindex|contenteditable|for|formaction)$/i.test(attribute.name) ||
+          /^on/i.test(attribute.name)
+        )
+          node.removeAttribute(attribute.name);
+      }
+    });
     // The copy is a visual location cue. Remove controls rather than leaving
     // buttons or checkboxes that look usable while the real header is away.
     clonedHeader.querySelectorAll("button, input, select, textarea").forEach((node) => {

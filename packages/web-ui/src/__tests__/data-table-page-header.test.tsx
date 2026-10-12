@@ -55,7 +55,18 @@ it("keeps a visual page header aligned with horizontally scrolling columns", asy
                 <th data-pinned="header" style={{ width: 200 }}>
                   <button>Name</button>
                 </th>
-                <th style={{ width: 700 }}>Assessment</th>
+                <th style={{ width: 700 }}>
+                  <a href="/assessment" tabIndex={0} onClick={() => undefined}>
+                    Assessment
+                  </a>
+                  <label htmlFor="assessment-status">Status</label>
+                  <details>
+                    <summary>Options</summary>More
+                  </details>
+                  <span contentEditable suppressContentEditableWarning>
+                    Editable
+                  </span>
+                </th>
               </tr>
             </thead>
           </table>
@@ -81,6 +92,10 @@ it("keeps a visual page header aligned with horizontally scrolling columns", asy
     expect(mirror.getAttribute("aria-hidden")).toBe("true");
     expect(table.textContent).toContain("Assessment");
     expect(table.querySelector("button")).toBeNull();
+    expect(table.querySelector("thead")?.hasAttribute("inert")).toBe(true);
+    expect(
+      table.querySelector("[href], [tabindex], [contenteditable], [for], [onclick]"),
+    ).toBeNull();
     expect(table.style.width).toBe("900px");
 
     headerBottom = 150;
