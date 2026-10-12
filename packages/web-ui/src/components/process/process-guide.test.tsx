@@ -391,6 +391,22 @@ it("marks connections complete only when both adjacent steps are complete", () =
   expect(host.querySelectorAll("li")[2].hasAttribute("data-connection-complete")).toBe(true);
 });
 
+it("keeps the progress track continuous across a skipped optional step", () => {
+  const progress = [
+    { id: "docs", label: "Documents", status: "complete" as const },
+    { id: "sync", label: "Catalog sync", optional: true, status: "skipped" as const },
+    { id: "review", label: "Review", status: "complete" as const },
+    { id: "publish", label: "Publish", status: "ready" as const },
+  ];
+  act(() => root.render(<ProcessSteps steps={progress} currentStepId="publish" />));
+  const items = host.querySelectorAll("li");
+  expect(items[0].hasAttribute("data-connection-complete")).toBe(true);
+  expect(items[1].getAttribute("data-status")).toBe("skipped");
+  expect(items[1].hasAttribute("data-connection-complete")).toBe(true);
+  expect(items[2].hasAttribute("data-connection-complete")).toBe(false);
+  expect(items[1].textContent).toContain("Skipped");
+});
+
 it("compact standalone progress delegates clicks to the host and retains accessible status", () => {
   const action = vi.fn();
   act(() => root.render(<ProcessSteps steps={steps} density="compact" onStepSelect={action} />));
@@ -469,13 +485,19 @@ it("keeps optionality independent of navigation and localizes compact optional l
 it("shows a dashed circle only while an optional step is unstarted", () => {
   const optional = { id: "extra", label: "Extra", optional: true };
   act(() => root.render(<ProcessSteps steps={[{ ...optional, status: "pending" }]} />));
-  expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).not.toBeNull();
+  expect(
+    host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]'),
+  ).not.toBeNull();
 
   act(() => root.render(<ProcessSteps steps={[{ ...optional, status: "complete" }]} />));
   expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).toBeNull();
   expect(host.querySelector('.foundry-process-step[data-status="complete"] svg')).not.toBeNull();
 
-  act(() => root.render(<ProcessSteps steps={[{ id: "required", label: "Required", status: "pending" }]} />));
+  act(() =>
+    root.render(
+      <ProcessSteps steps={[{ id: "required", label: "Required", status: "pending" }]} />,
+    ),
+  );
   expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).toBeNull();
 });
 it("only completes optional steps after the host records completion or a skip", () => {

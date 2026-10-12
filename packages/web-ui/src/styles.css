@@ -905,7 +905,7 @@ tr[data-active] > [data-pinned="cell"] {
   background: var(--border);
 }
 .foundry-process[data-variant="compact"][data-orientation="horizontal"]
-  .foundry-process-step[data-status="complete"]::before {
+  .foundry-process-step:is([data-status="complete"], [data-status="skipped"])::before {
   background: var(--primary);
 }
 
@@ -1123,9 +1123,9 @@ tr[data-active] > [data-pinned="cell"] {
 
 /* The track stays continuous; only the final completed segment has a small inset. */
 .foundry-process[data-variant="compact"]
-  .foundry-process-step[data-status="complete"]:not([data-connection-complete]):not(
-    :last-child
-  )::before {
+  .foundry-process-step:is([data-status="complete"], [data-status="skipped"]):not(
+    [data-connection-complete]
+  ):not(:last-child)::before {
   background: linear-gradient(
     to right,
     var(--primary) calc(100% - var(--spacing, 0.25rem) * 4),
@@ -1133,9 +1133,9 @@ tr[data-active] > [data-pinned="cell"] {
   );
 }
 .foundry-process[data-variant="compact"]:dir(rtl)
-  .foundry-process-step[data-status="complete"]:not([data-connection-complete]):not(
-    :last-child
-  )::before {
+  .foundry-process-step:is([data-status="complete"], [data-status="skipped"]):not(
+    [data-connection-complete]
+  ):not(:last-child)::before {
   background: linear-gradient(
     to left,
     var(--primary) calc(100% - var(--spacing, 0.25rem) * 4),
