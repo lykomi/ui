@@ -190,7 +190,7 @@ export function DataTable<T>({
   // remaining height (`min-h-0` lets a flex item shrink below its content)
   // and scrolls in both directions, so the toolbar above stays put.
   const filling = fill ?? frame?.focused ?? false;
-  const pageScrolling = scrollMode === "page" && !filling;
+  const pageScrolling = scrollMode === "page" && !filling && !frame?.focused;
   const rowModel = table.getRowModel().rows;
   const { grouping, expanded } = table.getState();
   const rows = useMemo(
@@ -299,6 +299,7 @@ export function DataTable<T>({
   // overflow. Fall back to the horizontal table scroller if a host shows more
   // columns than fit; its overflow controls keep those columns reachable.
   const pageFits = pageScrolling && (availableWidth === 0 || tableWidth <= availableWidth + 1);
+  const pageHeaderOffset = `calc(${typeof stickyHeaderOffset === "number" ? `${stickyHeaderOffset}px` : stickyHeaderOffset} + 36px)`;
   // A horizontal scrollport becomes the sticky containing block of its thead.
   // The page mirror owns stickiness in that case; keep the source header in
   // normal flow so it cannot drift over rows inside the horizontal scroller.
@@ -452,7 +453,9 @@ export function DataTable<T>({
       if (pageScrolling) {
         const header = headerRef.current;
         const headerHeight = header?.getBoundingClientRect().height ?? 40;
-        const top = header ? Number.parseFloat(getComputedStyle(header).top) || 0 : 0;
+        const stickySurface =
+          rootRef.current?.querySelector<HTMLElement>("[data-page-table-header]") ?? header;
+        const top = stickySurface ? Number.parseFloat(getComputedStyle(stickySurface).top) || 0 : 0;
         element.style.scrollMarginTop = `${top + headerHeight}px`;
       }
       element.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
@@ -523,11 +526,14 @@ export function DataTable<T>({
       style={pageScrolling ? { scrollMarginTop: stickyHeaderOffset } : undefined}
     >
       {pageScrolling && !pageFits ? (
+        <DataTableOverflow scroller={scrollerRef} compact stickyTop={stickyHeaderOffset} />
+      ) : null}
+      {pageScrolling && !pageFits ? (
         <DataTablePageHeader
           root={rootRef}
           scroller={scrollerRef}
           header={headerRef}
-          offset={stickyHeaderOffset}
+          offset={pageHeaderOffset}
         />
       ) : null}
       <div
@@ -863,7 +869,7 @@ export function DataTable<T>({
           </span>
         ) : null}
       </div>
-      <DataTableOverflow scroller={scrollerRef} />
+      {pageScrolling && !pageFits ? null : <DataTableOverflow scroller={scrollerRef} />}
     </div>
   );
 }

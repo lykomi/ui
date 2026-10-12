@@ -4,6 +4,7 @@ import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import type { ColumnDef, Table } from "@tanstack/react-table";
 import { DataTableRowActions } from "../components/data-table/data-table-row-actions.tsx";
 import { DataTable } from "../components/data-table/data-table.tsx";
+import { DataTableFrame, useDataTableFrame } from "../components/data-table/data-table-frame.tsx";
 import { useDataTable } from "../components/data-table/use-data-table.ts";
 
 interface Item {
@@ -266,6 +267,7 @@ it("lets a dedicated page own scrolling and offset its sticky header", async () 
 });
 it("keeps the page-owned header outside a horizontal column scroller", async () => {
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(500);
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(1000);
   function WidePageList() {
     const instance = useDataTable({
       data: items.slice(0, 5),
@@ -285,6 +287,11 @@ it("keeps the page-owned header outside a horizontal column scroller", async () 
   const mirror = host.querySelector("[data-page-table-header]");
   expect(mirror?.parentElement).toBe(host.querySelector("[data-list-root]"));
   expect(mirror?.querySelector("table")?.textContent).toContain("Status");
+  expect((mirror as HTMLElement).style.top).toBe("calc(132px)");
+  const overflow = host.querySelector<HTMLElement>("[data-table-overflow]");
+  expect(overflow?.parentElement).toBe(host.querySelector("[data-list-root]"));
+  expect(overflow?.style.top).toBe("96px");
+  expect(overflow?.querySelector('[aria-label="Next columns"]')).not.toBeNull();
   expect(host.querySelector("[data-list-scroller] thead")?.className).not.toContain("sticky");
 });
 it("returns to the page-owned list start after changing pages", async () => {
@@ -349,6 +356,34 @@ it("offers one tab stop in a long page-owned list with internal row navigation",
   const rows = [...host.querySelectorAll<HTMLElement>("tr[data-row-id]")];
   expect(rows).toHaveLength(250);
   expect(rows.filter((row) => row.tabIndex === 0)).toHaveLength(1);
+});
+it("keeps a focused frame bounded even when the host overrides fill", async () => {
+  function FocusList() {
+    const frame = useDataTableFrame()!;
+    const instance = useDataTable({
+      data: items.slice(0, 250),
+      columns,
+      getRowId: (item) => item.id,
+      pageSize: false,
+    });
+    return (
+      <>
+        <button onClick={() => frame.setFocused(true)}>Focus list</button>
+        <DataTable table={instance} scrollMode="page" fill={false} onRowOpen={() => {}} />
+      </>
+    );
+  }
+  await act(async () =>
+    root.render(
+      <DataTableFrame>
+        <FocusList />
+      </DataTableFrame>,
+    ),
+  );
+  await act(async () => host.querySelector<HTMLButtonElement>("button")!.click());
+  const focused = document.querySelector("[data-focused] [data-list-scroller]");
+  expect(focused?.className).toContain("overflow-auto");
+  expect(document.querySelectorAll("[data-focused] tr[data-row-id]").length).toBeLessThan(50);
 });
 it("provides roving keyboard navigation when the host supplies only row opening", async () => {
   const open = vi.fn();

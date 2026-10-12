@@ -1,9 +1,17 @@
 import { useEffect, useState, type RefObject } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@iloveagents/foundry-web-primitives";
 
 /** Discoverable, keyboard-accessible navigation for a table wider than its pane. */
-export function DataTableOverflow({ scroller }: { scroller: RefObject<HTMLDivElement | null> }) {
+export function DataTableOverflow({
+  scroller,
+  compact = false,
+  stickyTop,
+}: {
+  scroller: RefObject<HTMLDivElement | null>;
+  compact?: boolean;
+  stickyTop?: number | string;
+}) {
   const [edges, setEdges] = useState({ previous: false, next: false });
   const overflowing = edges.previous || edges.next;
   useEffect(() => {
@@ -44,11 +52,24 @@ export function DataTableOverflow({ scroller }: { scroller: RefObject<HTMLDivEle
     <div
       data-table-overflow=""
       className="flex shrink-0 items-center gap-2 border-t border-border bg-card px-3 py-1"
+      style={
+        stickyTop === undefined
+          ? undefined
+          : { position: "sticky", top: stickyTop, zIndex: 12, height: 36 }
+      }
     >
-      <span className="min-w-0 flex-1 text-xs text-muted-foreground">
-        Scroll to see more columns
-      </span>
-      <div className="flex items-center gap-1" role="group" aria-label="Scroll table columns">
+      {compact ? (
+        <span className="sr-only">Scroll to see more columns</span>
+      ) : (
+        <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+          Scroll to see more columns
+        </span>
+      )}
+      <div
+        className={cn("flex items-center gap-1", compact && "ml-auto")}
+        role="group"
+        aria-label="Scroll table columns"
+      >
         <Button
           variant="ghost"
           size="icon"

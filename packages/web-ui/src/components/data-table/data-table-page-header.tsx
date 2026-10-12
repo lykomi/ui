@@ -38,6 +38,13 @@ export function DataTablePageHeader({
     clonedHeader.style.position = "static";
     clonedHeader.style.top = "auto";
     clonedHeader.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    // The copy is a visual location cue. Remove controls rather than leaving
+    // buttons or checkboxes that look usable while the real header is away.
+    clonedHeader.querySelectorAll("button, input, select, textarea").forEach((node) => {
+      const label = document.createElement("span");
+      label.textContent = node instanceof HTMLButtonElement ? node.textContent : "";
+      node.replaceWith(label);
+    });
     mirror.replaceChildren(...(columns ? [columns, clonedHeader] : [clonedHeader]));
     mirror.style.width =
       sourceTable?.style.width || `${sourceTable?.getBoundingClientRect().width ?? 0}px`;
@@ -56,7 +63,7 @@ export function DataTablePageHeader({
       const height = Math.ceil(source.getBoundingClientRect().height) || 40;
       host.style.height = `${height}px`;
       host.style.marginBottom = `-${height}px`;
-      const top = Number.parseFloat(getComputedStyle(host).top) || 0;
+      const top = host.getBoundingClientRect().top;
       const sourceBox = source.getBoundingClientRect();
       const rootBox = boundary.getBoundingClientRect();
       host.style.visibility =
@@ -89,7 +96,6 @@ export function DataTablePageHeader({
       ref={hostRef}
       data-page-table-header=""
       aria-hidden="true"
-      inert
       style={{
         position: "sticky",
         top: offset,
@@ -97,7 +103,7 @@ export function DataTablePageHeader({
         height: 40,
         marginBottom: -40,
         visibility: "hidden",
-        pointerEvents: "none",
+        pointerEvents: "auto",
         overflowAnchor: "none",
       }}
     >

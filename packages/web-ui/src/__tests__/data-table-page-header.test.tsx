@@ -16,10 +16,12 @@ it("keeps a visual page header aligned with horizontally scrolling columns", asy
     disconnect() {}
   }
   vi.stubGlobal("ResizeObserver", Observer);
-  let headerBottom = 140;
+  let headerBottom = 200;
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
-    const height = this.hasAttribute("data-original-header") ? 40 : 600;
-    const bottom = this.hasAttribute("data-original-header") ? headerBottom : 900;
+    const isSource = this.hasAttribute("data-original-header");
+    const isMirror = this.hasAttribute("data-page-table-header");
+    const height = isSource ? 40 : isMirror ? 40 : 600;
+    const bottom = isSource ? headerBottom : isMirror ? 200 : 900;
     return {
       x: 0,
       y: bottom - height,
@@ -51,7 +53,7 @@ it("keeps a visual page header aligned with horizontally scrolling columns", asy
             <thead ref={header} data-original-header="">
               <tr>
                 <th data-pinned="header" style={{ width: 200 }}>
-                  Name
+                  <button>Name</button>
                 </th>
                 <th style={{ width: 700 }}>Assessment</th>
               </tr>
@@ -78,9 +80,10 @@ it("keeps a visual page header aligned with horizontally scrolling columns", asy
     expect(mirror.style.visibility).toBe("hidden");
     expect(mirror.getAttribute("aria-hidden")).toBe("true");
     expect(table.textContent).toContain("Assessment");
+    expect(table.querySelector("button")).toBeNull();
     expect(table.style.width).toBe("900px");
 
-    headerBottom = 80;
+    headerBottom = 150;
     await act(async () => {
       window.dispatchEvent(new Event("scroll"));
       flush();
@@ -97,7 +100,7 @@ it("keeps a visual page header aligned with horizontally scrolling columns", asy
     expect(pinned?.style.left).toBe("0px");
     expect(pinned?.style.transform).toBe("translate3d(220px, 0, 0)");
 
-    headerBottom = 140;
+    headerBottom = 200;
     await act(async () => {
       window.dispatchEvent(new Event("scroll"));
       flush();
