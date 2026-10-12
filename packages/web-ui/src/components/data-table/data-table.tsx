@@ -21,6 +21,7 @@ import { DATA_TABLE_MIN_WIDTH, type DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { usePinnedOffsets } from "./use-pinned-offsets.ts";
 import { DataTableOverflow } from "./data-table-overflow.tsx";
+import { DataTablePageHeader } from "./data-table-page-header.tsx";
 import { useTableViewport } from "./use-table-viewport.ts";
 import { boundedColumnWidth } from "./column-sizing.ts";
 import { DataTableColumnResize } from "./data-table-column-resize.tsx";
@@ -66,9 +67,9 @@ export interface DataTableProps<T> {
   /** Keep the header in place while the rows scroll (always on in focus mode). */
   stickyHeader?: boolean;
   /**
-   * Let the containing page own vertical scrolling. Use this for a dedicated
-   * working-list view with columns that fit its width; focus mode remains a
-   * bounded, virtualized table for very large datasets.
+   * Let the containing page own vertical scrolling. A visual header mirror
+   * keeps column labels visible when the table also scrolls horizontally.
+   * Focus mode remains bounded and virtualized for very large datasets.
    */
   scrollMode?: "table" | "page";
   /** Offset below the page's own sticky navigation and filters. */
@@ -221,14 +222,37 @@ export function DataTable<T>({
   const dataRows = useMemo(() => rows.filter((row) => !row.getIsGrouped()), [rows]);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLTableSectionElement | null>(null);
   // Automatic bounds must contribute height even below the page fold.
   const viewport = useTableViewport(scrollerRef, bounded, fitViewport && maxHeight !== undefined);
   const availableHeight = viewport.height;
   const keepHeight = stableHeight ?? (viewport.paginated && table.getPageCount() > 1);
   const { pageIndex, pageSize } = table.getState().pagination;
+  const previousPage = useRef({ pageIndex, pageSize });
   useEffect(() => {
-    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
-  }, [pageIndex, pageSize]);
+    const changed =
+      previousPage.current.pageIndex !== pageIndex || previousPage.current.pageSize !== pageSize;
+    previousPage.current = { pageIndex, pageSize };
+    if (!changed) return;
+    if (!pageScrolling) {
+      if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
+      return;
+    }
+    const root = rootRef.current;
+    if (!root) return;
+    // A page-owned list has no vertical table viewport. Return to its first
+    // row without moving the horizontally selected columns.
+    const horizontal = new Map<HTMLElement, number>();
+    for (let parent = root.parentElement; parent; parent = parent.parentElement)
+      horizontal.set(parent, parent.scrollLeft);
+    const windowLeft = window.scrollX;
+    root.scrollIntoView?.({ block: "start", inline: "nearest", behavior: "instant" });
+    horizontal.forEach((left, parent) => {
+      parent.scrollLeft = left;
+    });
+    if (window.scrollX !== windowLeft)
+      window.scrollTo({ left: windowLeft, top: window.scrollY, behavior: "instant" });
+  }, [pageIndex, pageSize, pageScrolling]);
   const viewportMaxHeight =
     availableHeight === undefined
       ? effectiveMaxHeight
@@ -421,6 +445,12 @@ export function DataTable<T>({
         horizontal.set(parent, parent.scrollLeft);
       }
       const windowLeft = window.scrollX;
+      if (pageScrolling) {
+        const header = headerRef.current;
+        const headerHeight = header?.getBoundingClientRect().height ?? 40;
+        const top = header ? Number.parseFloat(getComputedStyle(header).top) || 0 : 0;
+        element.style.scrollMarginTop = `${top + headerHeight}px`;
+      }
       element.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
       horizontal.forEach((left, parent) => {
         parent.scrollLeft = left;
@@ -441,7 +471,7 @@ export function DataTable<T>({
     if (element && onARow && active !== element) {
       element.focus?.({ preventScroll: true });
     }
-  }, [navigationRowId, activeIndex, sticky, viewportMaxHeight]);
+  }, [navigationRowId, activeIndex, sticky, viewportMaxHeight, pageScrolling]);
   const columnCount = renderedColumns.length + (trailingSpace ? 1 : 0);
   const renderedIds = renderedColumns.map((column) => column.id);
   // JSON, not a comma-joined string: a column id may contain a comma, and
@@ -482,11 +512,20 @@ export function DataTable<T>({
       className={cn(
         "rounded-2xl border border-border/45 bg-card/60",
         pageScrolling && "min-w-0 w-full",
-        pageFits ? "overflow-visible" : "overflow-hidden",
+        pageScrolling ? "overflow-visible" : "overflow-hidden",
         filling && "flex min-h-0 flex-1 flex-col",
         className,
       )}
+      style={pageScrolling ? { scrollMarginTop: stickyHeaderOffset } : undefined}
     >
+      {pageScrolling && !pageFits ? (
+        <DataTablePageHeader
+          root={rootRef}
+          scroller={scrollerRef}
+          header={headerRef}
+          offset={stickyHeaderOffset}
+        />
+      ) : null}
       <div
         ref={scrollerRef}
         onScroll={(event) => {
@@ -550,6 +589,7 @@ export function DataTable<T>({
             {trailingSpace ? <col /> : null}
           </colgroup>
           <thead
+            ref={headerRef}
             className={cn(sticky && "sticky top-0 z-10 bg-card")}
             // A sticky surface must cover rows even when a host applies a
             // translucent header utility for ordinary, non-scrolling tables.
@@ -711,7 +751,7 @@ export function DataTable<T>({
                           onRowClick || onRowOpen || onActiveRowChange ? "" : undefined
                         }
                         tabIndex={
-                          internalNavigation && virtual.enabled
+                          internalNavigation
                             ? row.id === rovingEntryId
                               ? 0
                               : -1

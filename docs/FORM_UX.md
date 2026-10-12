@@ -249,6 +249,20 @@ A frozen identity column must leave room for the scrolling columns. At narrow
 widths the shared table releases a wide frozen prefix while keeping narrow
 leading utility columns fixed when they fit; column widths remain unchanged.
 
+For a dedicated long-list view, use `DataTable scrollMode="page"` and let its
+containing page own the one vertical scroll. Pass `stickyHeaderOffset` for the
+height of sticky navigation and filters above it. The shared table keeps its
+column labels visible even when columns overflow horizontally; do not add a
+second vertical row viewport or a second horizontal scrollport. Keep the
+sticky stack compact: let the page hero scroll away, collapse optional facet
+chips behind Filters on narrow panes, and retain search, the active filter
+count, horizontal navigation and column labels. Show the task's useful
+columns by default and let the horizontal scroller reach the rest. A width
+breakpoint may hide genuinely secondary fields, but must not make horizontal
+overflow disappear by silently hiding the columns a user came to compare.
+For thousands of rows, use paging or the bounded, virtualized focus mode
+instead of mounting the entire dataset in the page.
+
 `spacer={false}` lets the first content column use spare width, up to its
 maximum. A user-resized column keeps its chosen width. The default spacer
 keeps declared column widths and leaves spare room at the end. Explicit
