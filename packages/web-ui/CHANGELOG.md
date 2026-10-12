@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.42.1
+
+### Patch Changes
+
+- 4c9d55b: Keep horizontal column navigation within the sticky table header on narrow page-scrolling lists.
+  - @iloveagents/foundry-agent@0.42.1
+  - @iloveagents/foundry-web-primitives@0.42.1
+
 ## 0.42.0
 
 ### Minor Changes
