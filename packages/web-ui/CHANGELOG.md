@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.42.0
+
+### Minor Changes
+
+- d9cb710: Add a page scroll mode for dedicated list views. The containing page can own vertical scrolling while the table header stays below its sticky navigation; focus mode retains its bounded, virtualized layout.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.42.0
+- @iloveagents/foundry-web-primitives@0.42.0
+
 ## 0.41.1
 
 ### Patch Changes
