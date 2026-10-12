@@ -287,10 +287,11 @@ it("keeps the page-owned header outside a horizontal column scroller", async () 
   const mirror = host.querySelector("[data-page-table-header]");
   expect(mirror?.parentElement).toBe(host.querySelector("[data-list-root]"));
   expect(mirror?.querySelector("table")?.textContent).toContain("Status");
-  expect((mirror as HTMLElement).style.top).toBe("calc(132px)");
+  expect((mirror as HTMLElement).style.top).toBe("calc(140px)");
   const overflow = host.querySelector<HTMLElement>("[data-table-overflow]");
   expect(overflow?.parentElement).toBe(host.querySelector("[data-list-root]"));
   expect(overflow?.style.top).toBe("96px");
+  expect(overflow?.style.height).toBe("44px");
   expect(overflow?.querySelector('[aria-label="Next columns"]')).not.toBeNull();
   expect(host.querySelector("[data-list-scroller] thead")?.className).not.toContain("sticky");
 });
@@ -339,7 +340,7 @@ it("keeps one keyboard entry and reveals active rows below page headers", async 
   // internal roving mode is covered separately below.
   await act(async () => activate("item-220"));
   expect(host.querySelector<HTMLElement>('[data-row-id="item-220"]')?.style.scrollMarginTop).toBe(
-    "136px",
+    "calc(136px)",
   );
 });
 it("offers one tab stop in a long page-owned list with internal row navigation", async () => {

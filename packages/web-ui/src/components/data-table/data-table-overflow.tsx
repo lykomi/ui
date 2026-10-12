@@ -2,6 +2,8 @@ import { useEffect, useState, type RefObject } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 
+export const DATA_TABLE_PAGE_OVERFLOW_HEIGHT = 44;
+
 /** Discoverable, keyboard-accessible navigation for a table wider than its pane. */
 export function DataTableOverflow({
   scroller,
@@ -51,11 +53,19 @@ export function DataTableOverflow({
   return (
     <div
       data-table-overflow=""
-      className="flex shrink-0 items-center gap-2 border-t border-border bg-card px-3 py-1"
+      className={cn(
+        "flex shrink-0 items-center gap-2 border-t border-border bg-card",
+        compact ? "px-2" : "px-3 py-1",
+      )}
       style={
         stickyTop === undefined
           ? undefined
-          : { position: "sticky", top: stickyTop, zIndex: 12, height: 36 }
+          : {
+              position: "sticky",
+              top: stickyTop,
+              zIndex: 12,
+              height: DATA_TABLE_PAGE_OVERFLOW_HEIGHT,
+            }
       }
     >
       {compact ? (

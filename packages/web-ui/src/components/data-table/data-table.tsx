@@ -20,7 +20,7 @@ import {
 import { DATA_TABLE_MIN_WIDTH, type DataTableBreakpoint } from "./facets.ts";
 import { useDataTableFrame } from "./data-table-frame.tsx";
 import { usePinnedOffsets } from "./use-pinned-offsets.ts";
-import { DataTableOverflow } from "./data-table-overflow.tsx";
+import { DataTableOverflow, DATA_TABLE_PAGE_OVERFLOW_HEIGHT } from "./data-table-overflow.tsx";
 import { DataTablePageHeader } from "./data-table-page-header.tsx";
 import { useTableViewport } from "./use-table-viewport.ts";
 import { boundedColumnWidth } from "./column-sizing.ts";
@@ -299,7 +299,7 @@ export function DataTable<T>({
   // overflow. Fall back to the horizontal table scroller if a host shows more
   // columns than fit; its overflow controls keep those columns reachable.
   const pageFits = pageScrolling && (availableWidth === 0 || tableWidth <= availableWidth + 1);
-  const pageHeaderOffset = `calc(${typeof stickyHeaderOffset === "number" ? `${stickyHeaderOffset}px` : stickyHeaderOffset} + 36px)`;
+  const pageHeaderOffset = `calc(${typeof stickyHeaderOffset === "number" ? `${stickyHeaderOffset}px` : stickyHeaderOffset} + ${DATA_TABLE_PAGE_OVERFLOW_HEIGHT}px)`;
   // A horizontal scrollport becomes the sticky containing block of its thead.
   // The page mirror owns stickiness in that case; keep the source header in
   // normal flow so it cannot drift over rows inside the horizontal scroller.
@@ -453,10 +453,9 @@ export function DataTable<T>({
       if (pageScrolling) {
         const header = headerRef.current;
         const headerHeight = header?.getBoundingClientRect().height ?? 40;
-        const stickySurface =
-          rootRef.current?.querySelector<HTMLElement>("[data-page-table-header]") ?? header;
-        const top = stickySurface ? Number.parseFloat(getComputedStyle(stickySurface).top) || 0 : 0;
-        element.style.scrollMarginTop = `${top + headerHeight}px`;
+        const offset = pageFits ? stickyHeaderOffset : pageHeaderOffset;
+        const cssOffset = typeof offset === "number" ? `${offset}px` : offset;
+        element.style.scrollMarginTop = `calc(${cssOffset} + ${headerHeight}px)`;
       }
       element.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
       horizontal.forEach((left, parent) => {
@@ -478,7 +477,16 @@ export function DataTable<T>({
     if (element && onARow && active !== element) {
       element.focus?.({ preventScroll: true });
     }
-  }, [navigationRowId, activeIndex, sticky, viewportMaxHeight, pageScrolling]);
+  }, [
+    navigationRowId,
+    activeIndex,
+    sticky,
+    viewportMaxHeight,
+    pageScrolling,
+    pageFits,
+    stickyHeaderOffset,
+    pageHeaderOffset,
+  ]);
   const columnCount = renderedColumns.length + (trailingSpace ? 1 : 0);
   const renderedIds = renderedColumns.map((column) => column.id);
   // JSON, not a comma-joined string: a column id may contain a comma, and
