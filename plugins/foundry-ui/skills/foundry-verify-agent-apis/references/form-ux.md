@@ -251,6 +251,24 @@ A frozen identity column must leave room for the scrolling columns. At narrow
 widths the shared table releases a wide frozen prefix while keeping narrow
 leading utility columns fixed when they fit; column widths remain unchanged.
 
+For a dedicated long-list view, use `DataTable scrollMode="page"` and let its
+containing page own the one vertical scroll. Pass `stickyHeaderOffset` for the
+height of sticky navigation and filters above it. The shared table keeps its
+compact horizontal arrows above the column labels when columns overflow;
+both remain reachable while the rows scroll, and the arrows disappear when
+all columns fit. The mirrored sticky labels are visual only; sorting and
+selection controls remain in the original header at the top of the list.
+Do not add a
+second vertical row viewport or a second horizontal scrollport. Keep the
+sticky stack compact: let the page hero scroll away, collapse optional facet
+chips behind Filters on narrow panes, and retain search, the active filter
+count, horizontal navigation and column labels. Show the task's useful
+columns by default and let the horizontal scroller reach the rest. A width
+breakpoint may hide genuinely secondary fields, but must not make horizontal
+overflow disappear by silently hiding the columns a user came to compare.
+For thousands of rows, use paging or the bounded, virtualized focus mode
+instead of mounting the entire dataset in the page.
+
 `spacer={false}` lets the first content column use spare width, up to its
 maximum. A user-resized column keeps its chosen width. The default spacer
 keeps declared column widths and leaves spare room at the end. Explicit
@@ -278,7 +296,7 @@ These are complementary references, not a single design-system benchmark.
 
 Paged bounded tables reserve a stable viewport when standard pagination has multiple pages, so the next/previous controls do not jump on a short final page. `stableHeight` explicitly overrides this behavior. Page changes return to the top while preserving the horizontal position; resizing columns preserves the current reading position.
 
-Use a single native horizontal scrollport per table. Bottom arrows provide additional access to off-screen columns; do not duplicate the horizontal scrollbar with a synchronized second track.
+Use a single native horizontal scrollport per table. Bounded tables place their arrows below the row viewport; page-owned tables keep compact arrows in the sticky header stack. Do not duplicate the horizontal scrollbar with a synchronized second track.
 
 ## Wizards and process guidance
 
