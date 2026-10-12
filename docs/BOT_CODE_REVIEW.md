@@ -93,12 +93,16 @@ agent sits on a finished review indefinitely, or asks for it again.
    Run the required suite once after the batch. Repeat only for new changes,
    failures or unresolved concerns. Cross-npm changes still need standalone
    or CI validation against the published artifact.
-6. **Reply with evidence, then resolve.** For a fix, cite the commit and test.
-   For a decline, state the actual behavior and evidence. Leave a disagreement
-   requiring adjudication open and explain why. Never resolve unread findings.
-7. **Push once and review the new head.** Include the previous reviewed SHA,
-   changes, tests and declined findings in the request. Prioritize fixes and
-   affected paths without excluding the full PR from regression review.
+6. **Push the tested batch once.** Verify the fixing commit is reachable on
+   the PR branch before marking its findings addressed. If the push fails,
+   retain the local commit and leave the affected threads open.
+7. **Reply, resolve, then request review.** For a fix, cite the pushed commit
+   and test. For a decline, state the actual behavior and evidence. Leave a
+   disagreement requiring adjudication open and explain why. Never resolve
+   unread findings. Request review of the new head after these replies;
+   include the previous reviewed SHA, changes, tests and declined findings.
+   Prioritize fixes and affected paths without excluding the full PR from
+   regression review.
 8. **Stop on evidence, not round count.** Routine PRs may merge when required
    CI passes on the final head, that head has completed Codex review, every
    finding is fixed or declined with evidence, and required approvals are
