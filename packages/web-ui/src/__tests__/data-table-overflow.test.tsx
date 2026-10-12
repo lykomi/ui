@@ -68,6 +68,7 @@ it("keeps page navigation inside the header height on narrow tables", async () =
   const element = document.createElement("div");
   Object.defineProperties(element, { clientWidth: { value: 400 }, scrollWidth: { value: 800 } });
   const host = document.createElement("div");
+  document.body.append(host);
   const root = createRoot(host);
   try {
     await act(async () =>
@@ -78,14 +79,20 @@ it("keeps page navigation inside the header height on narrow tables", async () =
     expect(navigation.style.height).toBe(`${DATA_TABLE_PAGE_OVERFLOW_HEIGHT}px`);
     expect(navigation.style.marginBottom).toBe(`-${DATA_TABLE_PAGE_OVERFLOW_HEIGHT}px`);
     expect(controls.style.width).toBe(`${DATA_TABLE_PAGE_OVERFLOW_WIDTH}px`);
-    expect(host.querySelector('[aria-label="Previous columns"]')).toBeNull();
-    expect(host.querySelector('[aria-label="Next columns"]')).not.toBeNull();
+    const previous = host.querySelector('[aria-label="Previous columns"]') as HTMLButtonElement;
+    const next = host.querySelector('[aria-label="Next columns"]') as HTMLButtonElement;
+    expect(previous.getAttribute("aria-disabled")).toBe("true");
+    expect(next.getAttribute("aria-disabled")).toBeNull();
+    next.focus();
     await act(async () => {
       element.scrollLeft = 400;
       element.dispatchEvent(new Event("scroll"));
     });
-    expect(host.querySelector('[aria-label="Previous columns"]')).not.toBeNull();
-    expect(host.querySelector('[aria-label="Next columns"]')).toBeNull();
+    expect(host.querySelector('[aria-label="Previous columns"]')).toBe(previous);
+    expect(host.querySelector('[aria-label="Next columns"]')).toBe(next);
+    expect(document.activeElement).toBe(next);
+    expect(previous.getAttribute("aria-disabled")).toBeNull();
+    expect(next.getAttribute("aria-disabled")).toBe("true");
   } finally {
     await act(async () => root.unmount());
     host.remove();

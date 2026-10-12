@@ -293,7 +293,7 @@ it("keeps the page-owned header outside a horizontal column scroller", async () 
   expect(overflow?.style.top).toBe("96px");
   expect(overflow?.style.height).toBe("40px");
   expect(overflow?.style.marginBottom).toBe("-40px");
-  expect(host.querySelector<HTMLElement>("[data-list-scroller]")?.style.paddingRight).toBe("80px");
+  expect(host.querySelector<HTMLElement>("[data-list-scroller]")?.style.paddingRight).toBe("96px");
   expect(overflow?.querySelector('[aria-label="Next columns"]')).not.toBeNull();
   expect(host.querySelector("[data-list-scroller] thead")?.className).not.toContain("sticky");
 });

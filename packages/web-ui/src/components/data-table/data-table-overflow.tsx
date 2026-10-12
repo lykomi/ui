@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 
 export const DATA_TABLE_PAGE_OVERFLOW_HEIGHT = 40;
-export const DATA_TABLE_PAGE_OVERFLOW_WIDTH = 80;
+export const DATA_TABLE_PAGE_OVERFLOW_WIDTH = 96;
 
 /** Discoverable, keyboard-accessible navigation for a table wider than its pane. */
 export function DataTableOverflow({
@@ -87,30 +87,40 @@ export function DataTableOverflow({
         role="group"
         aria-label="Scroll table columns"
       >
-        {(!compact || edges.previous) && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 [@media(pointer:coarse)]:size-11"
-            aria-label="Previous columns"
-            disabled={!edges.previous}
-            onClick={() => move(-1)}
-          >
-            <ChevronLeft className="size-4 rtl:rotate-180" />
-          </Button>
-        )}
-        {(!compact || edges.next) && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 [@media(pointer:coarse)]:size-11"
-            aria-label="Next columns"
-            disabled={!edges.next}
-            onClick={() => move(1)}
-          >
-            <ChevronRight className="size-4 rtl:rotate-180" />
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "size-8 shrink-0 [@media(pointer:coarse)]:size-11",
+            compact && !edges.previous && "opacity-40",
+          )}
+          aria-label="Previous columns"
+          aria-disabled={compact && !edges.previous ? true : undefined}
+          tabIndex={compact && !edges.previous ? -1 : undefined}
+          disabled={!compact && !edges.previous}
+          onClick={() => {
+            if (edges.previous) move(-1);
+          }}
+        >
+          <ChevronLeft className="size-4 rtl:rotate-180" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "size-8 shrink-0 [@media(pointer:coarse)]:size-11",
+            compact && !edges.next && "opacity-40",
+          )}
+          aria-label="Next columns"
+          aria-disabled={compact && !edges.next ? true : undefined}
+          tabIndex={compact && !edges.next ? -1 : undefined}
+          disabled={!compact && !edges.next}
+          onClick={() => {
+            if (edges.next) move(1);
+          }}
+        >
+          <ChevronRight className="size-4 rtl:rotate-180" />
+        </Button>
       </div>
     </div>
   );
