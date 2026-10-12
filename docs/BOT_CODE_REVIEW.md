@@ -51,8 +51,17 @@ comment ("Codex Review Summary") also shows _Running_ / _Completed_ per commit.
 The dependable question has to cover **both** surfaces, because a clean Codex
 pass has no `commit_id` to match — the SHA lives only in the comment body:
 
-- a **review** by Codex's id whose `commit_id` is your head, **or**
-- an **issue comment** by Codex's id whose `Reviewed commit:` names it.
+- a **submitted code review** by Codex's id, with a `Codex Review` Markdown
+  heading (for example `### 💡 Codex Review`) and `commit_id` matching your head;
+  exclude pending, dismissed and security-only reviews, **or**
+- a **clean code-review issue comment** by Codex's id, beginning with
+  `Codex Review: Didn't find any major issues`, whose `Reviewed commit:`
+  marker names the head (the bot can abbreviate the SHA).
+
+A summary, reaction, or security review alone does not satisfy code review.
+Apply these signature checks in the manual/standalone procedure too, not just
+in the helper. A matching review with findings proves review completion,
+not that those findings are addressed.
 
 Either one means it looked at this code. Waiting only for the first is how an
 agent sits on a finished review indefinitely, or asks for it again.
@@ -63,11 +72,10 @@ agent sits on a finished review indefinitely, or asks for it again.
    behavior, affected callers, risks and validation in the PR description.
    Run the repository's required local checks before the first review.
 2. **Use draft during fixes.** Batch the whole round into one locally tested
-   push. In `ltwlf/lastspace`, draft CI runs quality checks and blocks the merge
-   gate while expensive suites wait for ready-for-review. Mark ready after
-   review fixes are complete; return to draft before pushing another fix.
-   Other repos may run full CI on drafts: inspect their workflows. See the
-   platform [CI review workflow](https://github.com/ltwlf/lastspace/blob/main/docs/CI_REVIEW_WORKFLOW.md).
+   push. Draft status does not suppress this repository's full CI jobs. Inspect
+   `.github/workflows/ci.yml` before assuming any draft savings. Mark ready
+   after review fixes are complete; return to draft while preparing another
+   fix when appropriate.
 3. **Review each new head once.** Check for completed evidence and an existing
    request before triggering `@codex review`. Automatic review may already
    cover PR open or ready-for-review. Do not add a manual request for the same
@@ -167,10 +175,10 @@ Grounding, checked 2026-10-12:
 
 ### Read-only status helper
 
-From `lastspace-meta` (authenticated `gh` and Python 3 required):
+From a cross-repository development workspace that provides the helper
+(authenticated `gh` and Python 3 required):
 
 ```bash
-python3 scripts/review-status.py ltwlf/lastspace 1234
 python3 scripts/review-status.py iLoveAgents/foundry-ui 123 --json
 python3 -m unittest discover -s scripts -p test_review_status.py -v
 ```
@@ -180,9 +188,10 @@ numeric id and current SHA (a security review alone does not count),
 accepts the bot's abbreviated commit marker, paginates REST and GraphQL,
 lists unresolved threads from all reviewers (including outdated ones), and
 rechecks the head after inspection. It reads GitHub only: no comments,
-resolutions, review requests, pushes or merges. Use it from the meta workspace;
-standalone sibling users can use the API procedure above or a separate meta
-checkout. Customer forks with no Codex integration will report missing.
+resolutions, review requests, pushes or merges. Standalone users should use
+this repository's API procedure above, including the signature checks; the
+helper is optional and is not shipped here. A repository with no Codex
+integration will report missing.
 
 Exit 0 means **review evidence found**, not clean or mergeable. Exit 1 means
 no matching evidence; queued, running, hung and never requested remain
