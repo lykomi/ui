@@ -1,7 +1,7 @@
 import { cloneElement, isValidElement, useCallback, useState, type FC } from "react";
 import { useMessagePartText } from "@assistant-ui/react";
 import remarkGfm from "remark-gfm";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
 import { Children, type ReactElement, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
@@ -69,11 +69,6 @@ function resolveHandledHref(rawHref: string): string | null {
   return resolveLinkHandler(rawHref)?.href ?? null;
 }
 
-function openHandledHref(href: string) {
-  const resolved = resolveLinkHandler(href);
-  resolved?.handler.openLink(resolved.href);
-}
-
 const TRAILING_LINK_PUNCT_RE = /[.,;:!?)\]]+$/;
 
 function trimLinkCandidate(value: string): { href: string; suffix: string } {
@@ -90,7 +85,7 @@ function exactHandledHref(value: string): string | null {
   if (!trimmed || /\s/.test(trimmed)) return null;
   const { href, suffix } = trimLinkCandidate(trimmed);
   if (suffix) return null;
-  return resolveHandledHref(href);
+  return resolveHandledHref(href) ? href : null;
 }
 
 const HANDLED_LINK_RE = /(https?:\/\/[^\s<>"`]+|\/[A-Za-z0-9][^\s<>"`]*)/g;
@@ -102,9 +97,10 @@ const HandledLink: FC<
     className?: string;
   } & React.AnchorHTMLAttributes<HTMLAnchorElement>
 > = ({ href, children, className, ...props }) => {
-  const handledHref = useStore(linkStore, () => resolveHandledHref(href));
+  useStore(linkStore, (state) => state.handlers);
+  const resolved = resolveLinkHandler(href);
 
-  if (!handledHref) {
+  if (!resolved) {
     return (
       <a
         href={href}
@@ -120,11 +116,11 @@ const HandledLink: FC<
 
   return (
     <a
-      href={handledHref}
+      href={resolved.href}
       className={cn("text-primary hover:underline", className)}
       onClick={(event) => {
         event.preventDefault();
-        openHandledHref(handledHref);
+        resolved.handler.openLink(resolved.href);
       }}
       {...props}
     >
@@ -146,7 +142,7 @@ const AutoLinkedText: FC<{ text: string }> = ({ text }) => {
     if (!handledHref) continue;
     if (start > lastIndex) parts.push(text.slice(lastIndex, start));
     parts.push(
-      <HandledLink key={`${start}-${href}`} href={handledHref}>
+      <HandledLink key={`${start}-${href}`} href={href}>
         {href}
       </HandledLink>,
     );
@@ -410,10 +406,18 @@ export function injectCitations(children: ReactNode): ReactNode {
 
 export const MarkdownText: FC = () => {
   const part = useMessagePartText();
+  // A handler can arrive after history hydration; re-evaluate the original URL.
+  useStore(linkStore, (state) => state.handlers);
 
   return (
     <MermaidStreamingContext.Provider value={part.status.type === "running"}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={markdownComponents}
+        urlTransform={(url, key) =>
+          key === "href" && resolveHandledHref(url) ? url : defaultUrlTransform(url)
+        }
+      >
         {part.text}
       </ReactMarkdown>
     </MermaidStreamingContext.Provider>
