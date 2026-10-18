@@ -8,7 +8,7 @@ packages/web-primitives/  → @iloveagents/foundry-web-primitives (leaf primitiv
 packages/web-ui/          → @iloveagents/foundry-web-ui (React UI core — hooks, registries, assistant-ui adapter shim, ChatPanel, sidebar)
 packages/web-shell/       → @iloveagents/foundry-web-shell (browser bootstrap — bootstrapShell + ChatModule protocol)
 packages/web-voice/       → @iloveagents/foundry-web-voice (OPTIONAL spoken conversation — Azure Voice Live as an assistant-ui RealtimeVoiceAdapter)
-packages/create-foundry-ui-app/ → create-foundry-ui-app (scaffolding CLI — `npm create foundry-ui-app`)
+packages/create-foundry-ui-app/ → create-lykomi-app (scaffolding CLI — `npm create lykomi-app`)
 ```
 
 **`web-voice` is optional and versions on its own.** Nothing in this repo imports it, and it is

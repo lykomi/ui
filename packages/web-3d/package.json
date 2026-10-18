@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iLoveAgents/foundry-ui.git",
+    "url": "git+https://github.com/lykomi/ui.git",
     "directory": "packages/web-3d"
   },
   "scripts": {

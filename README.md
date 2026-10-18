@@ -32,7 +32,7 @@ Foundry UI is an [iloveagents.ai](https://iloveagents.ai) project, not a Microso
 **Requirements:** Node.js 22+ and pnpm · [uv](https://docs.astral.sh/uv/) (runs the FastAPI agent service) · Azure CLI signed in with `az login` (the agent authenticates to Foundry via `DefaultAzureCredential`).
 
 ```bash
-npm create foundry-ui-app my-app     # scaffolds + installs
+npm create lykomi-app my-app     # scaffolds + installs
 cd my-app
 cp agent/.env.example agent/.env     # set FOUNDRY_PROJECT_ENDPOINT + FOUNDRY_MODEL
 az login

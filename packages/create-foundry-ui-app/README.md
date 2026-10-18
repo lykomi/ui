@@ -1,4 +1,4 @@
-# create-foundry-ui-app
+# create-lykomi-app
 
 Create a Foundry UI agent app: React chat UI, AG-UI protocol, Microsoft Agent Framework, and [Microsoft Foundry](https://learn.microsoft.com/azure/foundry/).
 
@@ -7,7 +7,7 @@ Foundry UI is built by [iLoveAgents](https://iloveagents.ai).
 ## Create An App
 
 ```bash
-npx create-foundry-ui-app my-agent-app
+npm create lykomi-app my-agent-app
 cd my-agent-app
 cp agent/.env.example agent/.env
 az login

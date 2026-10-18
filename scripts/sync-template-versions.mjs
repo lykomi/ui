@@ -11,7 +11,7 @@
 // template bump; `pnpm pack:check` fails the build if the two ever diverge.
 //
 // Rewriting a pin does not by itself release the CLI, and the pins only reach
-// users in a released create-foundry-ui-app: a scaffold always uses the pins
+// users in a released create-lykomi-app: a scaffold always uses the pins
 // its CLI version shipped with. So when this script moves a pin, it also gives
 // the CLI a patch release in the same Version Packages PR — unless a changeset
 // already bumped it. Leaving that to a hand-written changeset failed twice
@@ -63,7 +63,7 @@ if (!changed) {
 }
 
 /**
- * Give create-foundry-ui-app a patch release carrying the moved pins, unless
+ * Give create-lykomi-app a patch release carrying the moved pins, unless
  * a changeset already bumped it in this version run. "Already bumped" is
  * measured against the committed package.json: `changeset version` edits the
  * working tree, so a version that differs from HEAD was bumped by this run.

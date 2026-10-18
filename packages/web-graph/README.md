@@ -133,7 +133,7 @@ result rows and collects anything node- or relationship-shaped, so `RETURN *`
 works as well as a careful projection.
 
 Most apps will not need this: a backend that emits the payload directly is the
-better arrangement. See the `neo4j` starter — `npm create foundry-ui-app my-app -- --preset neo4j`.
+better arrangement. See the `neo4j` starter — `npm create lykomi-app my-app -- --preset neo4j`.
 
 ## The payload
 

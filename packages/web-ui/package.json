@@ -14,11 +14,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iLoveAgents/foundry-ui.git",
+    "url": "git+https://github.com/lykomi/ui.git",
     "directory": "packages/web-ui"
   },
-  "homepage": "https://github.com/iLoveAgents/foundry-ui/tree/main/packages/web-ui#readme",
-  "bugs": "https://github.com/iLoveAgents/foundry-ui/issues",
+  "homepage": "https://github.com/lykomi/ui/tree/main/packages/web-ui#readme",
+  "bugs": "https://github.com/lykomi/ui/issues",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
