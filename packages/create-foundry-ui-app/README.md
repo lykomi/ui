@@ -89,7 +89,7 @@ The packages publish built ESM JavaScript and `.d.ts` declarations. The
 generated Vite app is already configured to scan their Tailwind classes from the
 package `dist` folders.
 
-Source: [`iLoveAgents/foundry-ui`](https://github.com/iLoveAgents/foundry-ui).
+Source: [`lykomi/ui`](https://github.com/lykomi/ui).
 
 ## License
 

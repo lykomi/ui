@@ -8,7 +8,7 @@ security fixes.
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately via
-[GitHub Security Advisories](https://github.com/iLoveAgents/foundry-ui/security/advisories/new)
+[GitHub Security Advisories](https://github.com/lykomi/ui/security/advisories/new)
 — do **not** open a public issue.
 
 We aim to acknowledge reports within 3 business days. Please include a

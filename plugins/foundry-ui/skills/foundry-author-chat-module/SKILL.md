@@ -40,7 +40,7 @@ Then: `bootstrapShell({ modules: [myModule], pages, theme })`.
 ## Verify before writing
 
 Check the current types in `@iloveagents/foundry-web-shell` (the package's
-`.d.ts` or [`packages/web-shell/AGENTS.md`](https://github.com/iLoveAgents/foundry-ui/blob/main/packages/web-shell/AGENTS.md))
+`.d.ts` or [`packages/web-shell/AGENTS.md`](https://github.com/lykomi/ui/blob/main/packages/web-shell/AGENTS.md))
 — the module contract is pre-1.0 and evolves. If your change also touches
 `@assistant-ui/*` or `@ag-ui/*` APIs, run the `foundry-verify-agent-apis`
 skill first.

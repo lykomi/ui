@@ -42,7 +42,7 @@ components are generated:
 
 `ProcessSteps` provides a connected status rail. `ProcessGuide` adds focused
 guidance, content and actions for controlled wizards or resumable processes.
-See the [process guidance contract and examples](https://github.com/iLoveAgents/foundry-ui/blob/main/docs/PROCESS_GUIDE.md).
+See the [process guidance contract and examples](https://github.com/lykomi/ui/blob/main/docs/PROCESS_GUIDE.md).
 
 ## Lists
 
@@ -156,4 +156,4 @@ Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via regist
 - **Citation handler** — handles `[n]` citation clicks in markdown
 - **Tool UI** — custom rendering for agent tools via `makeAssistantToolUI`
 
-See [AGENTS.md](https://github.com/iLoveAgents/foundry-ui/blob/main/packages/web-ui/AGENTS.md) for architecture details and import boundary rules.
+See [AGENTS.md](https://github.com/lykomi/ui/blob/main/packages/web-ui/AGENTS.md) for architecture details and import boundary rules.

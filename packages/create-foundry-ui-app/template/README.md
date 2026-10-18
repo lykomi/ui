@@ -48,7 +48,7 @@ fast-moving assistant-ui / AG-UI / Agent Framework stack plus a ChatModule
 authoring skill:
 
 ```
-/plugin marketplace add iLoveAgents/foundry-ui
+/plugin marketplace add lykomi/ui
 /plugin install foundry-ui@foundry-ui
 ```
 

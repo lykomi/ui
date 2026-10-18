@@ -186,7 +186,7 @@ From a cross-repository development workspace that provides the helper
 (authenticated `gh` and Python 3 required):
 
 ```bash
-python3 scripts/review-status.py iLoveAgents/foundry-ui 123 --json
+python3 scripts/review-status.py lykomi/ui 123 --json
 python3 -m unittest discover -s scripts -p test_review_status.py -v
 ```
 

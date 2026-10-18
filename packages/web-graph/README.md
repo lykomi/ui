@@ -1,6 +1,6 @@
 # @iloveagents/foundry-web-graph
 
-Interactive graph visualization for [Foundry UI](https://github.com/iLoveAgents/foundry-ui).
+Interactive graph visualization for [Foundry UI](https://github.com/lykomi/ui).
 
 A force-directed graph view with the interactions people expect from a graph
 explorer — colour and caption by type, a filtering legend, hover, select,

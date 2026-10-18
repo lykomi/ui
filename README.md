@@ -1,6 +1,6 @@
 # Foundry UI
 
-[![CI](https://github.com/iLoveAgents/foundry-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/iLoveAgents/foundry-ui/actions/workflows/ci.yml)
+[![CI](https://github.com/lykomi/ui/actions/workflows/ci.yml/badge.svg)](https://github.com/lykomi/ui/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/%40iloveagents%2Ffoundry-web-ui)](https://www.npmjs.com/package/@iloveagents/foundry-web-ui)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -144,7 +144,7 @@ The repo ships first-class support for AI coding agents:
 - **Claude Code plugin** — apps _built on_ Foundry UI (including generated starters) can install the grounding + ChatModule-authoring skills:
 
   ```
-  /plugin marketplace add iLoveAgents/foundry-ui
+  /plugin marketplace add lykomi/ui
   /plugin install foundry-ui@foundry-ui
   ```
 
