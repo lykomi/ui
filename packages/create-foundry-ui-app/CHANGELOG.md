@@ -1,11 +1,16 @@
 # create-foundry-ui-app
 
+## 0.9.0
+
+### Minor Changes
+
+- 0d2e87f: Publish the app starter as `create-lykomi-app` (`npm create lykomi-app`) and point package repository metadata at `lykomi/ui` after the GitHub transfer.
+
 ## 0.8.34
 
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.42.1 → 0.42.2
   - @iloveagents/foundry-web-primitives: 0.42.1 → 0.42.2
   - @iloveagents/foundry-web-shell: 0.42.1 → 0.42.2
@@ -16,7 +21,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.42.0 → 0.42.1
   - @iloveagents/foundry-web-primitives: 0.42.0 → 0.42.1
   - @iloveagents/foundry-web-shell: 0.42.0 → 0.42.1
@@ -27,7 +31,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.41.1 → 0.42.0
   - @iloveagents/foundry-web-primitives: 0.41.1 → 0.42.0
   - @iloveagents/foundry-web-shell: 0.41.1 → 0.42.0
@@ -40,7 +43,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.41.0 → 0.41.1
   - @iloveagents/foundry-web-primitives: 0.41.0 → 0.41.1
   - @iloveagents/foundry-web-shell: 0.41.0 → 0.41.1
@@ -51,7 +53,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.40.1 → 0.41.0
   - @iloveagents/foundry-web-primitives: 0.40.1 → 0.41.0
   - @iloveagents/foundry-web-shell: 0.40.1 → 0.41.0
@@ -64,7 +65,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.40.0 → 0.40.1
   - @iloveagents/foundry-web-primitives: 0.40.0 → 0.40.1
   - @iloveagents/foundry-web-shell: 0.40.0 → 0.40.1
@@ -75,7 +75,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.39.0 → 0.40.0
   - @iloveagents/foundry-web-primitives: 0.39.0 → 0.40.0
   - @iloveagents/foundry-web-shell: 0.39.0 → 0.40.0
@@ -88,7 +87,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.38.0 → 0.39.0
   - @iloveagents/foundry-web-primitives: 0.38.0 → 0.39.0
   - @iloveagents/foundry-web-shell: 0.38.0 → 0.39.0
@@ -101,7 +99,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.37.0 → 0.38.0
   - @iloveagents/foundry-web-primitives: 0.37.0 → 0.38.0
   - @iloveagents/foundry-web-shell: 0.37.0 → 0.38.0
@@ -114,7 +111,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @iloveagents/foundry-agent: 0.36.0 → 0.37.0
   - @iloveagents/foundry-web-primitives: 0.36.0 → 0.37.0
   - @iloveagents/foundry-web-shell: 0.36.0 → 0.37.0

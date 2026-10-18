@@ -1,5 +1,14 @@
 # @iloveagents/foundry-web-3d
 
+## 0.1.9
+
+### Patch Changes
+
+- 0d2e87f: Publish the app starter as `create-lykomi-app` (`npm create lykomi-app`) and point package repository metadata at `lykomi/ui` after the GitHub transfer.
+- Updated dependencies [0d2e87f]
+  - @iloveagents/foundry-agent@0.42.3
+  - @iloveagents/foundry-web-primitives@0.42.3
+
 ## 0.1.8
 
 ### Patch Changes
