@@ -30,7 +30,7 @@ utility classes, and Tailwind v4 does not scan `node_modules`, so without a
 ```
 
 (Adjust the relative path to your stylesheet\'s location. Apps scaffolded by
-`create-foundry-ui-app --preset neo4j` already have this.)
+`create-lykomi-app --preset neo4j` already have this.)
 
 ## Drawing a graph
 

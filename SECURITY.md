@@ -13,4 +13,4 @@ Please report vulnerabilities privately via
 
 We aim to acknowledge reports within 3 business days. Please include a
 reproduction, the affected package(s) (`@iloveagents/foundry-*` or
-`create-foundry-ui-app`), and the version.
+`create-lykomi-app`), and the version.
