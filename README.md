@@ -1,6 +1,6 @@
 # Foundry UI
 
-[![CI](https://github.com/iLoveAgents/foundry-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/iLoveAgents/foundry-ui/actions/workflows/ci.yml)
+[![CI](https://github.com/lykomi/ui/actions/workflows/ci.yml/badge.svg)](https://github.com/lykomi/ui/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/%40iloveagents%2Ffoundry-web-ui)](https://www.npmjs.com/package/@iloveagents/foundry-web-ui)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -32,7 +32,7 @@ Foundry UI is an [iloveagents.ai](https://iloveagents.ai) project, not a Microso
 **Requirements:** Node.js 22+ and pnpm · [uv](https://docs.astral.sh/uv/) (runs the FastAPI agent service) · Azure CLI signed in with `az login` (the agent authenticates to Foundry via `DefaultAzureCredential`).
 
 ```bash
-npm create foundry-ui-app my-app     # scaffolds + installs
+npm create lykomi-app my-app     # scaffolds + installs
 cd my-app
 cp agent/.env.example agent/.env     # set FOUNDRY_PROJECT_ENDPOINT + FOUNDRY_MODEL
 az login
@@ -144,7 +144,7 @@ The repo ships first-class support for AI coding agents:
 - **Claude Code plugin** — apps _built on_ Foundry UI (including generated starters) can install the grounding + ChatModule-authoring skills:
 
   ```
-  /plugin marketplace add iLoveAgents/foundry-ui
+  /plugin marketplace add lykomi/ui
   /plugin install foundry-ui@foundry-ui
   ```
 

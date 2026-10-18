@@ -1,6 +1,6 @@
 # @iloveagents/foundry-web-voice
 
-Spoken conversation for [Foundry UI](https://github.com/iLoveAgents/foundry-ui), backed by
+Spoken conversation for [Foundry UI](https://github.com/lykomi/ui), backed by
 [Microsoft Foundry Voice Live](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live).
 
 Optional by construction: no other `@iloveagents/foundry-*` package imports this one, so an app

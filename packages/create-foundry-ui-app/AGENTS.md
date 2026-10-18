@@ -1,4 +1,4 @@
-npm scaffolding CLI for Foundry UI. Customers run `npx create-foundry-ui-app my-app` to get a chat-first agent starter that consumes `@iloveagents/foundry-*` from npm.
+npm scaffolding CLI for Foundry UI. Customers run `npx create-lykomi-app my-app` to get a chat-first agent starter that consumes `@iloveagents/foundry-*` from npm.
 
 # Architecture
 
@@ -21,7 +21,7 @@ template/
 # Public API
 
 ```bash
-npx create-foundry-ui-app <target-dir> [--preset <name>] [--no-install] [--force]
+npx create-lykomi-app <target-dir> [--preset <name>] [--no-install] [--force]
 ```
 
 - `--preset default` - bundled OSS starter: Foundry UI chat, FastAPI agent service, hello/weather tools.

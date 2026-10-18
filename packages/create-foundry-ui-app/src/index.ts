@@ -53,9 +53,9 @@ function parseArgs(argv: string[]): CliArgs {
 
 function printHelp(): void {
   // eslint-disable-next-line no-console
-  console.log(`Usage: create-foundry-ui-app <target-dir> [options]
+  console.log(`Usage: create-lykomi-app <target-dir> [options]
 
-Scaffold a new Foundry UI app — AG-UI protocol + Microsoft Agent Framework + Azure Foundry.
+Scaffold a new LYKOMI app — AG-UI protocol + Microsoft Agent Framework + Azure Foundry.
 
 Options:
   --preset <name>    Preset to scaffold from (default: "default" — OSS shell + AG-UI agent service).
@@ -67,9 +67,9 @@ Options:
   -h, --help         Show this message.
 
 Example:
-  npx create-foundry-ui-app my-app
-  npx create-foundry-ui-app my-app --preset foundry-iq
-  npx create-foundry-ui-app my-app --preset neo4j
+  npx create-lykomi-app my-app
+  npx create-lykomi-app my-app --preset foundry-iq
+  npx create-lykomi-app my-app --preset neo4j
 `);
 }
 

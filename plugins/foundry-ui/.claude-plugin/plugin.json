@@ -6,8 +6,8 @@
     "name": "iLoveAgents",
     "url": "https://github.com/iLoveAgents"
   },
-  "homepage": "https://github.com/iLoveAgents/foundry-ui",
-  "repository": "https://github.com/iLoveAgents/foundry-ui",
+  "homepage": "https://github.com/lykomi/ui",
+  "repository": "https://github.com/lykomi/ui",
   "license": "MIT",
   "keywords": ["foundry-ui", "ag-ui", "agent-framework", "assistant-ui", "skills"]
 }

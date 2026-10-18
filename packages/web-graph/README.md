@@ -1,6 +1,6 @@
 # @iloveagents/foundry-web-graph
 
-Interactive graph visualization for [Foundry UI](https://github.com/iLoveAgents/foundry-ui).
+Interactive graph visualization for [Foundry UI](https://github.com/lykomi/ui).
 
 A force-directed graph view with the interactions people expect from a graph
 explorer — colour and caption by type, a filtering legend, hover, select,
@@ -30,7 +30,7 @@ utility classes, and Tailwind v4 does not scan `node_modules`, so without a
 ```
 
 (Adjust the relative path to your stylesheet\'s location. Apps scaffolded by
-`create-foundry-ui-app --preset neo4j` already have this.)
+`create-lykomi-app --preset neo4j` already have this.)
 
 ## Drawing a graph
 
@@ -133,7 +133,7 @@ result rows and collects anything node- or relationship-shaped, so `RETURN *`
 works as well as a careful projection.
 
 Most apps will not need this: a backend that emits the payload directly is the
-better arrangement. See the `neo4j` starter — `npm create foundry-ui-app my-app -- --preset neo4j`.
+better arrangement. See the `neo4j` starter — `npm create lykomi-app my-app -- --preset neo4j`.
 
 ## The payload
 

@@ -40,6 +40,6 @@ when it merges. Never list sibling `@iloveagents/foundry-*` packages in
 
 ## Reporting issues
 
-Use [GitHub issues](https://github.com/iLoveAgents/foundry-ui/issues). For
+Use [GitHub issues](https://github.com/lykomi/ui/issues). For
 security reports, see [`SECURITY.md`](SECURITY.md) — please don't open public
 issues for vulnerabilities.

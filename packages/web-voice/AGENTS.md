@@ -140,7 +140,7 @@ src/
 - Nothing in this repo may import **this** package — that is what "optional" means, and
   `OPEN_CORE_GRAPH` in `packages/web-ui/src/__tests__/open-core-guards.test.ts` enforces it.
 - **Not** in the changesets `fixed` group — it versions independently of the coordinated four.
-- The `create-foundry-ui-app` template DOES depend on this package and import `createVoiceModule`;
+- The `create-lykomi-app` template DOES depend on this package and import `createVoiceModule`;
   it is gated at runtime on `VITE_VOICE_PROXY_URL`, so with the variable unset the call is
   unreachable and the bundler drops the package. "Optional" here is a runtime property enforced by
   tree-shaking, not an absence from the scaffold.

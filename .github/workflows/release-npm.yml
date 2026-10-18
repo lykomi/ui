@@ -4,8 +4,8 @@
 # `id-token: write` permission below + per-package Trusted Publisher trust
 # configured on npmjs.com authenticates this workflow against npm.
 #
-# Trusted Publisher configured for: iLoveAgents/foundry-ui + this workflow file.
-# Each of the four packages has its own trust entry under
+# Trusted Publisher configured for: lykomi/ui + this workflow file.
+# Each published package has its own trust entry under
 # npmjs.com → Packages → <pkg> → Settings → Trusted publishing.
 #
 # Behaviour:

@@ -1,8 +1,8 @@
 {
-  "name": "create-foundry-ui-app",
+  "name": "create-lykomi-app",
   "version": "0.8.34",
   "license": "MIT",
-  "description": "Scaffold a new Foundry UI app — AG-UI protocol + Microsoft Agent Framework + Azure Foundry, ready to run.",
+  "description": "Scaffold a new LYKOMI app — AG-UI protocol + Microsoft Agent Framework + Azure Foundry, ready to run.",
   "keywords": [
     "create-app",
     "foundry-ui",
@@ -14,7 +14,7 @@
   "type": "module",
   "main": "./dist/index.mjs",
   "bin": {
-    "create-foundry-ui-app": "./dist/index.mjs"
+    "create-lykomi-app": "./dist/index.mjs"
   },
   "files": [
     "dist",
@@ -25,11 +25,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iLoveAgents/foundry-ui.git",
+    "url": "git+https://github.com/lykomi/ui.git",
     "directory": "packages/create-foundry-ui-app"
   },
-  "homepage": "https://github.com/iLoveAgents/foundry-ui/tree/main/packages/create-foundry-ui-app#readme",
-  "bugs": "https://github.com/iLoveAgents/foundry-ui/issues",
+  "homepage": "https://github.com/lykomi/ui/tree/main/packages/create-foundry-ui-app#readme",
+  "bugs": "https://github.com/lykomi/ui/issues",
   "publishConfig": {
     "access": "public"
   },
