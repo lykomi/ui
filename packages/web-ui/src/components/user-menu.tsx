@@ -22,8 +22,9 @@ export const UserMenu: FC = () => {
     useShallow((s) => ({ user: s.user, signOut: s.signOut })),
   );
   const toggles = useNavStore((s) => s.userMenuToggles);
+  const actions = useNavStore((s) => s.userMenuActions);
 
-  if (!user && toggles.length === 0) return null;
+  if (!user && toggles.length === 0 && actions.length === 0) return null;
 
   return (
     <DropdownMenu>
@@ -64,6 +65,12 @@ export const UserMenu: FC = () => {
             <DropdownMenuSeparator />
           </>
         )}
+        {actions.map((action) => (
+          <DropdownMenuItem key={action.id} onSelect={action.onSelect}>
+            {action.label}
+          </DropdownMenuItem>
+        ))}
+        {actions.length > 0 && toggles.length > 0 && <DropdownMenuSeparator />}
         {toggles.map((toggle) => (
           <DropdownMenuCheckboxItem
             key={toggle.id}
@@ -74,10 +81,13 @@ export const UserMenu: FC = () => {
           </DropdownMenuCheckboxItem>
         ))}
         {user && (
-          <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
-            <LogOut className="size-4" />
-            Sign out
-          </DropdownMenuItem>
+          <>
+            {(actions.length > 0 || toggles.length > 0) && <DropdownMenuSeparator />}
+            <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
+              <LogOut className="size-4" />
+              Sign out
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

@@ -33,10 +33,18 @@ export interface UserMenuToggle {
   onCheckedChange: (checked: boolean) => void;
 }
 
+/** A module-owned navigation action in the user menu, available in every shell. */
+export interface UserMenuAction {
+  id: string;
+  label: string;
+  onSelect: () => void;
+}
+
 interface NavStoreState {
   config: NavGroup[];
   footerActions: NavFooterAction[];
   userMenuToggles: UserMenuToggle[];
+  userMenuActions: UserMenuAction[];
   /**
    * True while an integrator's nav sync is loading its first batch of
    * groups. Optional/defaulted (starts ``false``) so existing consumers
@@ -61,12 +69,17 @@ interface NavStoreState {
   setUserMenuToggle: (toggle: UserMenuToggle) => void;
   /** Remove a user-menu toggle by id */
   removeUserMenuToggle: (id: string) => void;
+  /** Register a user-menu action (replaces existing by id). */
+  setUserMenuAction: (action: UserMenuAction) => void;
+  /** Remove a module's user-menu action on cleanup. */
+  removeUserMenuAction: (id: string) => void;
 }
 
 export const useNavStore = create<NavStoreState>((set, get) => ({
   config: DEFAULT_NAV_CONFIG,
   footerActions: [],
   userMenuToggles: [],
+  userMenuActions: [],
   navLoading: false,
 
   setConfig: (config) => set({ config }),
@@ -116,5 +129,16 @@ export const useNavStore = create<NavStoreState>((set, get) => ({
 
   removeUserMenuToggle: (id) => {
     set({ userMenuToggles: get().userMenuToggles.filter((t) => t.id !== id) });
+  },
+  setUserMenuAction: (action) => {
+    const actions = get().userMenuActions;
+    const index = actions.findIndex((item) => item.id === action.id);
+    set({
+      userMenuActions:
+        index < 0 ? [...actions, action] : actions.map((item, i) => (i === index ? action : item)),
+    });
+  },
+  removeUserMenuAction: (id) => {
+    set({ userMenuActions: get().userMenuActions.filter((item) => item.id !== id) });
   },
 }));

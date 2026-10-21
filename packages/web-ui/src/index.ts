@@ -221,7 +221,12 @@ export { Select, selectClassName } from "./ui/select.tsx";
 
 // --- Stores ---
 export { useAppStore } from "./lib/app-store.ts";
-export { useNavStore, type NavFooterAction, type UserMenuToggle } from "./lib/nav-store.ts";
+export {
+  useNavStore,
+  type NavFooterAction,
+  type UserMenuToggle,
+  type UserMenuAction,
+} from "./lib/nav-store.ts";
 export { useToolPanelStore } from "./lib/tool-panel-store.ts";
 export type {
   ToolPanelContent,
