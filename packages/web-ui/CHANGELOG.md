@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.43.0
+
+### Minor Changes
+
+- ef65ae5: Allow feature modules to register ordinary user-menu actions through `useNavStore.setUserMenuAction` and remove them on cleanup. Actions use native dropdown items and remain available across shell layouts alongside user preferences and sign-out.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.43.0
+- @iloveagents/foundry-web-primitives@0.43.0
+
 ## 0.42.3
 
 ### Patch Changes
