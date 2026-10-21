@@ -20,6 +20,7 @@ try {
         "narrow&responsive&details",
         "narrow&compact&details",
         "narrow&compact&dense&details",
+        "narrow&compact&dense&details&long",
       ]) {
         const url = new URL(base);
         url.search = [layout, dark ? "dark" : "", rtl ? "rtl" : ""].filter(Boolean).join("&");

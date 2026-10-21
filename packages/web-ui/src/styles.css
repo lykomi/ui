@@ -819,7 +819,7 @@ tr[data-active] > [data-pinned="cell"] {
 /* Progress-only density: retain status in accessible text without a second row. */
 .foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-target {
   padding: calc(var(--spacing, 0.25rem) * 2);
-  align-items: center;
+  align-items: flex-start;
   min-height: calc(var(--spacing, 0.25rem) * 10);
 }
 .foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-status {
@@ -980,7 +980,7 @@ tr[data-active] > [data-pinned="cell"] {
   --process-step-width: calc(var(--spacing, 0.25rem) * 48);
 }
 .foundry-process[data-variant="compact"][data-density="compact"] {
-  --process-marker-center: calc(var(--spacing, 0.25rem) * 7);
+  --process-marker-center: calc(var(--spacing, 0.25rem) * 6.5);
 }
 .foundry-process-scroller {
   display: flex;

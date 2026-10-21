@@ -23,13 +23,16 @@ function Demo() {
       ? "responsive"
       : "horizontal";
   const width = query.has("narrow") ? 360 : 900;
+  const labeled = query.has("long")
+    ? base.map((step) => ({ ...step, label: `${step.label} and supporting information` }))
+    : base;
   const steps = query.has("details")
-    ? base.map((step) => ({
+    ? labeled.map((step) => ({
         ...step,
         description:
           "A longer explanation of the completed work. Details should not move the overflow navigation away from the status markers.",
       }))
-    : base;
+    : labeled;
   React.useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);

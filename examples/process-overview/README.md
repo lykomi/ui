@@ -11,7 +11,7 @@ pnpm --filter @iloveagents/foundry-web-shell exec vite ../../examples/process-ov
 ```
 
 Query flags: `narrow`, `vertical`, `responsive`, `rtl`, `dark`, `details`,
-`compact`, and `dense`. For example, `/?narrow&details&dark` checks the
+`compact`, `dense`, and `long` (wrapping labels). For example, `/?narrow&details&dark` checks the
 overview overflow controls alongside long descriptions. Clicking a step
 changes inspection only.
 
