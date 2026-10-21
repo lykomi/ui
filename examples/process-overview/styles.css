@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "../../packages/web-ui/src/styles.css";
+@source "../../packages/web-primitives/src";
+@source "../../packages/web-ui/src/components/process";
+@source "./main.tsx";
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+  }
+}

@@ -399,6 +399,18 @@ tr[data-active] > [data-pinned="cell"] {
 .foundry-process-step[data-connection-complete]::after {
   background: var(--primary);
 }
+/* Overview cards own their full surface. Connect them only across the gap,
+   never through a selected card's border or its content. */
+.foundry-process[data-variant="overview"] {
+  --process-overview-gap: calc(var(--spacing, 0.25rem) * 6);
+}
+.foundry-process[data-variant="overview"] .foundry-process-steps {
+  gap: var(--process-overview-gap);
+}
+.foundry-process[data-variant="overview"] .foundry-process-step:not(:last-child)::after {
+  inset-inline-start: calc(100% + var(--spacing, 0.25rem));
+  inset-inline-end: calc(var(--spacing, 0.25rem) - var(--process-overview-gap));
+}
 .foundry-process-target {
   position: relative;
   display: flex;
@@ -561,6 +573,11 @@ tr[data-active] > [data-pinned="cell"] {
   height: auto;
   width: 1px;
 }
+.foundry-process[data-variant="overview"][data-orientation="vertical"]
+  .foundry-process-step:not(:last-child)::after {
+  top: calc(100% + var(--spacing, 0.25rem));
+  bottom: calc(var(--spacing, 0.25rem) - var(--process-overview-gap));
+}
 @container (max-width: 38rem) {
   .foundry-process:not([data-orientation="horizontal"]) .foundry-process-steps {
     flex-direction: column;
@@ -578,6 +595,15 @@ tr[data-active] > [data-pinned="cell"] {
     inset-inline-end: auto;
     height: auto;
     width: 1px;
+  }
+  .foundry-process[data-variant="overview"]:not([data-orientation="horizontal"])
+    .foundry-process-steps {
+    gap: var(--process-overview-gap);
+  }
+  .foundry-process[data-variant="overview"]:not([data-orientation="horizontal"])
+    .foundry-process-step:not(:last-child)::after {
+    top: calc(100% + var(--spacing, 0.25rem));
+    bottom: calc(var(--spacing, 0.25rem) - var(--process-overview-gap));
   }
 }
 
@@ -945,13 +971,20 @@ tr[data-active] > [data-pinned="cell"] {
 
 .foundry-process {
   --process-step-width: calc(var(--spacing, 0.25rem) * 56);
+  --process-marker-center: calc(var(--spacing, 0.25rem) * 7 + 1px);
+}
+.foundry-process[data-variant="compact"] {
+  --process-marker-center: calc(var(--spacing, 0.25rem) * 8.5);
 }
 .foundry-process[data-density="compact"] {
   --process-step-width: calc(var(--spacing, 0.25rem) * 48);
 }
+.foundry-process[data-variant="compact"][data-density="compact"] {
+  --process-marker-center: calc(var(--spacing, 0.25rem) * 7);
+}
 .foundry-process-scroller {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-width: 0;
   gap: calc(var(--spacing, 0.25rem) * 1);
 }
@@ -972,9 +1005,14 @@ tr[data-active] > [data-pinned="cell"] {
   border-radius: var(--radius);
 }
 .foundry-process-scroll-button {
+  --process-scroll-button-size: calc(var(--spacing, 0.25rem) * 8);
   flex-shrink: 0;
-  width: calc(var(--spacing, 0.25rem) * 8);
-  height: calc(var(--spacing, 0.25rem) * 8);
+  width: var(--process-scroll-button-size);
+  height: var(--process-scroll-button-size);
+  margin-block-start: calc(
+    var(--spacing, 0.25rem) * 1.5 + var(--process-marker-center) -
+      var(--process-scroll-button-size) / 2
+  );
 }
 .foundry-process-viewport {
   --process-fade-left: 0px;
@@ -1018,8 +1056,7 @@ tr[data-active] > [data-pinned="cell"] {
 }
 @media (pointer: coarse) {
   .foundry-process-scroll-button {
-    width: calc(var(--spacing, 0.25rem) * 11);
-    height: calc(var(--spacing, 0.25rem) * 11);
+    --process-scroll-button-size: calc(var(--spacing, 0.25rem) * 11);
   }
 }
 
