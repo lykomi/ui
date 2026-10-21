@@ -1,5 +1,7 @@
 # @iloveagents/foundry-agent
 
+## 0.43.0
+
 ## 0.42.3
 
 ### Patch Changes
