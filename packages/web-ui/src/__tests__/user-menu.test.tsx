@@ -7,11 +7,46 @@ import { useNavStore } from "../lib/nav-store.ts";
 
 afterEach(() => {
   authStore.setState({ user: null, isAuthenticated: false });
-  useNavStore.setState({ userMenuToggles: [] });
+  useNavStore.setState({ userMenuToggles: [], userMenuActions: [] });
   document.body.replaceChildren();
 });
 
 describe("UserMenu", () => {
+  it("runs a registered action as a regular menu item", async () => {
+    let selected = 0;
+    useNavStore.getState().setUserMenuAction({
+      id: "account-settings",
+      label: "Account settings",
+      onSelect: () => selected++,
+    });
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(<UserMenu />));
+    const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Interface menu"]')!;
+    await act(async () => {
+      trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    const item = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+      (node) => node.textContent === "Account settings",
+    );
+    expect(item).toBeDefined();
+    expect(item?.getAttribute("aria-checked")).toBeNull();
+    await act(async () => item!.click());
+    expect(selected).toBe(1);
+    await act(async () => root.unmount());
+  });
+
+  it("replaces an action without duplicating it and removes it on cleanup", () => {
+    const action = { id: "settings", label: "Settings", onSelect: () => {} };
+    useNavStore.getState().setUserMenuAction(action);
+    useNavStore.getState().setUserMenuAction({ ...action, label: "Account settings" });
+    expect(useNavStore.getState().userMenuActions).toEqual([
+      { ...action, label: "Account settings" },
+    ]);
+    useNavStore.getState().removeUserMenuAction(action.id);
+    expect(useNavStore.getState().userMenuActions).toEqual([]);
+  });
   it("hides the menu when there is no user or toggle", async () => {
     const host = document.createElement("div");
     document.body.append(host);

@@ -152,8 +152,26 @@ with the slack at the end, the way a spreadsheet looks.
 Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via registries — no direct imports needed:
 
 - **NavItem.dnd** — drag-and-drop behavior on sidebar items
+- **UserMenuAction** — ordinary actions in the account menu across shell layouts
 - **Panel renderer registry** — custom content renderers for the side panel
 - **Citation handler** — handles `[n]` citation clicks in markdown
 - **Tool UI** — custom rendering for agent tools via `makeAssistantToolUI`
 
 See [AGENTS.md](https://github.com/lykomi/ui/blob/main/packages/web-ui/AGENTS.md) for architecture details and import boundary rules.
+
+Register a menu action when a feature mounts and remove it on cleanup:
+
+```tsx
+useEffect(() => {
+  useNavStore.getState().setUserMenuAction({
+    id: "account-settings",
+    label: "Account settings",
+    onSelect: () => navigate("/settings"),
+  });
+  return () => useNavStore.getState().removeUserMenuAction("account-settings");
+}, [navigate]);
+```
+
+Registering the same ID replaces its label and handler without duplicating the
+item. Use `setUserMenuToggle` for preferences with a checked state. Feature
+modules own routing and authorization; the menu invokes their action.
