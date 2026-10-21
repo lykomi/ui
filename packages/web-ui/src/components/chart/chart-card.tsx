@@ -22,7 +22,7 @@ const ChartCard = React.forwardRef<HTMLDivElement, ChartCardProps>(
       ref={ref}
       data-chart-card=""
       className={cn(
-        "flex flex-col rounded-xl border border-border bg-card p-4 text-card-foreground",
+        "flex min-w-0 flex-col rounded-xl border border-border bg-card p-4 text-card-foreground",
         className,
       )}
       {...props}

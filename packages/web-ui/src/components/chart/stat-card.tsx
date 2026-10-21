@@ -30,6 +30,8 @@ export interface StatCardProps extends Omit<React.ComponentProps<"div">, "childr
   /** Small print under the value (e.g. "63.1 MB across 11 files"). */
   hint?: React.ReactNode;
   icon?: React.ReactNode;
+  /** Compact trend slot, typically a Sparkline with a metric/period label. */
+  trend?: React.ReactNode;
   /** Render a loading skeleton instead of the value. */
   loading?: boolean;
 }
@@ -54,6 +56,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
       invertDelta = false,
       hint,
       icon,
+      trend,
       loading = false,
       className,
       ...props
@@ -105,6 +108,11 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
             </span>
           )}
         </div>
+        {!loading && trend && (
+          <div className="mt-3" data-stat-trend="">
+            {trend}
+          </div>
+        )}
         {(hint || deltaLabel) && (
           <div className="mt-1 truncate text-[11px] text-muted-foreground">
             {hint}
