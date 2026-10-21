@@ -147,6 +147,47 @@ both axes) instead of running down the page; inside a focused `DataTableFrame`
 it fills the layer. `spacer` (default) keeps columns at their natural width
 with the slack at the end, the way a spreadsheet looks.
 
+## Charts and management dashboards
+
+Import charts from `@iloveagents/foundry-web-ui/chart`; this optional subpath
+keeps Recharts out of hosts that do not draw charts. Use `DashboardGrid` and
+`DashboardTile` for layout, `ChartCard` for consistent frames, and `StatCard`
+for headline metrics. `TimeSeriesChart`, `CategoryBarChart` and `DonutChart`
+share theme colors, legends and tooltips.
+
+```tsx
+import { GaugeChart, Sparkline, StatCard } from "@iloveagents/foundry-web-ui/chart";
+
+<GaugeChart
+  label="On-time delivery"
+  value={92.4}
+  target={90}
+  tone="success"
+  valueFormatter={(value) => `${value}%`}
+/>;
+<StatCard
+  label="Revenue"
+  value="$3.04M"
+  delta={18.6}
+  deltaLabel="vs previous year"
+  trend={
+    <Sparkline data={[181, 195, 190, 214, 232, 248]} label="Monthly revenue, January to June" />
+  }
+/>;
+```
+
+`GaugeChart` defaults to 0–100, supports custom ranges, and clamps the arc
+while displaying the actual value when it exceeds the range. Its accessible
+meter carries that actual value as text. Missing/non-finite values and invalid
+ranges show “No data”; `loading` shows “Loading…”. Targets outside the range
+are omitted. The arc stays clean by default; set `showTargetMarker` to add a
+target tick while the target text is always shown. Choose `tone` and `hint` explicitly for metric semantics, including
+lower-is-better metrics. Sparklines leave gaps for missing samples and need a
+metric/period label; use a full chart when exact values matter.
+
+See [the management dashboard example](../../examples/management-dashboard/README.md)
+for a complete composition with period selection and light/dark preview.
+
 ## Extension Points
 
 Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via registries — no direct imports needed:

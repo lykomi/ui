@@ -1,0 +1,24 @@
+@import "tailwindcss";
+@import "../../packages/web-ui/src/styles.css";
+@source "../../packages/web-ui/src/components/chart";
+@source "./main.tsx";
+@source "./chart-gallery.tsx";
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+  }
+  button,
+  select {
+    font: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+}
