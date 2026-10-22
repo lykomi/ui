@@ -13,6 +13,7 @@ npm-debug.log*
 !.vscode/settings.json
 !.vscode/extensions.json
 coverage/
+output/playwright/
 .nyc_output/
 .turbo/
 
