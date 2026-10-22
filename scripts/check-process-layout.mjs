@@ -34,7 +34,11 @@ try {
             const { left, top, right, bottom, width, height } = element.getBoundingClientRect();
             return { left, top, right, bottom, width, height };
           };
-          const cards = [...document.querySelectorAll(".foundry-process-target")].map(rect);
+          const cards = [
+            ...document.querySelectorAll(
+              ".foundry-process-marker, .foundry-process-copy, .foundry-process-detail",
+            ),
+          ].map(rect);
           const connectors = [
             ...document.querySelectorAll(".foundry-process-step:not(:last-child)"),
           ].map((step) => {
@@ -89,7 +93,7 @@ try {
                 connector.right > card.left &&
                 connector.top < card.bottom &&
                 connector.bottom > card.top;
-              assert.ok(!overlaps, `Connector crosses a card: ${url.search}`);
+              assert.ok(!overlaps, `Connector crosses step content: ${url.search}`);
             }
           }
         }
