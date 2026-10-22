@@ -37,7 +37,7 @@ export function DataTableColumnHeader<T>({
             aria-label={`${title}: ${sorted === "asc" ? "sorted ascending" : sorted === "desc" ? "sorted descending" : "not sorted"}`}
             title={title}
             data-sorted={sorted || undefined}
-            className="h-8 min-w-0 max-w-full gap-1.5 rounded-lg px-0 text-xs font-medium text-muted-foreground data-[state=open]:bg-accent data-[sorted]:text-foreground"
+            className="h-8 min-w-0 max-w-full gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground data-[state=open]:bg-accent data-[sorted]:text-foreground"
           >
             <span className="truncate">{title}</span>
             {sorted === "desc" ? (
