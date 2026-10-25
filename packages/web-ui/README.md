@@ -216,3 +216,21 @@ useEffect(() => {
 Registering the same ID replaces its label and handler without duplicating the
 item. Use `setUserMenuToggle` for preferences with a checked state. Feature
 modules own routing and authorization; the menu invokes their action.
+
+### Lazy navigation branches
+
+A module may publish a container with `childrenUnloaded: true` and
+`onExpandedChange`. The sidebar offers a disclosure button and notifies the
+owner when it opens, including an active route opened automatically. The owner
+fetches authorized children and republishes its navigation config. Deduplicate
+requests across sidebar surfaces and reject responses from an obsolete user,
+workspace, snapshot or mutation generation.
+
+Set `childrenLoading` during a read and `childrenError` to safe user-facing text
+on failure. Existing children stay visible. Retry calls `onExpandedChange(true)`;
+it never navigates or changes permissions. After the last page, publish
+`childrenUnloaded: false` even for an empty folder. Native pagination uses
+`childrenHasMore` and `onLoadMoreChildren`; the owner retains its source cursor.
+
+Branch expansion is document-local. Persistent collapsed group preferences
+remain separate; opening a fresh browser tab does not restore unrelated trees.

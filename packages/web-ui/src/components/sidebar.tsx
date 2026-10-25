@@ -33,6 +33,8 @@ import {
 import { useToolPanelStore } from "../lib/tool-panel-store.ts";
 import { useNewConversation } from "../lib/use-new-conversation.ts";
 import { useNavStore } from "../lib/nav-store.ts";
+import { useTreeExpanded } from "../lib/nav-tree-state.ts";
+import { NavBranchMore, NavBranchStatus } from "./nav-branch-status.tsx";
 import { useAppStore } from "../lib/app-store.ts";
 import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import {
@@ -973,8 +975,7 @@ function SubNavItems({
   return (
     <div>
       {items.map((child) => {
-        const hasNestedChildren =
-          !child.childrenHidden && child.children && child.children.length > 0;
+        const hasNestedChildren = hasNavBranch(child);
 
         // Folders with children render as collapsible nested items
         if (hasNestedChildren) {
@@ -1065,7 +1066,11 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const isInsideSubtree = isInSubtree(currentPath, item);
   const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
-  const [isExpanded, setExpanded] = useTreeExpanded(item.to, isInsideSubtree);
+  const [isExpanded, setExpanded] = useTreeExpanded(
+    item.to,
+    isInsideSubtree,
+    item.disabled ? undefined : item.onExpandedChange,
+  );
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const bodyPl = getNavDepthOffsets(depth).body;
 
@@ -1175,11 +1180,11 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         )}
         <NavRowControls item={item} />
       </div>
-      {isExpanded && item.children && (
-        <div>
-          {item.children.map((child) => {
-            const hasNestedChildren =
-              !child.childrenHidden && child.children && child.children.length > 0;
+      {isExpanded && (
+        <div aria-busy={item.childrenLoading || undefined}>
+          <NavBranchStatus item={item} />
+          {(item.children ?? []).map((child) => {
+            const hasNestedChildren = hasNavBranch(child);
             if (hasNestedChildren) {
               return (
                 <NestedFolderItem key={child.to + child.label} item={child} depth={depth + 1} />
@@ -1208,6 +1213,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
               />
             );
           })}
+          <NavBranchMore item={item} />
           {item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
         </div>
       )}
@@ -1237,11 +1243,21 @@ function CollapsibleNavItem({
   const isInsideSubtree = isInSubtree(currentPath, item);
   const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
-  const [treeExpanded, setExpanded] = useTreeExpanded(item.to, isInsideSubtree);
+  const reportExpanded = useCallback(
+    (expanded: boolean) => {
+      if (!item.disabled) item.onExpandedChange?.(heading || expanded);
+    },
+    [item.disabled, item.onExpandedChange, heading],
+  );
+  const [treeExpanded, setExpanded] = useTreeExpanded(
+    item.to,
+    isInsideSubtree,
+    item.disabled || !item.onExpandedChange ? undefined : reportExpanded,
+  );
   // A heading is never collapsed and carries no chevron: its children ARE
   // the tree it stands for.
   const isExpanded = heading ? true : treeExpanded;
-  const hasChildren = Boolean(!item.childrenHidden && item.children && item.children.length > 0);
+  const hasChildren = hasNavBranch(item);
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const rowInTree = inTree && !heading;
@@ -1371,7 +1387,9 @@ function CollapsibleNavItem({
             {/* A heading's children sit one step further left than a
                 branch's: the heading is flat, so its own column is free and
                 the hierarchy still reads. Same row metrics either way. */}
-            <SubNavItems items={item.children!} parentPath={item.to} depth={heading ? 0 : 1} />
+            <NavBranchStatus item={item} />
+            <SubNavItems items={item.children ?? []} parentPath={item.to} depth={heading ? 0 : 1} />
+            <NavBranchMore item={item} />
             {item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
           </>
         )}
@@ -1665,16 +1683,13 @@ function useGroupCollapsed(label: string, defaultCollapsed: boolean | undefined)
   return Object.prototype.hasOwnProperty.call(map, label) ? map[label] : Boolean(defaultCollapsed);
 }
 
-/** Keep opened branches stable while routes and asynchronously loaded children change. */
-function useTreeExpanded(to: string, inside: boolean): [boolean, (expanded: boolean) => void] {
-  const key = `tree:${to}`;
-  const collapsed = useGroupCollapsed(key, !inside);
-  useEffect(() => {
-    if (inside && !Object.prototype.hasOwnProperty.call(readCollapseMap(), key)) {
-      writeCollapseMap({ ...readCollapseMap(), [key]: false });
-    }
-  }, [inside, key]);
-  return [!collapsed, (expanded) => writeCollapseMap({ ...readCollapseMap(), [key]: !expanded })];
+function hasNavBranch(item: NavItem): boolean {
+  return Boolean(
+    !item.childrenHidden &&
+    (item.children?.length ||
+      (item.childrenUnloaded && item.onExpandedChange) ||
+      (item.childrenHasMore && item.onLoadMoreChildren)),
+  );
 }
 
 function toggleGroupCollapsed(label: string, current: boolean): void {
@@ -1712,9 +1727,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   // that does not exist and reads as a bullet. The disclosure cell still
   // renders either way, so flat rows keep the same label column as tree
   // rows and the sidebar stays on one grid.
-  const groupHasBranches = group.items.some((item) =>
-    Boolean(!item.childrenHidden && item.children && item.children.length > 0),
-  );
+  const groupHasBranches = group.items.some(hasNavBranch);
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy
   // groups stay uncollapsable so behaviour is unchanged.
