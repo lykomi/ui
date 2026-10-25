@@ -93,11 +93,21 @@ export interface NavItem {
    * empty `children`, and the row then claims to be a leaf on the strength of
    * a fetch that never happened.
    *
-   * Set this while the answer is unknown and the row shows neither marker: no
-   * chevron to click into nothing, no dot asserting an emptiness no one
-   * checked. Clear it once the children are known, empty or not.
+   * Without a loader the row shows neither marker. With `onExpandedChange`
+   * it offers a chevron to request the unknown children. Clear it once the
+   * children are known, empty or not.
    */
   childrenUnloaded?: boolean;
+  /** A branch disclosure signal. The owning module loads and publishes its
+   * children with its own authorization, scope and request-generation guards. */
+  onExpandedChange?: (expanded: boolean) => void;
+  /** Keep existing children visible while a branch is loading. */
+  childrenLoading?: boolean;
+  /** Safe user-facing failure text; an open branch offers an explicit retry. */
+  childrenError?: string;
+  /** More authorized children are available through the owner's native cursor. */
+  childrenHasMore?: boolean;
+  onLoadMoreChildren?: () => void;
   /** Inline action buttons rendered next to the nav item (e.g., + document, + folder) */
   actions?: NavItemAction[];
   /** Optional drag-and-drop behavior (provided by feature modules) */

@@ -175,6 +175,71 @@ describe("Sidebar active state", () => {
     });
   };
 
+  it("starts a new document closed despite persisted branches from another tab", async () => {
+    localStorage.setItem("sidebar-nav-collapsed", JSON.stringify({ "tree:/other-tab": false }));
+    await renderWithItems([
+      {
+        to: "/other-tab",
+        label: "Other tab branch",
+        icon: FolderOpen,
+        children: [{ to: "/other-tab/child", label: "Old expanded child", icon: FolderOpen }],
+      },
+    ]);
+    expect(twisty(container, "Other tab branch")?.getAttribute("aria-expanded")).toBe("false");
+    expect(navRow(container, "Old expanded child")).toBeUndefined();
+  });
+
+  it("opens an unknown lazy branch on demand, keeps items during refresh and offers retry", async () => {
+    const disclosure = vi.fn();
+    const item = {
+      to: "/lazy-root",
+      label: "Lazy root",
+      icon: FolderOpen,
+      childrenUnloaded: true,
+      onExpandedChange: disclosure,
+    };
+    await renderWithItems([item]);
+    expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(false);
+    await act(async () => twisty(container, "Lazy root")!.click());
+    expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
+    expect(twisty(container, "Lazy root")?.getAttribute("aria-expanded")).toBe("true");
+    const child = { to: "/lazy-root/child", label: "Fetched child", icon: FolderOpen };
+    await renderWithItems([{ ...item, children: [child], childrenLoading: true }]);
+    expect(navRow(container, "Fetched child")).toBeTruthy();
+    expect(desktopSidebar(container).textContent).toContain("Loading items");
+    await renderWithItems([
+      { ...item, children: [child], childrenError: "Items could not be loaded." },
+    ]);
+    expect(navRow(container, "Fetched child")).toBeTruthy();
+    const before = disclosure.mock.calls.filter(([open]) => open === true).length;
+    const retry = Array.from(desktopSidebar(container).querySelectorAll("button")).find(
+      (button) => button.textContent === "Try again",
+    )!;
+    await act(async () => retry.click());
+    expect(disclosure.mock.calls.filter(([open]) => open === true)).toHaveLength(before + 1);
+  });
+
+  it("offers another page even when the first page has no drawn children", async () => {
+    const more = vi.fn();
+    await renderWithItems([
+      {
+        to: "/paged-empty",
+        label: "Paged branch",
+        icon: FolderOpen,
+        children: [],
+        childrenUnloaded: false,
+        childrenHasMore: true,
+        onLoadMoreChildren: more,
+      },
+    ]);
+    await act(async () => twisty(container, "Paged branch")!.click());
+    const button = Array.from(desktopSidebar(container).querySelectorAll("button")).find(
+      (candidate) => candidate.textContent === "Load more items",
+    )!;
+    await act(async () => button.click());
+    expect(more).toHaveBeenCalledOnce();
+  });
+
   it("keeps scoped active navigation selected without re-navigating", async () => {
     const { Sidebar } = await import("./sidebar.tsx");
     useNavStore.getState().setConfig([
