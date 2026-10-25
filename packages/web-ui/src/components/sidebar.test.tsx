@@ -204,6 +204,10 @@ describe("Sidebar active state", () => {
     expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
     expect(twisty(container, "Lazy root")?.getAttribute("aria-expanded")).toBe("true");
     await renderWithItems([{ ...item, childrenLoading: true }]);
+    expect(desktopSidebar(container).textContent).not.toContain("Loading items");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 160));
+    });
     expect(desktopSidebar(container).textContent).toContain("Loading items");
     const loadingRow = desktopSidebar(container).querySelector('[role="status"]')!;
     const child = { to: "/lazy-root/child", label: "Fetched child", icon: FolderOpen };
