@@ -4,6 +4,9 @@ import type { NavItem } from "../lib/nav-config.ts";
 export function NavBranchStatus({ item }: { item: NavItem }) {
   if (item.disabled) return null;
   if (item.childrenLoading) {
+    // Refreshing a visible branch must not insert a row and move its items.
+    // The branch remains aria-busy; pagination keeps its native disabled action.
+    if (item.children?.length) return null;
     return (
       <div
         role="status"

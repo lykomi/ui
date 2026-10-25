@@ -203,10 +203,40 @@ describe("Sidebar active state", () => {
     await act(async () => twisty(container, "Lazy root")!.click());
     expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
     expect(twisty(container, "Lazy root")?.getAttribute("aria-expanded")).toBe("true");
-    const child = { to: "/lazy-root/child", label: "Fetched child", icon: FolderOpen };
-    await renderWithItems([{ ...item, children: [child], childrenLoading: true }]);
-    expect(navRow(container, "Fetched child")).toBeTruthy();
+    await renderWithItems([{ ...item, childrenLoading: true }]);
     expect(desktopSidebar(container).textContent).toContain("Loading items");
+    const child = { to: "/lazy-root/child", label: "Fetched child", icon: FolderOpen };
+    const more = vi.fn();
+    await renderWithItems([
+      {
+        ...item,
+        children: [child],
+        childrenLoading: false,
+        childrenHasMore: true,
+        onLoadMoreChildren: more,
+      },
+    ]);
+    const original = navRow(container, "Fetched child")!;
+    original.focus();
+    await renderWithItems([
+      {
+        ...item,
+        children: [child],
+        childrenLoading: true,
+        childrenHasMore: true,
+        onLoadMoreChildren: more,
+      },
+    ]);
+    expect(navRow(container, "Fetched child")).toBeTruthy();
+    expect(navRow(container, "Fetched child")).toBe(original);
+    expect(document.activeElement).toBe(original);
+    expect(desktopSidebar(container).textContent).not.toContain("Loading items");
+    expect(original.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(
+      Array.from(desktopSidebar(container).querySelectorAll("button")).find(
+        (button) => button.textContent === "Load more items",
+      )?.disabled,
+    ).toBe(true);
     await renderWithItems([
       { ...item, children: [child], childrenError: "Items could not be loaded." },
     ]);

@@ -1380,7 +1380,11 @@ function CollapsibleNavItem({
     );
 
     return (
-      <div {...(isDisabled ? {} : dropTargetProps)} {...(isDisabled ? {} : draggableProps)}>
+      <div
+        aria-busy={item.childrenLoading || undefined}
+        {...(isDisabled ? {} : dropTargetProps)}
+        {...(isDisabled ? {} : draggableProps)}
+      >
         {inner(isActive, isAncestorActive)}
         {hasChildren && isExpanded && (
           <>
