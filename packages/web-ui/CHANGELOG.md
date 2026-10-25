@@ -1,5 +1,23 @@
 # @iloveagents/foundry-web-ui
 
+## 0.44.0
+
+### Minor Changes
+
+- aac03a7: Add native branch disclosure, loading, retry and pagination extension points.
+  Keep existing children visible while an owning module refreshes a branch.
+  Tree expansion belongs to the current browser document; new tabs no longer
+  inherit deeply opened branches from shared persistent group preferences.
+- 3e0fe38: Add GaugeChart with an optional target marker, explicit semantic colors, accessible meter values and missing-data handling. Add Sparkline and a StatCard trend slot, with a responsive management dashboard composition example and themed component gallery.
+
+### Patch Changes
+
+- fba1458: Keep overview process connectors in the gaps between cards so they do not cross selected borders. Align overflow controls with status markers rather than the full height of step details.
+- b747a41: Use a continuous marker rail and compact label selection for overview process steps instead of a large selected card and short disconnected gap strokes.
+- 4f26244: Restore horizontal padding around column sort labels and icons so hover and open menu fills have breathing room.
+  - @iloveagents/foundry-agent@0.44.0
+  - @iloveagents/foundry-web-primitives@0.44.0
+
 ## 0.43.0
 
 ### Minor Changes
