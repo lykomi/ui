@@ -1,5 +1,15 @@
 # @iloveagents/foundry-web-ui
 
+## 0.44.2
+
+### Patch Changes
+
+- eda0e00: Suppress brief navigation loading flashes. Show first-load status only after
+  150 milliseconds, fade it in gently and respect reduced motion. Loaded children
+  appear immediately and background refresh never inserts a status row.
+  - @iloveagents/foundry-agent@0.44.2
+  - @iloveagents/foundry-web-primitives@0.44.2
+
 ## 0.44.1
 
 ### Patch Changes

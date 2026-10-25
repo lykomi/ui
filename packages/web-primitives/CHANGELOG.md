@@ -1,5 +1,7 @@
 # @iloveagents/foundry-web-primitives
 
+## 0.44.2
+
 ## 0.44.1
 
 ## 0.44.0
