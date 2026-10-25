@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.44.3
+
+### Patch Changes
+
+- ffb9462: Align loading and retry rows with the actual child icon and label columns in both normal navigation and workspace workbenches. Reuse the native depth geometry instead of applying the default sidebar spacing inside the wider workbench tree.
+  - @iloveagents/foundry-agent@0.44.3
+  - @iloveagents/foundry-web-primitives@0.44.3
+
 ## 0.44.2
 
 ### Patch Changes
