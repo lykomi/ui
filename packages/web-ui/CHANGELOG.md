@@ -1,5 +1,18 @@
 # @iloveagents/foundry-web-ui
 
+## 0.44.1
+
+### Patch Changes
+
+- c7697eb: Keep visible navigation branches stationary during refresh. Preserve row DOM
+  and focus, report busy state accessibly, and retain disabled pagination without
+  inserting a loading row above already loaded children.
+
+  Align initial loading and retry messages with the branch's child rows, using
+  the same indentation ladder, icon size, typography and vertical spacing.
+  - @iloveagents/foundry-agent@0.44.1
+  - @iloveagents/foundry-web-primitives@0.44.1
+
 ## 0.44.0
 
 ### Minor Changes
