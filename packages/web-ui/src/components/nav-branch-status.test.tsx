@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { NavItem } from "../lib/nav-config.ts";
+import { WorkbenchStyles } from "../workbench/workbench-styles.tsx";
 import { NavBranchStatus } from "./nav-branch-status.tsx";
 
 let root: Root;
@@ -88,4 +89,64 @@ it.each([0, 2, 5])("keeps child geometry at native depth %s", async (depth) => {
   expect(status.dataset.navDepth).toBe(String(depth));
   expect(status.style.getPropertyValue("--nav-depth")).toBe(String(depth));
   expect(status.querySelector("svg")?.classList.contains("size-3.5")).toBe(true);
+});
+
+it("allows wrapped retry text to grow in a fine-pointer workbench", async () => {
+  host.className = "workbench-preview";
+  host.setAttribute("data-workspace-navigation", "");
+  await act(async () =>
+    root.render(
+      <>
+        <WorkbenchStyles />
+        <aside data-sidebar-surface="desktop">
+          <section data-nav-group-label="Content">
+            <NavBranchStatus
+              item={{
+                ...item,
+                childrenLoading: false,
+                childrenError:
+                  "A longer explanation at a deeply indented branch must remain readable.",
+              }}
+              depth={5}
+              bodyClassName="pl-18"
+            />
+          </section>
+        </aside>
+      </>,
+    ),
+  );
+  const status = host.querySelector<HTMLElement>('[role="status"]')!;
+  const collect = (rules: CSSRuleList): CSSStyleRule[] =>
+    Array.from(rules).flatMap((rule) =>
+      "cssRules" in rule
+        ? collect((rule as CSSGroupingRule).cssRules)
+        : "selectorText" in rule
+          ? [rule as CSSStyleRule]
+          : [],
+    );
+  const fixed = collect(host.querySelector("style")!.sheet!.cssRules).filter(
+    (rule) =>
+      rule.style.height && rule.style.height !== "auto" && status.matches(rule.selectorText),
+  );
+  expect(fixed.map((rule) => rule.selectorText)).toEqual([]);
+  expect(getComputedStyle(status).minHeight).toBe("32px");
+});
+
+it("keeps status icons on the flat workbench item column", async () => {
+  host.className = "workbench-preview";
+  await act(async () =>
+    root.render(
+      <>
+        <WorkbenchStyles />
+        <aside data-sidebar-surface="desktop">
+          <NavBranchStatus
+            item={{ ...item, childrenLoading: false, childrenError: "Retry required" }}
+            depth={0}
+            bodyClassName="pl-8"
+          />
+        </aside>
+      </>,
+    ),
+  );
+  expect(getComputedStyle(host.querySelector('[role="status"]')!).paddingLeft).toBe("12px");
 });
