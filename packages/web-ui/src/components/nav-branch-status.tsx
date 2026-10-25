@@ -1,8 +1,18 @@
-import { LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertCircle, LoaderCircle } from "lucide-react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { NavItem } from "../lib/nav-config.ts";
 
-export function NavBranchStatus({ item, bodyClassName }: { item: NavItem; bodyClassName: string }) {
+export function NavBranchStatus({
+  item,
+  bodyClassName,
+  depth,
+}: {
+  item: NavItem;
+  bodyClassName: string;
+  depth: number;
+}) {
+  const iconClassName = "size-3.5 shrink-0";
+  const geometry = { "--nav-depth": depth } as CSSProperties;
   const waiting = !item.disabled && item.childrenLoading && !item.children?.length;
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -21,10 +31,13 @@ export function NavBranchStatus({ item, bodyClassName }: { item: NavItem; bodyCl
     return (
       <div
         role="status"
+        data-nav-branch-status
+        data-nav-depth={depth}
+        style={geometry}
         className={`flex w-full items-center gap-2 rounded-xl border border-transparent ${bodyClassName} pr-3 py-1 text-sm text-sidebar-foreground/60 animate-in fade-in duration-150 motion-reduce:animate-none`}
       >
-        <LoaderCircle aria-hidden="true" className="size-4 shrink-0 animate-spin" />
-        Loading items…
+        <LoaderCircle aria-hidden="true" className={`${iconClassName} animate-spin`} />
+        <span>Loading items…</span>
       </div>
     );
   }
@@ -32,12 +45,18 @@ export function NavBranchStatus({ item, bodyClassName }: { item: NavItem; bodyCl
     return (
       <div
         role="status"
-        className={`rounded-xl border border-transparent ${bodyClassName} pr-3 py-1 text-sm text-sidebar-foreground/60`}
+        data-nav-branch-status
+        data-nav-depth={depth}
+        style={geometry}
+        className={`flex w-full items-center gap-2 rounded-xl border border-transparent ${bodyClassName} pr-3 py-1 text-sm text-sidebar-foreground/60`}
       >
-        <span>{item.childrenError}</span>{" "}
-        <button type="button" className="underline" onClick={() => item.onExpandedChange?.(true)}>
-          Try again
-        </button>
+        <AlertCircle aria-hidden="true" className={iconClassName} />
+        <span className="min-w-0">
+          {item.childrenError}{" "}
+          <button type="button" className="underline" onClick={() => item.onExpandedChange?.(true)}>
+            Try again
+          </button>
+        </span>
       </div>
     );
   }

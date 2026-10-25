@@ -261,10 +261,11 @@ export function WorkbenchStyles() {
           padding-top: 0;
           padding-bottom: 0;
         }
-        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] {
+        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"]:not([data-nav-branch-status]) {
           padding-left: 0;
         }
-        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] > button:not([data-nav-twisty]) {
+        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] > button:not([data-nav-twisty]),
+        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-branch-status][data-nav-depth="0"] {
           padding-left: 12px;
           min-height: 32px;
           gap: 8px;
@@ -318,7 +319,8 @@ export function WorkbenchStyles() {
         }
 
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] button[data-nav-depth],
-        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] div[data-nav-depth] > button:not([data-nav-twisty]) {
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] div[data-nav-depth] > button:not([data-nav-twisty]),
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] [data-nav-branch-status] {
           padding-left: calc(32px + var(--nav-depth, 0) * 16px);
         }
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] [data-nav-depth] > [data-nav-twisty-cell] {
@@ -326,7 +328,7 @@ export function WorkbenchStyles() {
         }
 
         @media (pointer: fine) {
-          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth] {
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth]:not([data-nav-branch-status]) {
             height: 32px;
             min-height: 32px;
             padding-top: 0;
