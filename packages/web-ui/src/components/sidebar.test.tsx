@@ -240,6 +240,46 @@ describe("Sidebar active state", () => {
     expect(more).toHaveBeenCalledOnce();
   });
 
+  it("does not synthesize disclosure when loading or error config replaces a callback", async () => {
+    const reported = vi.fn();
+    const item = {
+      to: "/callback-refresh",
+      label: "Callback refresh",
+      icon: FolderOpen,
+      childrenUnloaded: true,
+    };
+    await renderWithItems([{ ...item, onExpandedChange: (open) => reported(open) }]);
+    await act(async () => twisty(container, "Callback refresh")!.click());
+    const count = reported.mock.calls.filter(([open]) => open === true).length;
+    await renderWithItems([
+      { ...item, childrenLoading: true, onExpandedChange: (open) => reported(open) },
+    ]);
+    await renderWithItems([
+      { ...item, childrenError: "Try again later.", onExpandedChange: (open) => reported(open) },
+    ]);
+    expect(reported.mock.calls.filter(([open]) => open === true)).toHaveLength(count);
+  });
+
+  it("reserves the tree disclosure column for an unloaded branch in a flat unlabeled group", async () => {
+    const item = {
+      to: "/lazy-layout",
+      label: "Lazy layout",
+      icon: FolderOpen,
+      childrenUnloaded: true,
+      onExpandedChange: vi.fn(),
+    };
+    await renderWithItems([item]);
+    await act(async () =>
+      useNavStore.getState().setConfig([{ label: "Lazy group", hideLabel: true, items: [item] }]),
+    );
+    const row = navRow(container, "Lazy layout")!;
+    const body = Array.from(row.querySelectorAll("button")).find(
+      (button) => button.textContent === "Lazy layout",
+    )!;
+    expect(body.classList.contains("pl-8")).toBe(true);
+    expect(twisty(container, "Lazy layout")).toBeTruthy();
+  });
+
   it("keeps scoped active navigation selected without re-navigating", async () => {
     const { Sidebar } = await import("./sidebar.tsx");
     useNavStore.getState().setConfig([

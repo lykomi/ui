@@ -1727,9 +1727,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   // that does not exist and reads as a bullet. The disclosure cell still
   // renders either way, so flat rows keep the same label column as tree
   // rows and the sidebar stays on one grid.
-  const groupHasBranches = group.items.some((item) =>
-    Boolean(!item.childrenHidden && item.children && item.children.length > 0),
-  );
+  const groupHasBranches = group.items.some(hasNavBranch);
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy
   // groups stay uncollapsable so behaviour is unchanged.
