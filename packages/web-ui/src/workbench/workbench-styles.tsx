@@ -318,7 +318,8 @@ export function WorkbenchStyles() {
         }
 
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] button[data-nav-depth],
-        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] div[data-nav-depth] > button:not([data-nav-twisty]) {
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] div[data-nav-depth] > button:not([data-nav-twisty]),
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] [data-nav-branch-status] {
           padding-left: calc(32px + var(--nav-depth, 0) * 16px);
         }
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] [data-nav-depth] > [data-nav-twisty-cell] {

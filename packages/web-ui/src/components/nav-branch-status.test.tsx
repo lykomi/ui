@@ -9,7 +9,9 @@ let host: HTMLDivElement;
 let previousAct: boolean | undefined;
 const item: NavItem = { to: "/branch", label: "Branch", childrenLoading: true };
 const draw = async (value: NavItem) => {
-  await act(async () => root.render(<NavBranchStatus item={value} bodyClassName="pl-10" />));
+  await act(async () =>
+    root.render(<NavBranchStatus item={value} depth={1} bodyClassName="pl-10" />),
+  );
 };
 const advance = async (milliseconds: number) => {
   await act(async () => vi.advanceTimersByTimeAsync(milliseconds));
@@ -59,4 +61,31 @@ it("never inserts loading above known children and does not delay retry errors",
   await draw({ ...item, childrenLoading: false, childrenError: "Could not load items." });
   expect(host.textContent).toContain("Try again");
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it("exposes the native depth to workbench geometry without creating a navigation action", async () => {
+  await draw(item);
+  await advance(150);
+  const status = host.querySelector<HTMLElement>('[role="status"]')!;
+  expect(status.dataset.navDepth).toBe("1");
+  expect(status.hasAttribute("data-nav-branch-status")).toBe(true);
+  expect(status.style.getPropertyValue("--nav-depth")).toBe("1");
+  expect(status.querySelector("svg")?.classList.contains("size-3.5")).toBe(true);
+  expect(status.querySelector("button")).toBeNull();
+  await draw({ ...item, childrenLoading: false, childrenError: "Retry required" });
+  const error = host.querySelector<HTMLElement>('[role="status"]')!;
+  expect(error.dataset.navDepth).toBe("1");
+  expect(error.querySelector("svg")?.classList.contains("size-3.5")).toBe(true);
+  expect(error.querySelector(":scope > button")).toBeNull();
+});
+
+it.each([0, 2, 5])("keeps child geometry at native depth %s", async (depth) => {
+  await act(async () =>
+    root.render(<NavBranchStatus item={item} depth={depth} bodyClassName="pl-12" />),
+  );
+  await advance(150);
+  const status = host.querySelector<HTMLElement>('[role="status"]')!;
+  expect(status.dataset.navDepth).toBe(String(depth));
+  expect(status.style.getPropertyValue("--nav-depth")).toBe(String(depth));
+  expect(status.querySelector("svg")?.classList.contains("size-3.5")).toBe(true);
 });

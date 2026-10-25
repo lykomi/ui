@@ -1182,7 +1182,11 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
       </div>
       {isExpanded && (
         <div aria-busy={item.childrenLoading || undefined}>
-          <NavBranchStatus item={item} bodyClassName={getNavDepthOffsets(depth + 1).body} />
+          <NavBranchStatus
+            item={item}
+            depth={depth + 1}
+            bodyClassName={getNavDepthOffsets(depth + 1).body}
+          />
           {(item.children ?? []).map((child) => {
             const hasNestedChildren = hasNavBranch(child);
             if (hasNestedChildren) {
@@ -1391,7 +1395,11 @@ function CollapsibleNavItem({
             {/* A heading's children sit one step further left than a
                 branch's: the heading is flat, so its own column is free and
                 the hierarchy still reads. Same row metrics either way. */}
-            <NavBranchStatus item={item} bodyClassName={getNavDepthOffsets(heading ? 0 : 1).body} />
+            <NavBranchStatus
+              item={item}
+              depth={heading ? 0 : 1}
+              bodyClassName={getNavDepthOffsets(heading ? 0 : 1).body}
+            />
             <SubNavItems items={item.children ?? []} parentPath={item.to} depth={heading ? 0 : 1} />
             <NavBranchMore item={item} />
             {item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}

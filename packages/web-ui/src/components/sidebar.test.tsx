@@ -227,7 +227,16 @@ describe("Sidebar active state", () => {
     expect(loadingRow.classList.contains(childPadding!)).toBe(true);
     expect(loadingRow.classList.contains("text-sm")).toBe(original.classList.contains("text-sm"));
     expect(loadingRow.classList.contains("py-1")).toBe(original.classList.contains("py-1"));
-    expect(loadingRow.querySelector("svg")?.classList.contains("size-4")).toBe(true);
+    expect(loadingRow.getAttribute("data-nav-depth")).toBe(
+      original.closest("[data-nav-depth]")?.getAttribute("data-nav-depth"),
+    );
+    expect((loadingRow as HTMLElement).style.getPropertyValue("--nav-depth")).toBe(
+      (original.closest("[data-nav-depth]") as HTMLElement).style.getPropertyValue("--nav-depth"),
+    );
+    const childIconSize = Array.from(original.querySelector("svg")!.classList).find((name) =>
+      name.startsWith("size-"),
+    );
+    expect(loadingRow.querySelector("svg")?.classList.contains(childIconSize!)).toBe(true);
     original.focus();
     await renderWithItems([
       {
