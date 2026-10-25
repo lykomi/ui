@@ -205,6 +205,7 @@ describe("Sidebar active state", () => {
     expect(twisty(container, "Lazy root")?.getAttribute("aria-expanded")).toBe("true");
     await renderWithItems([{ ...item, childrenLoading: true }]);
     expect(desktopSidebar(container).textContent).toContain("Loading items");
+    const loadingRow = desktopSidebar(container).querySelector('[role="status"]')!;
     const child = { to: "/lazy-root/child", label: "Fetched child", icon: FolderOpen };
     const more = vi.fn();
     await renderWithItems([
@@ -217,6 +218,12 @@ describe("Sidebar active state", () => {
       },
     ]);
     const original = navRow(container, "Fetched child")!;
+    const childPadding = Array.from(original.classList).find((name) => /^pl-\d+$/.test(name));
+    expect(childPadding).toBeTruthy();
+    expect(loadingRow.classList.contains(childPadding!)).toBe(true);
+    expect(loadingRow.classList.contains("text-sm")).toBe(original.classList.contains("text-sm"));
+    expect(loadingRow.classList.contains("py-1")).toBe(original.classList.contains("py-1"));
+    expect(loadingRow.querySelector("svg")?.classList.contains("size-4")).toBe(true);
     original.focus();
     await renderWithItems([
       {
