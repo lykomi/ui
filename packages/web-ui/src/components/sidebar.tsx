@@ -90,7 +90,8 @@ const NAV_DEPTH_OFFSETS = [
 // Fixed-width cell every nav row leads with, holding either a chevron
 // (branch) or a dot (leaf). Same width as ``SIDEBAR_ITEM_ICON_CLASS`` so
 // the disclosure column and the group-header chevron share one x.
-const NAV_TWISTY_CLASS = "absolute inset-y-0 flex w-4 items-center justify-center";
+// The disclosure must win hit testing over a host's positioned row button.
+const NAV_TWISTY_CLASS = "absolute inset-y-0 z-10 flex w-4 items-center justify-center";
 // The chevron is a real control, so it needs a real touch target: it draws
 // at ``size-3.5`` but CLICKS in 24px (WCAG 2.2 target-size minimum). It can
 // simply overflow the 16px cell — the cell is absolutely positioned, so
@@ -638,6 +639,7 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
 function NavTwisty({
   hasChildren,
   childrenUnloaded = false,
+  emptyContainer = false,
   isExpanded,
   onToggle,
   label,
@@ -648,6 +650,8 @@ function NavTwisty({
   hasChildren: boolean;
   /** Nobody has fetched this row's children yet — see {@link NavItem.childrenUnloaded}. */
   childrenUnloaded?: boolean;
+  /** An owner-managed container whose current navigation window is empty. */
+  emptyContainer?: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
   label: string;
@@ -672,15 +676,22 @@ function NavTwisty({
             claim on the strength of a request it never sent. The cell still
             occupies its column, so labels stay aligned and no marker jumps
             sideways when the answer arrives. */}
-        {inTree && !childrenUnloaded && (
-          <span
-            data-nav-leaf-dot
-            className={cn(
-              "block size-1 shrink-0 rounded-full",
-              isActive ? "bg-sidebar-selected-foreground/70" : "bg-sidebar-foreground/30",
-            )}
-          />
-        )}
+        {inTree &&
+          !childrenUnloaded &&
+          (emptyContainer ? (
+            <ChevronRight
+              data-nav-empty-container
+              className="size-3.5 shrink-0 text-sidebar-foreground/25"
+            />
+          ) : (
+            <span
+              data-nav-leaf-dot
+              className={cn(
+                "block size-1 shrink-0 rounded-full",
+                isActive ? "bg-sidebar-selected-foreground/70" : "bg-sidebar-foreground/30",
+              )}
+            />
+          ))}
       </span>
     );
   }
@@ -827,7 +838,8 @@ function NavLeafItem({
       >
         <NavTwisty
           hasChildren={false}
-          childrenUnloaded={item.childrenUnloaded}
+          childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          emptyContainer={isNavContainer(item)}
           label={item.label}
           isActive={isActive && !isDisabled}
           depth={depth}
@@ -915,7 +927,8 @@ function NavLeafItem({
     >
       <NavTwisty
         hasChildren={false}
-        childrenUnloaded={item.childrenUnloaded}
+        childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+        emptyContainer={isNavContainer(item)}
         label={item.label}
         isActive={isActive && !isDisabled}
         depth={depth}
@@ -1249,14 +1262,15 @@ function CollapsibleNavItem({
   const isAncestorActive = isInsideSubtree && !isActive;
   const reportExpanded = useCallback(
     (expanded: boolean) => {
-      if (!item.disabled) item.onExpandedChange?.(heading || expanded);
+      if (!item.disabled) item.onExpandedChange?.(!item.childrenHidden && (heading || expanded));
     },
-    [item.disabled, item.onExpandedChange, heading],
+    [item.disabled, item.childrenHidden, item.onExpandedChange, heading],
   );
   const [treeExpanded, setExpanded] = useTreeExpanded(
     item.to,
     isInsideSubtree,
     item.disabled || !item.onExpandedChange ? undefined : reportExpanded,
+    item.childrenHidden,
   );
   // A heading is never collapsed and carries no chevron: its children ARE
   // the tree it stands for.
@@ -1304,7 +1318,8 @@ function CollapsibleNavItem({
       >
         <NavTwisty
           hasChildren={hasChildren && !heading}
-          childrenUnloaded={item.childrenUnloaded}
+          childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          emptyContainer={isNavContainer(item)}
           inTree={rowInTree}
           isExpanded={isExpanded}
           onToggle={hasChildren && !heading ? () => setExpanded(!isExpanded) : undefined}
@@ -1422,7 +1437,8 @@ function CollapsibleNavItem({
       >
         <NavTwisty
           hasChildren={false}
-          childrenUnloaded={item.childrenUnloaded}
+          childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          emptyContainer={isNavContainer(item)}
           inTree={rowInTree}
           label={item.label}
           depth={0}
@@ -1472,7 +1488,8 @@ function CollapsibleNavItem({
         <>
           <NavTwisty
             hasChildren={false}
-            childrenUnloaded={item.childrenUnloaded}
+            childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+            emptyContainer={isNavContainer(item)}
             inTree={rowInTree}
             label={item.label}
             isActive={isActive}
@@ -1704,6 +1721,12 @@ function hasNavBranch(item: NavItem): boolean {
   );
 }
 
+/** The owner supplies this signal even when its authorized window is empty.
+ * A list that hides records is a navigation endpoint, regardless of storage. */
+function isNavContainer(item: NavItem): boolean {
+  return !item.childrenHidden && Boolean(item.onExpandedChange);
+}
+
 function toggleGroupCollapsed(label: string, current: boolean): void {
   writeCollapseMap({ ...readCollapseMap(), [label]: !current });
 }
@@ -1739,7 +1762,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   // that does not exist and reads as a bullet. The disclosure cell still
   // renders either way, so flat rows keep the same label column as tree
   // rows and the sidebar stays on one grid.
-  const groupHasBranches = group.items.some(hasNavBranch);
+  const groupHasBranches = group.items.some((item) => hasNavBranch(item) || isNavContainer(item));
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy
   // groups stay uncollapsable so behaviour is unchanged.

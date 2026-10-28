@@ -290,6 +290,68 @@ describe("Sidebar active state", () => {
     expect(more).toHaveBeenCalledOnce();
   });
 
+  it.each([false, true])(
+    "keeps a container marker after an empty lazy read without requesting it again (nested=%s)",
+    async (nested) => {
+      const disclosure = vi.fn();
+      const item = {
+        to: `/empty-container-${nested}`,
+        label: "Empty container",
+        icon: FolderOpen,
+        childrenUnloaded: true,
+        onExpandedChange: disclosure,
+      };
+      const items = (unloaded: boolean): NavGroup["items"] => {
+        const container = { ...item, childrenUnloaded: unloaded };
+        return nested
+          ? [
+              {
+                to: "/empty-parent",
+                label: "Outer parent",
+                icon: FolderOpen,
+                children: [container],
+              },
+            ]
+          : [container];
+      };
+      await renderWithItems(items(true));
+      if (nested) await act(async () => twisty(container, "Outer parent")!.click());
+      await act(async () => twisty(container, "Empty container")!.click());
+      const requests = disclosure.mock.calls.filter(([open]) => open === true).length;
+      await renderWithItems(items(false));
+      const cell = twistyCell(container, "Empty container")!;
+      expect(cell.querySelector("[data-nav-empty-container]")).not.toBeNull();
+      expect(cell.querySelector("[data-nav-leaf-dot]")).toBeNull();
+      expect(cell.querySelector("[aria-expanded]")).toBeNull();
+      expect(twisty(container, "Empty container")).toBeUndefined();
+      await act(async () => navRow(container, "Empty container")!.click());
+      await renderWithItems(items(false));
+      expect(disclosure.mock.calls.filter(([open]) => open === true)).toHaveLength(requests);
+    },
+  );
+
+  it("closes disclosure when a list hides records and restores the user's choice when shown", async () => {
+    const disclosure = vi.fn();
+    const list = {
+      to: "/toggle-list",
+      label: "Toggle list",
+      icon: FolderOpen,
+      onExpandedChange: disclosure,
+      children: [{ to: "/spaces/demo", label: "List record", icon: MessageSquare }],
+    };
+    await renderWithItems([list]);
+    expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
+    disclosure.mockClear();
+    await renderWithItems([{ ...list, childrenHidden: true }]);
+    expect(disclosure.mock.calls.length).toBeGreaterThan(0);
+    expect(disclosure.mock.calls.every(([open]) => open === false)).toBe(true);
+    expect(navRow(container, "List record")).toBeUndefined();
+    expect(twisty(container, "Toggle list")).toBeUndefined();
+    await renderWithItems([list]);
+    expect(twisty(container, "Toggle list")?.getAttribute("aria-expanded")).toBe("true");
+    expect(navRow(container, "List record")).toBeTruthy();
+  });
+
   it("does not synthesize disclosure when loading or error config replaces a callback", async () => {
     const reported = vi.fn();
     const item = {
@@ -364,11 +426,14 @@ describe("Sidebar active state", () => {
   it.each([false, true])(
     "keeps a hidden list selected without rendering its records (nested=%s)",
     async (nested) => {
+      const disclosure = vi.fn();
       const list = {
         to: "/spaces/tasks",
         label: "Tasks",
         icon: FolderOpen,
         childrenHidden: true,
+        childrenUnloaded: true,
+        onExpandedChange: disclosure,
         children: Array.from({ length: 1000 }, (_, i) => ({
           to: i === 0 ? "/spaces/demo" : `/spaces/task-${i}`,
           label: `Task ${i}`,
@@ -378,6 +443,7 @@ describe("Sidebar active state", () => {
       await renderWithItems(
         nested ? [{ to: "/spaces", label: "Space", icon: FolderOpen, children: [list] }] : [list],
       );
+      expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(false);
       for (const surface of container.querySelectorAll("[data-sidebar-surface]")) {
         const selected = surface.querySelector('[data-active-nav-row="true"]');
         expect(selected?.textContent).toBe("Tasks");

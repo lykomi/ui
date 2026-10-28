@@ -114,7 +114,7 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
         background: var(--sidebar-selected);
         pointer-events: none;
       }
-      [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"] > * {
+      [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"] > :not([data-nav-twisty-cell]) {
         z-index: 2;
       }
     `}</style>
