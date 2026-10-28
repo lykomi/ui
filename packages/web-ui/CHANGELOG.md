@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.44.4
+
+### Patch Changes
+
+- 4d06288: Keep navigation chevrons above row click targets, preserve a muted container marker and keyboard focus after an empty lazy read, and avoid requesting sidebar children for lists that hide their records.
+  - @iloveagents/foundry-agent@0.44.4
+  - @iloveagents/foundry-web-primitives@0.44.4
+
 ## 0.44.3
 
 ### Patch Changes
