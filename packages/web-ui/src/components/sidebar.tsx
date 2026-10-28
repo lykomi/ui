@@ -90,7 +90,8 @@ const NAV_DEPTH_OFFSETS = [
 // Fixed-width cell every nav row leads with, holding either a chevron
 // (branch) or a dot (leaf). Same width as ``SIDEBAR_ITEM_ICON_CLASS`` so
 // the disclosure column and the group-header chevron share one x.
-const NAV_TWISTY_CLASS = "absolute inset-y-0 flex w-4 items-center justify-center";
+// The disclosure must win hit testing over a host's positioned row button.
+const NAV_TWISTY_CLASS = "absolute inset-y-0 z-10 flex w-4 items-center justify-center";
 // The chevron is a real control, so it needs a real touch target: it draws
 // at ``size-3.5`` but CLICKS in 24px (WCAG 2.2 target-size minimum). It can
 // simply overflow the 16px cell — the cell is absolutely positioned, so
@@ -638,6 +639,7 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
 function NavTwisty({
   hasChildren,
   childrenUnloaded = false,
+  emptyContainer = false,
   isExpanded,
   onToggle,
   label,
@@ -648,6 +650,8 @@ function NavTwisty({
   hasChildren: boolean;
   /** Nobody has fetched this row's children yet — see {@link NavItem.childrenUnloaded}. */
   childrenUnloaded?: boolean;
+  /** An owner-managed container whose current navigation window is empty. */
+  emptyContainer?: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
   label: string;
@@ -663,7 +667,7 @@ function NavTwisty({
 }) {
   const cell = cn(NAV_TWISTY_CLASS, getNavDepthOffsets(depth).column);
 
-  if (!hasChildren) {
+  if (!hasChildren && (!emptyContainer || !inTree)) {
     return (
       <span data-nav-twisty-cell aria-hidden="true" className={cn(cell, "pointer-events-none")}>
         {/* No dot when the children simply have not been fetched. The dot is
@@ -689,24 +693,38 @@ function NavTwisty({
     <span data-nav-twisty-cell className={cell}>
       <button
         type="button"
-        data-nav-twisty
-        aria-expanded={isExpanded}
-        aria-label={isExpanded ? `Collapse ${label}` : `Expand ${label}`}
+        data-nav-twisty={hasChildren || undefined}
+        data-nav-empty-container={!hasChildren || undefined}
+        aria-expanded={hasChildren ? isExpanded : undefined}
+        aria-disabled={!hasChildren || undefined}
+        tabIndex={hasChildren ? undefined : -1}
+        aria-label={
+          !hasChildren
+            ? `${label}: no visible items`
+            : isExpanded
+              ? `Collapse ${label}`
+              : `Expand ${label}`
+        }
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onToggle?.();
+          if (hasChildren) onToggle?.();
         }}
         className={cn(
           "flex items-center justify-center rounded",
           NAV_TWISTY_HIT_CLASS,
-          isActive
-            ? "text-sidebar-selected-foreground"
-            : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
+          !hasChildren
+            ? "text-sidebar-foreground/25 cursor-default"
+            : isActive
+              ? "text-sidebar-selected-foreground"
+              : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
         )}
       >
         <ChevronRight
-          className={cn("size-3.5 transition-transform duration-150", isExpanded && "rotate-90")}
+          className={cn(
+            "size-3.5 transition-transform duration-150",
+            hasChildren && isExpanded && "rotate-90",
+          )}
         />
       </button>
     </span>
@@ -827,7 +845,8 @@ function NavLeafItem({
       >
         <NavTwisty
           hasChildren={false}
-          childrenUnloaded={item.childrenUnloaded}
+          childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          emptyContainer={isNavContainer(item)}
           label={item.label}
           isActive={isActive && !isDisabled}
           depth={depth}
@@ -915,7 +934,8 @@ function NavLeafItem({
     >
       <NavTwisty
         hasChildren={false}
-        childrenUnloaded={item.childrenUnloaded}
+        childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+        emptyContainer={isNavContainer(item)}
         label={item.label}
         isActive={isActive && !isDisabled}
         depth={depth}
@@ -975,7 +995,7 @@ function SubNavItems({
   return (
     <div>
       {items.map((child) => {
-        const hasNestedChildren = hasNavBranch(child);
+        const hasNestedChildren = hasNavBranch(child) || Boolean(child.onExpandedChange);
 
         // Folders with children render as collapsible nested items
         if (hasNestedChildren) {
@@ -1066,10 +1086,12 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const isInsideSubtree = isInSubtree(currentPath, item);
   const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
+  const hasChildren = hasNavBranch(item);
   const [isExpanded, setExpanded] = useTreeExpanded(
     item.to,
     isInsideSubtree,
     item.disabled ? undefined : item.onExpandedChange,
+    item.childrenHidden,
   );
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const bodyPl = getNavDepthOffsets(depth).body;
@@ -1105,7 +1127,9 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         )}
       >
         <NavTwisty
-          hasChildren
+          hasChildren={hasChildren}
+          childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          emptyContainer={isNavContainer(item)}
           isExpanded={isExpanded}
           onToggle={() => setExpanded(!isExpanded)}
           label={item.label}
@@ -1117,7 +1141,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           disabled={isDisabled}
           onClick={() => {
             if (isDisabled) return;
-            setExpanded(true);
+            if (hasChildren) setExpanded(true);
             setNavContext({
               ...navContext,
               label: item.label,
@@ -1180,7 +1204,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         )}
         <NavRowControls item={item} />
       </div>
-      {isExpanded && (
+      {hasChildren && isExpanded && (
         <div aria-busy={item.childrenLoading || undefined}>
           <NavBranchStatus
             item={item}
@@ -1188,7 +1212,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
             bodyClassName={getNavDepthOffsets(depth + 1).body}
           />
           {(item.children ?? []).map((child) => {
-            const hasNestedChildren = hasNavBranch(child);
+            const hasNestedChildren = hasNavBranch(child) || Boolean(child.onExpandedChange);
             if (hasNestedChildren) {
               return (
                 <NestedFolderItem key={child.to + child.label} item={child} depth={depth + 1} />
@@ -1247,20 +1271,15 @@ function CollapsibleNavItem({
   const isInsideSubtree = isInSubtree(currentPath, item);
   const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
-  const reportExpanded = useCallback(
-    (expanded: boolean) => {
-      if (!item.disabled) item.onExpandedChange?.(heading || expanded);
-    },
-    [item.disabled, item.onExpandedChange, heading],
-  );
-  const [treeExpanded, setExpanded] = useTreeExpanded(
+  const [isExpanded, setExpanded] = useTreeExpanded(
     item.to,
     isInsideSubtree,
-    item.disabled || !item.onExpandedChange ? undefined : reportExpanded,
+    item.disabled ? undefined : item.onExpandedChange,
+    item.childrenHidden,
+    heading,
   );
   // A heading is never collapsed and carries no chevron: its children ARE
   // the tree it stands for.
-  const isExpanded = heading ? true : treeExpanded;
   const hasChildren = hasNavBranch(item);
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
@@ -1275,7 +1294,7 @@ function CollapsibleNavItem({
     !isDisabled &&
     `font-semibold ${isActive ? "text-sidebar-selected-foreground" : "text-sidebar-primary"}`;
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
-  const rendersRow = Boolean(hasChildren || hasActions);
+  const rendersRow = Boolean(hasChildren || hasActions || item.onExpandedChange);
   const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);
   const activeLinkRef = useActiveNavRowScroll<HTMLAnchorElement>(isActive && !rendersRow);
 
@@ -1304,7 +1323,8 @@ function CollapsibleNavItem({
       >
         <NavTwisty
           hasChildren={hasChildren && !heading}
-          childrenUnloaded={item.childrenUnloaded}
+          childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          emptyContainer={isNavContainer(item)}
           inTree={rowInTree}
           isExpanded={isExpanded}
           onToggle={hasChildren && !heading ? () => setExpanded(!isExpanded) : undefined}
@@ -1422,7 +1442,8 @@ function CollapsibleNavItem({
       >
         <NavTwisty
           hasChildren={false}
-          childrenUnloaded={item.childrenUnloaded}
+          childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          emptyContainer={isNavContainer(item)}
           inTree={rowInTree}
           label={item.label}
           depth={0}
@@ -1472,7 +1493,8 @@ function CollapsibleNavItem({
         <>
           <NavTwisty
             hasChildren={false}
-            childrenUnloaded={item.childrenUnloaded}
+            childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+            emptyContainer={isNavContainer(item)}
             inTree={rowInTree}
             label={item.label}
             isActive={isActive}
@@ -1704,6 +1726,12 @@ function hasNavBranch(item: NavItem): boolean {
   );
 }
 
+/** The owner supplies this signal even when its authorized window is empty.
+ * A list that hides records is a navigation endpoint, regardless of storage. */
+function isNavContainer(item: NavItem): boolean {
+  return !item.childrenHidden && Boolean(item.onExpandedChange);
+}
+
 function toggleGroupCollapsed(label: string, current: boolean): void {
   writeCollapseMap({ ...readCollapseMap(), [label]: !current });
 }
@@ -1739,7 +1767,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
   // that does not exist and reads as a bullet. The disclosure cell still
   // renders either way, so flat rows keep the same label column as tree
   // rows and the sidebar stays on one grid.
-  const groupHasBranches = group.items.some(hasNavBranch);
+  const groupHasBranches = group.items.some((item) => hasNavBranch(item) || isNavContainer(item));
   // hideLabel + collapsible are mutually exclusive — a hidden label
   // can't host a chevron. The collapsible flag is the opt-in; legacy
   // groups stay uncollapsable so behaviour is unchanged.

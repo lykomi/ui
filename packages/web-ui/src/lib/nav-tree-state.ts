@@ -16,9 +16,12 @@ export function useTreeExpanded(
   to: string,
   inside: boolean,
   onExpandedChange?: (expanded: boolean) => void,
+  forceClosed = false,
+  forceOpen = false,
 ): [boolean, (expanded: boolean) => void] {
   const state = useSyncExternalStore(subscribe, read, read);
-  const isExpanded = state.get(to) ?? inside;
+  // Heading/hidden presentation never overwrites the user's disclosure choice.
+  const isExpanded = !forceClosed && (forceOpen || (state.get(to) ?? inside));
   const callback = useRef(onExpandedChange);
   callback.current = onExpandedChange;
   const available = Boolean(onExpandedChange);
@@ -29,8 +32,8 @@ export function useTreeExpanded(
     for (const listener of listeners) listener();
   };
   useEffect(() => {
-    if (inside && !expanded.has(to)) setExpanded(true);
-  }, [inside, to]);
+    if (inside && !forceClosed && !forceOpen && !expanded.has(to)) setExpanded(true);
+  }, [inside, to, forceClosed, forceOpen]);
   useEffect(() => {
     const previous = reported.current;
     if (previous?.to === to && previous.expanded === isExpanded && previous.available === available)

@@ -290,6 +290,117 @@ describe("Sidebar active state", () => {
     expect(more).toHaveBeenCalledOnce();
   });
 
+  it.each([false, true])(
+    "keeps a container marker after an empty lazy read without requesting it again (nested=%s)",
+    async (nested) => {
+      const disclosure = vi.fn();
+      const item = {
+        to: `/empty-container-${nested}`,
+        label: "Empty container",
+        icon: FolderOpen,
+        childrenUnloaded: true,
+        onExpandedChange: disclosure,
+      };
+      const items = (unloaded: boolean): NavGroup["items"] => {
+        const container = { ...item, childrenUnloaded: unloaded };
+        return nested
+          ? [
+              {
+                to: "/empty-parent",
+                label: "Outer parent",
+                icon: FolderOpen,
+                children: [container],
+              },
+            ]
+          : [container];
+      };
+      await renderWithItems(items(true));
+      if (nested) await act(async () => twisty(container, "Outer parent")!.click());
+      const control = twisty(container, "Empty container")!;
+      control.focus();
+      await act(async () => control.click());
+      const requests = disclosure.mock.calls.filter(([open]) => open === true).length;
+      await renderWithItems(items(false));
+      const cell = twistyCell(container, "Empty container")!;
+      expect(cell.querySelector("[data-nav-empty-container]")).not.toBeNull();
+      expect(cell.querySelector("[data-nav-leaf-dot]")).toBeNull();
+      expect(cell.querySelector("[aria-expanded]")).toBeNull();
+      expect(twisty(container, "Empty container")).toBeUndefined();
+      expect(cell.querySelector('[aria-disabled="true"]')).toBe(control);
+      expect(document.activeElement).toBe(control);
+      expect(control.tabIndex).toBe(-1);
+      await act(async () => control.click());
+      const name = Array.from(
+        navRow(container, "Empty container")!.querySelectorAll("button,a"),
+      ).find((candidate) => candidate.textContent === "Empty container")!;
+      await act(async () => (name as HTMLElement).click());
+      await renderWithItems(items(false));
+      expect(disclosure.mock.calls.filter(([open]) => open === true)).toHaveLength(requests);
+    },
+  );
+
+  it.each([false, true])(
+    "closes disclosure when a list hides records and restores the user's choice when shown (nested=%s)",
+    async (nested) => {
+      const disclosure = vi.fn();
+      const list = {
+        to: "/toggle-list",
+        label: "Toggle list",
+        icon: FolderOpen,
+        onExpandedChange: disclosure,
+        children: [{ to: "/spaces/demo", label: "List record", icon: MessageSquare }],
+      };
+      const items = (hidden: boolean): NavGroup["items"] => {
+        const item = { ...list, childrenHidden: hidden };
+        return nested
+          ? [{ to: "/toggle-parent", label: "Toggle parent", icon: FolderOpen, children: [item] }]
+          : [item];
+      };
+      await renderWithItems(items(false));
+      expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
+      disclosure.mockClear();
+      await renderWithItems(items(true));
+      expect(disclosure.mock.calls.length).toBeGreaterThan(0);
+      expect(disclosure.mock.calls.every(([open]) => open === false)).toBe(true);
+      expect(navRow(container, "List record")).toBeUndefined();
+      expect(twisty(container, "Toggle list")).toBeUndefined();
+      await renderWithItems(items(false));
+      expect(twisty(container, "Toggle list")?.getAttribute("aria-expanded")).toBe("true");
+      expect(navRow(container, "List record")).toBeTruthy();
+    },
+  );
+
+  it("reports shown heading children while preserving the user's collapsed tree choice", async () => {
+    const disclosure = vi.fn();
+    const item = {
+      to: "/focused-disclosure",
+      label: "Focused disclosure",
+      icon: FolderOpen,
+      childrenUnloaded: true,
+      onExpandedChange: disclosure,
+    };
+    await renderWithItems([item]);
+    await act(async () => twisty(container, item.label)!.click());
+    await act(async () => twisty(container, item.label)!.click());
+    const focus = (hidden: boolean) =>
+      act(async () => {
+        useNavStore.getState().setConfig([
+          {
+            label: "Workspaces",
+            to: "/spaces",
+            focusOn: item.to,
+            items: [{ ...item, childrenHidden: hidden }],
+          },
+        ]);
+      });
+    await focus(true);
+    disclosure.mockClear();
+    await focus(false);
+    expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
+    await renderWithItems([item]);
+    expect(twisty(container, item.label)?.getAttribute("aria-expanded")).toBe("false");
+  });
+
   it("does not synthesize disclosure when loading or error config replaces a callback", async () => {
     const reported = vi.fn();
     const item = {
@@ -364,11 +475,14 @@ describe("Sidebar active state", () => {
   it.each([false, true])(
     "keeps a hidden list selected without rendering its records (nested=%s)",
     async (nested) => {
+      const disclosure = vi.fn();
       const list = {
         to: "/spaces/tasks",
         label: "Tasks",
         icon: FolderOpen,
         childrenHidden: true,
+        childrenUnloaded: true,
+        onExpandedChange: disclosure,
         children: Array.from({ length: 1000 }, (_, i) => ({
           to: i === 0 ? "/spaces/demo" : `/spaces/task-${i}`,
           label: `Task ${i}`,
@@ -378,6 +492,7 @@ describe("Sidebar active state", () => {
       await renderWithItems(
         nested ? [{ to: "/spaces", label: "Space", icon: FolderOpen, children: [list] }] : [list],
       );
+      expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(false);
       for (const surface of container.querySelectorAll("[data-sidebar-surface]")) {
         const selected = surface.querySelector('[data-active-nav-row="true"]');
         expect(selected?.textContent).toBe("Tasks");

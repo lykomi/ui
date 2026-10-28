@@ -98,8 +98,10 @@ export interface NavItem {
    * children are known, empty or not.
    */
   childrenUnloaded?: boolean;
-  /** A branch disclosure signal. The owning module loads and publishes its
-   * children with its own authorization, scope and request-generation guards. */
+  /** A branch disclosure signal, also identifying an owner-managed container
+   * when its authorized window is empty. The owning module loads and publishes
+   * children with its own authorization, scope and request-generation guards.
+   * Lists with childrenHidden are reported closed and do not request children. */
   onExpandedChange?: (expanded: boolean) => void;
   /** Keep existing children visible while a branch is loading. */
   childrenLoading?: boolean;
