@@ -667,7 +667,7 @@ function NavTwisty({
 }) {
   const cell = cn(NAV_TWISTY_CLASS, getNavDepthOffsets(depth).column);
 
-  if (!hasChildren) {
+  if (!hasChildren && (!emptyContainer || !inTree)) {
     return (
       <span data-nav-twisty-cell aria-hidden="true" className={cn(cell, "pointer-events-none")}>
         {/* No dot when the children simply have not been fetched. The dot is
@@ -676,22 +676,15 @@ function NavTwisty({
             claim on the strength of a request it never sent. The cell still
             occupies its column, so labels stay aligned and no marker jumps
             sideways when the answer arrives. */}
-        {inTree &&
-          !childrenUnloaded &&
-          (emptyContainer ? (
-            <ChevronRight
-              data-nav-empty-container
-              className="size-3.5 shrink-0 text-sidebar-foreground/25"
-            />
-          ) : (
-            <span
-              data-nav-leaf-dot
-              className={cn(
-                "block size-1 shrink-0 rounded-full",
-                isActive ? "bg-sidebar-selected-foreground/70" : "bg-sidebar-foreground/30",
-              )}
-            />
-          ))}
+        {inTree && !childrenUnloaded && (
+          <span
+            data-nav-leaf-dot
+            className={cn(
+              "block size-1 shrink-0 rounded-full",
+              isActive ? "bg-sidebar-selected-foreground/70" : "bg-sidebar-foreground/30",
+            )}
+          />
+        )}
       </span>
     );
   }
@@ -700,24 +693,38 @@ function NavTwisty({
     <span data-nav-twisty-cell className={cell}>
       <button
         type="button"
-        data-nav-twisty
-        aria-expanded={isExpanded}
-        aria-label={isExpanded ? `Collapse ${label}` : `Expand ${label}`}
+        data-nav-twisty={hasChildren || undefined}
+        data-nav-empty-container={!hasChildren || undefined}
+        aria-expanded={hasChildren ? isExpanded : undefined}
+        aria-disabled={!hasChildren || undefined}
+        tabIndex={hasChildren ? undefined : -1}
+        aria-label={
+          !hasChildren
+            ? `${label}: no visible items`
+            : isExpanded
+              ? `Collapse ${label}`
+              : `Expand ${label}`
+        }
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onToggle?.();
+          if (hasChildren) onToggle?.();
         }}
         className={cn(
           "flex items-center justify-center rounded",
           NAV_TWISTY_HIT_CLASS,
-          isActive
-            ? "text-sidebar-selected-foreground"
-            : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
+          !hasChildren
+            ? "text-sidebar-foreground/25 cursor-default"
+            : isActive
+              ? "text-sidebar-selected-foreground"
+              : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
         )}
       >
         <ChevronRight
-          className={cn("size-3.5 transition-transform duration-150", isExpanded && "rotate-90")}
+          className={cn(
+            "size-3.5 transition-transform duration-150",
+            hasChildren && isExpanded && "rotate-90",
+          )}
         />
       </button>
     </span>
@@ -988,7 +995,7 @@ function SubNavItems({
   return (
     <div>
       {items.map((child) => {
-        const hasNestedChildren = hasNavBranch(child);
+        const hasNestedChildren = hasNavBranch(child) || Boolean(child.onExpandedChange);
 
         // Folders with children render as collapsible nested items
         if (hasNestedChildren) {
@@ -1079,10 +1086,12 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
   const isInsideSubtree = isInSubtree(currentPath, item);
   const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
+  const hasChildren = hasNavBranch(item);
   const [isExpanded, setExpanded] = useTreeExpanded(
     item.to,
     isInsideSubtree,
     item.disabled ? undefined : item.onExpandedChange,
+    item.childrenHidden,
   );
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
   const bodyPl = getNavDepthOffsets(depth).body;
@@ -1118,7 +1127,9 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         )}
       >
         <NavTwisty
-          hasChildren
+          hasChildren={hasChildren}
+          childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          emptyContainer={isNavContainer(item)}
           isExpanded={isExpanded}
           onToggle={() => setExpanded(!isExpanded)}
           label={item.label}
@@ -1130,7 +1141,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
           disabled={isDisabled}
           onClick={() => {
             if (isDisabled) return;
-            setExpanded(true);
+            if (hasChildren) setExpanded(true);
             setNavContext({
               ...navContext,
               label: item.label,
@@ -1193,7 +1204,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         )}
         <NavRowControls item={item} />
       </div>
-      {isExpanded && (
+      {hasChildren && isExpanded && (
         <div aria-busy={item.childrenLoading || undefined}>
           <NavBranchStatus
             item={item}
@@ -1201,7 +1212,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
             bodyClassName={getNavDepthOffsets(depth + 1).body}
           />
           {(item.children ?? []).map((child) => {
-            const hasNestedChildren = hasNavBranch(child);
+            const hasNestedChildren = hasNavBranch(child) || Boolean(child.onExpandedChange);
             if (hasNestedChildren) {
               return (
                 <NestedFolderItem key={child.to + child.label} item={child} depth={depth + 1} />
@@ -1289,7 +1300,7 @@ function CollapsibleNavItem({
     !isDisabled &&
     `font-semibold ${isActive ? "text-sidebar-selected-foreground" : "text-sidebar-primary"}`;
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
-  const rendersRow = Boolean(hasChildren || hasActions);
+  const rendersRow = Boolean(hasChildren || hasActions || item.onExpandedChange);
   const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);
   const activeLinkRef = useActiveNavRowScroll<HTMLAnchorElement>(isActive && !rendersRow);
 

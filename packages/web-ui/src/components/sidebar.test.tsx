@@ -316,7 +316,9 @@ describe("Sidebar active state", () => {
       };
       await renderWithItems(items(true));
       if (nested) await act(async () => twisty(container, "Outer parent")!.click());
-      await act(async () => twisty(container, "Empty container")!.click());
+      const control = twisty(container, "Empty container")!;
+      control.focus();
+      await act(async () => control.click());
       const requests = disclosure.mock.calls.filter(([open]) => open === true).length;
       await renderWithItems(items(false));
       const cell = twistyCell(container, "Empty container")!;
@@ -324,33 +326,49 @@ describe("Sidebar active state", () => {
       expect(cell.querySelector("[data-nav-leaf-dot]")).toBeNull();
       expect(cell.querySelector("[aria-expanded]")).toBeNull();
       expect(twisty(container, "Empty container")).toBeUndefined();
-      await act(async () => navRow(container, "Empty container")!.click());
+      expect(cell.querySelector('[aria-disabled="true"]')).toBe(control);
+      expect(document.activeElement).toBe(control);
+      expect(control.tabIndex).toBe(-1);
+      await act(async () => control.click());
+      const name = Array.from(
+        navRow(container, "Empty container")!.querySelectorAll("button,a"),
+      ).find((candidate) => candidate.textContent === "Empty container")!;
+      await act(async () => (name as HTMLElement).click());
       await renderWithItems(items(false));
       expect(disclosure.mock.calls.filter(([open]) => open === true)).toHaveLength(requests);
     },
   );
 
-  it("closes disclosure when a list hides records and restores the user's choice when shown", async () => {
-    const disclosure = vi.fn();
-    const list = {
-      to: "/toggle-list",
-      label: "Toggle list",
-      icon: FolderOpen,
-      onExpandedChange: disclosure,
-      children: [{ to: "/spaces/demo", label: "List record", icon: MessageSquare }],
-    };
-    await renderWithItems([list]);
-    expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
-    disclosure.mockClear();
-    await renderWithItems([{ ...list, childrenHidden: true }]);
-    expect(disclosure.mock.calls.length).toBeGreaterThan(0);
-    expect(disclosure.mock.calls.every(([open]) => open === false)).toBe(true);
-    expect(navRow(container, "List record")).toBeUndefined();
-    expect(twisty(container, "Toggle list")).toBeUndefined();
-    await renderWithItems([list]);
-    expect(twisty(container, "Toggle list")?.getAttribute("aria-expanded")).toBe("true");
-    expect(navRow(container, "List record")).toBeTruthy();
-  });
+  it.each([false, true])(
+    "closes disclosure when a list hides records and restores the user's choice when shown (nested=%s)",
+    async (nested) => {
+      const disclosure = vi.fn();
+      const list = {
+        to: "/toggle-list",
+        label: "Toggle list",
+        icon: FolderOpen,
+        onExpandedChange: disclosure,
+        children: [{ to: "/spaces/demo", label: "List record", icon: MessageSquare }],
+      };
+      const items = (hidden: boolean): NavGroup["items"] => {
+        const item = { ...list, childrenHidden: hidden };
+        return nested
+          ? [{ to: "/toggle-parent", label: "Toggle parent", icon: FolderOpen, children: [item] }]
+          : [item];
+      };
+      await renderWithItems(items(false));
+      expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
+      disclosure.mockClear();
+      await renderWithItems(items(true));
+      expect(disclosure.mock.calls.length).toBeGreaterThan(0);
+      expect(disclosure.mock.calls.every(([open]) => open === false)).toBe(true);
+      expect(navRow(container, "List record")).toBeUndefined();
+      expect(twisty(container, "Toggle list")).toBeUndefined();
+      await renderWithItems(items(false));
+      expect(twisty(container, "Toggle list")?.getAttribute("aria-expanded")).toBe("true");
+      expect(navRow(container, "List record")).toBeTruthy();
+    },
+  );
 
   it("does not synthesize disclosure when loading or error config replaces a callback", async () => {
     const reported = vi.fn();
