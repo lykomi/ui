@@ -1271,21 +1271,15 @@ function CollapsibleNavItem({
   const isInsideSubtree = isInSubtree(currentPath, item);
   const isActive = isSelectedNavItem(currentPath, item);
   const isAncestorActive = isInsideSubtree && !isActive;
-  const reportExpanded = useCallback(
-    (expanded: boolean) => {
-      if (!item.disabled) item.onExpandedChange?.(!item.childrenHidden && (heading || expanded));
-    },
-    [item.disabled, item.childrenHidden, item.onExpandedChange, heading],
-  );
-  const [treeExpanded, setExpanded] = useTreeExpanded(
+  const [isExpanded, setExpanded] = useTreeExpanded(
     item.to,
     isInsideSubtree,
-    item.disabled || !item.onExpandedChange ? undefined : reportExpanded,
+    item.disabled ? undefined : item.onExpandedChange,
     item.childrenHidden,
+    heading,
   );
   // A heading is never collapsed and carries no chevron: its children ARE
   // the tree it stands for.
-  const isExpanded = heading ? true : treeExpanded;
   const hasChildren = hasNavBranch(item);
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);

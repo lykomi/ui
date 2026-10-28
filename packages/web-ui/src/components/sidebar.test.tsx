@@ -370,6 +370,37 @@ describe("Sidebar active state", () => {
     },
   );
 
+  it("reports shown heading children while preserving the user's collapsed tree choice", async () => {
+    const disclosure = vi.fn();
+    const item = {
+      to: "/focused-disclosure",
+      label: "Focused disclosure",
+      icon: FolderOpen,
+      childrenUnloaded: true,
+      onExpandedChange: disclosure,
+    };
+    await renderWithItems([item]);
+    await act(async () => twisty(container, item.label)!.click());
+    await act(async () => twisty(container, item.label)!.click());
+    const focus = (hidden: boolean) =>
+      act(async () => {
+        useNavStore.getState().setConfig([
+          {
+            label: "Workspaces",
+            to: "/spaces",
+            focusOn: item.to,
+            items: [{ ...item, childrenHidden: hidden }],
+          },
+        ]);
+      });
+    await focus(true);
+    disclosure.mockClear();
+    await focus(false);
+    expect(disclosure.mock.calls.some(([open]) => open === true)).toBe(true);
+    await renderWithItems([item]);
+    expect(twisty(container, item.label)?.getAttribute("aria-expanded")).toBe("false");
+  });
+
   it("does not synthesize disclosure when loading or error config replaces a callback", async () => {
     const reported = vi.fn();
     const item = {
