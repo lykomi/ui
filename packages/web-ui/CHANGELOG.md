@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.44.5
+
+### Patch Changes
+
+- ec18be8: Keep list toolbar buttons on the shared primitive's compact density and theme styling. Remove table-specific radius, fill and shadow overrides from Filters, Columns, facet and focus controls, and document matching density for authored actions.
+  - @iloveagents/foundry-agent@0.44.5
+  - @iloveagents/foundry-web-primitives@0.44.5
+
 ## 0.44.4
 
 ### Patch Changes
