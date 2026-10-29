@@ -134,7 +134,7 @@ export function DataTableToolbar<T>({
         aria-label={frame.focused ? "Leave focus mode" : "Focus on the list"}
         title={frame.focused ? "Leave focus mode (Esc)" : "Focus on the list"}
         onClick={() => frame.setFocused(!frame.focused)}
-        className="size-8 rounded-xl border-border/45 bg-background/65 p-0 shadow-none hover:bg-muted/26"
+        className="size-8 p-0"
       >
         {frame.focused ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
       </Button>
@@ -169,7 +169,7 @@ export function DataTableToolbar<T>({
         onChange={(event) => table.setGlobalFilter(event.target.value)}
         placeholder={searchPlaceholder}
         aria-label={searchPlaceholder}
-        className="h-8 w-full rounded-xl border-border/45 bg-background/72 pl-8 text-sm shadow-none"
+        className="h-8 w-full pl-8"
       />
     </div>
   ) : null;
@@ -206,7 +206,7 @@ export function DataTableToolbar<T>({
             variant="ghost"
             size="sm"
             data-facet-menu=""
-            className="h-8 rounded-xl px-2.5 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
             <Plus className="size-4" />
             Filter
@@ -241,7 +241,6 @@ export function DataTableToolbar<T>({
         table.setGlobalFilter("");
         setRevealed(new Set());
       }}
-      className="h-8 rounded-xl px-2.5"
     >
       Reset
       <X className="size-4" />
@@ -256,10 +255,7 @@ export function DataTableToolbar<T>({
       data-filters-toggle=""
       aria-expanded={showFilters}
       onClick={() => setFiltersOpen((current) => !current)}
-      className={cn(
-        "h-8 rounded-xl border-border/45 bg-background/65 shadow-none hover:bg-muted/26",
-        activeFilters > 0 && "border-primary/30",
-      )}
+      className={cn(activeFilters > 0 && "border-primary/30")}
     >
       <SlidersHorizontal className="size-4" />
       Filters

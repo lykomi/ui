@@ -1,7 +1,7 @@
 /** The "Columns" menu: toggle column visibility. */
 import type { Table } from "@tanstack/react-table";
 import { Settings2 } from "lucide-react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@iloveagents/foundry-web-primitives";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,15 +25,7 @@ export function DataTableViewOptions<T>({ table, className }: DataTableViewOptio
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(
-            "h-8 rounded-xl border-border/45 bg-background/65 shadow-none hover:bg-muted/26",
-            className,
-          )}
-        >
+        <Button type="button" variant="outline" size="sm" className={className}>
           <Settings2 className="size-4" />
           Columns
         </Button>
