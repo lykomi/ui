@@ -74,7 +74,7 @@ export function DataTableFacetedFilter<T>({
           data-facet={column.id}
           data-active={selected.length ? "" : undefined}
           className={cn(
-            "h-8 rounded-xl border-dashed border-border/60 bg-background/65 shadow-none hover:bg-muted/26",
+            "border-dashed",
             selected.length && "border-solid border-primary/30",
             className,
           )}

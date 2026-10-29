@@ -480,3 +480,20 @@ scope symbols without imports.
   keyboard operation and expanded state for unfolding guidance.
 
 These inform the design; usability with real users still needs validation.
+
+### List toolbar control density
+
+List toolbars use the shared `Button size="sm"` density for New, grouping,
+Filters, Columns and other text actions. Authored `DataTableToolbar actions`
+use the same primitive and size; do not mix the default-height button into that
+row. Let the button primitive own font family, weight, size, control radius,
+outline surface and interaction states. Table controls must not restyle ordinary
+outline buttons with a different radius, translucent fill or shadow reset.
+Retain meaningful states such as active filters, dashed facet boundaries and
+pressed grouping. Icon-only toolbar controls share the same height and focus
+behavior. Menus and badges retain their own semantic surface treatment.
+
+Verify the rendered toolbar in light/dark themes and at narrow widths. Compare
+computed height, font, weight and radius of authored actions with built-in
+Filters/Columns; using the same component name alone does not establish parity.
+Use CSS and shared primitive variants, without observers or per-button requests.
