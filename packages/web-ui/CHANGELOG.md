@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.45.1
+
+### Patch Changes
+
+- bb83cab: Keep navigation labels, shared controls and selected badges readable when sidebar and content use different palettes.
+  - @iloveagents/foundry-agent@0.45.1
+  - @iloveagents/foundry-web-primitives@0.45.1
+
 ## 0.45.0
 
 ### Minor Changes
