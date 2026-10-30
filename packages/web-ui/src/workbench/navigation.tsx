@@ -20,7 +20,7 @@ export function WorkbenchNavigation({
         onNewConversation={onNewConversation}
         footer={
           <footer
-            className="shrink-0 border-t border-sidebar-border bg-sidebar px-2 py-2"
+            className="shrink-0 border-t border-sidebar-border px-2 py-2"
             aria-label="Account and appearance"
           >
             <div className="flex min-w-0 items-center justify-between gap-1">
