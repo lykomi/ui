@@ -1,5 +1,12 @@
 # @iloveagents/foundry-web-3d
 
+## 0.1.13
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.46.0
+- @iloveagents/foundry-web-primitives@0.46.0
+
 ## 0.1.12
 
 ### Patch Changes
