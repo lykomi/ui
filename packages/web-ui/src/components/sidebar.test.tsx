@@ -1353,7 +1353,13 @@ describe("Sidebar active state", () => {
     expect(warningWrappers.length).toBeGreaterThan(0);
     const wrapper = warningWrappers[0];
     expect(wrapper.getAttribute("title")).toBe("3 documents failed to index");
-    expect(wrapper.querySelector("svg.text-warning")).not.toBeNull();
+    expect(
+      wrapper
+        .querySelector("svg")
+        ?.classList.contains(
+          "text-[color-mix(in_srgb,var(--warning)_55%,var(--sidebar-foreground))]",
+        ),
+    ).toBe(true);
 
     // No statusIcon on the healthy workspace ⇒ its leaf row
     // contains no warning svg. Workspaces are rendered as NavLink
