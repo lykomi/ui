@@ -61,7 +61,7 @@ const ACTIVE_NAV_ROW_CLASS =
 const ACTIVE_NAV_TEXT_CLASS = "font-semibold text-sidebar-selected-foreground";
 const ACTIVE_NAV_ICON_CLASS = "text-sidebar-selected-foreground";
 const ACTIVE_NAV_BADGE_CLASS =
-  "border border-sidebar-border bg-background/60 text-sidebar-foreground";
+  "border border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground";
 // Indent ladder for the nav tree, indexed by depth (0 = top-level item).
 //
 // ONE array of PAIRS rather than two parallel arrays, because the two
@@ -272,7 +272,12 @@ function NavStatusDot({ statusDot }: { statusDot?: NavStatusDot }) {
       aria-label={statusDot.label}
       title={statusDot.label}
       className={cn("size-1.5 shrink-0 rounded-full opacity-90", pulse && "animate-pulse")}
-      style={{ backgroundColor: statusDotColor(statusDot.tone) }}
+      style={{
+        backgroundColor:
+          statusDot.tone === "info" || statusDot.tone === "neutral"
+            ? statusDotColor(statusDot.tone)
+            : `color-mix(in srgb, ${statusDotColor(statusDot.tone)} 55%, var(--sidebar-foreground))`,
+      }}
     />
   );
 }
@@ -280,9 +285,9 @@ function NavStatusDot({ statusDot }: { statusDot?: NavStatusDot }) {
 function statusIconClass(tone: NavStatusIcon["tone"]) {
   switch (tone) {
     case "warning":
-      return "text-warning";
+      return "text-[color-mix(in_srgb,var(--warning)_55%,var(--sidebar-foreground))]";
     case "danger":
-      return "text-destructive";
+      return "text-[color-mix(in_srgb,var(--destructive)_55%,var(--sidebar-foreground))]";
     case "info":
       return "text-primary";
     case "neutral":

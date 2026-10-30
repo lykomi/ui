@@ -1353,10 +1353,16 @@ describe("Sidebar active state", () => {
     expect(warningWrappers.length).toBeGreaterThan(0);
     const wrapper = warningWrappers[0];
     expect(wrapper.getAttribute("title")).toBe("3 documents failed to index");
-    expect(wrapper.querySelector("svg.text-warning")).not.toBeNull();
+    expect(
+      wrapper
+        .querySelector("svg")
+        ?.classList.contains(
+          "text-[color-mix(in_srgb,var(--warning)_55%,var(--sidebar-foreground))]",
+        ),
+    ).toBe(true);
 
     // No statusIcon on the healthy workspace ⇒ its leaf row
-    // contains no warning svg. Workspaces are rendered as NavLink
+    // contains no status image. Workspaces are rendered as NavLink
     // anchors (button is for folders), so scope to ``a, button``
     // and reject ancestor containers that happen to enclose BOTH
     // workspaces.
@@ -1365,7 +1371,7 @@ describe("Sidebar active state", () => {
     ).filter((el) => el.textContent?.includes("Healthy Workspace"));
     expect(healthyRowLeaves.length).toBeGreaterThan(0);
     for (const leaf of healthyRowLeaves) {
-      expect(leaf.querySelectorAll("svg.text-warning").length).toBe(0);
+      expect(leaf.querySelector('[role="img"]')).toBeNull();
     }
   });
 
