@@ -520,13 +520,31 @@ describe("layout preview", () => {
     const { rerender } = render(<WorkbenchPreview page={<Editor />} />);
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
       expect.objectContaining({ ...activity, priority: 1100 }),
-      expect.objectContaining({ label: "All spaces", items: [{ ...root, children: undefined }] }),
+      expect.objectContaining({
+        label: "All spaces",
+        items: [{ ...root, children: undefined, childrenLoading: false }],
+      }),
       expect.objectContaining({ label: "Content", items: [child] }),
     ]);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);
     expect(root.children).toEqual([child]);
     expect(state.groups).toEqual([activity, workspace, recent]);
     expect(state.sidebar.mock.lastCall?.[0].onNewConversation).toBeTypeOf("function");
+    state.groups = [
+      activity,
+      { ...workspace, items: [{ ...root, children: [], childrenLoading: true }] },
+      recent,
+    ];
+    rerender(<WorkbenchPreview page={<Editor />} />);
+    expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
+      expect.objectContaining({ label: "Activity" }),
+      expect.objectContaining({
+        label: "All spaces",
+        items: [expect.objectContaining({ childrenLoading: false })],
+      }),
+      expect.objectContaining({ label: "Content", items: [], loading: true }),
+    ]);
+
     state.groups = [
       activity,
       { ...workspace, meta: { type: "spaces-workspaces" } },

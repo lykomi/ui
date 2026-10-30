@@ -35,6 +35,7 @@ import { useNewConversation } from "../lib/use-new-conversation.ts";
 import { useNavStore } from "../lib/nav-store.ts";
 import { useTreeExpanded } from "../lib/nav-tree-state.ts";
 import { NavBranchMore, NavBranchStatus } from "./nav-branch-status.tsx";
+import { NavLoadingSkeleton } from "./nav-loading-skeleton.tsx";
 import { useAppStore } from "../lib/app-store.ts";
 import type { NavGroup, NavItem, NavItemDnd } from "../lib/nav-config.ts";
 import {
@@ -2002,6 +2003,7 @@ function NavGroupSection({ group }: { group: NavGroup }) {
               "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200",
           )}
         >
+          {group.loading && group.items.length === 0 && <NavLoadingSkeleton />}
           {(focused ? [focusedItem] : group.items).map((item) => (
             <CollapsibleNavItem
               key={item.to + item.label}
@@ -2244,6 +2246,7 @@ function SidebarContent({
                     ))}
                   </div>
                 ))}
+          {showNavSkeleton && <NavLoadingSkeleton rows={6} compact />}
         </div>
       </div>
     );
@@ -2301,13 +2304,7 @@ function SidebarContent({
               newConversationAction}
           </Fragment>
         ))}
-        {showNavSkeleton && (
-          <div className="space-y-1 px-1 pt-2" aria-hidden="true">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="h-7 mx-1 rounded-lg animate-pulse bg-sidebar-accent/40" />
-            ))}
-          </div>
-        )}
+        {showNavSkeleton && <NavLoadingSkeleton rows={6} />}
       </nav>
 
       {/* Footer actions — registered by feature modules */}

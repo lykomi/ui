@@ -296,6 +296,26 @@ Paged bounded tables reserve a stable viewport when standard pagination has mult
 
 Use a single native horizontal scrollport per table. Bounded tables place their arrows below the row viewport; page-owned tables keep compact arrows in the sticky header stack. Do not duplicate the horizontal scrollbar with a synchronized second track.
 
+### Workspace navigation loading
+
+Use the shared navigation skeleton for the first sidebar load, the compact rail
+and newly expanded unknown branches. Set `NavGroup.loading` or
+`NavItem.childrenLoading` from the existing read state; do not manufacture a
+navigable or disabled "Loading..." item. When workspace children are promoted
+into their own group, carry their loading state with them. Skeleton rows use
+native row height, indentation, semantic sidebar theme tokens and reduced-motion
+preferences. Keep known rows visible during refresh. Loading presentation must
+not schedule another read, add a reveal timer, or resize the content shell.
+Workspace availability and breadcrumb arrival must not change pane header height
+or chat-body padding. These are shared layout/theme geometry, not data states.
+
+Chat homes keep their static heading and helper copy mounted. While the actual
+context is unknown, show a theme skeleton rather than briefly painting generic
+context. Use `ActionListSkeleton` for first-load starters, workflow actions and
+recent chats, driven by their existing read state. Keep successfully loaded
+suggestions and chats visible on refresh; settle empty and failed reads instead
+of leaving a permanent skeleton. Do not disable the composer or trigger work.
+
 ## Wizards and process guidance
 
 Use `ProcessSteps` for a connected status rail and `ProcessGuide` for that rail

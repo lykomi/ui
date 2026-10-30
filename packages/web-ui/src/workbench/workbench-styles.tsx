@@ -314,16 +314,8 @@ export function WorkbenchStyles() {
         .workbench-preview [data-nav-group-label="Activity"] [data-nav-twisty-cell]:not(:has([data-nav-twisty])) {
           display: none;
         }
-        .workbench-preview[data-workspace-navigation]:not(:has([data-page-title-row])) [data-chat-empty-state] {
-          padding-top: 28px;
-        }
-        .workbench-preview[data-workspace-navigation] [data-preview-entity-header] > [data-entity-header-row] {
-          padding-top: 24px;
-          min-height: 76px;
-        }
-        .workbench-preview[data-workspace-navigation] [data-entity-header-identity]:not(:has([aria-label="Page location"])) {
-          padding-top: 18px;
-        }
+        /* Data readiness changes navigation rows, never pane/header geometry.
+           Host headers own their theme-based title and breadcrumb slots. */
 
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] button[data-nav-depth],
         [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Content"] div[data-nav-depth] > button:not([data-nav-twisty]),

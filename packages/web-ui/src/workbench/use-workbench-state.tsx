@@ -41,7 +41,13 @@ function useWorkbenchNavigation() {
           icon: Layers,
           priority: 1000,
           items: root
-            ? [{ ...root, children: root.childrenHidden ? root.children : undefined }]
+            ? [
+                {
+                  ...root,
+                  children: root.childrenHidden ? root.children : undefined,
+                  childrenLoading: root.childrenHidden ? root.childrenLoading : false,
+                },
+              ]
             : space.items,
         },
         {
@@ -50,6 +56,7 @@ function useWorkbenchNavigation() {
           hideLabel: true,
           priority: 800,
           items: root?.childrenHidden ? [] : (root?.children ?? []),
+          loading: !root?.childrenHidden && Boolean(root?.childrenLoading),
           meta: { hideInCollapsedRail: true },
         },
       ];
@@ -87,6 +94,8 @@ export function useWorkbenchState(chatRoute: boolean) {
       ? item
       : undefined;
   }, [location.pathname, location.search, navGroups]);
+  const navigationLoading = useNavStore((state) => state.navLoading);
+  const pageContextPending = navigationLoading && !routeItem;
   const pageLabel = useAppStore((s) => s.navContext.label);
   const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();
@@ -166,6 +175,7 @@ export function useWorkbenchState(chatRoute: boolean) {
     currentPage: location.pathname,
     chatOnly,
     pageLabel,
+    pageContextPending,
     entityId,
     chatWidth,
     collapsed,

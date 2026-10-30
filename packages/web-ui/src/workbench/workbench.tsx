@@ -12,6 +12,7 @@ import { ChatContent, TooltipIconButton } from "../index.ts";
 import type { ChatContentProps } from "../components/assistant-chat.tsx";
 import { ChatContentDefaultsContext } from "../components/chat-content-defaults.ts";
 import { FileText, MessageSquare, Menu, LoaderCircle } from "lucide-react";
+import { ActionListSkeleton } from "../components/action-list-skeleton.tsx";
 import { ConversationHistory } from "./conversation-history.tsx";
 export function WorkbenchPreview({
   page,
@@ -27,6 +28,7 @@ export function WorkbenchPreview({
     currentPage,
     chatOnly,
     pageLabel,
+    pageContextPending,
     entityId,
     chatWidth,
     collapsed,
@@ -73,7 +75,13 @@ export function WorkbenchPreview({
       compact
     />
   );
-  const emptyChatFooter = workspaceId ? conversationHome : historyShortcut;
+  const emptyChatFooter = pageContextPending ? (
+    <ActionListSkeleton label="Loading recent chats" secondaryText />
+  ) : workspaceId ? (
+    conversationHome
+  ) : (
+    historyShortcut
+  );
   const homeRecents = !workspaceId ? (
     <ConversationHistory
       groups={navGroups}
@@ -103,7 +111,11 @@ export function WorkbenchPreview({
     compactComposer: !spaciousChat,
     starterSuggestions: [],
     emptyState: (
-      <ChatEmptyState pageLabel={pageLabel} showHomeStarters={!spaciousChat}>
+      <ChatEmptyState
+        pageLabel={pageLabel}
+        contextLoading={pageContextPending}
+        showHomeStarters={!spaciousChat}
+      >
         {emptyChatFooter}
       </ChatEmptyState>
     ),
