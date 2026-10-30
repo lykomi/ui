@@ -4,6 +4,30 @@ import { join } from "node:path";
 import { THEME_SLOTS, resolveThemeRuntime, type ThemeDefinition } from "../lib/theme-runtime";
 
 describe("theme slot contract", () => {
+  it("keeps a navigation gradient separate from colors and resets it for plain themes", () => {
+    const gradient =
+      "radial-gradient(at top left, #334466, transparent), linear-gradient(#332244, #163c44)";
+    const definition: ThemeDefinition = {
+      sidebar: { dark: { sidebar: "#332244", sidebarBackgroundImage: gradient } },
+    };
+    const dark = resolveThemeRuntime([{ definition }], "dark").variables;
+    expect(dark["--sidebar-background-image"]).toBe(gradient);
+    expect(dark["--sidebar"]).toBe("#332244");
+    expect(
+      resolveThemeRuntime([{ definition }], "light").variables["--sidebar-background-image"],
+    ).toBe("none");
+    expect(resolveThemeRuntime([], "dark").variables["--sidebar-background-image"]).toBe("none");
+    expect(
+      resolveThemeRuntime(
+        [{ definition }, { definition: { sidebar: { dark: { sidebarBackgroundImage: "none" } } } }],
+        "dark",
+      ).variables["--sidebar-background-image"],
+    ).toBe("none");
+    expect(
+      THEME_SLOTS.find((slot) => slot.path.join(".") === "sidebar.dark.sidebarBackgroundImage")
+        ?.kind,
+    ).toBe("background");
+  });
   it("orders surface controls by visual impact", () => {
     const surfaces = THEME_SLOTS.filter(
       (slot) => slot.group === "Surfaces" && slot.mode === "light",

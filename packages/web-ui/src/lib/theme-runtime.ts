@@ -34,6 +34,8 @@ export interface ThemeColorSlots {
 
 export interface ThemeSidebarSlots {
   sidebar?: string;
+  /** Optional CSS background-image for navigation and the workbench frame. */
+  sidebarBackgroundImage?: string;
   sidebarForeground?: string;
   sidebarPrimary?: string;
   sidebarPrimaryForeground?: string;
@@ -217,6 +219,7 @@ const COLOR_KEYS = [
 ] as const satisfies readonly (keyof ThemeColorSlots)[];
 
 const SIDEBAR_KEYS = [
+  "sidebarBackgroundImage",
   "sidebarSelected",
   "sidebarSelectedForeground",
   "sidebar",
@@ -298,7 +301,7 @@ export interface ThemeSlot {
   path: readonly string[];
   label: string;
   group: string;
-  kind: "color" | "font" | "length" | "text" | "image";
+  kind: "color" | "font" | "length" | "text" | "image" | "background";
   cssVariable?: string;
   mode?: "light" | "dark";
   /** Lower values appear first in authoring tools. */
@@ -376,7 +379,7 @@ export const THEME_SLOTS: readonly ThemeSlot[] = [
         path: [section, mode, key],
         label: slotLabel(key),
         group,
-        kind: "color" as const,
+        kind: key === "sidebarBackgroundImage" ? ("background" as const) : ("color" as const),
         cssVariable: cssName(key),
         mode,
         impact,
@@ -391,35 +394,29 @@ export const THEME_SLOTS: readonly ThemeSlot[] = [
       })),
     ),
   ]),
-  ...TYPOGRAPHY_KEYS.map(
-    (key): ThemeSlot => ({
-      path: ["typography", key],
-      label: slotLabel(key),
-      group: "Typography & shape",
-      kind: "font",
-      cssVariable: `--font-${key.replace("Font", "")}`,
-      impact: key === "headingFont" ? 0 : key === "bodyFont" ? 1 : 3,
-    }),
-  ),
-  ...RADIUS_KEYS.map(
-    (key): ThemeSlot => ({
-      path: ["radius", key],
-      label: "Corner radius",
-      group: "Typography & shape",
-      kind: "length",
-      cssVariable: cssName(key),
-      impact: 2,
-    }),
-  ),
-  ...BRANDING_KEYS.map(
-    (key): ThemeSlot => ({
-      path: ["branding", key],
-      label: slotLabel(key),
-      group: "Brand",
-      kind: key.endsWith("Url") ? "image" : key === "logoHeight" ? "length" : "text",
-      impact: BRANDING_KEYS.indexOf(key),
-    }),
-  ),
+  ...TYPOGRAPHY_KEYS.map((key): ThemeSlot => ({
+    path: ["typography", key],
+    label: slotLabel(key),
+    group: "Typography & shape",
+    kind: "font",
+    cssVariable: `--font-${key.replace("Font", "")}`,
+    impact: key === "headingFont" ? 0 : key === "bodyFont" ? 1 : 3,
+  })),
+  ...RADIUS_KEYS.map((key): ThemeSlot => ({
+    path: ["radius", key],
+    label: "Corner radius",
+    group: "Typography & shape",
+    kind: "length",
+    cssVariable: cssName(key),
+    impact: 2,
+  })),
+  ...BRANDING_KEYS.map((key): ThemeSlot => ({
+    path: ["branding", key],
+    label: slotLabel(key),
+    group: "Brand",
+    kind: key.endsWith("Url") ? "image" : key === "logoHeight" ? "length" : "text",
+    impact: BRANDING_KEYS.indexOf(key),
+  })),
 ];
 
 function cleanObject<T extends object>(
@@ -542,6 +539,7 @@ function toCssVars(
     ["--input" as string]: colors.input,
     ["--ring" as string]: colors.ring,
     ["--sidebar" as string]: sidebar.sidebar,
+    ["--sidebar-background-image" as string]: sidebar.sidebarBackgroundImage ?? "none",
     ["--sidebar-foreground" as string]: sidebar.sidebarForeground,
     ["--sidebar-primary" as string]: sidebar.sidebarPrimary,
     ["--sidebar-primary-foreground" as string]: sidebar.sidebarPrimaryForeground,
@@ -904,6 +902,7 @@ export function resolveThemeRuntime(layers: ThemeLayer[], mode: ThemeMode): Reso
       : getThemePreset(basePreset).sidebar?.light;
   const sidebarSources: Record<keyof ThemeSidebarSlots, keyof ThemeColorSlots | null> = {
     sidebar: "secondary",
+    sidebarBackgroundImage: null,
     sidebarForeground: "foreground",
     sidebarPrimary: "primary",
     sidebarPrimaryForeground: "primaryForeground",
