@@ -1,6 +1,7 @@
-import { AlertCircle, LoaderCircle } from "lucide-react";
-import { useEffect, useState, type CSSProperties } from "react";
+import { AlertCircle } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { NavItem } from "../lib/nav-config.ts";
+import { NavLoadingSkeleton } from "./nav-loading-skeleton.tsx";
 
 export function NavBranchStatus({
   item,
@@ -14,32 +15,12 @@ export function NavBranchStatus({
   const iconClassName = "size-3.5 shrink-0";
   const geometry = { "--nav-depth": depth } as CSSProperties;
   const waiting = !item.disabled && item.childrenLoading && !item.children?.length;
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (!waiting) {
-      setVisible(false);
-      return;
-    }
-    const timer = setTimeout(() => setVisible(true), 150);
-    return () => clearTimeout(timer);
-  }, [waiting]);
   if (item.disabled) return null;
   if (item.childrenLoading) {
     // Refreshing a visible branch must not insert a row and move its items.
     // The branch remains aria-busy; pagination keeps its native disabled action.
-    if (!waiting || !visible) return null;
-    return (
-      <div
-        role="status"
-        data-nav-branch-status
-        data-nav-depth={depth}
-        style={geometry}
-        className={`flex w-full items-center gap-2 rounded-xl border border-transparent ${bodyClassName} pr-3 py-1 text-sm text-sidebar-foreground/60 animate-in fade-in duration-150 motion-reduce:animate-none`}
-      >
-        <LoaderCircle aria-hidden="true" className={`${iconClassName} animate-spin`} />
-        <span>Loading items…</span>
-      </div>
-    );
+    if (!waiting) return null;
+    return <NavLoadingSkeleton depth={depth} bodyClassName={bodyClassName} />;
   }
   if (item.childrenError) {
     return (

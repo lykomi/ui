@@ -148,6 +148,8 @@ export interface NavGroup {
   /** Icon for a group entry point in a compact navigation rail. */
   icon?: LucideIcon;
   items: NavItem[];
+  /** First-load skeleton while this group's items are unknown. Known items remain visible. */
+  loading?: boolean;
   /**
    * Render order weight. Higher = higher in the sidebar. Default 0.
    * Ties keep insertion order (stable sort), so existing call sites

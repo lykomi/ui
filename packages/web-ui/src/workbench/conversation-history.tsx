@@ -21,6 +21,8 @@ import {
   Copy,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "../lib/nav-config.ts";
+import { useNavStore } from "../lib/nav-store.ts";
+import { ActionListSkeleton } from "../components/action-list-skeleton.tsx";
 
 import { useChatRuns, isChatRunActive } from "../lib/chat-runs-store.ts";
 
@@ -53,6 +55,7 @@ export function ConversationHistory({
   rootContext?: boolean;
 }) {
   const [loadingTo, setLoadingTo] = useState<string | null>(null);
+  const navigationLoading = useNavStore((state) => state.navLoading);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [all, setAll] = useState(!workspaceId);
@@ -61,6 +64,12 @@ export function ConversationHistory({
   const scoped = groups.find(
     (g) => g.meta?.type === "recent-chats" && g.meta?.workspaceId === workspaceId,
   );
+  const historyKnown = workspaceId
+    ? Boolean(scoped)
+    : groups.some(
+        (group) => group.meta?.type === "recent-chats" || group.meta?.type === "pinned-chats",
+      );
+  const historyLoading = Boolean(scoped?.loading || (navigationLoading && !historyKnown));
   const allItems =
     (scoped?.meta?.allConversations as NavItem[] | undefined) ??
     groups
@@ -261,6 +270,9 @@ export function ConversationHistory({
           {loadError}
         </p>
       )}
+      {items.length === 0 && historyLoading && (
+        <ActionListSkeleton label="Loading recent chats" secondaryText />
+      )}
       <div
         className={
           home
@@ -460,7 +472,7 @@ export function ConversationHistory({
               )}
             </section>
           ))}
-        {items.length === 0 && !compact && (
+        {items.length === 0 && !historyLoading && !compact && (
           <p className="py-3 text-sm text-muted-foreground">
             {search ? "No matching chats" : "No chats yet"}
           </p>

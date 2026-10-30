@@ -11,11 +11,13 @@ import {
   removeChatRun,
 } from "../lib/chat-runs-store.ts";
 import type { NavGroup, NavItem } from "../lib/nav-config.ts";
+import { useNavStore } from "../lib/nav-store.ts";
 let root: Root;
 let host: HTMLDivElement;
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   disposeChatRuns();
+  useNavStore.setState({ navLoading: false });
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -184,4 +186,28 @@ it("shows the last workspace on home recent and pinned rows", async () => {
       button.textContent?.includes("View all conversations"),
     ),
   ).toBe(true);
+});
+
+it("shows recent-chat skeletons for unknown history and retains populated history during refresh", async () => {
+  useNavStore.setState({ navLoading: true });
+  const draw = (value: NavGroup[]) =>
+    act(async () =>
+      root.render(
+        <MemoryRouter>
+          <ConversationHistory
+            groups={value}
+            workspaceId="workspace"
+            onClose={() => {}}
+            compact
+            rootContext
+          />
+        </MemoryRouter>,
+      ),
+    );
+  await draw([]);
+  expect(host.querySelector('[aria-label="Loading recent chats"]')).not.toBeNull();
+  expect(host.textContent).not.toContain("No chats yet");
+  await draw(groups);
+  expect(host.querySelector('[aria-label="Loading recent chats"]')).toBeNull();
+  expect(host.textContent).toContain("Saved saved");
 });

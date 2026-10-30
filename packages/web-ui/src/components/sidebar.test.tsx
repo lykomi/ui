@@ -99,7 +99,7 @@ describe("Sidebar active state", () => {
     ];
 
     useNavStore.getState().setConfig(navConfig);
-    useNavStore.setState({ footerActions: [] });
+    useNavStore.setState({ footerActions: [], navLoading: false });
     useAppStore.setState({
       currentPage: "/spaces/demo",
       threadActive: false,
@@ -175,6 +175,42 @@ describe("Sidebar active state", () => {
     });
   };
 
+  it("shows group skeletons only before the first items arrive", async () => {
+    await renderWithItems([]);
+    await act(async () =>
+      useNavStore.getState().setConfig([{ label: "Workspaces", items: [], loading: true }]),
+    );
+    expect(desktopSidebar(container).querySelectorAll("[data-nav-branch-status]")).toHaveLength(3);
+    await act(async () =>
+      useNavStore
+        .getState()
+        .setConfig([
+          {
+            label: "Workspaces",
+            items: [{ to: "/known", label: "Known", icon: FolderOpen }],
+            loading: true,
+          },
+        ]),
+    );
+    expect(desktopSidebar(container).querySelector('[role="status"]')).toBeNull();
+    expect(navRow(container, "Known")).toBeTruthy();
+  });
+
+  it("provides initial navigation skeletons in the expanded sidebar and compact rail", async () => {
+    await renderWithItems([]);
+    await act(async () => {
+      useNavStore.getState().setConfig([]);
+      useNavStore.setState({ navLoading: true });
+    });
+    expect(desktopSidebar(container).querySelectorAll("[data-nav-branch-status]")).toHaveLength(6);
+    await act(async () => useSidebarStore.setState({ isOpen: false }));
+    expect(desktopSidebar(container).querySelectorAll("[data-nav-branch-status]")).toHaveLength(6);
+    expect(
+      desktopSidebar(container).querySelector('[aria-label="Loading navigation"]'),
+    ).not.toBeNull();
+    expect(desktopSidebar(container).textContent).not.toContain("Loading");
+  });
+
   it("starts a new document closed despite persisted branches from another tab", async () => {
     localStorage.setItem("sidebar-nav-collapsed", JSON.stringify({ "tree:/other-tab": false }));
     await renderWithItems([
@@ -205,11 +241,10 @@ describe("Sidebar active state", () => {
     expect(twisty(container, "Lazy root")?.getAttribute("aria-expanded")).toBe("true");
     await renderWithItems([{ ...item, childrenLoading: true }]);
     expect(desktopSidebar(container).textContent).not.toContain("Loading items");
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 160));
-    });
-    expect(desktopSidebar(container).textContent).toContain("Loading items");
-    const loadingRow = desktopSidebar(container).querySelector('[role="status"]')!;
+    expect(
+      desktopSidebar(container).querySelector('[aria-label="Loading navigation"]'),
+    ).not.toBeNull();
+    const loadingRow = desktopSidebar(container).querySelector("[data-nav-branch-status]")!;
     const child = { to: "/lazy-root/child", label: "Fetched child", icon: FolderOpen };
     const more = vi.fn();
     await renderWithItems([
@@ -225,7 +260,6 @@ describe("Sidebar active state", () => {
     const childPadding = Array.from(original.classList).find((name) => /^pl-\d+$/.test(name));
     expect(childPadding).toBeTruthy();
     expect(loadingRow.classList.contains(childPadding!)).toBe(true);
-    expect(loadingRow.classList.contains("text-sm")).toBe(original.classList.contains("text-sm"));
     expect(loadingRow.classList.contains("py-1")).toBe(original.classList.contains("py-1"));
     expect(loadingRow.getAttribute("data-nav-depth")).toBe(
       original.closest("[data-nav-depth]")?.getAttribute("data-nav-depth"),
@@ -236,7 +270,7 @@ describe("Sidebar active state", () => {
     const childIconSize = Array.from(original.querySelector("svg")!.classList).find((name) =>
       name.startsWith("size-"),
     );
-    expect(loadingRow.querySelector("svg")?.classList.contains(childIconSize!)).toBe(true);
+    expect(loadingRow.querySelector("span")?.classList.contains(childIconSize!)).toBe(true);
     original.focus();
     await renderWithItems([
       {

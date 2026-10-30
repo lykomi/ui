@@ -33,15 +33,14 @@ afterEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = previousAct;
 });
 
-it("reveals only a sustained first load and removes it immediately for children", async () => {
+it("shows first-load skeleton rows immediately and removes them for known children", async () => {
   await draw(item);
-  await advance(149);
-  expect(host.querySelector('[role="status"]')).toBeNull();
-  await advance(1);
   const status = host.querySelector('[role="status"]')!;
-  expect(status.textContent).toContain("Loading items");
-  expect(status.classList.contains("fade-in")).toBe(true);
-  expect(status.classList.contains("motion-reduce:animate-none")).toBe(true);
+  expect(status.getAttribute("aria-label")).toBe("Loading navigation");
+  expect(status.textContent).toBe("");
+  expect(status.querySelectorAll("[data-nav-branch-status]")).toHaveLength(3);
+  expect(status.querySelector(".motion-safe\\:animate-pulse")).not.toBeNull();
+  expect(vi.getTimerCount()).toBe(0);
   await draw({ ...item, children: [{ to: "/branch/child", label: "Child" }] });
   expect(host.querySelector('[role="status"]')).toBeNull();
 });
@@ -67,11 +66,11 @@ it("never inserts loading above known children and does not delay retry errors",
 it("exposes the native depth to workbench geometry without creating a navigation action", async () => {
   await draw(item);
   await advance(150);
-  const status = host.querySelector<HTMLElement>('[role="status"]')!;
+  const status = host.querySelector<HTMLElement>("[data-nav-branch-status]")!;
   expect(status.dataset.navDepth).toBe("1");
   expect(status.hasAttribute("data-nav-branch-status")).toBe(true);
   expect(status.style.getPropertyValue("--nav-depth")).toBe("1");
-  expect(status.querySelector("svg")?.classList.contains("size-3.5")).toBe(true);
+  expect(status.querySelector(".size-3\\.5")).not.toBeNull();
   expect(status.querySelector("button")).toBeNull();
   await draw({ ...item, childrenLoading: false, childrenError: "Retry required" });
   const error = host.querySelector<HTMLElement>('[role="status"]')!;
@@ -85,10 +84,10 @@ it.each([0, 2, 5])("keeps child geometry at native depth %s", async (depth) => {
     root.render(<NavBranchStatus item={item} depth={depth} bodyClassName="pl-12" />),
   );
   await advance(150);
-  const status = host.querySelector<HTMLElement>('[role="status"]')!;
+  const status = host.querySelector<HTMLElement>("[data-nav-branch-status]")!;
   expect(status.dataset.navDepth).toBe(String(depth));
   expect(status.style.getPropertyValue("--nav-depth")).toBe(String(depth));
-  expect(status.querySelector("svg")?.classList.contains("size-3.5")).toBe(true);
+  expect(status.querySelector(".size-3\\.5")).not.toBeNull();
 });
 
 it("allows wrapped retry text to grow in a fine-pointer workbench", async () => {
@@ -115,7 +114,7 @@ it("allows wrapped retry text to grow in a fine-pointer workbench", async () => 
       </>,
     ),
   );
-  const status = host.querySelector<HTMLElement>('[role="status"]')!;
+  const status = host.querySelector<HTMLElement>("[data-nav-branch-status]")!;
   const collect = (rules: CSSRuleList): CSSStyleRule[] =>
     Array.from(rules).flatMap((rule) =>
       "cssRules" in rule

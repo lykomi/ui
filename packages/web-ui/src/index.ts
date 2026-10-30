@@ -72,6 +72,7 @@ export {
 } from "./components/collection-view-toggle.tsx";
 export { CollectionEmptyState } from "./components/collection-empty-state.tsx";
 export { CollectionSkeleton } from "./components/collection-skeleton.tsx";
+export { ActionListSkeleton } from "./components/action-list-skeleton.tsx";
 export { InfiniteScrollSentinel } from "./components/infinite-scroll-sentinel.tsx";
 export { CollectionSurface } from "./components/collection-surface.tsx";
 export { DataTable, type DataTableProps } from "./components/data-table/data-table.tsx";
