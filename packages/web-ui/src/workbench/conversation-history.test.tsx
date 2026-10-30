@@ -211,3 +211,36 @@ it("shows recent-chat skeletons for unknown history and retains populated histor
   expect(host.querySelector('[aria-label="Loading recent chats"]')).toBeNull();
   expect(host.textContent).toContain("Saved saved");
 });
+
+it.each([false, true])(
+  "honors loading groups across workspaces on the global home=%s",
+  async (home) => {
+    useNavStore.setState({ navLoading: true });
+    const pending: NavGroup = {
+      label: "Recent",
+      items: [],
+      loading: true,
+      meta: { type: "recent-chats", workspaceId: "workspace" },
+    };
+    const draw = (group: NavGroup) =>
+      act(async () =>
+        root.render(
+          <MemoryRouter>
+            <ConversationHistory
+              groups={[group]}
+              workspaceId={undefined}
+              onClose={() => {}}
+              compact={home}
+              home={home}
+            />
+          </MemoryRouter>,
+        ),
+      );
+    await draw(pending);
+    expect(host.querySelector('[aria-label="Loading recent chats"]')).not.toBeNull();
+    expect(host.textContent).not.toContain("No chats yet");
+    await draw({ ...pending, items: [item("known", "entity")] });
+    expect(host.querySelector('[aria-label="Loading recent chats"]')).toBeNull();
+    expect(host.textContent).toContain("Saved known");
+  },
+);

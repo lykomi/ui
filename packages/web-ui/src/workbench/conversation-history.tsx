@@ -64,12 +64,16 @@ export function ConversationHistory({
   const scoped = groups.find(
     (g) => g.meta?.type === "recent-chats" && g.meta?.workspaceId === workspaceId,
   );
-  const historyKnown = workspaceId
-    ? Boolean(scoped)
-    : groups.some(
+  const historyGroups = workspaceId
+    ? scoped
+      ? [scoped]
+      : []
+    : groups.filter(
         (group) => group.meta?.type === "recent-chats" || group.meta?.type === "pinned-chats",
       );
-  const historyLoading = Boolean(scoped?.loading || (navigationLoading && !historyKnown));
+  const historyLoading =
+    historyGroups.some((group) => group.loading) ||
+    (navigationLoading && historyGroups.length === 0);
   const allItems =
     (scoped?.meta?.allConversations as NavItem[] | undefined) ??
     groups
