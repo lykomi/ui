@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-voice
 
+## 0.1.28
+
+### Patch Changes
+
+- Updated dependencies [be5167e]
+  - @iloveagents/foundry-web-ui@0.45.0
+  - @iloveagents/foundry-agent@0.45.0
+
 ## 0.1.27
 
 ### Patch Changes

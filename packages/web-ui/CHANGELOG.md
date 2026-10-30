@@ -1,5 +1,18 @@
 # @iloveagents/foundry-web-ui
 
+## 0.45.0
+
+### Minor Changes
+
+- be5167e: Add optional light and dark navigation background images, including CSS gradients.
+  Workbench navigation shares the shell backdrop while content panes retain their
+  solid surfaces. Existing themes keep their current colors and no background image.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.45.0
+- @iloveagents/foundry-web-primitives@0.45.0
+
 ## 0.44.5
 
 ### Patch Changes
