@@ -1,3 +1,10 @@
+/* Images stay separate from sidebar color tokens used by borders and mixes. */
+[data-sidebar-surface] {
+  background-image: var(--sidebar-background-image, none);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
 @theme inline {
   --color-heading: var(--heading, var(--foreground));
   --color-content-heading-1: var(--content-heading-1, var(--heading, var(--foreground)));

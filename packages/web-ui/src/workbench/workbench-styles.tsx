@@ -104,8 +104,15 @@ export function WorkbenchStyles() {
           --workbench-rail-inset: 8px;
           --workbench-rail-gap: 4px;
           background: var(--sidebar);
+          background-image: var(--sidebar-background-image, none);
+          background-repeat: no-repeat;
+          background-size: cover;
           --workbench-outline: var(--border);
           padding: 8px 8px 8px 0;
+        }
+        /* Share one continuous frame behind desktop navigation and pane gaps. */
+        .workbench-preview [data-sidebar-surface="desktop"] {
+          background: transparent;
         }
         .workbench-preview [data-workbench-surface] {
           position: relative;

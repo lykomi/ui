@@ -188,6 +188,16 @@ metric/period label; use a full chart when exact values matter.
 See [the management dashboard example](../../examples/management-dashboard/README.md)
 for a complete composition with period selection and light/dark preview.
 
+## Navigation backgrounds
+
+Themes may set `sidebar.light.sidebarBackgroundImage` and
+`sidebar.dark.sidebarBackgroundImage` to a CSS `background-image`, including
+layered gradients. The workbench draws one continuous background behind desktop
+navigation and pane gaps; content panes retain their solid surfaces. Standalone
+and mobile navigation draw the same image on their own surface. Use `none` to
+clear an inherited image. Keep `sidebar` as the solid fallback color so color
+mixes, selection and borders continue to work. Existing themes default to `none`.
+
 ## Extension Points
 
 Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via registries — no direct imports needed:
