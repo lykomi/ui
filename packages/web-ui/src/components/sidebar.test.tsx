@@ -1362,7 +1362,7 @@ describe("Sidebar active state", () => {
     ).toBe(true);
 
     // No statusIcon on the healthy workspace ⇒ its leaf row
-    // contains no warning svg. Workspaces are rendered as NavLink
+    // contains no status image. Workspaces are rendered as NavLink
     // anchors (button is for folders), so scope to ``a, button``
     // and reject ancestor containers that happen to enclose BOTH
     // workspaces.
@@ -1371,7 +1371,7 @@ describe("Sidebar active state", () => {
     ).filter((el) => el.textContent?.includes("Healthy Workspace"));
     expect(healthyRowLeaves.length).toBeGreaterThan(0);
     for (const leaf of healthyRowLeaves) {
-      expect(leaf.querySelectorAll("svg.text-warning").length).toBe(0);
+      expect(leaf.querySelector('[role="img"]')).toBeNull();
     }
   });
 
