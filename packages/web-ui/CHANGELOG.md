@@ -1,5 +1,18 @@
 # @iloveagents/foundry-web-ui
 
+## 0.46.0
+
+### Minor Changes
+
+- 19d36b1: Show immediate theme-based navigation skeletons during first and expanded-branch loads, including the compact rail. Preserve known rows during refresh and carry group loading state when workspace children are promoted.
+
+  Add ActionListSkeleton and first-load chat context/history placeholders without hiding known content during refresh.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.46.0
+- @iloveagents/foundry-web-primitives@0.46.0
+
 ## 0.45.1
 
 ### Patch Changes
