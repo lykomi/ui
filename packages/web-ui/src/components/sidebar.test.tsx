@@ -163,8 +163,8 @@ describe("Sidebar active state", () => {
    */
   const renderWithItems = async (items: NavGroup["items"]) => {
     const { Sidebar } = await import("./sidebar.tsx");
-    useNavStore.getState().setConfig([{ label: "Workspaces", items }]);
     await act(async () => {
+      useNavStore.getState().setConfig([{ label: "Workspaces", items }]);
       root.render(
         <MemoryRouter initialEntries={["/spaces/demo"]}>
           <TooltipProvider>
@@ -175,6 +175,86 @@ describe("Sidebar active state", () => {
     });
   };
 
+  it("keeps the user's scroll position and disclosure focus while another branch loads", async () => {
+    vi.useFakeTimers();
+    try {
+      const active = { to: "/spaces/demo", label: "Active item", icon: FolderOpen };
+      const branch = {
+        to: "/browse-folder",
+        label: "Browse folder",
+        icon: FolderOpen,
+        childrenUnloaded: true,
+        onExpandedChange: vi.fn(),
+      };
+      await renderWithItems([active, branch]);
+      const nav = desktopSidebar(container).querySelector("nav")!;
+      const row = navRow(container, "Active item")!;
+      let rowTop = 20;
+      Object.defineProperty(nav, "clientHeight", { configurable: true, value: 200 });
+      nav.getBoundingClientRect = () => new DOMRect(0, 0, 240, 200);
+      row.getBoundingClientRect = () => new DOMRect(0, rowTop, 240, 32);
+      await act(async () => vi.advanceTimersByTime(500));
+
+      // The user browses away from the selected page and opens another folder.
+      nav.scrollTop = 800;
+      rowTop = -500;
+      const disclosure = twisty(container, "Browse folder")!;
+      disclosure.focus();
+      await act(async () => {
+        disclosure.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+        disclosure.click();
+      });
+      await renderWithItems([active, { ...branch, childrenLoading: true }]);
+      await act(async () => vi.advanceTimersByTime(500));
+      expect(nav.scrollTop).toBe(800);
+      expect(document.activeElement).toBe(disclosure);
+
+      await renderWithItems([
+        active,
+        {
+          ...branch,
+          childrenUnloaded: false,
+          children: [{ to: "/browse-folder/child", label: "Fetched child", icon: FolderOpen }],
+        },
+      ]);
+      await act(async () => vi.advanceTimersByTime(500));
+      expect(nav.scrollTop).toBe(800);
+      expect(document.activeElement).toBe(disclosure);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([null, "pointerdown", "wheel", "keydown"])(
+    "reveals a cold route once unless the user has already taken over the tree (%s)",
+    async (interaction) => {
+      await renderWithItems([]);
+      const nav = desktopSidebar(container).querySelector("nav")!;
+      Object.defineProperty(nav, "clientHeight", { configurable: true, value: 200 });
+      nav.getBoundingClientRect = () => new DOMRect(0, 0, 240, 200);
+      nav.scrollTop = 800;
+      const originalRect = HTMLElement.prototype.getBoundingClientRect;
+      const rect = vi
+        .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+        .mockImplementation(function () {
+          return this.dataset.activeNavRow === "true"
+            ? new DOMRect(0, 380, 240, 32)
+            : originalRect.call(this);
+        });
+      try {
+        if (interaction) nav.dispatchEvent(new Event(interaction, { bubbles: true }));
+        const active = { to: "/spaces/demo", label: "Loaded destination", icon: FolderOpen };
+        await renderWithItems([active]);
+        const expectedTop = interaction ? 800 : 1012;
+        expect(nav.scrollTop).toBe(expectedTop);
+        await renderWithItems([{ ...active, badge: "Updated" }]);
+        expect(nav.scrollTop).toBe(expectedTop);
+      } finally {
+        rect.mockRestore();
+      }
+    },
+  );
+
   it("shows group skeletons only before the first items arrive", async () => {
     await renderWithItems([]);
     await act(async () =>
@@ -182,15 +262,13 @@ describe("Sidebar active state", () => {
     );
     expect(desktopSidebar(container).querySelectorAll("[data-nav-branch-status]")).toHaveLength(3);
     await act(async () =>
-      useNavStore
-        .getState()
-        .setConfig([
-          {
-            label: "Workspaces",
-            items: [{ to: "/known", label: "Known", icon: FolderOpen }],
-            loading: true,
-          },
-        ]),
+      useNavStore.getState().setConfig([
+        {
+          label: "Workspaces",
+          items: [{ to: "/known", label: "Known", icon: FolderOpen }],
+          loading: true,
+        },
+      ]),
     );
     expect(desktopSidebar(container).querySelector('[role="status"]')).toBeNull();
     expect(navRow(container, "Known")).toBeTruthy();
@@ -287,10 +365,10 @@ describe("Sidebar active state", () => {
     expect(desktopSidebar(container).textContent).not.toContain("Loading items");
     expect(original.closest('[aria-busy="true"]')).not.toBeNull();
     expect(
-      Array.from(desktopSidebar(container).querySelectorAll("button")).find(
-        (button) => button.textContent === "Load more items",
-      )?.disabled,
-    ).toBe(true);
+      Array.from(desktopSidebar(container).querySelectorAll("button"))
+        .find((button) => button.textContent === "Load more items")
+        ?.getAttribute("aria-disabled"),
+    ).toBe("true");
     await renderWithItems([
       { ...item, children: [child], childrenError: "Items could not be loaded." },
     ]);
@@ -323,6 +401,87 @@ describe("Sidebar active state", () => {
     await act(async () => button.click());
     expect(more).toHaveBeenCalledOnce();
   });
+
+  it("keeps the native pagination action focused and guarded while its page loads", async () => {
+    const more = vi.fn();
+    const branch = {
+      to: "/paged-focus",
+      label: "Paged folder",
+      icon: FolderOpen,
+      children: [{ to: "/paged-focus/first", label: "First page", icon: FolderOpen }],
+      childrenHasMore: true,
+      onLoadMoreChildren: more,
+    };
+    await renderWithItems([branch]);
+    await act(async () => twisty(container, "Paged folder")!.click());
+    const button = desktopSidebar(container).querySelector<HTMLButtonElement>(
+      '[aria-label="Load more items in Paged folder"]',
+    )!;
+    await act(async () => {
+      button.focus();
+      button.click();
+    });
+    await renderWithItems([{ ...branch, childrenLoading: true }]);
+    expect(document.activeElement).toBe(button);
+    expect(button.getAttribute("aria-busy")).toBe("true");
+    expect(button.classList.contains("underline")).toBe(false);
+    expect(button.classList.contains("pl-10")).toBe(true);
+    await act(async () => button.click());
+    expect(more).toHaveBeenCalledOnce();
+    await renderWithItems([{ ...branch, childrenLoading: false }]);
+    expect(document.activeElement).toBe(button);
+    expect(button.hasAttribute("aria-disabled")).toBe(false);
+    await renderWithItems([{ ...branch, childrenHasMore: false }]);
+    expect(document.activeElement).toBe(button);
+    expect(button.textContent).toBe("All items loaded");
+    await act(async () => button.click());
+    expect(more).toHaveBeenCalledOnce();
+    await act(async () => button.blur());
+    expect(desktopSidebar(container).contains(button)).toBe(false);
+  });
+
+  it.each([false, true])(
+    "retains pagination focus when the final authorized window is empty (nested=%s)",
+    async (nested) => {
+      const branch = {
+        to: `/empty-page-${nested}`,
+        label: "Empty paged folder",
+        icon: FolderOpen,
+        children: [],
+        childrenHasMore: true,
+        onExpandedChange: vi.fn(),
+        onLoadMoreChildren: vi.fn(),
+      };
+      const items = (finished: boolean): NavGroup["items"] => {
+        const item = finished
+          ? { ...branch, childrenHasMore: false, onLoadMoreChildren: undefined }
+          : branch;
+        return nested
+          ? [
+              {
+                to: `/empty-page-parent-${nested}`,
+                label: "Page parent",
+                icon: FolderOpen,
+                children: [item],
+              },
+            ]
+          : [item];
+      };
+      await renderWithItems(items(false));
+      if (nested) await act(async () => twisty(container, "Page parent")!.click());
+      await act(async () => twisty(container, "Empty paged folder")!.click());
+      const button = desktopSidebar(container).querySelector<HTMLButtonElement>(
+        '[aria-label="Load more items in Empty paged folder"]',
+      )!;
+      await act(async () => button.focus());
+      await renderWithItems(items(true));
+      expect(document.activeElement).toBe(button);
+      expect(button.textContent).toBe("All items loaded");
+      expect(button.getAttribute("aria-disabled")).toBe("true");
+      await act(async () => button.blur());
+      expect(desktopSidebar(container).contains(button)).toBe(false);
+    },
+  );
 
   it.each([false, true])(
     "keeps a container marker after an empty lazy read without requesting it again (nested=%s)",
@@ -1443,7 +1602,7 @@ describe("Sidebar active state", () => {
 
     _scrollNavRowIntoViewForTest(nav, row);
 
-    expect(nav.scrollTop).toBe(2196);
+    expect(nav.scrollTop).toBe(2527);
   });
 });
 

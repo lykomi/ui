@@ -3,6 +3,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -174,71 +175,34 @@ function getNavDepthOffsets(depth: number) {
 function scrollNavRowIntoView(nav: HTMLElement, row: HTMLElement) {
   const navRect = nav.getBoundingClientRect();
   const rowRect = row.getBoundingClientRect();
-  if (rowRect.top < navRect.top || rowRect.bottom > navRect.bottom) {
-    const rowCenter = rowRect.top - navRect.top + rowRect.height / 2;
-    nav.scrollTop += rowCenter - nav.clientHeight / 2;
-  }
+  // Reveal only the clipped edge; a selection is not a request to center the tree.
+  if (rowRect.top < navRect.top) nav.scrollTop += rowRect.top - navRect.top;
+  else if (rowRect.bottom > navRect.bottom) nav.scrollTop += rowRect.bottom - navRect.bottom;
 }
 
 export const _scrollNavRowIntoViewForTest = scrollNavRowIntoView;
 
-function useActiveNavRowScroll<T extends HTMLElement>(isActive: boolean) {
-  const ref = useRef<T | null>(null);
-
-  useEffect(() => {
-    if (!isActive) return;
-    const scroll = () => {
-      const element = ref.current;
-      if (!element) return;
-      const rect = element.getBoundingClientRect();
-      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-      const isOnScreen =
-        rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.left < viewportWidth;
-      if (!isOnScreen) return;
-      const nav = element.closest<HTMLElement>("nav");
-      if (!nav) return;
-      scrollNavRowIntoView(nav, element);
-    };
-
-    const frame = window.requestAnimationFrame(scroll);
-    const retry = window.setTimeout(scroll, 120);
-    const finalRetry = window.setTimeout(scroll, 400);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(retry);
-      window.clearTimeout(finalRetry);
-    };
-  }, [isActive]);
-
-  return ref;
-}
-
 function useScrollActiveNavRow(currentPage: string, navConfig: NavGroup[], collapsed: boolean) {
-  useEffect(() => {
-    if (collapsed) return;
-    const scroll = () => {
-      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-      const navs = Array.from(document.querySelectorAll<HTMLElement>("nav")).filter((nav) => {
-        const rect = nav.getBoundingClientRect();
-        return rect.width > 0 && rect.right > 0 && rect.left < viewportWidth;
-      });
-      for (const nav of navs) {
-        const row = nav.querySelector<HTMLElement>('[data-active-nav-row="true"]');
-        if (!row) continue;
-        scrollNavRowIntoView(nav, row);
-        break;
-      }
-    };
+  const navRef = useRef<HTMLElement | null>(null);
+  const reveal = useRef({ page: currentPage, collapsed, pending: !collapsed });
+  const preservePosition = useCallback(() => {
+    reveal.current.pending = false;
+  }, []);
 
-    const frame = window.requestAnimationFrame(scroll);
-    const retry = window.setTimeout(scroll, 120);
-    const finalRetry = window.setTimeout(scroll, 400);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(retry);
-      window.clearTimeout(finalRetry);
-    };
+  useLayoutEffect(() => {
+    if (reveal.current.page !== currentPage || reveal.current.collapsed !== collapsed) {
+      reveal.current = { page: currentPage, collapsed, pending: !collapsed };
+    }
+    if (!reveal.current.pending) return;
+    const nav = navRef.current;
+    const row = nav?.querySelector<HTMLElement>('[data-active-nav-row="true"]');
+    // A cold route may receive its selected row in a later authorized tree page.
+    if (!nav || !row || nav.clientHeight === 0) return;
+    reveal.current.pending = false;
+    scrollNavRowIntoView(nav, row);
   }, [collapsed, currentPage, navConfig]);
+
+  return { navRef, preservePosition };
 }
 
 function statusDotColor(tone: NavStatusDot["tone"]) {
@@ -819,14 +783,11 @@ function NavLeafItem({
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
-  const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && hasActions);
-  const activeButtonRef = useActiveNavRowScroll<HTMLButtonElement>(isActive && !hasActions);
 
   // Items with actions use the group layout (button + action controls)
   if (hasActions) {
     return (
       <div
-        ref={activeRowRef}
         data-active-nav-row={isActive ? "true" : undefined}
         data-nav-depth={depth}
         style={{ "--nav-depth": depth } as React.CSSProperties}
@@ -911,7 +872,6 @@ function NavLeafItem({
 
   return (
     <button
-      ref={activeButtonRef}
       data-active-nav-row={isActive ? "true" : undefined}
       data-nav-depth={depth}
       style={{ "--nav-depth": depth } as React.CSSProperties}
@@ -1104,12 +1064,10 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
 
   const isDisabled = item.disabled === true;
   const hasActions = Boolean(!isDisabled && item.actions && item.actions.length > 0);
-  const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive);
 
   return (
     <div {...(isDisabled ? {} : dropTargetProps)}>
       <div
-        ref={activeRowRef}
         data-active-nav-row={isActive ? "true" : undefined}
         data-nav-depth={depth}
         style={{ "--nav-depth": depth } as React.CSSProperties}
@@ -1210,7 +1168,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         )}
         <NavRowControls item={item} />
       </div>
-      {hasChildren && isExpanded && (
+      {isExpanded && (
         <div aria-busy={item.childrenLoading || undefined}>
           <NavBranchStatus
             item={item}
@@ -1247,8 +1205,8 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
               />
             );
           })}
-          <NavBranchMore item={item} />
-          {item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
+          <NavBranchMore item={item} bodyClassName={getNavDepthOffsets(depth + 1).body} />
+          {hasChildren && item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
         </div>
       )}
     </div>
@@ -1300,14 +1258,11 @@ function CollapsibleNavItem({
     !isDisabled &&
     `font-semibold ${isActive ? "text-sidebar-selected-foreground" : "text-sidebar-primary"}`;
   const { draggableProps, dropTargetProps, isDragOver, isFileDragOver } = useNavItemDnd(item.dnd);
-  const rendersRow = Boolean(hasChildren || hasActions || item.onExpandedChange);
-  const activeRowRef = useActiveNavRowScroll<HTMLDivElement>(isActive && rendersRow);
-  const activeLinkRef = useActiveNavRowScroll<HTMLAnchorElement>(isActive && !rendersRow);
 
+  const rendersRow = Boolean(hasChildren || hasActions || item.onExpandedChange);
   if (rendersRow) {
     const inner = (selected: boolean, ancestor: boolean) => (
       <div
-        ref={activeRowRef}
         data-active-nav-row={selected ? "true" : undefined}
         data-nav-depth={0}
         className={cn(
@@ -1416,7 +1371,7 @@ function CollapsibleNavItem({
         {...(isDisabled ? {} : draggableProps)}
       >
         {inner(isActive, isAncestorActive)}
-        {hasChildren && isExpanded && (
+        {isExpanded && (
           <>
             {/* A heading's children sit one step further left than a
                 branch's: the heading is flat, so its own column is free and
@@ -1427,8 +1382,8 @@ function CollapsibleNavItem({
               bodyClassName={getNavDepthOffsets(heading ? 0 : 1).body}
             />
             <SubNavItems items={item.children ?? []} parentPath={item.to} depth={heading ? 0 : 1} />
-            <NavBranchMore item={item} />
-            {item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
+            <NavBranchMore item={item} bodyClassName={getNavDepthOffsets(heading ? 0 : 1).body} />
+            {hasChildren && item.dnd?.canDrop() && <ContainerDropZone dnd={item.dnd} />}
           </>
         )}
       </div>
@@ -1462,7 +1417,6 @@ function CollapsibleNavItem({
 
   return (
     <NavLink
-      ref={activeLinkRef}
       data-active-nav-row={isActive ? "true" : undefined}
       data-nav-depth={0}
       to={item.to}
@@ -2113,7 +2067,7 @@ function SidebarContent({
   const location = useLocation();
   const currentPage = location.pathname + location.search;
   const navContext = useAppStore((s) => s.navContext);
-  useScrollActiveNavRow(currentPage, navConfig, collapsed);
+  const { navRef, preservePosition } = useScrollActiveNavRow(currentPage, navConfig, collapsed);
 
   const preventNativeFileDrop = useCallback((e: React.DragEvent) => {
     if (!e.dataTransfer.types.includes("Files")) return;
@@ -2292,6 +2246,10 @@ function SidebarContent({
 
       {/* Navigation groups */}
       <nav
+        ref={navRef}
+        onPointerDownCapture={preservePosition}
+        onWheelCapture={preservePosition}
+        onKeyDownCapture={preservePosition}
         className="flex-1 overflow-y-auto px-1 pb-16"
         onDragOverCapture={preventNativeFileDrop}
         onDropCapture={preventNativeFileDrop}

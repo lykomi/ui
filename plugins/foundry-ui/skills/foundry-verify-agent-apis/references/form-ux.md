@@ -311,6 +311,22 @@ not schedule another read, add a reveal timer, or resize the content shell.
 Workspace availability and breadcrumb arrival must not change pane header height
 or chat-body padding. These are shared layout/theme geometry, not data states.
 
+Sidebar scrolling follows navigation intent, not every tree update. Reveal the
+active row once on a route change or when its first authorized row arrives,
+using the nearest clipped edge. Pointer, wheel and keyboard interaction give the
+user ownership of the reading position. Branch expansion, pagination, refresh
+and status updates must not recenter the selected page or restart reveal timers.
+Keep reveal work scoped to that sidebar's own scrollport; never scroll the page
+or move keyboard focus as a side effect of loading.
+
+Branch pagination uses a shared native button aligned with its child rows and
+the sidebar theme. Keep the control mounted and focusable while busy, expose
+its busy/disabled semantics, and guard repeat activation.
+On the final page, retain the focused action as a quiet completion state until
+focus leaves it; removing the focused button must not strand focus on the page.
+The branch owner still owns the authorized cursor and request lifecycle;
+presentation must not add automatic loading loops or another observer.
+
 Chat homes keep their static heading and helper copy mounted. While the actual
 context is unknown, show a theme skeleton rather than briefly painting generic
 context. Use `ActionListSkeleton` for first-load starters, workflow actions and
