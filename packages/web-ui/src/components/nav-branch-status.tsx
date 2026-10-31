@@ -1,5 +1,6 @@
-import { AlertCircle } from "lucide-react";
-import type { CSSProperties } from "react";
+import { AlertCircle, Check, ChevronDown, Loader2 } from "lucide-react";
+import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { type CSSProperties, useState } from "react";
 import type { NavItem } from "../lib/nav-config.ts";
 import { NavLoadingSkeleton } from "./nav-loading-skeleton.tsx";
 
@@ -44,16 +45,44 @@ export function NavBranchStatus({
   return null;
 }
 
-export function NavBranchMore({ item }: { item: NavItem }) {
-  if (item.disabled || !item.childrenHasMore || !item.onLoadMoreChildren) return null;
+export function NavBranchMore({ item, bodyClassName }: { item: NavItem; bodyClassName: string }) {
+  const [focused, setFocused] = useState(false);
+  if (item.disabled || (!focused && (!item.childrenHasMore || !item.onLoadMoreChildren)))
+    return null;
+  const waiting = Boolean(item.childrenLoading);
+  const available = Boolean(item.childrenHasMore && item.onLoadMoreChildren) && !waiting;
+  const label =
+    item.childrenHasMore || waiting
+      ? "Load more items"
+      : item.childrenError
+        ? "More items unavailable"
+        : "All items loaded";
   return (
-    <button
+    <Button
       type="button"
-      disabled={item.childrenLoading}
-      className="px-3 py-1 text-xs text-muted-foreground underline"
-      onClick={item.onLoadMoreChildren}
+      variant="ghost"
+      size="sm"
+      aria-disabled={!available || undefined}
+      aria-label={`${label} in ${item.label}`}
+      aria-busy={waiting || undefined}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      className={cn(
+        "w-full justify-start text-sidebar-foreground/70 aria-disabled:opacity-50",
+        bodyClassName,
+      )}
+      onClick={() => {
+        if (available) item.onLoadMoreChildren?.();
+      }}
     >
-      Load more items
-    </button>
+      {waiting ? (
+        <Loader2 aria-hidden="true" className="size-3.5 motion-safe:animate-spin" />
+      ) : item.childrenHasMore ? (
+        <ChevronDown aria-hidden="true" className="size-3.5" />
+      ) : (
+        <Check aria-hidden="true" className="size-3.5" />
+      )}
+      {label}
+    </Button>
   );
 }
