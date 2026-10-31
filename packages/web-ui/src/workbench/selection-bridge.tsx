@@ -89,7 +89,10 @@ export function SelectionBridge({ children }: { children: ReactNode }) {
       .workbench-preview [data-sidebar-surface="desktop"] nav { padding-right: 16px; }
       .workbench-preview [data-sidebar-surface="desktop"] { border-right-color: transparent; }
       [data-connected-navigation="true"] [data-sidebar-surface="desktop"] [data-active-nav-row="true"] {
-        background: var(--background);
+        /* The selected inset keeps the navigation palette visible around it.
+           Painting the content background here creates a light band when a
+           dark sidebar sits beside a light workbench. */
+        background: transparent;
         border-color: transparent;
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
