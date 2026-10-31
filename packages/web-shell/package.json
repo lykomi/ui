@@ -1,6 +1,6 @@
 {
   "name": "@iloveagents/foundry-web-shell",
-  "version": "0.46.0",
+  "version": "0.46.1",
   "license": "MIT",
   "description": "Browser bootstrap and layout shell for Foundry UI — bootstrapShell({ modules, pages, theme, authProvider }) mounts the SPA around foundry-web-ui. Module-agnostic.",
   "keywords": [

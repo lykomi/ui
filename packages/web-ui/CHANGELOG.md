@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.46.1
+
+### Patch Changes
+
+- d50b532: Keep the sidebar surface visible around the connected selected row when navigation and content use different palettes.
+  - @iloveagents/foundry-agent@0.46.1
+  - @iloveagents/foundry-web-primitives@0.46.1
+
 ## 0.46.0
 
 ### Minor Changes
