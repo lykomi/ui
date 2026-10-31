@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.46.2
+
+### Patch Changes
+
+- 3a5d1cf: Keep sidebar browsing stable during branch loading and pagination. Reveal active
+  rows once for navigation intent instead of repeatedly recentering after tree
+  updates, and use a themed, indented pagination button that retains focus while busy
+  and through the final page until the user moves focus elsewhere.
+  - @iloveagents/foundry-agent@0.46.2
+  - @iloveagents/foundry-web-primitives@0.46.2
+
 ## 0.46.1
 
 ### Patch Changes
