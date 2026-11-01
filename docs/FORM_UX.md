@@ -299,11 +299,13 @@ Use a single native horizontal scrollport per table. Bounded tables place their 
 ### Workspace navigation loading
 
 Use the shared navigation skeleton for the first sidebar load and compact rail.
-An individual branch can resolve to no visible children: show its loading skeleton
+An individual branch can resolve to no visible children: show a small loading ring
 inside the existing disclosure control, not as invented child rows. Keep the
 control mounted, focusable and `aria-busy` while an unknown branch loads; retain
 its normal toggle behavior. A focused heading has no disclosure button: use its
-existing gutter for a named busy status with the same inline skeleton. A known empty branch stays empty during refresh.
+existing gutter for a named busy status with the same loading ring. A known empty branch stays empty during refresh.
+Selected rows and their ancestors keep the same label size, weight and spacing as
+unselected rows; use the shared selected background and foreground tokens.
 Set `NavGroup.loading` or `NavItem.childrenLoading` from the existing read state;
 do not manufacture a navigable or disabled "Loading..." item. When workspace
 children are promoted into their own group, carry their loading state with them.
