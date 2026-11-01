@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.46.3
+
+### Patch Changes
+
+- e531eb6: Keep lazy navigation branch loading inside the existing disclosure control so empty results do not flash phantom child rows or move neighboring items.
+  - @iloveagents/foundry-agent@0.46.3
+  - @iloveagents/foundry-web-primitives@0.46.3
+
 ## 0.46.2
 
 ### Patch Changes
