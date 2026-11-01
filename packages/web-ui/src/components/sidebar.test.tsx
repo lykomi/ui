@@ -289,6 +289,41 @@ describe("Sidebar active state", () => {
     expect(desktopSidebar(container).textContent).not.toContain("Loading");
   });
 
+  it("keeps a focused heading visibly busy without inventing child rows", async () => {
+    const item = {
+      to: "/focused-loading-heading",
+      label: "Focused folder",
+      icon: FolderOpen,
+      childrenUnloaded: true,
+      childrenLoading: true,
+      onExpandedChange: vi.fn(),
+    };
+    await renderWithItems([item]);
+    const focus = async (loading: boolean) => {
+      await act(async () => {
+        useNavStore.getState().setConfig([
+          {
+            label: "Workspaces",
+            to: "/spaces",
+            focusOn: item.to,
+            items: [{ ...item, childrenLoading: loading }],
+          },
+        ]);
+      });
+    };
+    await focus(true);
+    const sidebar = desktopSidebar(container);
+    const busy = sidebar.querySelector(
+      '[role="status"][aria-label="Loading items in Focused folder"]',
+    );
+    expect(busy?.getAttribute("aria-busy")).toBe("true");
+    expect(busy?.querySelector("[data-nav-disclosure-loading]")).not.toBeNull();
+    expect(twisty(container, "Focused folder")).toBeUndefined();
+    expect(sidebar.querySelector("[data-nav-branch-status]")).toBeNull();
+    await focus(false);
+    expect(sidebar.querySelector('[aria-label="Loading items in Focused folder"]')).toBeNull();
+  });
+
   it("starts a new document closed despite persisted branches from another tab", async () => {
     localStorage.setItem("sidebar-nav-collapsed", JSON.stringify({ "tree:/other-tab": false }));
     await renderWithItems([

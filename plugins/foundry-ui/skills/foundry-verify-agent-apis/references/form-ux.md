@@ -304,7 +304,8 @@ Use the shared navigation skeleton for the first sidebar load and compact rail.
 An individual branch can resolve to no visible children: show its loading skeleton
 inside the existing disclosure control, not as invented child rows. Keep the
 control mounted, focusable and `aria-busy` while an unknown branch loads; retain
-its normal toggle behavior. A known empty branch stays empty during refresh.
+its normal toggle behavior. A focused heading has no disclosure button: use its
+existing gutter for a named busy status with the same inline skeleton. A known empty branch stays empty during refresh.
 Set `NavGroup.loading` or `NavItem.childrenLoading` from the existing read state;
 do not manufacture a navigable or disabled "Loading..." item. When workspace
 children are promoted into their own group, carry their loading state with them.
