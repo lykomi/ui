@@ -298,12 +298,15 @@ Use a single native horizontal scrollport per table. Bounded tables place their 
 
 ### Workspace navigation loading
 
-Use the shared navigation skeleton for the first sidebar load, the compact rail
-and newly expanded unknown branches. Set `NavGroup.loading` or
-`NavItem.childrenLoading` from the existing read state; do not manufacture a
-navigable or disabled "Loading..." item. When workspace children are promoted
-into their own group, carry their loading state with them. Skeleton rows use
-native row height, indentation, semantic sidebar theme tokens and reduced-motion
+Use the shared navigation skeleton for the first sidebar load and compact rail.
+An individual branch can resolve to no visible children: show its loading skeleton
+inside the existing disclosure control, not as invented child rows. Keep the
+control mounted, focusable and `aria-busy` while an unknown branch loads; retain
+its normal toggle behavior. A known empty branch stays empty during refresh.
+Set `NavGroup.loading` or `NavItem.childrenLoading` from the existing read state;
+do not manufacture a navigable or disabled "Loading..." item. When workspace
+children are promoted into their own group, carry their loading state with them.
+Skeletons use native geometry, semantic sidebar theme tokens and reduced-motion
 preferences. Keep known rows visible during refresh. Loading presentation must
 not schedule another read, add a reveal timer, or resize the content shell.
 Workspace availability and breadcrumb arrival must not change pane header height

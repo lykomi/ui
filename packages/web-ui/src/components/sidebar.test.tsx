@@ -319,10 +319,11 @@ describe("Sidebar active state", () => {
     expect(twisty(container, "Lazy root")?.getAttribute("aria-expanded")).toBe("true");
     await renderWithItems([{ ...item, childrenLoading: true }]);
     expect(desktopSidebar(container).textContent).not.toContain("Loading items");
-    expect(
-      desktopSidebar(container).querySelector('[aria-label="Loading navigation"]'),
-    ).not.toBeNull();
-    const loadingRow = desktopSidebar(container).querySelector("[data-nav-branch-status]")!;
+    expect(desktopSidebar(container).querySelector('[aria-label="Loading navigation"]')).toBeNull();
+    const loadingControl = twisty(container, "Lazy root")!;
+    expect(loadingControl.getAttribute("aria-busy")).toBe("true");
+    expect(loadingControl.querySelector("[data-nav-disclosure-loading]")).not.toBeNull();
+    expect(desktopSidebar(container).querySelector("[data-nav-branch-status]")).toBeNull();
     const child = { to: "/lazy-root/child", label: "Fetched child", icon: FolderOpen };
     const more = vi.fn();
     await renderWithItems([
@@ -335,20 +336,9 @@ describe("Sidebar active state", () => {
       },
     ]);
     const original = navRow(container, "Fetched child")!;
-    const childPadding = Array.from(original.classList).find((name) => /^pl-\d+$/.test(name));
-    expect(childPadding).toBeTruthy();
-    expect(loadingRow.classList.contains(childPadding!)).toBe(true);
-    expect(loadingRow.classList.contains("py-1")).toBe(original.classList.contains("py-1"));
-    expect(loadingRow.getAttribute("data-nav-depth")).toBe(
-      original.closest("[data-nav-depth]")?.getAttribute("data-nav-depth"),
-    );
-    expect((loadingRow as HTMLElement).style.getPropertyValue("--nav-depth")).toBe(
-      (original.closest("[data-nav-depth]") as HTMLElement).style.getPropertyValue("--nav-depth"),
-    );
-    const childIconSize = Array.from(original.querySelector("svg")!.classList).find((name) =>
-      name.startsWith("size-"),
-    );
-    expect(loadingRow.querySelector("span")?.classList.contains(childIconSize!)).toBe(true);
+    expect(twisty(container, "Lazy root")).toBe(loadingControl);
+    expect(loadingControl.getAttribute("aria-busy")).toBeNull();
+    expect(loadingControl.querySelector("[data-nav-disclosure-loading]")).toBeNull();
     original.focus();
     await renderWithItems([
       {
@@ -494,8 +484,8 @@ describe("Sidebar active state", () => {
         childrenUnloaded: true,
         onExpandedChange: disclosure,
       };
-      const items = (unloaded: boolean): NavGroup["items"] => {
-        const container = { ...item, childrenUnloaded: unloaded };
+      const items = (unloaded: boolean, loading = false): NavGroup["items"] => {
+        const container = { ...item, childrenUnloaded: unloaded, childrenLoading: loading };
         return nested
           ? [
               {
@@ -527,6 +517,14 @@ describe("Sidebar active state", () => {
         navRow(container, "Empty container")!.querySelectorAll("button,a"),
       ).find((candidate) => candidate.textContent === "Empty container")!;
       await act(async () => (name as HTMLElement).click());
+      // Selecting a known empty container can coincide with its owner's
+      // background refresh. Empty is a successful previous result too:
+      // do not invent three child rows until that refresh settles.
+      await renderWithItems(items(false, true));
+      expect(
+        desktopSidebar(container).querySelector('[aria-label="Loading navigation"]'),
+      ).toBeNull();
+      expect(desktopSidebar(container).querySelector('[aria-busy="true"]')).not.toBeNull();
       await renderWithItems(items(false));
       expect(disclosure.mock.calls.filter(([open]) => open === true)).toHaveLength(requests);
     },

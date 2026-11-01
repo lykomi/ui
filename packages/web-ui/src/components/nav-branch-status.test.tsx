@@ -33,17 +33,17 @@ afterEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = previousAct;
 });
 
-it("shows first-load skeleton rows immediately and removes them for known children", async () => {
-  await draw(item);
-  const status = host.querySelector('[role="status"]')!;
-  expect(status.getAttribute("aria-label")).toBe("Loading navigation");
-  expect(status.textContent).toBe("");
-  expect(status.querySelectorAll("[data-nav-branch-status]")).toHaveLength(3);
-  expect(status.querySelector(".motion-safe\\:animate-pulse")).not.toBeNull();
-  expect(vi.getTimerCount()).toBe(0);
-  await draw({ ...item, children: [{ to: "/branch/child", label: "Child" }] });
-  expect(host.querySelector('[role="status"]')).toBeNull();
-});
+it.each([true, false, undefined])(
+  "does not invent child rows while branch knowledge is %s",
+  async (childrenUnloaded) => {
+    await draw({ ...item, childrenUnloaded });
+    expect(host.querySelector('[role="status"]')).toBeNull();
+    expect(host.querySelectorAll("[data-nav-branch-status]")).toHaveLength(0);
+    expect(vi.getTimerCount()).toBe(0);
+    await draw({ ...item, children: [{ to: "/branch/child", label: "Child" }] });
+    expect(host.querySelector('[role="status"]')).toBeNull();
+  },
+);
 
 it("cancels a short load without a late flash or timer leak", async () => {
   await draw(item);
@@ -63,31 +63,30 @@ it("never inserts loading above known children and does not delay retry errors",
   expect(vi.getTimerCount()).toBe(0);
 });
 
-it("exposes the native depth to workbench geometry without creating a navigation action", async () => {
-  await draw(item);
-  await advance(150);
-  const status = host.querySelector<HTMLElement>("[data-nav-branch-status]")!;
-  expect(status.dataset.navDepth).toBe("1");
-  expect(status.hasAttribute("data-nav-branch-status")).toBe(true);
-  expect(status.style.getPropertyValue("--nav-depth")).toBe("1");
-  expect(status.querySelector(".size-3\\.5")).not.toBeNull();
-  expect(status.querySelector("button")).toBeNull();
+it("exposes retry depth to workbench geometry without creating a navigation action", async () => {
   await draw({ ...item, childrenLoading: false, childrenError: "Retry required" });
   const error = host.querySelector<HTMLElement>('[role="status"]')!;
   expect(error.dataset.navDepth).toBe("1");
+  expect(error.style.getPropertyValue("--nav-depth")).toBe("1");
   expect(error.querySelector("svg")?.classList.contains("size-3.5")).toBe(true);
   expect(error.querySelector(":scope > button")).toBeNull();
 });
 
 it.each([0, 2, 5])("keeps child geometry at native depth %s", async (depth) => {
   await act(async () =>
-    root.render(<NavBranchStatus item={item} depth={depth} bodyClassName="pl-12" />),
+    root.render(
+      <NavBranchStatus
+        item={{ ...item, childrenLoading: false, childrenError: "Retry required" }}
+        depth={depth}
+        bodyClassName="pl-12"
+      />,
+    ),
   );
   await advance(150);
   const status = host.querySelector<HTMLElement>("[data-nav-branch-status]")!;
   expect(status.dataset.navDepth).toBe(String(depth));
   expect(status.style.getPropertyValue("--nav-depth")).toBe(String(depth));
-  expect(status.querySelector(".size-3\\.5")).not.toBeNull();
+  expect(status.querySelector("svg")?.classList.contains("size-3.5")).toBe(true);
 });
 
 it("allows wrapped retry text to grow in a fine-pointer workbench", async () => {

@@ -609,6 +609,7 @@ export function ContainerDropZone({ dnd }: { dnd: NavItemDnd }) {
 function NavTwisty({
   hasChildren,
   childrenUnloaded = false,
+  childrenLoading = false,
   emptyContainer = false,
   isExpanded,
   onToggle,
@@ -620,6 +621,7 @@ function NavTwisty({
   hasChildren: boolean;
   /** Nobody has fetched this row's children yet — see {@link NavItem.childrenUnloaded}. */
   childrenUnloaded?: boolean;
+  childrenLoading?: boolean;
   /** An owner-managed container whose current navigation window is empty. */
   emptyContainer?: boolean;
   isExpanded?: boolean;
@@ -666,6 +668,7 @@ function NavTwisty({
         data-nav-twisty={hasChildren || undefined}
         data-nav-empty-container={!hasChildren || undefined}
         aria-expanded={hasChildren ? isExpanded : undefined}
+        aria-busy={(hasChildren && childrenLoading) || undefined}
         aria-disabled={!hasChildren || undefined}
         tabIndex={hasChildren ? undefined : -1}
         aria-label={
@@ -690,12 +693,20 @@ function NavTwisty({
               : "text-sidebar-foreground/50 hover:text-sidebar-foreground",
         )}
       >
-        <ChevronRight
-          className={cn(
-            "size-3.5 transition-transform duration-150",
-            hasChildren && isExpanded && "rotate-90",
-          )}
-        />
+        {hasChildren && childrenLoading ? (
+          <span
+            aria-hidden="true"
+            data-nav-disclosure-loading
+            className="size-3.5 rounded bg-sidebar-foreground/30 motion-safe:animate-pulse"
+          />
+        ) : (
+          <ChevronRight
+            className={cn(
+              "size-3.5 transition-transform duration-150",
+              hasChildren && isExpanded && "rotate-90",
+            )}
+          />
+        )}
       </button>
     </span>
   );
@@ -1093,6 +1104,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
         <NavTwisty
           hasChildren={hasChildren}
           childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          childrenLoading={item.childrenLoading}
           emptyContainer={isNavContainer(item)}
           isExpanded={isExpanded}
           onToggle={() => setExpanded(!isExpanded)}
@@ -1285,6 +1297,7 @@ function CollapsibleNavItem({
         <NavTwisty
           hasChildren={hasChildren && !heading}
           childrenUnloaded={!item.childrenHidden && item.childrenUnloaded}
+          childrenLoading={item.childrenLoading}
           emptyContainer={isNavContainer(item)}
           inTree={rowInTree}
           isExpanded={isExpanded}
