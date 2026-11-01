@@ -2,7 +2,6 @@ import { AlertCircle, Check, ChevronDown, Loader2 } from "lucide-react";
 import { Button, cn } from "@iloveagents/foundry-web-primitives";
 import { type CSSProperties, useState } from "react";
 import type { NavItem } from "../lib/nav-config.ts";
-import { NavLoadingSkeleton } from "./nav-loading-skeleton.tsx";
 
 export function NavBranchStatus({
   item,
@@ -15,13 +14,12 @@ export function NavBranchStatus({
 }) {
   const iconClassName = "size-3.5 shrink-0";
   const geometry = { "--nav-depth": depth } as CSSProperties;
-  const waiting = !item.disabled && item.childrenLoading && !item.children?.length;
   if (item.disabled) return null;
   if (item.childrenLoading) {
-    // Refreshing a visible branch must not insert a row and move its items.
-    // The branch remains aria-busy; pagination keeps its native disabled action.
-    if (!waiting) return null;
-    return <NavLoadingSkeleton depth={depth} bodyClassName={bodyClassName} />;
+    // The answer can be empty. Keep loading in the existing disclosure slot,
+    // rather than inserting pretend children that disappear on an empty read.
+    // The branch remains aria-busy; pagination keeps its native busy action.
+    return null;
   }
   if (item.childrenError) {
     return (
