@@ -1,6 +1,6 @@
 {
   "name": "@iloveagents/foundry-web-primitives",
-  "version": "0.46.3",
+  "version": "0.46.4",
   "license": "MIT",
   "description": "Leaf React UI primitives for Foundry UI — Button, Checkbox, Input, Textarea, Field, FieldSet, cn().",
   "keywords": [

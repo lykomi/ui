@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.46.4
+
+### Patch Changes
+
+- a6ef7d9: Use a small loading ring in the existing navigation disclosure slot so loading is recognizable without inserting rows or moving focus. Respect reduced-motion preferences and keep navigation label weight unchanged on selection so text does not reflow.
+  - @iloveagents/foundry-agent@0.46.4
+  - @iloveagents/foundry-web-primitives@0.46.4
+
 ## 0.46.3
 
 ### Patch Changes
