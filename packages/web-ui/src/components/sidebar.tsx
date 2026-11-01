@@ -22,6 +22,7 @@ import {
   Plus,
   Upload,
   ChevronLeft,
+  LoaderCircle,
 } from "lucide-react";
 import { cn } from "@iloveagents/foundry-web-primitives";
 import {
@@ -60,7 +61,7 @@ import { AppBrand } from "./app-brand.tsx";
 
 const ACTIVE_NAV_ROW_CLASS =
   "border border-transparent bg-sidebar-selected text-sidebar-selected-foreground shadow-none";
-const ACTIVE_NAV_TEXT_CLASS = "font-semibold text-sidebar-selected-foreground";
+const ACTIVE_NAV_TEXT_CLASS = "text-sidebar-selected-foreground";
 const ACTIVE_NAV_ICON_CLASS = "text-sidebar-selected-foreground";
 const ACTIVE_NAV_BADGE_CLASS =
   "border border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground";
@@ -656,10 +657,10 @@ function NavTwisty({
             occupies its column, so labels stay aligned and no marker jumps
             sideways when the answer arrives. */}
         {childrenLoading ? (
-          <span
+          <LoaderCircle
             aria-hidden="true"
             data-nav-disclosure-loading
-            className="size-3.5 rounded bg-sidebar-foreground/30 motion-safe:animate-pulse"
+            className="size-3.5 motion-safe:animate-spin"
           />
         ) : inTree && !childrenUnloaded ? (
           <span
@@ -707,10 +708,10 @@ function NavTwisty({
         )}
       >
         {hasChildren && childrenLoading ? (
-          <span
+          <LoaderCircle
             aria-hidden="true"
             data-nav-disclosure-loading
-            className="size-3.5 rounded bg-sidebar-foreground/30 motion-safe:animate-pulse"
+            className="size-3.5 motion-safe:animate-spin"
           />
         ) : (
           <ChevronRight
@@ -1153,7 +1154,7 @@ function NestedFolderItem({ item, depth }: { item: NavItem; depth: number }) {
               : isActive
                 ? ACTIVE_NAV_TEXT_CLASS
                 : isAncestorActive
-                  ? "text-sidebar-foreground font-medium"
+                  ? "text-sidebar-foreground"
                   : "text-sidebar-foreground/80",
           )}
         >
@@ -1346,7 +1347,7 @@ function CollapsibleNavItem({
               : selected
                 ? ACTIVE_NAV_TEXT_CLASS
                 : ancestor
-                  ? "text-sidebar-foreground font-medium"
+                  ? "text-sidebar-foreground"
                   : "text-sidebar-foreground/85",
             headingClass,
           )}
