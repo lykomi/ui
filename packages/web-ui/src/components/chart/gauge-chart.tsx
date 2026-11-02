@@ -151,7 +151,11 @@ export const GaugeChart = React.forwardRef<HTMLDivElement, GaugeChartProps>(
               y="102"
               textAnchor="middle"
               fill="currentColor"
-              className="text-2xl font-semibold tabular-nums tracking-tight"
+              className={cn(
+                available
+                  ? "text-2xl font-semibold tabular-nums tracking-tight"
+                  : "text-sm font-medium text-muted-foreground",
+              )}
             >
               {display}
             </text>
