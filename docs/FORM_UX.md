@@ -337,6 +337,10 @@ context. Use `ActionListSkeleton` for first-load starters, workflow actions and
 recent chats, driven by their existing read state. Keep successfully loaded
 suggestions and chats visible on refresh; settle empty and failed reads instead
 of leaving a permanent skeleton. Do not disable the composer or trigger work.
+The global home has no item context: do not mount contextual starter placeholders
+above its create action. Reserve the action row itself, and put history skeletons
+inside the existing Recent and Pinned cards. Keep those cards and their headings
+stable through pending, populated and empty states, including narrow layouts.
 
 ## Wizards and process guidance
 

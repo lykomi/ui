@@ -100,6 +100,7 @@ export function WorkbenchPreview({
     composerIntro:
       spaciousChat && emptyChat ? (
         <WelcomeIntro
+          contextual={Boolean(workspaceId || entityId || pageContextPending)}
           navGroups={navGroups}
           historyShortcut={workspaceId ? emptyChatFooter : null}
         />
