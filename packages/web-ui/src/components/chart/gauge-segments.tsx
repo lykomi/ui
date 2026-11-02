@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip.tsx";
 
@@ -19,8 +19,7 @@ export function validGaugeSegments(segments: readonly GaugeSegment[], range: num
         Number.isFinite(segment.value) &&
         segment.value >= 0,
     ) &&
-    Math.abs(segments.reduce((total, segment) => total + segment.value, 0) - range) <=
-      Math.max(1, range) * 1e-6
+    Math.abs(segments.reduce((total, segment) => total + segment.value, 0) / range - 1) <= 1e-9
   );
 }
 
@@ -40,9 +39,15 @@ export function GaugeSegments({
   valueFormatter: (value: number) => string;
 }) {
   const [focused, setFocused] = useState<number | null>(null);
+  const capClipId = useId();
   let offset = 0;
   return (
     <TooltipProvider delayDuration={150}>
+      <defs>
+        <clipPath id={capClipId}>
+          <rect x="0" y="120" width="240" height="20" />
+        </clipPath>
+      </defs>
       {segments.map((segment, index) => {
         const start = offset;
         offset += segment.value / range;
@@ -72,10 +77,22 @@ export function GaugeSegments({
                   strokeLinecap="butt"
                 />
                 {start === 0 ? (
-                  <circle cx={from[0]} cy={from[1]} r="7" fill={segment.color} />
+                  <circle
+                    cx={from[0]}
+                    cy={from[1]}
+                    r="7"
+                    fill={segment.color}
+                    clipPath={`url(#${capClipId})`}
+                  />
                 ) : null}
                 {Math.abs(offset - 1) < 1e-6 ? (
-                  <circle cx={to[0]} cy={to[1]} r="7" fill={segment.color} />
+                  <circle
+                    cx={to[0]}
+                    cy={to[1]}
+                    r="7"
+                    fill={segment.color}
+                    clipPath={`url(#${capClipId})`}
+                  />
                 ) : null}
               </g>
             </TooltipTrigger>

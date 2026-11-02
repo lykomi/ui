@@ -127,6 +127,52 @@ describe("GaugeChart breakdown", () => {
     );
     expect(view.querySelector("[data-gauge-fill]")).toBeNull();
   });
+  it("keeps end caps outside earlier shares, including tiny final segments", () => {
+    const view = mount(
+      <GaugeChart
+        label="Result"
+        value={99}
+        segments={[
+          { label: "First", value: 99, color: "green" },
+          { label: "Small", value: 0.1, color: "gold" },
+          { label: "Last", value: 0.9, color: "gray" },
+        ]}
+      />,
+    );
+    const clip = view.querySelector("clipPath")!;
+    expect(clip.querySelector("rect")?.getAttribute("y")).toBe("120");
+    expect(view.querySelectorAll("[data-gauge-segment] path")).toHaveLength(3);
+    for (const cap of view.querySelectorAll("[data-gauge-segment] circle"))
+      expect(cap.getAttribute("clip-path")).toBe(`url(#${clip.id})`);
+  });
+  it.each([0, 1e-6])("rejects an invalid total %s even for a tiny valid range", (total) => {
+    const view = mount(
+      <GaugeChart
+        label="Tiny units"
+        min={0}
+        max={1e-7}
+        value={5e-8}
+        segments={[{ label: "Total", value: total, color: "green" }]}
+      />,
+    );
+    expect(view.querySelector('[role="meter"]')).toBeNull();
+    expect(view.textContent).toContain("Invalid breakdown");
+  });
+  it("accepts a complete breakdown at a small scale", () => {
+    const view = mount(
+      <GaugeChart
+        label="Tiny units"
+        min={0}
+        max={1e-7}
+        value={5e-8}
+        segments={[
+          { label: "First", value: 5e-8, color: "green" },
+          { label: "Second", value: 5e-8, color: "gray" },
+        ]}
+      />,
+    );
+    expect(view.querySelectorAll("[data-gauge-segment]")).toHaveLength(2);
+  });
   it("preserves zero and full shares without inventing a minimum visual slice", () => {
     const view = mount(
       <GaugeChart
