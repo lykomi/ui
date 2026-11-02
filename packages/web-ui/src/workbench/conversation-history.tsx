@@ -152,7 +152,6 @@ export function ConversationHistory({
   const homePinnedItems = home
     ? items.filter((item) => item.meta?.pinned).slice(0, HOME_SECTION_LIMIT)
     : [];
-  const homeHasItems = homeRecentItems.length > 0 || homePinnedItems.length > 0;
   const visibleItems = compact ? items.slice(0, 3) : items;
   const activeItems = visibleItems.filter((item) => {
     const run = runFor(item);
@@ -203,7 +202,7 @@ export function ConversationHistory({
           <ArrowLeft size={14} /> Back to chat
         </button>
       )}
-      {(!compact || items.length > 0) && (
+      {(home || !compact || items.length > 0) && (
         <div
           className={
             home
@@ -274,7 +273,7 @@ export function ConversationHistory({
           {loadError}
         </p>
       )}
-      {items.length === 0 && historyLoading && (
+      {!home && items.length === 0 && historyLoading && (
         <ActionListSkeleton label="Loading recent chats" secondaryText />
       )}
       <div
@@ -286,14 +285,14 @@ export function ConversationHistory({
         aria-busy={Boolean(loadingTo)}
       >
         {sections
-          .filter((section) => (home ? homeHasItems : section.items.length))
+          .filter((section) => home || section.items.length)
           .map((section) => (
             <section
               key={section.label}
               aria-label={section.label || "Recent chats"}
               className={
                 home
-                  ? `min-w-0 rounded-xl border border-border/70 bg-muted/10 p-3 ${section.items.length ? "" : "hidden min-[640px]:block"}`
+                  ? "min-h-80 min-w-0 rounded-xl border border-border/70 bg-muted/10 p-3"
                   : "mb-4 last:mb-0"
               }
             >
@@ -309,7 +308,14 @@ export function ConversationHistory({
                   {section.label}
                 </h3>
               )}
-              {home && !section.items.length && (
+              {home && !section.items.length && historyLoading && (
+                <ActionListSkeleton
+                  label={`Loading ${section.label.toLowerCase()} chats`}
+                  rows={3}
+                  secondaryText
+                />
+              )}
+              {home && !section.items.length && !historyLoading && (
                 <p className="px-1 py-3 text-xs text-muted-foreground">
                   {section.label === "Pinned"
                     ? "Pin chats to keep them close."

@@ -12,9 +12,12 @@ import { Layers } from "lucide-react";
 export function WelcomeIntro({
   navGroups,
   historyShortcut,
+  contextual = false,
 }: {
   navGroups: ReturnType<typeof useNavStore.getState>["config"];
   historyShortcut: ReactNode;
+  /** Global home has no item context and must not reserve speculative starter rows. */
+  contextual?: boolean;
 }) {
   return (
     <div className="mb-4 text-center">
@@ -22,10 +25,12 @@ export function WelcomeIntro({
       <p className="mt-2 text-sm text-muted-foreground">
         Find information, create or edit content, and run actions across your spaces.
       </p>
-      <div className="mx-auto mt-4 max-w-sm text-left">
-        <ChatHomeStartersSlot priority={10} />
-      </div>
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+      {contextual && (
+        <div className="mx-auto mt-4 max-w-sm text-left">
+          <ChatHomeStartersSlot priority={10} />
+        </div>
+      )}
+      <div className="mt-4 flex min-h-9 flex-wrap items-center justify-center gap-2 [@media(pointer:coarse)]:min-h-11">
         {historyShortcut}
         {navGroups.some(
           (group) => group.meta?.type === "spaces-workspaces" && group.createActions?.length,
