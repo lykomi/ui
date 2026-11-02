@@ -2,6 +2,9 @@ import * as React from "react";
 
 import { cn } from "@iloveagents/foundry-web-primitives";
 
+import { GaugeSegments, validGaugeSegments, type GaugeSegment } from "./gauge-segments.tsx";
+export type { GaugeSegment } from "./gauge-segments.tsx";
+
 export interface GaugeChartProps extends Omit<React.ComponentProps<"div">, "children"> {
   label: string;
   value: number | null | undefined;
@@ -9,6 +12,8 @@ export interface GaugeChartProps extends Omit<React.ComponentProps<"div">, "chil
   max?: number;
   /** A marker in the same units as value. Out-of-range targets are omitted. */
   target?: number;
+  /** An ordered breakdown whose values sum to max - min. Uses the same units as value. */
+  segments?: readonly GaugeSegment[];
   targetLabel?: string;
   /** Opt in to a tick on the arc. The target text remains visible without it. */
   showTargetMarker?: boolean;
@@ -38,6 +43,7 @@ export const GaugeChart = React.forwardRef<HTMLDivElement, GaugeChartProps>(
       min = 0,
       max = 100,
       target,
+      segments,
       targetLabel = "Target",
       showTargetMarker = false,
       tone = "neutral",
@@ -52,7 +58,14 @@ export const GaugeChart = React.forwardRef<HTMLDivElement, GaugeChartProps>(
   ) => {
     const validRange =
       Number.isFinite(min) && Number.isFinite(max) && max > min && Number.isFinite(max - min);
-    const available = !loading && validRange && typeof value === "number" && Number.isFinite(value);
+    const validSegments =
+      segments === undefined || (validRange && validGaugeSegments(segments, max - min));
+    const available =
+      !loading &&
+      validRange &&
+      validSegments &&
+      typeof value === "number" &&
+      Number.isFinite(value);
     const bounded = available ? Math.min(max, Math.max(min, value)) : min;
     const fraction = available ? (bounded - min) / (max - min) : 0;
     const hasTarget =
@@ -62,7 +75,17 @@ export const GaugeChart = React.forwardRef<HTMLDivElement, GaugeChartProps>(
       target >= min &&
       target <= max;
     const angle = hasTarget ? Math.PI * (1 - (target - min) / (max - min)) : 0;
-    const display = loading ? "Loading…" : available ? valueFormatter(value) : emptyLabel;
+    const display = loading
+      ? "Loading…"
+      : !validSegments
+        ? "Invalid breakdown"
+        : available
+          ? valueFormatter(value)
+          : emptyLabel;
+    const breakdownText =
+      available && segments
+        ? segments.map((segment) => `${segment.label}: ${valueFormatter(segment.value)}`).join("; ")
+        : undefined;
     const targetText = hasTarget ? `${targetLabel}: ${valueFormatter(target)}` : undefined;
 
     return (
@@ -82,7 +105,9 @@ export const GaugeChart = React.forwardRef<HTMLDivElement, GaugeChartProps>(
           aria-valuemin={available ? min : undefined}
           aria-valuemax={available ? max : undefined}
           aria-valuenow={available ? bounded : undefined}
-          aria-valuetext={available ? [display, targetText].filter(Boolean).join("; ") : undefined}
+          aria-valuetext={
+            available ? [display, targetText, breakdownText].filter(Boolean).join("; ") : undefined
+          }
         >
           <g aria-hidden="true">
             <path
@@ -92,7 +117,12 @@ export const GaugeChart = React.forwardRef<HTMLDivElement, GaugeChartProps>(
               strokeWidth="14"
               strokeLinecap="round"
             />
-            {available && fraction > 0 && (
+          </g>
+          {available && segments ? (
+            <GaugeSegments segments={segments} range={max - min} valueFormatter={valueFormatter} />
+          ) : null}
+          <g aria-hidden="true">
+            {available && !segments && fraction > 0 && (
               <path
                 data-gauge-fill=""
                 d="M 24 120 A 96 96 0 0 1 216 120"
