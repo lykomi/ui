@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.47.0
+
+### Minor Changes
+
+- a90cbaa: Add an ordered, accessible segment breakdown to GaugeChart, with proportional arcs and hover or keyboard details. Invalid or incomplete breakdowns remain unavailable instead of being normalized into misleading proportions.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.47.0
+- @iloveagents/foundry-web-primitives@0.47.0
+
 ## 0.46.5
 
 ### Patch Changes
