@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.46.5
+
+### Patch Changes
+
+- 37bf85f: Keep global-home actions in a stable button row and render pending chat history inside its Recent and Pinned cards. Contextual starter placeholders no longer expand the global home.
+  - @iloveagents/foundry-agent@0.46.5
+  - @iloveagents/foundry-web-primitives@0.46.5
+
 ## 0.46.4
 
 ### Patch Changes
