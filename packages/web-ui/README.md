@@ -185,6 +185,27 @@ target tick while the target text is always shown. Choose `tone` and `hint` expl
 lower-is-better metrics. Sparklines leave gaps for missing samples and need a
 metric/period label; use a full chart when exact values matter.
 
+An ordered `segments` breakdown colors adjacent portions of the same arc:
+
+```tsx
+<GaugeChart
+  label="Confirmed quality"
+  value={29}
+  valueFormatter={(value) => `${value}%`}
+  segments={[
+    { label: "Confirmed", value: 29, color: "var(--chart-1)" },
+    { label: "Assessed gaps", value: 7.2, color: "var(--warning)" },
+    { label: "Not evidenced", value: 63.8, color: "var(--muted)" },
+  ]}
+/>
+```
+
+Segment values use the gauge's units and must total `max - min`. The central
+reading remains `value`; a secondary share never disappears into the track.
+Hover or focus a segment for its label, value and optional `description`.
+Invalid or incomplete breakdowns show “Invalid breakdown”; they are never
+normalized. Zero-length segments are omitted without inflating small values.
+
 See [the management dashboard example](../../examples/management-dashboard/README.md)
 for a complete composition with period selection and light/dark preview.
 

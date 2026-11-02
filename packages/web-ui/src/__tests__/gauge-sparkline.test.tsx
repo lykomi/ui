@@ -103,6 +103,104 @@ describe("GaugeChart", () => {
   });
 });
 
+describe("GaugeChart breakdown", () => {
+  const segments = [
+    { label: "Confirmed", value: 29, color: "var(--chart-1)" },
+    { label: "Assessed nonconformity", value: 7.2, color: "var(--warning)" },
+    { label: "Not evidenced", value: 63.8, color: "var(--muted)" },
+  ];
+  it("draws the secondary share at its actual position, with accessible details", () => {
+    const view = mount(
+      <GaugeChart label="Result" value={29} segments={segments} valueFormatter={(n) => `${n}%`} />,
+    );
+    const paths = view.querySelectorAll("[data-gauge-segment] path");
+    expect(paths).toHaveLength(3);
+    expect(paths[1].getAttribute("stroke")).toBe("var(--warning)");
+    expect(paths[1].getAttribute("d")).not.toBe(paths[0].getAttribute("d"));
+    expect(paths[1].getAttribute("stroke-linecap")).toBe("butt");
+    expect(view.querySelector('[data-gauge-segment="1"]')?.getAttribute("aria-label")).toBe(
+      "Assessed nonconformity: 7.2%",
+    );
+    expect(view.querySelector('[data-gauge-segment="1"]')?.getAttribute("tabindex")).toBe("0");
+    expect(view.querySelector('[role="meter"]')?.getAttribute("aria-valuetext")).toContain(
+      "Not evidenced: 63.8%",
+    );
+    expect(view.querySelector("[data-gauge-fill]")).toBeNull();
+  });
+  it("keeps end caps outside earlier shares, including tiny final segments", () => {
+    const view = mount(
+      <GaugeChart
+        label="Result"
+        value={99}
+        segments={[
+          { label: "First", value: 99, color: "green" },
+          { label: "Small", value: 0.1, color: "gold" },
+          { label: "Last", value: 0.9, color: "gray" },
+        ]}
+      />,
+    );
+    const clip = view.querySelector("clipPath")!;
+    expect(clip.querySelector("rect")?.getAttribute("y")).toBe("120");
+    expect(view.querySelectorAll("[data-gauge-segment] path")).toHaveLength(3);
+    for (const cap of view.querySelectorAll("[data-gauge-segment] circle"))
+      expect(cap.getAttribute("clip-path")).toBe(`url(#${clip.id})`);
+  });
+  it.each([0, 1e-6])("rejects an invalid total %s even for a tiny valid range", (total) => {
+    const view = mount(
+      <GaugeChart
+        label="Tiny units"
+        min={0}
+        max={1e-7}
+        value={5e-8}
+        segments={[{ label: "Total", value: total, color: "green" }]}
+      />,
+    );
+    expect(view.querySelector('[role="meter"]')).toBeNull();
+    expect(view.textContent).toContain("Invalid breakdown");
+  });
+  it("accepts a complete breakdown at a small scale", () => {
+    const view = mount(
+      <GaugeChart
+        label="Tiny units"
+        min={0}
+        max={1e-7}
+        value={5e-8}
+        segments={[
+          { label: "First", value: 5e-8, color: "green" },
+          { label: "Second", value: 5e-8, color: "gray" },
+        ]}
+      />,
+    );
+    expect(view.querySelectorAll("[data-gauge-segment]")).toHaveLength(2);
+  });
+  it("preserves zero and full shares without inventing a minimum visual slice", () => {
+    const view = mount(
+      <GaugeChart
+        label="Result"
+        value={0}
+        segments={[
+          { label: "Confirmed", value: 0, color: "var(--chart-1)" },
+          { label: "Unknown", value: 100, color: "var(--muted)" },
+        ]}
+      />,
+    );
+    expect(view.querySelectorAll("[data-gauge-segment]")).toHaveLength(1);
+    expect(view.innerHTML).not.toMatch(/NaN|Infinity/);
+  });
+  it.each([
+    [],
+    [{ label: "Incomplete", value: 29, color: "red" }],
+    [{ label: "Excess", value: 120, color: "red" }],
+    [{ label: "Negative", value: -1, color: "red" }],
+    [{ label: "Invalid", value: NaN, color: "red" }],
+  ])("refuses an invalid breakdown instead of normalizing it", (...parts) => {
+    const view = mount(<GaugeChart label="Result" value={29} segments={parts} />);
+    expect(view.querySelector('[role="meter"]')).toBeNull();
+    expect(view.querySelector("[data-gauge-segment]")).toBeNull();
+    expect(view.textContent).toContain("Invalid breakdown");
+  });
+});
+
 describe("Sparkline", () => {
   it("breaks the line at missing observations", () => {
     const view = mount(<Sparkline label="Monthly revenue" data={[1, 2, null, 4, NaN, 6]} />);

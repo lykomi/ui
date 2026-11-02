@@ -54,5 +54,9 @@ export {
   type CategoryBarChartProps,
 } from "./components/chart/category-bar-chart.tsx";
 export { DonutChart, type DonutChartProps } from "./components/chart/donut-chart.tsx";
-export { GaugeChart, type GaugeChartProps } from "./components/chart/gauge-chart.tsx";
+export {
+  GaugeChart,
+  type GaugeChartProps,
+  type GaugeSegment,
+} from "./components/chart/gauge-chart.tsx";
 export { Sparkline, type SparklineProps } from "./components/chart/sparkline.tsx";

@@ -255,6 +255,37 @@ export function ChartGallery() {
               valueFormatter={(value) => `${value}°C`}
             />
           </ChartCard>
+          <ChartCard
+            title="Quality breakdown"
+            description="Confirmed, assessed gaps and unknown coverage"
+          >
+            <GaugeChart
+              label="Confirmed quality"
+              value={29}
+              valueFormatter={percent}
+              segments={[
+                {
+                  label: "Confirmed",
+                  value: 29,
+                  color: "var(--chart-1)",
+                  description: "Evidence meets the assessed criteria.",
+                },
+                {
+                  label: "Assessed gaps",
+                  value: 7.2,
+                  color: "var(--warning)",
+                  description: "Reviewed evidence contains unmet criteria.",
+                },
+                {
+                  label: "Not evidenced",
+                  value: 63.8,
+                  color: "var(--muted)",
+                  description: "Evidence is missing or has not been assessed.",
+                },
+              ]}
+              hint="Hover or focus an arc segment for details"
+            />
+          </ChartCard>
           <ChartCard title="Missing & loading" description="No fabricated zero reading">
             <GaugeChart label="Awaiting measurement" value={null} />
             <GaugeChart label="Refreshing" value={72} loading className="mt-4" />
