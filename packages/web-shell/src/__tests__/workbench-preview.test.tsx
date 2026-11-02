@@ -13,7 +13,11 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useNavStore as actualNavStore } from "../../../web-ui/dist/lib/nav-store.js";
+import { registerChatSlots } from "../../../web-ui/dist/components/chat-slots.js";
+
 const state = vi.hoisted(() => ({
+  navLoading: false,
   resize: (_width: number) => {},
   unmount: vi.fn(),
   groups: [] as NavGroup[],
@@ -52,7 +56,8 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   ),
   ThemeToggle: () => null,
   UserMenu: () => null,
-  useNavStore: (select: (s: unknown) => unknown) => select({ config: state.groups }),
+  useNavStore: (select: (s: unknown) => unknown) =>
+    select({ config: state.groups, navLoading: state.navLoading }),
   useNewConversation: () => vi.fn(),
   ChatContent: () => {
     const { emptyState, composerIntro, composerFooter, centerComposer } =
@@ -84,6 +89,9 @@ beforeEach(() => {
   state.unmount.mockClear();
   state.sidebar.mockClear();
   state.groups = [];
+  state.navLoading = false;
+  actualNavStore.setState({ navLoading: false });
+  registerChatSlots({ homeStarters: null });
   state.empty = false;
   state.running = false;
   state.panelOpen = false;
@@ -281,6 +289,20 @@ describe("layout preview", () => {
     expect(viewAll.parentElement?.className).toContain("justify-center");
     fireEvent.click(viewAll);
     expect(screen.getByRole("heading", { name: "Chat history" })).toBeTruthy();
+  });
+
+  it("does not show contextual starter skeletons on cold global chat home", () => {
+    state.empty = true;
+    state.navLoading = true;
+    actualNavStore.setState({ navLoading: true });
+    const starters = vi.fn(() => <div>Contextual loading rows</div>);
+    registerChatSlots({ homeStarters: starters });
+    render(<WorkbenchPreview chatOnly page={<Editor />} />);
+    expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
+    expect(screen.queryByText("Contextual loading rows")).toBeNull();
+    expect(starters).not.toHaveBeenCalled();
+    expect(screen.getByRole("status", { name: "Loading recent chats" })).toBeTruthy();
+    expect(screen.getByRole("status", { name: "Loading pinned chats" })).toBeTruthy();
   });
 
   it("keeps the recent and pinned groups available when only pinned chats exist", () => {

@@ -95,7 +95,8 @@ export function useWorkbenchState(chatRoute: boolean) {
       : undefined;
   }, [location.pathname, location.search, navGroups]);
   const navigationLoading = useNavStore((state) => state.navLoading);
-  const pageContextPending = navigationLoading && !routeItem;
+  // A global chat route has no page context to resolve.
+  const pageContextPending = !chatRoute && navigationLoading && !routeItem;
   const pageLabel = useAppStore((s) => s.navContext.label);
   const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();
