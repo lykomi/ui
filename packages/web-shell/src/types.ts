@@ -161,7 +161,7 @@ export interface AuthAdapter {
 
 export interface BootstrapShellOptions {
   modules?: ChatModule[];
-  /** Start the desktop side chat collapsed on content pages. Defaults to false. */
+  /** Start the desktop side chat collapsed on content pages. Defaults to true. */
   defaultSideChatCollapsed?: boolean;
   /** Customer-supplied pages — win over module pages on `path` collision. */
   pages?: ShellPage[];

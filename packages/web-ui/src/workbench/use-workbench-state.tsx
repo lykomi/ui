@@ -82,7 +82,7 @@ function useWorkbenchNavigation() {
   return { navGroups, workspaceGroups, staticNavigationGroups };
 }
 
-export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed = false) {
+export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed = true) {
   const panelOpen = useToolPanelStore((s) => s.isOpen && !s.isWindowHosted);
   const chatOnly = chatRoute && !panelOpen;
   const location = useLocation();

@@ -118,8 +118,8 @@ afterEach(() => {
 });
 
 describe("layout preview", () => {
-  it("starts collapsed when configured and keeps drafts mounted when expanded", () => {
-    render(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
+  it("starts collapsed by default and keeps drafts mounted when expanded", () => {
+    render(<WorkbenchPreview page={<Editor />} />);
     const assistant = screen.getByLabelText("Assistant conversation");
     const draft = screen.getByLabelText("Chat draft") as HTMLTextAreaElement;
     expect(assistant.style.width).toBe("44px");
@@ -153,7 +153,9 @@ describe("layout preview", () => {
 
   it("reveals a tool result on a chat-only route", () => {
     state.panelOpen = true;
-    render(<WorkbenchPreview chatOnly page={<div>Tool result</div>} />);
+    render(
+      <WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<div>Tool result</div>} />,
+    );
     expect(screen.getByLabelText("Working content").style.display).toBe("flex");
     expect(screen.getByLabelText("Working content").hasAttribute("inert")).toBe(false);
   });
@@ -163,7 +165,7 @@ describe("layout preview", () => {
     render(
       <>
         <Link to="/document">Open document</Link>
-        <WorkbenchPreview page={<Editor />} />
+        <WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />
       </>,
     );
     const editor = screen.getByLabelText("Unsaved field") as HTMLInputElement;
@@ -208,7 +210,7 @@ describe("layout preview", () => {
     render(
       <>
         <Link to="/document">Open document</Link>
-        <WorkbenchPreview page={<Editor />} />
+        <WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />
       </>,
     );
     const editor = screen.getByLabelText("Unsaved field");
@@ -224,7 +226,7 @@ describe("layout preview", () => {
   });
 
   it("expands chat into content space without losing the editor or preferred width", () => {
-    render(<WorkbenchPreview page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     const editor = screen.getByLabelText("Unsaved field") as HTMLInputElement;
     fireEvent.change(editor, { target: { value: "Unsaved content" } });
     const initial = screen.getByLabelText("Assistant conversation").style.width;
@@ -244,7 +246,7 @@ describe("layout preview", () => {
   });
 
   it("resizes without remounting chat, persists the width, and resets to default", () => {
-    const view = render(<WorkbenchPreview page={<Editor />} />);
+    const view = render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     const draft = screen.getByLabelText("Chat draft");
     const divider = screen.getByRole("separator", { name: "Resize chat" });
     const initial = Number(divider.getAttribute("aria-valuenow"));
@@ -252,7 +254,7 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Assistant conversation").style.width).toBe(`${initial + 40}px`);
     expect(screen.getByLabelText("Chat draft")).toBe(draft);
     view.unmount();
-    render(<WorkbenchPreview page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     expect(screen.getByLabelText("Assistant conversation").style.width).toBe(`${initial + 40}px`);
     fireEvent.doubleClick(screen.getByRole("separator", { name: "Resize chat" }));
     expect(screen.getByLabelText("Assistant conversation").style.width).toBe(`${initial}px`);
@@ -260,7 +262,7 @@ describe("layout preview", () => {
 
   it("shows the current context instead of history in an empty side panel", () => {
     state.empty = true;
-    render(<WorkbenchPreview page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
@@ -296,7 +298,7 @@ describe("layout preview", () => {
         },
       },
     ];
-    render(<WorkbenchPreview chatOnly page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
     const recent = screen.getByRole("region", { name: "Recent" });
     const pinned = screen.getByRole("region", { name: "Pinned" });
     expect(within(recent).getByRole("link", { name: /Newest/ })).toBeTruthy();
@@ -330,7 +332,7 @@ describe("layout preview", () => {
     actualNavStore.setState({ navLoading: true });
     const starters = vi.fn(() => <div>Contextual loading rows</div>);
     registerChatSlots({ homeStarters: starters });
-    render(<WorkbenchPreview chatOnly page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByText("Contextual loading rows")).toBeNull();
     expect(starters).not.toHaveBeenCalled();
@@ -357,7 +359,7 @@ describe("layout preview", () => {
         },
       },
     ];
-    render(<WorkbenchPreview chatOnly page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
     expect(screen.getByRole("heading", { name: "Your chats" })).toBeTruthy();
     expect(
       within(screen.getByRole("region", { name: "Recent" })).getByText(
@@ -405,7 +407,7 @@ describe("layout preview", () => {
       },
       recent,
     ];
-    render(<WorkbenchPreview page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     expect(screen.getByRole("link", { name: /Workspace review/ })).toBeTruthy();
   });
 
@@ -459,7 +461,7 @@ describe("layout preview", () => {
     render(
       <>
         <Link to="/task">Open task</Link>
-        <WorkbenchPreview page={<Editor />} />
+        <WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />
       </>,
     );
     expect(screen.getByRole("link", { name: /Workspace review/ })).toBeTruthy();
@@ -508,7 +510,7 @@ describe("layout preview", () => {
         },
       },
     ];
-    renderUI(<WorkbenchPreview page={<Editor />} />, {
+    renderUI(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />, {
       wrapper: ({ children }) => (
         <MemoryRouter initialEntries={["/workspace/task"]}>{children}</MemoryRouter>
       ),
@@ -518,10 +520,10 @@ describe("layout preview", () => {
 
   it("keeps a fresh composer after reset and opens history explicitly", () => {
     state.empty = true;
-    const view = render(<WorkbenchPreview page={<Editor />} />);
+    const view = render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     fireEvent.click(screen.getAllByRole("button", { name: "New chat" })[0]);
     view.unmount();
-    render(<WorkbenchPreview page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
@@ -534,7 +536,7 @@ describe("layout preview", () => {
 
   it("keeps the visible history shortcut when content is collapsed", () => {
     state.empty = true;
-    render(<WorkbenchPreview page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     const draft = screen.getByLabelText("Chat draft") as HTMLTextAreaElement;
     fireEvent.change(draft, { target: { value: "Draft question" } });
     fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
@@ -572,7 +574,9 @@ describe("layout preview", () => {
       meta: { showInWorkspaceNavigation: true },
     };
     state.groups = [activity, workspace, recent];
-    const { rerender } = render(<WorkbenchPreview page={<Editor />} />);
+    const { rerender } = render(
+      <WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />,
+    );
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
       expect.objectContaining({ ...activity, priority: 1100 }),
       expect.objectContaining({
@@ -590,7 +594,7 @@ describe("layout preview", () => {
       { ...workspace, items: [{ ...root, children: [], childrenLoading: true }] },
       recent,
     ];
-    rerender(<WorkbenchPreview page={<Editor />} />);
+    rerender(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
       expect.objectContaining({ label: "Activity" }),
       expect.objectContaining({
@@ -606,7 +610,7 @@ describe("layout preview", () => {
       recent,
       { label: "Pinned", items: [], meta: { type: "pinned-chats" } },
     ];
-    rerender(<WorkbenchPreview page={<Editor />} />);
+    rerender(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     expect(state.sidebar.mock.lastCall?.[0].groups).toHaveLength(2);
     expect(state.sidebar.mock.lastCall?.[0].collapsedGroupsOnly).toBe(true);
     expect(state.sidebar.mock.lastCall?.[0].hideNewConversation).toBe(true);
@@ -614,7 +618,7 @@ describe("layout preview", () => {
   });
 
   it("preserves unsaved fields and chat drafts when collapsed to a rail", () => {
-    render(<WorkbenchPreview page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     const editor = screen.getByLabelText("Unsaved field") as HTMLInputElement;
     const draft = screen.getByLabelText("Chat draft") as HTMLTextAreaElement;
     fireEvent.change(editor, { target: { value: "Unsaved edit" } });
@@ -644,11 +648,11 @@ function render(ui: ReactNode) {
 
 it("shows ongoing work in the collapsed rail and clears it when the run ends", () => {
   state.running = true;
-  const view = render(<WorkbenchPreview page={<Editor />} />);
+  const view = render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
   fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
   expect(screen.getByRole("button", { name: "AI is working — expand chat" })).toBeTruthy();
   state.running = false;
-  view.rerender(<WorkbenchPreview page={<Editor />} />);
+  view.rerender(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
   expect(screen.queryByRole("button", { name: "AI is working — expand chat" })).toBeNull();
   expect(screen.getByRole("button", { name: "Expand chat" })).toBeTruthy();
 });
