@@ -53,14 +53,24 @@ const statusIcons = {
 };
 
 /** Status remains visible when a completed or skipped step is inspected again. */
-function ProcessStatusIcon({ status, selected, optional }: { status: ProcessStepStatus; selected: boolean; optional?: boolean }) {
+function ProcessStatusIcon({
+  status,
+  selected,
+  optional,
+}: {
+  status: ProcessStepStatus;
+  selected: boolean;
+  optional?: boolean;
+}) {
   // Optionality changes the *unstarted* marker only. Running, completed,
   // blocked and failed steps keep their actual status symbols.
   if (optional && (status === "pending" || status === "ready")) {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <circle cx="12" cy="12" r="10" strokeDasharray="3 3" />
-        {status === "ready" && selected ? <circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" /> : null}
+        {status === "ready" && selected ? (
+          <circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" />
+        ) : null}
       </svg>
     );
   }
@@ -215,7 +225,11 @@ export function ProcessSteps({
                 const content = (
                   <>
                     <span className="foundry-process-marker" aria-hidden="true">
-                        <ProcessStatusIcon status={step.status} selected={selected} optional={step.optional} />
+                      <ProcessStatusIcon
+                        status={step.status}
+                        selected={selected}
+                        optional={step.optional}
+                      />
                     </span>
                     <span className="foundry-process-copy">
                       <span className="foundry-process-name">
@@ -257,7 +271,9 @@ export function ProcessSteps({
                     data-status={step.status}
                     data-disclosure={stepDisclosure?.stepId === step.id || undefined}
                     data-connection-complete={
-                      (step.status === "complete" && steps[index + 1]?.status === "complete") ||
+                      ((step.status === "complete" || step.status === "skipped") &&
+                        (steps[index + 1]?.status === "complete" ||
+                          steps[index + 1]?.status === "skipped")) ||
                       undefined
                     }
                     data-current={current || undefined}
