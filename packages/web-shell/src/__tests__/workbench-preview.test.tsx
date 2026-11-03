@@ -118,6 +118,39 @@ afterEach(() => {
 });
 
 describe("layout preview", () => {
+  it("starts collapsed when configured and keeps drafts mounted when expanded", () => {
+    render(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
+    const assistant = screen.getByLabelText("Assistant conversation");
+    const draft = screen.getByLabelText("Chat draft") as HTMLTextAreaElement;
+    expect(assistant.style.width).toBe("44px");
+    fireEvent.click(screen.getByRole("button", { name: "Expand chat" }));
+    expect(assistant.style.width).not.toBe("44px");
+    expect(screen.getByLabelText("Chat draft")).toBe(draft);
+  });
+
+  it("keeps chat-only routes expanded and restores the configured side-chat default", () => {
+    const view = render(<WorkbenchPreview defaultSideChatCollapsed chatOnly page={null} />);
+    const assistant = screen.getByLabelText("Assistant conversation");
+    expect(assistant.style.width).toBe("100%");
+    expect(assistant.hasAttribute("data-chat-collapsed")).toBe(false);
+    view.rerender(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
+    expect(assistant.style.width).toBe("44px");
+    fireEvent.click(screen.getByRole("button", { name: "Expand chat" }));
+    view.rerender(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
+    expect(assistant.style.width).not.toBe("44px");
+  });
+
+  it("shows content on compact screens and opens chat through the pane switcher", () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(600);
+    render(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
+    expect(screen.getByLabelText("Assistant conversation").style.display).toBe("none");
+    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
+    expect(screen.getByLabelText("Assistant conversation").style.display).toBe("flex");
+    expect(
+      screen.getByLabelText("Assistant conversation").hasAttribute("data-chat-collapsed"),
+    ).toBe(false);
+  });
+
   it("reveals a tool result on a chat-only route", () => {
     state.panelOpen = true;
     render(<WorkbenchPreview chatOnly page={<div>Tool result</div>} />);

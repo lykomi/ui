@@ -82,7 +82,7 @@ function useWorkbenchNavigation() {
   return { navGroups, workspaceGroups, staticNavigationGroups };
 }
 
-export function useWorkbenchState(chatRoute: boolean) {
+export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed = false) {
   const panelOpen = useToolPanelStore((s) => s.isOpen && !s.isWindowHosted);
   const chatOnly = chatRoute && !panelOpen;
   const location = useLocation();
@@ -100,8 +100,11 @@ export function useWorkbenchState(chatRoute: boolean) {
   const pageLabel = useAppStore((s) => s.navContext.label);
   const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();
-  const [desktopCollapsed, setCollapsed] = useState(false);
-  const collapsed = !chatWidth.compact && desktopCollapsed;
+  const [desktopCollapsed, setCollapsed] = useState(defaultSideChatCollapsed);
+  const collapsed = !chatOnly && !chatWidth.compact && desktopCollapsed;
+  useEffect(() => {
+    setCollapsed(defaultSideChatCollapsed);
+  }, [chatOnly, defaultSideChatCollapsed]);
   const [compactPane, setCompactPane] = useState<"chat" | "content">(chatOnly ? "chat" : "content");
   const [contentCollapsed, setContentCollapsed] = useState(false);
   const contentHidden =
@@ -109,7 +112,6 @@ export function useWorkbenchState(chatRoute: boolean) {
   useEffect(() => {
     setContentCollapsed(chatOnly);
     setCompactPane(chatOnly ? "chat" : "content");
-    if (chatOnly) setCollapsed(false);
     // Navigation is an explicit request to see content, including selecting
     // the same address again. Collapsing remains local until the next entry.
   }, [chatOnly, location.key]);
@@ -158,6 +160,7 @@ export function useWorkbenchState(chatRoute: boolean) {
 
   const startChat = () => {
     setHistoryOpen(false);
+    setCollapsed(false);
     setCompactPane("chat");
     newConversation();
   };

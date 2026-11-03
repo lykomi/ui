@@ -190,6 +190,15 @@ export function WorkbenchStyles() {
           color: var(--foreground);
           background-color: var(--muted);
         }
+        .workbench-preview [data-chat-collapsed="true"] [data-chat-expand] {
+          color: var(--primary);
+          background-color: color-mix(in srgb, var(--primary) 14%, var(--background));
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 30%, transparent);
+        }
+        .workbench-preview [data-chat-collapsed="true"] [data-chat-expand]:hover {
+          color: var(--primary);
+          background-color: color-mix(in srgb, var(--primary) 22%, var(--background));
+        }
         .workbench-preview [data-navigation-header] button svg,
         .workbench-preview [data-chat-header] button svg,
         .workbench-preview [data-content-collapse] svg,

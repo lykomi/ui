@@ -27,11 +27,13 @@ describe("bootstrapShell", () => {
     bootstrapShell({
       rootElement: root,
       agentFetch,
+      defaultSideChatCollapsed: true,
       strictMode: false,
     });
 
     expect(createRootSpy).toHaveBeenCalledWith(root);
     expect(renderSpy).toHaveBeenCalledTimes(1);
     expect(renderSpy.mock.calls[0][0].props.agentFetch).toBe(agentFetch);
+    expect(renderSpy.mock.calls[0][0].props.defaultSideChatCollapsed).toBe(true);
   });
 });

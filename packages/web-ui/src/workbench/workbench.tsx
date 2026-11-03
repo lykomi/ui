@@ -18,10 +18,13 @@ export function WorkbenchPreview({
   page,
   chatPage,
   chatOnly: chatRoute = false,
+  defaultSideChatCollapsed = false,
 }: {
   page: ReactNode;
   chatPage?: ReactNode;
   chatOnly?: boolean;
+  /** Initial desktop side-chat state; chat-only routes always remain expanded. */
+  defaultSideChatCollapsed?: boolean;
 }) {
   const {
     panelOpen,
@@ -52,7 +55,7 @@ export function WorkbenchPreview({
     staticNavigationGroups,
     closePanel,
     startChat,
-  } = useWorkbenchState(chatRoute);
+  } = useWorkbenchState(chatRoute, defaultSideChatCollapsed);
   const workspaceId = workspaceGroups?.[0]?.meta?.exclusiveRootId;
   const rootItem = workspaceGroups?.[0]
     ? (workspaceGroups[0].items.find((item) => item.to === workspaceGroups[0].focusOn) ??

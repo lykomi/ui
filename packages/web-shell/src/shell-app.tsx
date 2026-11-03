@@ -15,6 +15,7 @@ import { _setChatConfigFetch, loadChatConfig } from "./load-chat-config.ts";
 
 interface ShellAppProps {
   modules: ChatModule[];
+  defaultSideChatCollapsed?: boolean;
   pages: ShellPage[];
   baseThemeLayers: ThemeLayer[];
   authProvider?: AuthAdapter;
@@ -52,6 +53,7 @@ export function ShellApp({
   baseThemeLayers,
   authProvider,
   agentFetch,
+  defaultSideChatCollapsed,
 }: ShellAppProps) {
   const resolvedAgentFetch = agentFetch ?? defaultAgentFetch;
   // Bind the refresh seam here (cheap, no I/O) so a host-app context
@@ -120,6 +122,7 @@ export function ShellApp({
                   element={
                     <ShellLayout
                       modules={modules}
+                      defaultSideChatCollapsed={defaultSideChatCollapsed}
                       baseThemeLayers={baseThemeLayers}
                       chatRoutes={mergedPages.filter((p) => p.chatOnly).map((p) => p.path)}
                     />
