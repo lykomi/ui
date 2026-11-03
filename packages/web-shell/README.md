@@ -26,3 +26,18 @@ the chat pane. Mark other chat pages with `chatOnly: true` so they render there
 even without a chat persistence module; other routes render in the content pane.
 
 This package publishes built ESM JavaScript and `.d.ts` declarations.
+
+### Side chat initial state
+
+Set `defaultSideChatCollapsed: true` to start the desktop side chat as a
+collapsed rail on content pages:
+
+```tsx
+bootstrapShell({ modules, pages, defaultSideChatCollapsed: true });
+```
+
+The default is `false`. Chat-only routes always show the conversation. Returning
+from a chat-only route restores the configured side-chat default; manual toggles
+remain in effect while browsing content pages. Compact layouts keep their
+content/chat pane switcher. Opening the rail preserves the mounted conversation
+and composer draft.

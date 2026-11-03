@@ -54,6 +54,7 @@ export function WorkbenchChatHeader({
         )}
         {collapsed ? (
           <TooltipIconButton
+            data-chat-expand
             tooltip={running ? "AI is working — expand chat" : "Expand chat"}
             className={buttonClass}
             aria-label={running ? "AI is working — expand chat" : "Expand chat"}

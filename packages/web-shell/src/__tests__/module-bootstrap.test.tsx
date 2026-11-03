@@ -59,12 +59,18 @@ vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
     page,
     chatPage,
     chatOnly,
+    defaultSideChatCollapsed,
   }: {
     page: ReactNode;
     chatPage?: ReactNode;
     chatOnly: boolean;
+    defaultSideChatCollapsed?: boolean;
   }) => (
-    <div data-testid="workbench" data-chat-only={chatOnly}>
+    <div
+      data-testid="workbench"
+      data-chat-only={chatOnly}
+      data-side-chat-collapsed={defaultSideChatCollapsed}
+    >
       {chatPage}
       {page}
     </div>
@@ -101,6 +107,7 @@ describe("ChatModule bootstrap composition", () => {
     window.history.replaceState({}, "", "/?ux=classic");
     render(
       <ShellApp
+        defaultSideChatCollapsed
         modules={[]}
         pages={[{ path: "/", element: <div>home</div> }]}
         baseThemeLayers={[]}
@@ -110,6 +117,7 @@ describe("ChatModule bootstrap composition", () => {
     );
     const workbench = await screen.findByTestId("workbench");
     expect(workbench.getAttribute("data-chat-only")).toBe("true");
+    expect(workbench.getAttribute("data-side-chat-collapsed")).toBe("true");
     expect(screen.getByText("home")).toBeTruthy();
     expect(screen.queryByTestId("sidebar")).toBeNull();
   });

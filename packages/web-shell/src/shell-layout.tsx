@@ -20,6 +20,7 @@ const WorkbenchPreview = lazy(() =>
 
 interface ShellLayoutProps {
   modules: ChatModule[];
+  defaultSideChatCollapsed?: boolean;
   baseThemeLayers: ThemeLayer[];
   chatRoutes: string[];
 }
@@ -35,7 +36,12 @@ interface ShellLayoutProps {
  * The shell knows nothing about Spaces — `useSpacesInit`, dialogs, banners
  * all flow through the module protocol.
  */
-export function ShellLayout({ modules, baseThemeLayers, chatRoutes }: ShellLayoutProps) {
+export function ShellLayout({
+  modules,
+  baseThemeLayers,
+  chatRoutes,
+  defaultSideChatCollapsed,
+}: ShellLayoutProps) {
   // Module init hooks — called in registration order. Rules-of-hooks
   // require a stable count, so module additions/removals across renders
   // are forbidden (ChatModule[] is meant to be a static prop).
@@ -119,6 +125,7 @@ export function ShellLayout({ modules, baseThemeLayers, chatRoutes }: ShellLayou
             page={isChatRoute ? null : page}
             chatPage={isChatRoute ? page : undefined}
             chatOnly={isChatRoute}
+            defaultSideChatCollapsed={defaultSideChatCollapsed}
           />
         </Suspense>
         <GlobalSelectionPopover />

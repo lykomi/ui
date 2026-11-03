@@ -19,6 +19,7 @@ export function bootstrapShell(opts: BootstrapShellOptions = {}): void {
     theme = [],
     authProvider,
     agentFetch,
+    defaultSideChatCollapsed,
     strictMode = true,
     rootElement,
   } = opts;
@@ -43,6 +44,7 @@ export function bootstrapShell(opts: BootstrapShellOptions = {}): void {
       baseThemeLayers={theme}
       authProvider={authProvider}
       agentFetch={agentFetch}
+      defaultSideChatCollapsed={defaultSideChatCollapsed}
     />
   );
 
