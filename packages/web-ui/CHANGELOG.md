@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.47.1
+
+### Patch Changes
+
+- 7f57ee6: Use smaller, muted gauge status text for loading, unavailable and invalid values while retaining prominent numeric results.
+  - @iloveagents/foundry-agent@0.47.1
+  - @iloveagents/foundry-web-primitives@0.47.1
+
 ## 0.47.0
 
 ### Minor Changes
