@@ -1,5 +1,19 @@
 # @iloveagents/foundry-web-ui
 
+## 0.48.0
+
+### Minor Changes
+
+- e6bf02b: Add a `defaultSideChatCollapsed` option to start the desktop side chat collapsed on content pages while keeping chat-only routes expanded and preserving conversation drafts.
+
+  Highlight the collapsed chat launcher with the theme primary colour, a tinted background, and an inset border so it stands out from other rail actions.
+
+### Patch Changes
+
+- 4912882: Start the desktop side chat collapsed by default on content pages. Set `defaultSideChatCollapsed: false` to keep it initially expanded. Chat-only routes remain expanded.
+  - @iloveagents/foundry-agent@0.48.0
+  - @iloveagents/foundry-web-primitives@0.48.0
+
 ## 0.47.1
 
 ### Patch Changes

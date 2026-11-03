@@ -1,5 +1,18 @@
 # create-lykomi-app
 
+## 0.9.18
+
+### Patch Changes
+
+- Release the starter with the updated Foundry package pins:
+
+  - @iloveagents/foundry-agent: 0.47.1 → 0.48.0
+  - @iloveagents/foundry-web-primitives: 0.47.1 → 0.48.0
+  - @iloveagents/foundry-web-shell: 0.47.1 → 0.48.0
+  - @iloveagents/foundry-web-ui: 0.47.1 → 0.48.0
+  - @iloveagents/foundry-web-voice: 0.1.30 → 0.1.31
+  - @iloveagents/foundry-web-graph: 0.3.14 → 0.3.15
+
 ## 0.9.17
 
 ### Patch Changes
