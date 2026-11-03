@@ -18,12 +18,12 @@ export function WorkbenchPreview({
   page,
   chatPage,
   chatOnly: chatRoute = false,
-  defaultSideChatCollapsed = false,
+  defaultSideChatCollapsed = true,
 }: {
   page: ReactNode;
   chatPage?: ReactNode;
   chatOnly?: boolean;
-  /** Initial desktop side-chat state; chat-only routes always remain expanded. */
+  /** Initial desktop side-chat state. Defaults to true; chat-only routes remain expanded. */
   defaultSideChatCollapsed?: boolean;
 }) {
   const {
