@@ -17,6 +17,7 @@ import { useVoiceAdapterStore } from "../lib/voice-adapter-registry.ts";
 import { AGUIAdapterContext } from "./ag-ui-adapter-context.ts";
 import { ShowDocumentToolUI } from "./show-document-tool-ui.tsx";
 import { ClientToolExecutor } from "./client-tool-executor.tsx";
+import { WorkbenchLayoutProvider } from "../workbench/layout-state.tsx";
 
 /**
  * Per-mount inputs the host shell passes when it wants a chat
@@ -156,7 +157,7 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
     };
   }, []);
   return (
-    <>
+    <WorkbenchLayoutProvider>
       {sessions
         .filter((session) => !deletedThreads[session.threadId] || session.threadId === id)
         .map((session) => (
@@ -172,7 +173,7 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
             {props.active !== false && session.threadId === id ? props.children : null}
           </AGUIRuntimeInner>
         ))}
-    </>
+    </WorkbenchLayoutProvider>
   );
 }
 

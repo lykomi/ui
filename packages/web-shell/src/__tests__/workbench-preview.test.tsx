@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useNavStore as actualNavStore } from "../../../web-ui/dist/lib/nav-store.js";
 import { registerChatSlots } from "../../../web-ui/dist/components/chat-slots.js";
+import { WorkbenchLayoutProvider } from "../../../web-ui/dist/workbench/layout-state.js";
 
 const state = vi.hoisted(() => ({
   navLoading: false,
@@ -118,6 +119,23 @@ afterEach(() => {
 });
 
 describe("layout preview", () => {
+  it("keeps a newly mounted conversation expanded after New chat", () => {
+    const view = render(
+      <WorkbenchLayoutProvider>
+        <WorkbenchPreview key="first" page={<Editor />} />
+      </WorkbenchLayoutProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Expand chat" }));
+    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    view.rerender(
+      <WorkbenchLayoutProvider>
+        <WorkbenchPreview key="next" page={<Editor />} />
+      </WorkbenchLayoutProvider>,
+    );
+    expect(screen.getByLabelText("Assistant conversation").style.width).not.toBe("44px");
+    expect(screen.getByRole("button", { name: "Collapse chat" })).toBeTruthy();
+  });
+
   it("starts collapsed by default and keeps drafts mounted when expanded", () => {
     render(<WorkbenchPreview page={<Editor />} />);
     const assistant = screen.getByLabelText("Assistant conversation");
