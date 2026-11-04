@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.48.1
+
+### Patch Changes
+
+- 6d0c08f: Keep the side chat expanded when starting a new conversation replaces the chat runtime.
+  - @iloveagents/foundry-agent@0.48.1
+  - @iloveagents/foundry-web-primitives@0.48.1
+
 ## 0.48.0
 
 ### Minor Changes
