@@ -13,6 +13,7 @@ import {
 import { MessagesSquare, Settings, Layers } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
 import { findNavItem } from "../lib/nav-config.ts";
+import { useWorkbenchCollapsed } from "./layout-state.tsx";
 
 export function normalizeWorkbenchPath(path: string) {
   return path === "/" ? path : path.replace(/\/+$/, "");
@@ -100,11 +101,19 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
   const pageLabel = useAppStore((s) => s.navContext.label);
   const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();
-  const [desktopCollapsed, setCollapsed] = useState(defaultSideChatCollapsed);
+  const [desktopCollapsed, setCollapsed] = useWorkbenchCollapsed(defaultSideChatCollapsed);
   const collapsed = !chatOnly && !chatWidth.compact && desktopCollapsed;
+  const previousLayout = useRef({ chatOnly, defaultSideChatCollapsed });
   useEffect(() => {
-    setCollapsed(defaultSideChatCollapsed);
-  }, [chatOnly, defaultSideChatCollapsed]);
+    const previous = previousLayout.current;
+    if (
+      previous.chatOnly !== chatOnly ||
+      previous.defaultSideChatCollapsed !== defaultSideChatCollapsed
+    ) {
+      setCollapsed(defaultSideChatCollapsed);
+    }
+    previousLayout.current = { chatOnly, defaultSideChatCollapsed };
+  }, [chatOnly, defaultSideChatCollapsed, setCollapsed]);
   const [compactPane, setCompactPane] = useState<"chat" | "content">(chatOnly ? "chat" : "content");
   const [contentCollapsed, setContentCollapsed] = useState(false);
   const contentHidden =
