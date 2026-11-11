@@ -147,9 +147,11 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
   const [contentCollapsed, setContentCollapsed] = useState(false);
   const contentHidden =
     chatOnly || (chatWidth.compact ? compactPane !== "content" : contentCollapsed);
+  const openingNewChat = useRef(false);
   useEffect(() => {
     setContentCollapsed(chatOnly);
-    const resumedChat = chatRoute && location.pathname !== "/";
+    const resumedChat = (chatRoute && location.pathname !== "/") || openingNewChat.current;
+    openingNewChat.current = false;
     setCompactPane(chatOnly || resumedChat ? "chat" : "content");
     if (resumedChat) setCollapsed(false);
     // Navigation is an explicit request to see content, including selecting
@@ -210,6 +212,12 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
     setCollapsed(false);
     setCompactPane("chat");
     newConversation();
+    // A conversation URL pins the runtime to that saved thread. Only leave
+    // that route; content routes retain their page and unsaved edits.
+    if (chatRoute && location.pathname !== "/") {
+      openingNewChat.current = true;
+      navigate("/");
+    }
   };
 
   useEffect(() => {

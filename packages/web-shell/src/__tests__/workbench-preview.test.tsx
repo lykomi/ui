@@ -174,6 +174,7 @@ describe("layout preview", () => {
       return (
         <>
           <Link to="/chat/saved">Saved conversation</Link>
+          <output aria-label="Current route">{pathname}</output>
           <WorkbenchPreview chatOnly={pathname.startsWith("/chat/")} page={<Editor />} />
         </>
       );
@@ -183,6 +184,9 @@ describe("layout preview", () => {
     fireEvent.click(screen.getByRole("link", { name: "Saved conversation" }));
     expect(screen.getByLabelText("Assistant conversation").style.display).toBe("flex");
     expect(screen.getByLabelText("Working content").style.display).toBe("none");
+    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    expect(screen.getByLabelText("Current route").textContent).toBe("/");
+    expect(screen.getByLabelText("Assistant conversation").style.display).toBe("flex");
   });
 
   it("requests children when focusing an unloaded space root", () => {
