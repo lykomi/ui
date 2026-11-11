@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.49.0
+
+### Minor Changes
+
+- 5fbe7d7: Unify contextual chat, pinned and recent conversations, and focused space navigation. Add guided Home actions and server-backed recent-space integration while preserving mounted editors and chat drafts during panel transitions.
+
+### Patch Changes
+
+- @iloveagents/foundry-agent@0.49.0
+- @iloveagents/foundry-web-primitives@0.49.0
+
 ## 0.48.1
 
 ### Patch Changes
