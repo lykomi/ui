@@ -18,13 +18,13 @@ export function ChatPanelToggle({
     (s) => s.config.find((group) => group.meta?.type === "spaces-workspaces")?.meta?.userState,
   ) as
     | {
-        ready: boolean;
-        acknowledgedHints: Record<string, string>;
-        acknowledgeHint: (id: string) => void;
+        ready?: boolean;
+        acknowledgedHints?: Record<string, string>;
+        acknowledgeHint?: (id: string) => void;
       }
     | undefined;
-  const discovered = Boolean(state?.acknowledgedHints[DISCOVERY_KEY]);
-  const dismiss = () => state?.acknowledgeHint(DISCOVERY_KEY);
+  const discovered = Boolean(state?.acknowledgedHints?.[DISCOVERY_KEY]);
+  const dismiss = () => state?.acknowledgeHint?.(DISCOVERY_KEY);
   const description = running ? "Open chat — AI is working" : "Open chat";
   return (
     <>
@@ -47,7 +47,7 @@ export function ChatPanelToggle({
         </TooltipTrigger>
         <TooltipContent side="right">{description}</TooltipContent>
       </Tooltip>
-      {!home && state?.ready && !discovered && (
+      {!home && state?.ready && state.acknowledgeHint && !discovered && (
         <div
           role="status"
           data-chat-discovery

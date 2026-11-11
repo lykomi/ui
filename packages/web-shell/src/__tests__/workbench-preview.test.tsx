@@ -1,5 +1,5 @@
 import { TooltipProvider } from "../../../web-ui/dist/ui/tooltip.js";
-import { Link, MemoryRouter } from "react-router";
+import { Link, MemoryRouter, useLocation } from "react-router";
 import { Folder, MessageSquare } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
 import { type ReactNode, useContext, useEffect } from "react";
@@ -98,7 +98,7 @@ beforeEach(() => {
   state.sidebar.mockClear();
   state.groups = [];
   state.navLoading = false;
-  actualNavStore.setState({ navLoading: false });
+  actualNavStore.setState({ navLoading: false, config: [] });
   registerChatSlots({ homeStarters: null });
   state.empty = false;
   state.running = false;
@@ -165,6 +165,55 @@ describe("layout preview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
     view.rerender(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
     expect(assistant.style.width).not.toBe("44px");
+  });
+
+  it("opens a saved conversation in the compact chat pane", () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(600);
+    function Routes() {
+      const { pathname } = useLocation();
+      return (
+        <>
+          <Link to="/chat/saved">Saved conversation</Link>
+          <WorkbenchPreview chatOnly={pathname.startsWith("/chat/")} page={<Editor />} />
+        </>
+      );
+    }
+    render(<Routes />);
+    expect(screen.getByLabelText("Assistant conversation").style.display).toBe("none");
+    fireEvent.click(screen.getByRole("link", { name: "Saved conversation" }));
+    expect(screen.getByLabelText("Assistant conversation").style.display).toBe("flex");
+    expect(screen.getByLabelText("Working content").style.display).toBe("none");
+  });
+
+  it("requests children when focusing an unloaded space root", () => {
+    const onExpandedChange = vi.fn();
+    state.groups = [
+      {
+        label: "Spaces",
+        focusOn: "/w1",
+        items: [
+          { label: "Workspace", to: "/w1", icon: Folder, childrenUnloaded: true, onExpandedChange },
+        ],
+        meta: { type: "spaces-workspaces", exclusiveRootId: "w1" },
+      },
+    ];
+    render(<WorkbenchPreview page={<Editor />} />);
+    expect(onExpandedChange).toHaveBeenCalledWith(true);
+  });
+
+  it("opens chat when the module only provides recent-space state", () => {
+    actualNavStore.setState({
+      config: [
+        {
+          label: "Spaces",
+          items: [],
+          meta: { type: "spaces-workspaces", userState: { recentSpaceIds: [] } },
+        },
+      ],
+    });
+    render(<WorkbenchPreview page={<Editor />} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
+    expect(screen.getByRole("button", { name: "Collapse chat" })).toBeTruthy();
   });
 
   it("shows content on compact screens and opens chat through the pane switcher", () => {

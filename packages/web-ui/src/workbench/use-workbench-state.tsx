@@ -31,6 +31,18 @@ function useWorkbenchNavigation() {
     if (!workspace) return undefined;
     return [workspace];
   }, [navGroups]);
+  const focusedGroup = workspaceGroups?.[0];
+  const focusedRoot =
+    focusedGroup?.items.find((item) => item.to === focusedGroup.focusOn) ?? focusedGroup?.items[0];
+  useEffect(() => {
+    if (focusedRoot?.childrenUnloaded && !focusedRoot.childrenHidden)
+      focusedRoot.onExpandedChange?.(true);
+  }, [
+    focusedRoot?.to,
+    focusedRoot?.childrenUnloaded,
+    focusedRoot?.childrenHidden,
+    focusedRoot?.onExpandedChange,
+  ]);
   const navigationGroups = useMemo(() => {
     if (workspaceGroups) {
       const space = workspaceGroups[0];
@@ -137,10 +149,12 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
     chatOnly || (chatWidth.compact ? compactPane !== "content" : contentCollapsed);
   useEffect(() => {
     setContentCollapsed(chatOnly);
-    setCompactPane(chatOnly ? "chat" : "content");
+    const resumedChat = chatRoute && location.pathname !== "/";
+    setCompactPane(chatOnly || resumedChat ? "chat" : "content");
+    if (resumedChat) setCollapsed(false);
     // Navigation is an explicit request to see content, including selecting
     // the same address again. Collapsing remains local until the next entry.
-  }, [chatOnly, location.key]);
+  }, [chatOnly, chatRoute, location.key, location.pathname, setCollapsed]);
   const setHistoryOpen = (open: boolean) => setHistoryPath(open ? location.pathname : null);
   const running = useAuiState((s) => s.thread.isRunning);
   const emptyChat = useAuiState(
