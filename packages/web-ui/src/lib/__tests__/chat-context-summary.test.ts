@@ -97,3 +97,23 @@ it("does not repeat the focused field title", () => {
   ];
   expect(summarizeChatContext(projection)).toMatchObject({ label: "Instructions", detail: "" });
 });
+
+it("shows the visible active item and drops it when closed or hidden", () => {
+  const projection = state();
+  projection.navigation.label = "Activity";
+  projection.contextItems = [
+    {
+      type: "ref",
+      label: "Review renewal options",
+      meta: { windowState: "active", visible: true },
+    },
+  ];
+  expect(summarizeChatContext(projection)).toMatchObject({
+    label: "Activity",
+    detail: "Review renewal options",
+  });
+  projection.contextItems[0].meta = { windowState: "active", visible: false };
+  expect(summarizeChatContext(projection).detail).toBe("");
+  projection.contextItems = [];
+  expect(summarizeChatContext(projection).detail).toBe("");
+});

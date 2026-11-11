@@ -244,3 +244,57 @@ it.each([false, true])(
     expect(host.textContent).toContain("Saved known");
   },
 );
+
+it("uses complete authorized history rather than the bounded sidebar rows", async () => {
+  const full = Array.from({ length: 14 }, (_, i) => item(`complete-${i}`, "entity"));
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <ConversationHistory
+          groups={[
+            {
+              label: "Chats",
+              items: full.slice(0, 8),
+              meta: { type: "recent-chats", allConversations: full },
+            },
+          ]}
+          workspaceId={undefined}
+          standalone
+          onClose={vi.fn()}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  expect(host.querySelectorAll("[data-conversation-row]")).toHaveLength(14);
+  expect(host.textContent).toContain("Saved complete-13");
+});
+
+it("shows scoped pinned chats separately in the compact panel, including pins from another page", async () => {
+  const pinned = {
+    ...item("pinned-page", "another-page"),
+    meta: { previewEntityId: "another-page", pinned: true },
+  };
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <ConversationHistory
+          groups={[
+            {
+              label: "Chats",
+              items: [pinned, item("recent", "entity")],
+              meta: { type: "recent-chats", workspaceId: "workspace" },
+            },
+          ]}
+          workspaceId="workspace"
+          entityId="entity"
+          compact
+          onClose={vi.fn()}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  expect(host.querySelector('section[aria-label="Pinned"]')?.textContent).toContain(
+    "Saved pinned-page",
+  );
+  expect(host.querySelector('section[aria-label="Recent"]')?.textContent).toContain("Saved recent");
+});

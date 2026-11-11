@@ -7,7 +7,14 @@ import {
   useLayoutEffect,
   useEffect,
 } from "react";
-import { AssistantRuntimeProvider, useLocalRuntime } from "@assistant-ui/react";
+import {
+  AssistantRuntimeProvider,
+  useLocalRuntime,
+  AuiProvider,
+  useAui,
+  ThreadPrimitive,
+  type AssistantClient,
+} from "@assistant-ui/react";
 import type { ThreadHistoryAdapter } from "@assistant-ui/react";
 import { TooltipProvider } from "../ui/tooltip.tsx";
 import { AGUIAdapterSDK } from "../lib/ag-ui-adapter.ts";
@@ -106,9 +113,33 @@ export function useIsForegroundChat() {
   );
 }
 
+interface ForegroundBinding {
+  adapter: AGUIAdapterSDK;
+  client: AssistantClient;
+}
+
+// Reuse the retained runtime's client, including its tool registrations. A
+// second AssistantRuntimeProvider would mount its runtime effects twice.
+function PublishForeground({
+  adapter,
+  active,
+  publish,
+}: {
+  adapter: AGUIAdapterSDK;
+  active: boolean;
+  publish: (binding: ForegroundBinding) => void;
+}) {
+  const client = useAui();
+  useLayoutEffect(() => {
+    if (active) publish({ adapter, client });
+  }, [active, adapter, client, publish]);
+  return null;
+}
+
 let mountedProviders = 0;
 
 export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
+  const [foreground, setForeground] = useState<ForegroundBinding | null>(null);
   const deletedThreads = useChatRuns((state) => state.deletedThreads);
   const adapterCache = useRef(new Map<string, AGUIAdapterSDK>()).current;
   for (const threadId of Object.keys(deletedThreads)) adapterCache.delete(threadId);
@@ -166,19 +197,35 @@ export function AGUIRuntimeProvider(props: AGUIRuntimeProviderProps) {
             {...session}
             deleted={Boolean(deletedThreads[session.threadId])}
             adapterCache={adapterCache}
+            active={props.active !== false && session.threadId === id}
+            publishForeground={setForeground}
             resetThread={resetThread}
             selectRetainedThread={selectRetainedThread}
           >
             {session.headlessChildren}
-            {props.active !== false && session.threadId === id ? props.children : null}
           </AGUIRuntimeInner>
         ))}
+      {/* Only the client changes on New/resume. Keep the shell, routed content,
+          focus and scroll mounted while the selected runtime publishes. */}
+      {foreground && props.active !== false && (
+        <AGUIAdapterContext.Provider
+          value={{ adapter: foreground.adapter, resetThread, selectRetainedThread }}
+        >
+          <AuiProvider value={foreground.client}>
+            <ThreadPrimitive.ViewportProvider>
+              <TooltipProvider>{props.children}</TooltipProvider>
+            </ThreadPrimitive.ViewportProvider>
+          </AuiProvider>
+        </AGUIAdapterContext.Provider>
+      )}
     </WorkbenchLayoutProvider>
   );
 }
 
 function AGUIRuntimeInner({
   children,
+  active,
+  publishForeground,
   adapterCache,
   deleted,
   fetchFn,
@@ -189,6 +236,7 @@ function AGUIRuntimeInner({
   selectRetainedThread,
   conversationUrl,
 }: AGUIRuntimeProviderProps & {
+  publishForeground: (binding: ForegroundBinding) => void;
   adapterCache: Map<string, AGUIAdapterSDK>;
   deleted: boolean;
   resetThread: () => void;
@@ -252,8 +300,13 @@ function AGUIRuntimeInner({
     <AGUIAdapterContext.Provider value={{ adapter, resetThread, selectRetainedThread }}>
       <AssistantRuntimeProvider runtime={runtime}>
         <TooltipProvider>
-          {children && <ShowDocumentToolUI />}
-          {children && <ClientToolExecutor />}
+          <PublishForeground
+            adapter={adapter}
+            active={Boolean(active)}
+            publish={publishForeground}
+          />
+          <ShowDocumentToolUI />
+          <ClientToolExecutor />
           {children}
         </TooltipProvider>
       </AssistantRuntimeProvider>

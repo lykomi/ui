@@ -162,6 +162,10 @@ describe("useNewConversation", () => {
     expect(resetThread).toHaveBeenCalledTimes(1);
     expect(useAppStore.getState().currentPage).toBe("/spaces/demo");
     expect(useAppStore.getState().navContext.label).toBe("Demo");
+    expect(useToolPanelStore.getState().isOpen).toBe(true);
+    expect(useAppStore.getState().selectedItemId).toBe("entity-1");
+    expect(useAppStore.getState().content).toEqual({ title: "Draft" });
+    expect(useAppStore.getState().highlights).toHaveLength(1);
     expect(useAppStore.getState().threadActive).toBe(false);
     expect(useAppStore.getState().contextItems).toEqual([]);
   });

@@ -97,7 +97,7 @@ export function ShellLayout({
       group: found?.group ?? null,
       groupDescription: found?.groupDescription ?? null,
       groupMeta: found?.groupMeta ?? {},
-      label: found?.item.label ?? pathname,
+      label: found?.item.label ?? (pathname === "/" ? "Home" : pathname),
       description: found?.item.description ?? null,
       meta: found?.item.meta ?? {},
       contextInstructions: mergedInstructions || null,

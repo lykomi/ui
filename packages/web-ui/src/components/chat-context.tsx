@@ -96,6 +96,17 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
         <button
           type="button"
           data-chat-context
+          data-chat-context-default={
+            context.label === "Your spaces" &&
+            !detail &&
+            items.length === 0 &&
+            !isPinned &&
+            !context.focused &&
+            context.processes.length === 0 &&
+            !memory?.nearlyFull
+              ? "true"
+              : undefined
+          }
           aria-label={`Message context: ${context.label}${detail ? `, ${detail}` : ""}${additionalCount ? `, ${additionalCount} more` : ""}${memory?.full ? ", conversation memory full" : memory?.nearlyFull ? ", conversation memory nearly full" : ""}`}
           className={`mb-2 flex min-h-9 min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary [@media(pointer:coarse)]:min-h-11 ${centered ? "mx-auto w-fit max-w-full" : "w-full"}`}
         >

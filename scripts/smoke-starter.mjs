@@ -276,6 +276,8 @@ async function runBrowserStarterSmoke() {
         : { viewport: { width: 1280, height: 900 } },
     );
     let sawAgentRequest = false;
+    let sentMessages = [];
+    const prompt = "Say hello world using the hello_world tool";
     let parserRequests = 0;
     page.on("request", (request) => {
       if (/\/vendor-mermaid-parser-[\w-]+\.js(?:\?|$)/.test(request.url())) parserRequests += 1;
@@ -301,6 +303,7 @@ async function runBrowserStarterSmoke() {
     await page.route("**/api/agent", async (route) => {
       sawAgentRequest = true;
       const requestBody = JSON.parse(route.request().postData() || "{}");
+      sentMessages = requestBody.messages ?? [];
       await route.fulfill({
         status: 200,
         headers: {
@@ -338,7 +341,11 @@ async function runBrowserStarterSmoke() {
       .waitFor({ timeout: 10_000 });
     if (parserRequests !== 0)
       throw new Error("Mermaid parser loaded before a diagram was requested.");
-    await page.getByRole("button", { name: "Say hello world using the hello_world tool" }).click();
+    // Home is a composer entry point into the same contextual chat panel.
+    // Typing opens that panel; the draft must survive the handoff.
+    await page.getByRole("textbox", { name: "Message", exact: true }).fill(prompt);
+    await page.getByRole("button", { name: "Collapse chat", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Send message", exact: true }).click();
     await page.getByText("Hello from the", { exact: false }).first().waitFor({ timeout: 10_000 });
 
     if (!screenshotPath) {
@@ -363,6 +370,9 @@ async function runBrowserStarterSmoke() {
 
     if (!sawAgentRequest) {
       throw new Error("The generated starter did not call /api/agent.");
+    }
+    if (!sentMessages.some((message) => message.role === "user" && message.content === prompt)) {
+      throw new Error("The Home-to-chat handoff did not preserve the submitted prompt.");
     }
 
     if (pageErrors.length > 0 || consoleErrors.length > 0) {

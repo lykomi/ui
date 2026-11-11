@@ -1,6 +1,34 @@
 export function WorkbenchStyles() {
   return (
     <style>{`
+        .workbench-preview [data-history-standalone] {
+          padding-top: 24px;
+        }
+        .workbench-preview[data-home-start] [data-chat-context-default="true"] {
+          display: none;
+        }
+        .workbench-preview[data-home-start] [data-chat-composer-surface] {
+          margin-top: clamp(24px, 7vh, 72px);
+          margin-bottom: 24px;
+        }
+        .workbench-preview [data-sidebar-collapsed] [data-workbench-navigation-actions] [data-action-label] {
+          display: none;
+        }
+        .workbench-preview [data-sidebar-collapsed] [data-workbench-navigation-actions] {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          padding: var(--workbench-rail-inset) 0 0;
+          gap: var(--workbench-rail-gap);
+        }
+        .workbench-preview [data-sidebar-collapsed] [data-workbench-navigation-actions] + [data-navigation-rail-items] {
+          padding-top: var(--workbench-rail-gap);
+        }
+        .workbench-preview [data-sidebar-collapsed] [data-workbench-navigation-actions] > * {
+          justify-content: center;
+          padding-inline: 8px;
+        }
         .workbench-preview [data-panel-resize] {
           width: 12px;
           right: 0 !important;
@@ -66,7 +94,6 @@ export function WorkbenchStyles() {
         @media (max-width: 767px) {
           .workbench-preview .preview-mobile-navigation { display: inline-flex; }
         }
-        .workbench-preview [data-chat-collapsed="true"] [data-chat-header] button,
         .workbench-preview [data-chat-rail] button {
           width: 36px;
           max-width: 36px;
@@ -76,19 +103,26 @@ export function WorkbenchStyles() {
 
         .workbench-preview [data-chat-composer-divider] { display: none; }
         .workbench-preview [data-global-chat] section[aria-label="Chat history"] {
-          width: 100%; max-width: 48rem; margin-left: auto; margin-right: auto;
+          width: 100%; max-width: 64rem; margin-left: auto; margin-right: auto;
           box-sizing: border-box;
         }
         .workbench-preview [data-global-chat] form { border-radius: 16px; }
-        /* One motion treatment for navigation and both working panes. */
-        .workbench-preview [data-sidebar-surface],
-        .workbench-preview [data-panel-motion] {
+        .workbench-preview [data-sidebar-surface] {
           transition: width 200ms ease-in-out, min-width 200ms ease-in-out;
         }
-        .workbench-preview [data-resizing] [data-panel-motion] { transition: none; }
+        /* Open at the final geometry: interpolating panel width rewraps both
+           the conversation and adjacent content on every animation frame. */
+        .workbench-preview [data-panel-motion] { transition: none; }
+        @keyframes workbench-chat-reveal {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .workbench-preview #preview-assistant:not([data-chat-collapsed]) {
+          animation: workbench-chat-reveal 120ms ease-out;
+        }
         @media (prefers-reduced-motion: reduce) {
-          .workbench-preview [data-sidebar-surface],
-          .workbench-preview [data-panel-motion] { transition: none; }
+          .workbench-preview [data-sidebar-surface] { transition: none; }
+          .workbench-preview #preview-assistant { animation: none; }
         }
         .workbench-preview [data-sidebar-collapsed] button,
         .workbench-preview [data-sidebar-collapsed] a {
@@ -113,6 +147,14 @@ export function WorkbenchStyles() {
         /* Share one continuous frame behind desktop navigation and pane gaps. */
         .workbench-preview [data-sidebar-surface="desktop"] {
           background: transparent;
+          border-right-color: transparent;
+        }
+        /* Selection never changes the navigation's horizontal geometry. */
+        .workbench-preview [data-sidebar-surface] nav {
+          padding-inline: 4px;
+        }
+        .workbench-preview [data-sidebar-surface] [data-nav-depth]:not([data-active-nav-row="true"]):not([aria-disabled="true"]):hover {
+          background: var(--sidebar-accent);
         }
         .workbench-preview [data-workbench-surface] {
           position: relative;
@@ -190,14 +232,27 @@ export function WorkbenchStyles() {
           color: var(--foreground);
           background-color: var(--muted);
         }
+        .workbench-preview [data-chat-collapsed="true"] [data-chat-header] {
+          height: var(--workbench-header-height);
+          min-height: var(--workbench-header-height);
+        }
         .workbench-preview [data-chat-collapsed="true"] [data-chat-expand] {
-          color: var(--primary);
-          background-color: color-mix(in srgb, var(--primary) 14%, var(--background));
-          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 30%, transparent);
+          width: 36px;
+          max-width: 36px;
+          height: 36px;
+          min-height: 36px;
+          padding: 8px;
+          color: var(--muted-foreground);
+          background: transparent;
+          box-shadow: none;
         }
         .workbench-preview [data-chat-collapsed="true"] [data-chat-expand]:hover {
-          color: var(--primary);
-          background-color: color-mix(in srgb, var(--primary) 22%, var(--background));
+          color: var(--foreground);
+          background: var(--muted);
+        }
+        .workbench-preview [data-chat-header] [data-chat-discovery] button {
+          height: 20px;
+          min-width: 20px;
         }
         .workbench-preview [data-navigation-header] button svg,
         .workbench-preview [data-chat-header] button svg,
@@ -220,7 +275,7 @@ export function WorkbenchStyles() {
         .workbench-preview [data-working-content]:has(> [data-content-collapse]) [data-preview-entity-header] > [data-entity-header-row] {
           padding-right: var(--workbench-header-actions-inset, calc(var(--workbench-inline-padding, 16px) + 44px));
         }
-        .workbench-preview [data-working-content]:not(:has([data-entity-header-row])):not([data-item-panel-open]) {
+        .workbench-preview [data-working-content]:not(:has([data-entity-header-row], [data-history-content], [data-home-content])):not([data-item-panel-open]) {
           padding-top: var(--workbench-header-height);
         }
         @media print {
@@ -252,6 +307,12 @@ export function WorkbenchStyles() {
           text-transform: none;
           color: inherit;
         }
+        .workbench-preview [data-sidebar-surface] [data-nav-group-header],
+        .workbench-preview [data-sidebar-surface] [data-nav-depth],
+        .workbench-preview [data-sidebar-surface] div[data-nav-depth] > button:not([data-nav-twisty]) {
+          font-size: 14px;
+          line-height: 20px;
+        }
         .workbench-preview [data-nav-group-header] > span[aria-hidden="true"] {
           display: none;
         }
@@ -259,7 +320,6 @@ export function WorkbenchStyles() {
           padding-top: 18px;
           padding-bottom: 2px;
         }
-        .workbench-preview [data-conversation-row],
         .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth] {
           min-height: 32px;
           padding-top: 4px;
@@ -289,7 +349,7 @@ export function WorkbenchStyles() {
         .workbench-preview [data-sidebar-surface] nav > [data-nav-group-label]:first-child > div:has(> [data-nav-group-header]) {
           padding-top: 0;
         }
-        [data-workspace-navigation] [data-nav-group-label="All spaces"] [data-nav-depth="0"] > button {
+        [data-workspace-navigation] [data-nav-group-label="Spaces"] [data-nav-depth="0"] > button {
           font-size: 14px;
           font-weight: 600;
           letter-spacing: normal;
@@ -301,27 +361,107 @@ export function WorkbenchStyles() {
         [data-workspace-navigation] [data-nav-group-label="Content"] {
           margin-top: 0;
         }
-        .workbench-preview [data-nav-group-label="All spaces"] > div:has(> [data-nav-group-header]) {
-          padding-top: 8px;
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-space-exit] {
+          color: var(--muted-foreground);
+          font-size: 14px;
+          font-weight: 400;
         }
-        .workbench-preview [data-nav-group-label="All spaces"] [data-nav-group-header] {
-          height: 32px;
-          min-height: 32px;
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) nav {
+          padding-top: 0;
+        }
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Spaces"] [data-nav-depth="0"],
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Spaces"] [data-nav-depth="0"] > button:not([data-nav-twisty]) {
+          min-height: 36px;
+        }
+        [data-workspace-navigation] [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Spaces"] [data-nav-depth="0"] > button:not([data-nav-twisty]) {
+          font-size: 16px;
+          font-weight: 600;
+        }
+        .workbench-preview [data-nav-group-label="Spaces"] > div:has(> [data-nav-group-header]) {
+          padding-top: 0;
+        }
+        .workbench-preview :is([data-nav-group-label="Recent spaces"], [data-nav-group-label="Administration"]) > div:has(> [data-nav-group-header]) {
+          padding-top: 18px;
+          padding-bottom: 2px;
+        }
+        .workbench-preview :is([data-nav-group-label="Recent spaces"], [data-nav-group-label="Administration"]) [data-nav-group-header] {
+          height: 24px;
+          min-height: 24px;
+          font-size: 14px;
+          line-height: 20px;
+          font-weight: 500;
+          color: var(--muted-foreground);
+        }
+        .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-secondary-link="true"] {
+          font-size: 14px;
+          font-weight: 400;
+          color: color-mix(in srgb, var(--sidebar-foreground) 65%, transparent);
+          padding-left: 36px;
+        }
+        .workbench-preview :is([data-nav-group-label="Recent spaces"], [data-nav-group-label="Administration"]) [data-nav-group-toggle] {
+          order: 2;
+          margin-left: auto;
+          width: 24px;
+          height: 24px;
+        }
+        .workbench-preview :is([data-nav-group-label="Recent spaces"], [data-nav-group-label="Administration"]) [data-nav-group-header] > button:not([data-nav-group-toggle]) {
+          padding-block: 0;
+          font: inherit;
+          color: inherit;
+        }
+        .workbench-preview [data-nav-secondary-link="true"] > svg {
+          display: none;
+        }
+        .workbench-preview [data-nav-group-label="Spaces"] [data-nav-group-header] {
+          font-size: 14px;
+          font-weight: 400;
+          color: var(--sidebar-foreground);
+          height: 36px;
+          min-height: 36px;
           padding-top: 0;
           padding-bottom: 0;
         }
-        .workbench-preview [data-nav-group-label="All spaces"] [data-nav-group-items] {
+        /* Group destinations are pages too; their label link owns exact
+           route selection, while the sibling create action stays separate. */
+        .workbench-preview [data-nav-group-header]:has(> a) {
+          border-radius: 8px;
+        }
+        .workbench-preview [data-nav-group-header]:has(> a):hover {
+          background: var(--sidebar-accent);
+        }
+        .workbench-preview [data-nav-group-header]:has(> a[aria-current="page"]) {
+          background: var(--sidebar-selected);
+          color: var(--sidebar-selected-foreground);
+        }
+        .workbench-preview [data-nav-group-label="Spaces"] [data-nav-group-items] {
           animation: none;
+        }
+        .workbench-preview:not([data-workspace-navigation]) [data-nav-group-label="Spaces"] [data-nav-group-items] {
+          margin-top: 2px;
         }
         /* The first utility row shares the heading line in both scopes. */
         .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) nav:has(> [data-nav-group-label="Activity"]:first-child) {
-          padding-top: 8px;
+          padding-top: 0;
         }
-        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-group-label="Activity"] [data-nav-depth="0"] {
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) :is([data-nav-group-label="Activity"], [data-nav-group-label="App Studio"], [data-nav-group-label="My space"]) [data-nav-depth="0"],
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) :is([data-nav-group-label="Activity"], [data-nav-group-label="App Studio"], [data-nav-group-label="My space"]) [data-nav-depth="0"] > button:not([data-nav-twisty]) {
+          min-height: 36px;
           padding-left: 12px;
         }
         .workbench-preview [data-nav-group-label="Activity"] [data-nav-twisty-cell]:not(:has([data-nav-twisty])) {
           display: none;
+        }
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) :is([data-nav-group-label="Activity"], [data-nav-group-label="App Studio"], [data-nav-group-label="My space"]) [data-nav-depth="0"] {
+          height: 36px;
+          min-height: 36px;
+          color: var(--sidebar-foreground);
+        }
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) :is([data-nav-group-label="Activity"], [data-nav-group-label="App Studio"], [data-nav-group-label="My space"]) [data-nav-depth="0"][data-active-nav-row="true"] {
+          color: var(--sidebar-selected-foreground);
+        }
+        .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) :is([data-nav-group-label="Activity"], [data-nav-group-label="App Studio"], [data-nav-group-label="My space"]) [data-nav-depth="0"] > svg {
+          width: 16px;
+          height: 16px;
         }
         /* Data readiness changes navigation rows, never pane/header geometry.
            Host headers own their theme-based title and breadcrumb slots. */
@@ -350,6 +490,13 @@ export function WorkbenchStyles() {
           }
           .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] > button:not([data-nav-twisty]) {
             min-height: 30px;
+          }
+        }
+
+        @media (pointer: fine) {
+          .workbench-preview [data-sidebar-surface]:not([data-sidebar-collapsed]) :is([data-nav-group-label="Activity"], [data-nav-group-label="App Studio"], [data-nav-group-label="My space"]) [data-nav-depth="0"]:not([data-nav-branch-status]) {
+            height: 36px;
+            min-height: 36px;
           }
         }
 

@@ -35,20 +35,18 @@ it("starts in the current workspace with entity sublines and allows all chats", 
       />
     </MemoryRouter>,
   );
-  expect(screen.getByLabelText("History filter").textContent).toBe("Last used in this workspace");
+  expect(screen.getByLabelText("History filter").textContent).toBe("This space");
   expect(screen.getByText("Last at First task")).toBeTruthy();
   expect(screen.queryByText(other.label)).toBeNull();
   fireEvent.keyDown(screen.getByLabelText("History filter"), { key: "ArrowDown" });
-  fireEvent.click(screen.getByRole("menuitemradio", { name: "All chats" }));
+  fireEvent.click(screen.getByRole("menuitemradio", { name: "All spaces" }));
   expect(screen.getByText("Last in Project")).toBeTruthy();
-  expect(
-    screen
-      .getByRole("link", { name: `${other.label} Last outside a workspace` })
-      .getAttribute("href"),
-  ).toBe(other.to);
+  expect(screen.getByRole("link", { name: `${other.label}General` }).getAttribute("href")).toBe(
+    other.to,
+  );
   fireEvent.change(screen.getByLabelText("Search chats"), { target: { value: "Across" } });
   expect(screen.queryByText(local.label)).toBeNull();
-  fireEvent.click(screen.getByRole("link", { name: `${other.label} Last outside a workspace` }));
+  fireEvent.click(screen.getByRole("link", { name: `${other.label}General` }));
   expect(close).toHaveBeenCalledOnce();
 });
 
@@ -71,16 +69,16 @@ it("resets the filter on workspace changes and does not invent an entity label",
       <ConversationHistory workspaceId="w1" groups={groups} onClose={() => {}} />
     </MemoryRouter>,
   );
-  expect(screen.getByLabelText("History filter").textContent).toBe("Last used in this workspace");
-  expect(screen.getByText("Last in this workspace")).toBeTruthy();
+  expect(screen.getByLabelText("History filter").textContent).toBe("This space");
+  expect(screen.getByText("Last in this space")).toBeTruthy();
   fireEvent.keyDown(screen.getByLabelText("History filter"), { key: "ArrowDown" });
-  fireEvent.click(screen.getByRole("menuitemradio", { name: "All chats" }));
+  fireEvent.click(screen.getByRole("menuitemradio", { name: "All spaces" }));
   view.rerender(
     <MemoryRouter>
       <ConversationHistory workspaceId="w2" groups={[]} onClose={() => {}} />
     </MemoryRouter>,
   );
-  expect(screen.getByLabelText("History filter").textContent).toBe("Last used in this workspace");
+  expect(screen.getByLabelText("History filter").textContent).toBe("This space");
 });
 
 it("shows workspace recents at a root and only exact entity recents elsewhere", () => {
@@ -137,7 +135,7 @@ it("shows workspace recents at a root and only exact entity recents elsewhere", 
   );
   expect(screen.queryByText("Workspace planning")).toBeNull();
   expect(screen.getByText("Task review")).toBeTruthy();
-  expect(screen.queryByText("Last at Task")).toBeNull();
+  expect(screen.getByText("Last at Task")).toBeTruthy();
 });
 
 it("shows only the conversations action when an entity has no exact recent chat", () => {
@@ -172,7 +170,7 @@ it("shows only the conversations action when an entity has no exact recent chat"
     </MemoryRouter>,
   );
   expect(screen.queryByText("No chats yet")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+  fireEvent.click(screen.getByRole("button", { name: "View all" }));
   expect(viewAll).toHaveBeenCalledOnce();
 });
 
@@ -205,7 +203,7 @@ it("does not leak workspace recents when the current entity metadata is unavaila
     </MemoryRouter>,
   );
   expect(screen.queryByText("Private task review")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Chat history" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "View all" })).toBeNull();
 });
 
 it("separates pinned chats from recents without duplicating entries", () => {
@@ -233,10 +231,10 @@ it("separates pinned chats from recents without duplicating entries", () => {
     </MemoryRouter>,
   );
   expect(screen.getByRole("heading", { name: "Pinned" })).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Recent chats" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Recent" })).toBeTruthy();
   expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
-    "Saved discussion Last outside a workspace",
-    "Recent discussion Last outside a workspace",
+    "Saved discussionGeneral",
+    "Recent discussionGeneral",
   ]);
 });
 
@@ -280,7 +278,7 @@ it.each([undefined, "Cannot load conversation"])(
           />
         </MemoryRouter>,
       );
-      fireEvent.click(screen.getByRole("link", { name: "Review Last outside a workspace" }));
+      fireEvent.click(screen.getByRole("link", { name: "ReviewGeneral" }));
       expect(screen.queryByLabelText("Opening chat")).toBeNull();
       if (error) {
         expect(screen.getByRole("alert").textContent).toBe(error);

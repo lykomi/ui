@@ -22,18 +22,20 @@ export function useNewConversation(options?: {
   const closeMobile = useSidebarStore((s) => s.closeMobile);
 
   return useCallback(() => {
-    const preserved = options?.preserveNavigation
-      ? {
-          currentPage: useAppStore.getState().currentPage,
-          navContext: useAppStore.getState().navContext,
-        }
-      : null;
-    closePanel();
-    const sentContext = useAppStore.getState().sentContext;
-    resetApp();
-    useAppStore.setState({ sentContext });
-    if (preserved) {
-      useAppStore.setState(preserved);
+    if (options?.preserveNavigation) {
+      // New chat does not leave the page or dismiss its inspector. Keep the
+      // live page context: its producers remain mounted and need not rerun.
+      useAppStore.setState((state) => ({
+        threadActive: false,
+        contextItems: state.contextItems.filter(
+          (item) => item.key && item.persistence === "ephemeral",
+        ),
+      }));
+    } else {
+      closePanel();
+      const sentContext = useAppStore.getState().sentContext;
+      resetApp();
+      useAppStore.setState({ sentContext });
     }
     closeMobile();
     // Clear only the foreground projection; retained transcripts keep their sources.

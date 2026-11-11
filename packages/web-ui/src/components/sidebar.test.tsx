@@ -509,7 +509,7 @@ describe("Sidebar active state", () => {
   );
 
   it.each([false, true])(
-    "keeps a container marker after an empty lazy read without requesting it again (nested=%s)",
+    "shows a leaf dot after an empty lazy read without requesting it again (nested=%s)",
     async (nested) => {
       const disclosure = vi.fn();
       const item = {
@@ -540,14 +540,11 @@ describe("Sidebar active state", () => {
       const requests = disclosure.mock.calls.filter(([open]) => open === true).length;
       await renderWithItems(items(false));
       const cell = twistyCell(container, "Empty container")!;
-      expect(cell.querySelector("[data-nav-empty-container]")).not.toBeNull();
-      expect(cell.querySelector("[data-nav-leaf-dot]")).toBeNull();
+      expect(cell.querySelector("[data-nav-empty-container]")).toBeNull();
+      expect(cell.querySelector("[data-nav-leaf-dot]")).not.toBeNull();
       expect(cell.querySelector("[aria-expanded]")).toBeNull();
       expect(twisty(container, "Empty container")).toBeUndefined();
-      expect(cell.querySelector('[aria-disabled="true"]')).toBe(control);
-      expect(document.activeElement).toBe(control);
-      expect(control.tabIndex).toBe(-1);
-      await act(async () => control.click());
+      expect(cell.querySelector("button")).toBeNull();
       const name = Array.from(
         navRow(container, "Empty container")!.querySelectorAll("button,a"),
       ).find((candidate) => candidate.textContent === "Empty container")!;

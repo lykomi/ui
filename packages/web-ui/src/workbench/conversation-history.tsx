@@ -6,7 +6,7 @@ import {
   DropdownMenuSeparator,
 } from "../ui/dropdown-menu.tsx";
 import { Button, Input } from "@iloveagents/foundry-web-primitives";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { Link } from "react-router";
 import {
   ArrowLeft,
@@ -26,7 +26,23 @@ import { ActionListSkeleton } from "../components/action-list-skeleton.tsx";
 
 import { useChatRuns, isChatRunActive } from "../lib/chat-runs-store.ts";
 
+import { useHistoryPreview } from "./history-preview.tsx";
+
 const HOME_SECTION_LIMIT = 5;
+
+function conversationTime(value: unknown) {
+  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) return null;
+  const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 60_000));
+  return minutes < 1
+    ? "Just now"
+    : minutes < 60
+      ? `${minutes}m ago`
+      : minutes < 1440
+        ? `${Math.floor(minutes / 60)}h ago`
+        : minutes < 10080
+          ? `${Math.floor(minutes / 1440)}d ago`
+          : new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 /** History is a view of existing navigation targets, never a second chat runtime. */
 export function ConversationHistory({
@@ -40,6 +56,8 @@ export function ConversationHistory({
   onViewAll,
   entityId,
   rootContext = false,
+  standalone = false,
+  onNewChat,
 }: {
   groups: NavGroup[];
   workspaceId: unknown;
@@ -53,13 +71,20 @@ export function ConversationHistory({
   /** Current content entity. Compact homes show only an exact match unless this is the workspace root. */
   entityId?: unknown;
   rootContext?: boolean;
+  /** Full history view entered from the global Home/chat surface. */
+  standalone?: boolean;
+  onNewChat?: () => void;
 }) {
+  const previewEnabled = groups.some((group) => group.meta?.historyPreview === true);
+  const preview = useHistoryPreview(previewEnabled, workspaceId);
   const [loadingTo, setLoadingTo] = useState<string | null>(null);
   const navigationLoading = useNavStore((state) => state.navLoading);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [all, setAll] = useState(!workspaceId);
-  useEffect(() => setAll(!workspaceId), [workspaceId]);
+  const [historyScope, setHistoryScope] = useState({ workspaceId, all: !workspaceId });
+  const all = historyScope.workspaceId === workspaceId ? historyScope.all : !workspaceId;
+  if (historyScope.workspaceId !== workspaceId) setHistoryScope({ workspaceId, all: !workspaceId });
+  const setAll = (value: boolean) => setHistoryScope({ workspaceId, all: value });
   const [search, setSearch] = useState("");
   const scoped = groups.find(
     (g) => g.meta?.type === "recent-chats" && g.meta?.workspaceId === workspaceId,
@@ -78,7 +103,7 @@ export function ConversationHistory({
     (scoped?.meta?.allConversations as NavItem[] | undefined) ??
     groups
       .filter((g) => g.meta?.type === "recent-chats" || g.meta?.type === "pinned-chats")
-      .flatMap((g) => g.items);
+      .flatMap((g) => (g.meta?.allConversations as NavItem[] | undefined) ?? g.items);
   const savedTargets = new Set(allItems.map((item) => item.to));
   const hasServerTimestamps = allItems.some((item) => typeof item.meta?.updatedAt === "string");
   const runs = useChatRuns((s) => s.runs);
@@ -92,7 +117,7 @@ export function ConversationHistory({
       : ((scoped?.meta?.workspaceConversations as NavItem[] | undefined) ?? scoped?.items ?? []);
   // In-memory runs appear immediately, before the server refreshes its nav rows.
   // A persisted title/actions win, while the live run owns its current location.
-  const merged = new Map(workspaceItems.map((item) => [item.to, item]));
+  const merged = new Map([...workspaceItems, ...preview.items].map((item) => [item.to, item]));
   for (const run of Object.values(runs)) {
     const to = run.conversationUrl ?? `/chat/${encodeURIComponent(run.threadId)}`;
     const saved = allItems.find((item) => item.to === to);
@@ -117,10 +142,17 @@ export function ConversationHistory({
     .filter(
       (item) =>
         !(compact && workspaceId && !rootContext) ||
+        Boolean(item.meta?.pinned || item.meta?.previewSample) ||
         (Boolean(entityId) && item.meta?.previewEntityId === entityId),
     )
     .filter((item) => !["show-all-chats", "no-chats-placeholder"].includes(String(item.meta?.type)))
-    .filter((item) => item.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
+    .filter((item) =>
+      [item.label, item.meta?.previewSpaceName, item.meta?.previewEntityName]
+        .filter((value) => typeof value === "string")
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(search.toLocaleLowerCase()),
+    )
     .sort((a, b) => {
       const active = (item: NavItem) => {
         const run = runFor(item);
@@ -165,27 +197,34 @@ export function ConversationHistory({
         { label: "Pinned", items: homePinnedItems },
       ]
     : compact
-      ? [{ label: "", items: visibleItems }]
+      ? [
+          { label: "Pinned", items: items.filter((item) => item.meta?.pinned).slice(0, 3) },
+          { label: "Recent", items: items.filter((item) => !item.meta?.pinned).slice(0, 3) },
+        ]
       : [
           { label: "Running", items: activeItems },
           { label: "Pinned", items: pinnedItems },
           {
-            label: activeItems.length || pinnedItems.length ? "Recent chats" : "",
+            label: activeItems.length || pinnedItems.length ? "Recent" : "",
             items: idleItems.filter((item) => !item.meta?.pinned),
           },
         ];
   return (
     <section
       data-conversation-history
+      data-history-standalone={standalone || undefined}
       aria-label={home ? "Home chats" : compact ? "Recent chats" : "Chat history"}
       className={
         home
           ? "w-full"
           : compact
             ? "w-full"
-            : "mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-4"
+            : standalone
+              ? "mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-6 pb-6"
+              : "flex min-h-0 w-full flex-1 flex-col px-4 pb-4"
       }
     >
+      {preview.dialog}
       {welcome && (
         <div className="pb-6 pt-8">
           <h1 className="text-xl font-semibold">How can I help?</h1>
@@ -202,12 +241,20 @@ export function ConversationHistory({
           <ArrowLeft size={14} /> Back to chat
         </button>
       )}
-      {(home || !compact || items.length > 0) && (
+      {standalone && (
+        <div className="mb-5 text-left">
+          <h1 className="text-2xl font-semibold tracking-tight">Chat history</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Find and continue your conversations across spaces.
+          </p>
+        </div>
+      )}
+      {!standalone && home && (
         <div
           className={
             home
               ? "mb-2 mt-5 flex items-center justify-center px-1 text-center"
-              : "mb-2 mt-2 flex items-center justify-between"
+              : "mb-4 mt-4 flex items-center justify-between"
           }
         >
           <h2
@@ -228,9 +275,7 @@ export function ConversationHistory({
                 aria-label="History filter"
                 className="w-full justify-between font-normal shadow-none"
               >
-                <span className="truncate">
-                  {all ? "All chats" : "Last used in this workspace"}
-                </span>
+                <span className="truncate">{all ? "All spaces" : "This space"}</span>
                 <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
@@ -239,8 +284,8 @@ export function ConversationHistory({
               className="w-[var(--radix-dropdown-menu-trigger-width)]"
             >
               {[
-                { value: false, label: "Last used in this workspace" },
-                { value: true, label: "All chats" },
+                { value: false, label: "This space" },
+                { value: true, label: "All spaces" },
               ].map((option) => (
                 <DropdownMenuItem
                   key={option.label}
@@ -256,13 +301,21 @@ export function ConversationHistory({
           </DropdownMenu>
         </div>
       )}
+      {previewEnabled && !compact && (
+        <div className="my-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>{preview.hidden ? "Local preview" : "Includes sample conversations"}</span>
+          <Button variant="ghost" size="sm" onClick={preview.toggle}>
+            {preview.hidden ? "Show samples" : "Hide samples"}
+          </Button>
+        </div>
+      )}
       {!compact && (
         <Input
           aria-label="Search chats"
           placeholder="Search chats"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="mb-3"
+          className="mb-4 h-10"
         />
       )}
       <span className="sr-only" role="status">
@@ -302,7 +355,7 @@ export function ConversationHistory({
                   className={
                     home
                       ? "px-1 pb-2 text-xs font-medium text-muted-foreground"
-                      : "px-2 py-2 text-xs font-medium text-muted-foreground"
+                      : "px-3 pb-2 pt-3 text-xs font-semibold text-muted-foreground"
                   }
                 >
                   {section.label}
@@ -333,12 +386,17 @@ export function ConversationHistory({
                     className={
                       home
                         ? "group flex items-center rounded-lg transition-colors hover:bg-muted/60"
-                        : "group flex items-center rounded-lg hover:bg-muted"
+                        : "group flex items-start rounded-lg border-b border-border/50 last:border-b-0 hover:bg-muted/50"
                     }
                   >
                     <Link
                       to={item.to}
                       onClick={(event) => {
+                        if (item.meta?.previewSample) {
+                          event.preventDefault();
+                          preview.open(item);
+                          return;
+                        }
                         if (loadingTo) {
                           event.preventDefault();
                           return;
@@ -371,7 +429,7 @@ export function ConversationHistory({
                       className={
                         home
                           ? "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-2 text-left text-sm focus-visible:outline-2 focus-visible:outline-primary"
-                          : "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"
+                          : "flex min-w-0 flex-1 items-start gap-3 rounded-lg px-3 py-3 text-sm [&>svg]:mt-0.5 focus-visible:outline-2 focus-visible:outline-primary"
                       }
                     >
                       {loadingTo === item.to ? (
@@ -395,28 +453,41 @@ export function ConversationHistory({
                         <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate">{item.label}</span>{" "}
-                        {runFor(item) && isChatRunActive(runFor(item)!) ? (
-                          <span className="block text-xs text-primary">
-                            {runFor(item)?.status === "waiting" ? "Waiting for you" : "Running"}
+                        <span className="block truncate font-medium leading-5">{item.label}</span>
+                        {item.description && item.description !== item.label && (
+                          <span className="mt-1 block truncate text-sm text-muted-foreground">
+                            {item.description}
                           </span>
-                        ) : (
-                          (home || !compact || rootContext) && (
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {!all &&
-                              typeof item.meta?.previewEntityName === "string" &&
-                              item.meta.previewEntityName
-                                ? `Last at ${item.meta.previewEntityName}`
-                                : !all
-                                  ? "Last in this workspace"
-                                  : typeof item.meta?.previewSpaceName === "string" &&
-                                      item.meta.previewSpaceName
-                                    ? `Last in ${item.meta.previewSpaceName}`
-                                    : item.meta?.previewContextUnavailable
-                                      ? "Location unavailable"
-                                      : "Last outside a workspace"}
-                            </span>
-                          )
+                        )}
+                        <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <span className="min-w-0 truncate">
+                            {!all &&
+                            typeof item.meta?.previewEntityName === "string" &&
+                            item.meta.previewEntityName
+                              ? `Last at ${item.meta.previewEntityName}`
+                              : !all
+                                ? "Last in this space"
+                                : typeof item.meta?.previewSpaceName === "string" &&
+                                    item.meta.previewSpaceName
+                                  ? `Last in ${item.meta.previewSpaceName}`
+                                  : item.meta?.previewContextUnavailable
+                                    ? "Location unavailable"
+                                    : "General"}
+                          </span>
+                          {conversationTime(item.meta?.updatedAt) && (
+                            <time
+                              className="whitespace-nowrap"
+                              dateTime={String(item.meta?.updatedAt)}
+                              title={new Date(String(item.meta?.updatedAt)).toLocaleString()}
+                            >
+                              · {conversationTime(item.meta?.updatedAt)}
+                            </time>
+                          )}
+                        </span>
+                        {runFor(item) && isChatRunActive(runFor(item)!) && (
+                          <span className="mt-1.5 block text-xs font-medium text-primary">
+                            {runFor(item)?.status === "waiting" ? "Waiting for you" : "Working"}
+                          </span>
                         )}
                       </span>
                     </Link>
@@ -426,38 +497,40 @@ export function ConversationHistory({
                           <button
                             type="button"
                             aria-label={`Actions for ${item.label}`}
-                            className="mr-1 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100 hover:bg-background"
+                            className="mr-1 mt-3 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100 hover:bg-background"
                           >
                             <MoreHorizontal className="size-4" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              const rawId =
-                                runFor(item)?.threadId ??
-                                item.meta?.conversationId ??
-                                item.to.split("/chat/")[1]?.split(/[?#]/)[0];
-                              if (typeof rawId !== "string" || !rawId) return;
-                              const id = rawId;
-                              void Promise.resolve()
-                                .then(() =>
-                                  navigator.clipboard.writeText(decodeURIComponent(String(id))),
-                                )
-                                .then(() => {
-                                  setCopiedId(id);
-                                  setLoadError(null);
-                                })
-                                .catch(() =>
-                                  setLoadError(
-                                    `Could not copy. Chat ID: ${decodeURIComponent(id)}`,
-                                  ),
-                                );
-                            }}
-                          >
-                            <Copy className="size-4" />
-                            Copy chat ID
-                          </DropdownMenuItem>
+                          {!item.meta?.previewSample && (
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                const rawId =
+                                  runFor(item)?.threadId ??
+                                  item.meta?.conversationId ??
+                                  item.to.split("/chat/")[1]?.split(/[?#]/)[0];
+                                if (typeof rawId !== "string" || !rawId) return;
+                                const id = rawId;
+                                void Promise.resolve()
+                                  .then(() =>
+                                    navigator.clipboard.writeText(decodeURIComponent(String(id))),
+                                  )
+                                  .then(() => {
+                                    setCopiedId(id);
+                                    setLoadError(null);
+                                  })
+                                  .catch(() =>
+                                    setLoadError(
+                                      `Could not copy. Chat ID: ${decodeURIComponent(id)}`,
+                                    ),
+                                  );
+                              }}
+                            >
+                              <Copy className="size-4" />
+                              Copy chat ID
+                            </DropdownMenuItem>
+                          )}
                           {Boolean(item.actions?.length) && <DropdownMenuSeparator />}
 
                           {item.actions?.map((action) => (
@@ -482,7 +555,27 @@ export function ConversationHistory({
               )}
             </section>
           ))}
-        {items.length === 0 && !historyLoading && !compact && (
+        {standalone && items.length === 0 && !historyLoading && (
+          <div className="flex flex-col items-center px-4 py-12 text-center">
+            <MessagesSquare className="mb-4 size-8 text-muted-foreground" aria-hidden />
+            <h2 className="text-base font-semibold">
+              {search ? "No matching chats" : "No conversations yet"}
+            </h2>
+            <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+              {search
+                ? "Try a different search or clear the filter."
+                : "Start a conversation from Home or a workspace. You can find it here later."}
+            </p>
+            <Button
+              className="mt-5 gap-2"
+              variant="outline"
+              onClick={search ? () => setSearch("") : (onNewChat ?? onClose)}
+            >
+              {search ? "Clear search" : "Start a chat"}
+            </Button>
+          </div>
+        )}
+        {!standalone && items.length === 0 && !historyLoading && !compact && (
           <p className="py-3 text-sm text-muted-foreground">
             {search ? "No matching chats" : "No chats yet"}
           </p>
@@ -509,7 +602,7 @@ export function ConversationHistory({
           className="mt-1 h-9 w-fit gap-2 px-2 text-sm font-normal text-muted-foreground [@media(pointer:coarse)]:min-h-11"
         >
           <MessagesSquare className="size-4" aria-hidden />
-          Chat history
+          View all
         </Button>
       )}
     </section>
