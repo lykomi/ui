@@ -23,6 +23,9 @@ export function summarizeChatContext(state: AgentStateProjection) {
     (item) => item.type === "selection" || item.meta.selectionScope === "text",
   );
   const process = references.find((item) => item.meta.processFocus === "active");
+  const activeWindow = references.find(
+    (item) => item.meta.windowState === "active" && item.meta.visible === true,
+  );
   const target = field && record(field.target ?? field.meta.jsonTarget);
   const detail = selected
     ? "Selected text"
@@ -34,7 +37,7 @@ export function summarizeChatContext(state: AgentStateProjection) {
           ? [text(process.meta.processLabel), text(process.meta.selectedStepLabel)]
               .filter(Boolean)
               .join(" › ")
-          : "";
+          : text(activeWindow?.label);
   const pageLabel =
     nav.label && !nav.label.startsWith("/") && !/^\/?chat$/i.test(nav.label)
       ? nav.label

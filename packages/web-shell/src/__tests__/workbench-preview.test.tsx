@@ -1,3 +1,4 @@
+import { TooltipProvider } from "../../../web-ui/dist/ui/tooltip.js";
 import { Link, MemoryRouter } from "react-router";
 import { Folder, MessageSquare } from "lucide-react";
 import type { NavGroup } from "@iloveagents/foundry-web-ui";
@@ -31,7 +32,13 @@ const state = vi.hoisted(() => ({
 vi.mock("../../../web-ui/dist/components/ag-ui-runtime-provider.js", () => ({
   useAGUIAdapter: () => ({ selectRetainedThread: () => false }),
 }));
-vi.mock("@assistant-ui/react", () => ({
+vi.mock("../../../web-ui/dist/workbench/home-content.js", () => ({
+  HomeContent: ({ onOpenChat }: { onOpenChat: () => void }) => (
+    <button onClick={onOpenChat}>Start from Home</button>
+  ),
+}));
+vi.mock("@assistant-ui/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@assistant-ui/react")>()),
   useAuiState: (select: (s: unknown) => unknown) =>
     select({
       thread: { messages: state.empty ? [] : [{}], isRunning: state.running, isLoading: false },
@@ -125,7 +132,7 @@ describe("layout preview", () => {
         <WorkbenchPreview key="first" page={<Editor />} />
       </WorkbenchLayoutProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Expand chat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
     view.rerender(
       <WorkbenchLayoutProvider>
@@ -141,19 +148,21 @@ describe("layout preview", () => {
     const assistant = screen.getByLabelText("Assistant conversation");
     const draft = screen.getByLabelText("Chat draft") as HTMLTextAreaElement;
     expect(assistant.style.width).toBe("44px");
-    fireEvent.click(screen.getByRole("button", { name: "Expand chat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
     expect(assistant.style.width).not.toBe("44px");
     expect(screen.getByLabelText("Chat draft")).toBe(draft);
   });
 
-  it("keeps chat-only routes expanded and restores the configured side-chat default", () => {
+  it("uses the same collapsible chat panel on Home and other destinations", () => {
     const view = render(<WorkbenchPreview defaultSideChatCollapsed chatOnly page={null} />);
     const assistant = screen.getByLabelText("Assistant conversation");
-    expect(assistant.style.width).toBe("100%");
-    expect(assistant.hasAttribute("data-chat-collapsed")).toBe(false);
+    expect(assistant.style.width).toBe("44px");
+    fireEvent.click(screen.getByRole("button", { name: "Start from Home" }));
+    expect(assistant.style.width).not.toBe("44px");
+    fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
     view.rerender(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
     expect(assistant.style.width).toBe("44px");
-    fireEvent.click(screen.getByRole("button", { name: "Expand chat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
     view.rerender(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
     expect(assistant.style.width).not.toBe("44px");
   });
@@ -253,7 +262,7 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Assistant conversation").contains(collapseContent)).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
     fireEvent.click(collapseContent);
-    expect(screen.queryByRole("button", { name: "Expand chat" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open chat" })).toBeNull();
     expect(screen.getByLabelText("Working content").hasAttribute("inert")).toBe(true);
     expect(screen.queryByRole("separator", { name: "Resize chat" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Expand content" }));
@@ -292,7 +301,7 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
   });
 
-  it("shows separate recent and pinned chats below the home composer", () => {
+  it("shows compact recent and pinned chats in the empty conversation", () => {
     state.empty = true;
     state.groups = [
       {
@@ -322,26 +331,14 @@ describe("layout preview", () => {
     expect(within(recent).getByRole("link", { name: /Newest/ })).toBeTruthy();
     expect(within(recent).getByRole("link", { name: /Third/ })).toBeTruthy();
     expect(within(recent).getByRole("link", { name: /Fourth/ })).toBeTruthy();
-    expect(within(recent).getByRole("link", { name: /Fifth/ })).toBeTruthy();
-    expect(within(recent).getByRole("link", { name: /Sixth/ })).toBeTruthy();
+    expect(within(recent).queryByRole("link", { name: /Fifth/ })).toBeNull();
+    expect(within(recent).queryByRole("link", { name: /Sixth/ })).toBeNull();
     expect(within(pinned).getByRole("link", { name: /Second/ })).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Seventh/ })).toBeNull();
-    expect(within(recent).getAllByText("Last in Operations")).toHaveLength(5);
+    expect(within(recent).getAllByText("Last in Operations")).toHaveLength(3);
     expect(within(pinned).getByText("Last in Finance")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Your chats" }).parentElement?.className).toContain(
-      "justify-center",
-    );
-    expect(screen.getAllByRole("button", { name: "Chat history" })).toHaveLength(1);
-    expect(
-      screen
-        .getByLabelText("Chat draft")
-        .compareDocumentPosition(screen.getByRole("heading", { name: "Your chats" })) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    const viewAll = screen.getByRole("button", { name: "View all conversations" });
-    expect(viewAll.parentElement?.className).toContain("justify-center");
-    fireEvent.click(viewAll);
-    expect(screen.getByRole("heading", { name: "Chat history" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "View all" }));
+    expect(screen.getByRole("region", { name: "Chat history" })).toBeTruthy();
   });
 
   it("does not show contextual starter skeletons on cold global chat home", () => {
@@ -355,7 +352,6 @@ describe("layout preview", () => {
     expect(screen.queryByText("Contextual loading rows")).toBeNull();
     expect(starters).not.toHaveBeenCalled();
     expect(screen.getByRole("status", { name: "Loading recent chats" })).toBeTruthy();
-    expect(screen.getByRole("status", { name: "Loading pinned chats" })).toBeTruthy();
   });
 
   it("keeps the recent and pinned groups available when only pinned chats exist", () => {
@@ -378,12 +374,7 @@ describe("layout preview", () => {
       },
     ];
     render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
-    expect(screen.getByRole("heading", { name: "Your chats" })).toBeTruthy();
-    expect(
-      within(screen.getByRole("region", { name: "Recent" })).getByText(
-        "Your latest chats will appear here.",
-      ),
-    ).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Recent" })).toBeNull();
     expect(
       within(screen.getByRole("region", { name: "Pinned" })).getByRole("link", {
         name: /Saved review/,
@@ -545,10 +536,10 @@ describe("layout preview", () => {
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Chat history" })).toBeNull();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
-    fireEvent.click(screen.getAllByRole("button", { name: "Chat history" })[1]);
-    expect(screen.getByRole("heading", { name: "Chat history" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "View all" }));
+    expect(screen.getByRole("region", { name: "Chat history" })).toBeTruthy();
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("none");
-    fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
   });
 
@@ -559,9 +550,9 @@ describe("layout preview", () => {
     fireEvent.change(draft, { target: { value: "Draft question" } });
     fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    fireEvent.click(screen.getByRole("button", { name: "View all" }));
     expect(screen.getByRole("region", { name: "Chat history" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Back to chat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
     expect(screen.getByLabelText("Chat draft")).toBe(draft);
     expect(draft.value).toBe("Draft question");
   });
@@ -596,10 +587,9 @@ describe("layout preview", () => {
       <WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />,
     );
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
-      expect.objectContaining({ ...activity, priority: 1100 }),
       expect.objectContaining({
-        label: "All spaces",
-        items: [{ ...root, children: undefined, childrenLoading: false }],
+        label: "Spaces",
+        items: [expect.objectContaining({ ...root, children: undefined, childrenLoading: false })],
       }),
       expect.objectContaining({ label: "Content", items: [child] }),
     ]);
@@ -614,9 +604,8 @@ describe("layout preview", () => {
     ];
     rerender(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     expect(state.sidebar.mock.lastCall?.[0].groups).toEqual([
-      expect.objectContaining({ label: "Activity" }),
       expect.objectContaining({
-        label: "All spaces",
+        label: "Spaces",
         items: [expect.objectContaining({ childrenLoading: false })],
       }),
       expect.objectContaining({ label: "Content", items: [], loading: true }),
@@ -644,7 +633,7 @@ describe("layout preview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
     expect(screen.getByLabelText("Assistant conversation").style.width).toBe("44px");
     expect(draft.parentElement?.style.display).toBe("none");
-    fireEvent.click(screen.getByRole("button", { name: "Expand chat" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
     expect(screen.getByLabelText("Chat draft")).toBe(draft);
     expect(draft.value).toBe("Question in progress");
     expect(screen.getByLabelText("Unsaved field")).toBe(editor);
@@ -661,16 +650,22 @@ describe("layout preview", () => {
 });
 
 function render(ui: ReactNode) {
-  return renderUI(ui, { wrapper: MemoryRouter });
+  return renderUI(ui, {
+    wrapper: ({ children }) => (
+      <MemoryRouter>
+        <TooltipProvider>{children}</TooltipProvider>
+      </MemoryRouter>
+    ),
+  });
 }
 
 it("shows ongoing work in the collapsed rail and clears it when the run ends", () => {
   state.running = true;
   const view = render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
   fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
-  expect(screen.getByRole("button", { name: "AI is working — expand chat" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Open chat — AI is working" })).toBeTruthy();
   state.running = false;
   view.rerender(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
-  expect(screen.queryByRole("button", { name: "AI is working — expand chat" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Expand chat" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Open chat — AI is working" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Open chat" })).toBeTruthy();
 });

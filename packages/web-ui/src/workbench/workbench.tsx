@@ -4,9 +4,9 @@ import { WorkbenchContentPane } from "./content-pane.tsx";
 import { ChatResizeHandle } from "./chat-resize-handle.tsx";
 import { ChatEmptyState } from "../components/chat-empty-state.tsx";
 import { WelcomeIntro } from "./welcome-intro.tsx";
-import { normalizeWorkbenchPath, useWorkbenchState } from "./use-workbench-state.tsx";
+import { useWorkbenchState } from "./use-workbench-state.tsx";
 import { WorkbenchStyles } from "./workbench-styles.tsx";
-import { type ReactNode } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@iloveagents/foundry-web-primitives";
 import { ChatContent, TooltipIconButton } from "../index.ts";
 import type { ChatContentProps } from "../components/assistant-chat.tsx";
@@ -14,6 +14,8 @@ import { ChatContentDefaultsContext } from "../components/chat-content-defaults.
 import { FileText, MessageSquare, Menu, LoaderCircle } from "lucide-react";
 import { ActionListSkeleton } from "../components/action-list-skeleton.tsx";
 import { ConversationHistory } from "./conversation-history.tsx";
+import { HistoryContent } from "./history-content.tsx";
+import { HomeContent } from "./home-content.tsx";
 export function WorkbenchPreview({
   page,
   chatPage,
@@ -29,10 +31,13 @@ export function WorkbenchPreview({
   const {
     panelOpen,
     currentPage,
+    globalHistory,
+    home,
     chatOnly,
     pageLabel,
     pageContextPending,
     entityId,
+    rootContext,
     chatWidth,
     collapsed,
     running,
@@ -44,11 +49,12 @@ export function WorkbenchPreview({
     contentHidden,
     historyOpen,
     emptyChat,
+    canResumeChat,
     showHistory,
     spaciousChat,
     returnToChat,
     openHistory,
-    historyShortcut,
+
     toggleNavigation,
     navGroups,
     workspaceGroups,
@@ -56,16 +62,25 @@ export function WorkbenchPreview({
     closePanel,
     startChat,
   } = useWorkbenchState(chatRoute, defaultSideChatCollapsed);
+  const assistantRef = useRef<HTMLElement>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
+  const chatOpen = chatWidth.compact ? compactPane === "chat" : !collapsed;
+  const revealChat = (focus = false) => {
+    returnToChat();
+    setCollapsed(false);
+    setContentCollapsed(false);
+    setCompactPane("chat");
+    if (focus) setFocusRequest((value) => value + 1);
+  };
+  useLayoutEffect(() => {
+    if (!focusRequest || !chatOpen || showHistory) return;
+    const input = assistantRef.current?.querySelector<HTMLTextAreaElement>("textarea");
+    if (input) {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+  }, [focusRequest, chatOpen, showHistory]);
   const workspaceId = workspaceGroups?.[0]?.meta?.exclusiveRootId;
-  const rootItem = workspaceGroups?.[0]
-    ? (workspaceGroups[0].items.find((item) => item.to === workspaceGroups[0].focusOn) ??
-      workspaceGroups[0].items[0])
-    : undefined;
-  const rootContext = Boolean(
-    workspaceId &&
-    rootItem &&
-    normalizeWorkbenchPath(rootItem.to) === normalizeWorkbenchPath(currentPage),
-  );
   const conversationHome = (
     <ConversationHistory
       groups={navGroups}
@@ -80,22 +95,10 @@ export function WorkbenchPreview({
   );
   const emptyChatFooter = pageContextPending ? (
     <ActionListSkeleton label="Loading recent chats" secondaryText />
-  ) : workspaceId ? (
-    conversationHome
   ) : (
-    historyShortcut
+    conversationHome
   );
-  const homeRecents = !workspaceId ? (
-    <ConversationHistory
-      groups={navGroups}
-      workspaceId={undefined}
-      onClose={returnToChat}
-      onViewAll={openHistory}
-      showBack={false}
-      compact
-      home
-    />
-  ) : undefined;
+  const globalHome = home && !workspaceId && !entityId;
   const buttonClass =
     "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary";
   const chatDefaults: ChatContentProps = {
@@ -105,20 +108,17 @@ export function WorkbenchPreview({
         <WelcomeIntro
           contextual={Boolean(workspaceId || entityId || pageContextPending)}
           navGroups={navGroups}
-          historyShortcut={workspaceId ? emptyChatFooter : null}
+          historyShortcut={emptyChatFooter}
         />
       ) : undefined,
-    composerFooter:
-      spaciousChat && emptyChat && !historyOpen && homeRecents ? (
-        <div className="w-full">{homeRecents}</div>
-      ) : undefined,
+
     compactComposer: !spaciousChat,
     starterSuggestions: [],
     emptyState: (
       <ChatEmptyState
         pageLabel={pageLabel}
         contextLoading={pageContextPending}
-        showHomeStarters={!spaciousChat}
+        showHomeStarters={!spaciousChat && !globalHome}
       >
         {emptyChatFooter}
       </ChatEmptyState>
@@ -134,6 +134,8 @@ export function WorkbenchPreview({
         groups={staticNavigationGroups}
         workspace={!!workspaceGroups}
         onNewConversation={startChat}
+        historyOpen={globalHistory}
+        onHome={returnToChat}
       />
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
@@ -141,7 +143,7 @@ export function WorkbenchPreview({
         role="region"
         aria-label="Workspace working area"
       >
-        {chatWidth.compact && (
+        {chatWidth.compact && !chatOnly && (
           <div
             className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1"
             role="group"
@@ -188,6 +190,7 @@ export function WorkbenchPreview({
         >
           <section
             id="preview-assistant"
+            ref={assistantRef}
             data-panel-motion
             data-global-chat={spaciousChat || undefined}
             data-chat-collapsed={collapsed ? "true" : undefined}
@@ -220,13 +223,17 @@ export function WorkbenchPreview({
               openHistory={openHistory}
               chatOnly={chatOnly}
               setContentCollapsed={setContentCollapsed}
+              home={globalHome}
+              canResumeChat={canResumeChat}
             />
             {!collapsed && showHistory && (
               <ConversationHistory
                 groups={navGroups}
                 workspaceId={workspaceId}
                 onClose={returnToChat}
-                showBack
+                showBack={false}
+                standalone={globalHome}
+                onNewChat={startChat}
               />
             )}
             {!chatWidth.compact && !collapsed && !contentCollapsed && (
@@ -256,7 +263,23 @@ export function WorkbenchPreview({
             setCollapsed={setCollapsed}
             setContentCollapsed={setContentCollapsed}
             closePanel={closePanel}
-            page={page}
+            page={
+              globalHistory ? (
+                <HistoryContent
+                  groups={navGroups}
+                  onResume={() => {
+                    returnToChat();
+                    setCollapsed(false);
+                    setCompactPane("chat");
+                  }}
+                  onNewChat={startChat}
+                />
+              ) : globalHome ? (
+                <HomeContent groups={navGroups} chatOpen={chatOpen} onOpenChat={revealChat} />
+              ) : (
+                page
+              )
+            }
           />
           {contentCollapsed && !chatOnly && !chatWidth.compact && (
             <aside

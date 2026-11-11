@@ -1,4 +1,4 @@
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useAuiState } from "@assistant-ui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@iloveagents/foundry-web-primitives";
@@ -9,8 +9,10 @@ import {
   useNewConversation,
   useNavStore,
   useAppStore,
+  type NavGroup,
 } from "../index.ts";
-import { MessagesSquare, Settings, Layers } from "lucide-react";
+import { MessagesSquare, Settings, Layers, UserRound } from "lucide-react";
+import { useRecentSpaceIds, overviewSpaceGroups } from "./recent-spaces.ts";
 import { useChatWidth } from "./use-chat-width.ts";
 import { findNavItem } from "../lib/nav-config.ts";
 import { useWorkbenchCollapsed } from "./layout-state.tsx";
@@ -21,6 +23,7 @@ export function normalizeWorkbenchPath(path: string) {
 
 function useWorkbenchNavigation() {
   const navGroups = useNavStore((s) => s.config);
+  const recentIds = useRecentSpaceIds(navGroups);
   const workspaceGroups = useMemo(() => {
     const workspace = navGroups.find(
       (group) => group.meta?.type === "spaces-workspaces" && group.meta?.exclusiveRootId,
@@ -33,20 +36,26 @@ function useWorkbenchNavigation() {
       const space = workspaceGroups[0];
       const root = space.items.find((item) => item.to === space.focusOn) ?? space.items[0];
       return [
-        ...navGroups
-          .filter((group) => group.meta?.showInWorkspaceNavigation)
-          .map((group) => ({ ...group, priority: 1100 })),
         {
           ...space,
-          label: "All spaces",
+          label: "Spaces",
           icon: Layers,
+          hideLabel: true,
+          collapsedRail: undefined,
           priority: 1000,
           items: root
             ? [
                 {
                   ...root,
+                  ...(["personal_space", "personal-space"].includes(
+                    String(root.meta?.spacesContentType),
+                  )
+                    ? { label: "My space", icon: UserRound }
+                    : {}),
                   children: root.childrenHidden ? root.children : undefined,
                   childrenLoading: root.childrenHidden ? root.childrenLoading : false,
+                  childrenUnloaded: false,
+                  onExpandedChange: root.childrenHidden ? root.onExpandedChange : undefined,
                 },
               ]
             : space.items,
@@ -65,19 +74,31 @@ function useWorkbenchNavigation() {
     return [
       ...navGroups
         .filter((group) => !["recent-chats", "pinned-chats"].includes(String(group.meta?.type)))
-        .map((group) =>
+        .flatMap((group) =>
           group.meta?.type === "spaces-workspaces"
-            ? { ...group, label: "All spaces", icon: Layers, createActions: undefined }
-            : group.label === "Admin"
-              ? { ...group, icon: Settings }
-              : group.label === "Activity"
-                ? { ...group, priority: 1100 }
-                : group,
+            ? overviewSpaceGroups(group, recentIds)
+            : group.meta?.type === "spaces-admin"
+              ? {
+                  ...group,
+                  label: "Administration",
+                  icon: Settings,
+                  collapsible: true,
+                  defaultCollapsed: true,
+                }
+              : group.meta?.type === "spaces-build"
+                ? { ...group, label: "App Studio", hideLabel: true, priority: 1075 }
+                : group.label === "Activity"
+                  ? { ...group, priority: 1100 }
+                  : group,
         ),
     ];
-  }, [workspaceGroups, navGroups]);
+  }, [workspaceGroups, navGroups, recentIds]);
   const staticNavigationGroups = useMemo(
-    () => navigationGroups.map((group) => ({ ...group, collapsible: false })),
+    () =>
+      navigationGroups.map((group) => ({
+        ...group,
+        collapsible: group.meta?.type === "spaces-admin" || group.meta?.type === "recent-spaces",
+      })),
     [navigationGroups],
   );
   return { navGroups, workspaceGroups, staticNavigationGroups };
@@ -85,8 +106,13 @@ function useWorkbenchNavigation() {
 
 export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed = true) {
   const panelOpen = useToolPanelStore((s) => s.isOpen && !s.isWindowHosted);
-  const chatOnly = chatRoute && !panelOpen;
   const location = useLocation();
+  const globalHistory =
+    location.pathname === "/" &&
+    new URLSearchParams(location.search).get("view") === "chat-history";
+  const home = chatRoute && !panelOpen && !globalHistory;
+  const chatOnly = false;
+  const navigate = useNavigate();
   const { navGroups, workspaceGroups, staticNavigationGroups } = useWorkbenchNavigation();
   const routeItem = useMemo(() => {
     const item = findNavItem(navGroups, location.pathname + location.search)?.item;
@@ -102,18 +128,9 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
   const entityId = routeItem?.meta?.spacesEntityId;
   const chatWidth = useChatWidth();
   const [desktopCollapsed, setCollapsed] = useWorkbenchCollapsed(defaultSideChatCollapsed);
-  const collapsed = !chatOnly && !chatWidth.compact && desktopCollapsed;
-  const previousLayout = useRef({ chatOnly, defaultSideChatCollapsed });
-  useEffect(() => {
-    const previous = previousLayout.current;
-    if (
-      previous.chatOnly !== chatOnly ||
-      previous.defaultSideChatCollapsed !== defaultSideChatCollapsed
-    ) {
-      setCollapsed(defaultSideChatCollapsed);
-    }
-    previousLayout.current = { chatOnly, defaultSideChatCollapsed };
-  }, [chatOnly, defaultSideChatCollapsed, setCollapsed]);
+  const collapsed = !chatWidth.compact && desktopCollapsed;
+  const [historyPath, setHistoryPath] = useState<string | null>(null);
+  const historyOpen = historyPath === location.pathname;
   const [compactPane, setCompactPane] = useState<"chat" | "content">(chatOnly ? "chat" : "content");
   const [contentCollapsed, setContentCollapsed] = useState(false);
   const contentHidden =
@@ -124,11 +141,12 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
     // Navigation is an explicit request to see content, including selecting
     // the same address again. Collapsing remains local until the next entry.
   }, [chatOnly, location.key]);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const setHistoryOpen = (open: boolean) => setHistoryPath(open ? location.pathname : null);
   const running = useAuiState((s) => s.thread.isRunning);
   const emptyChat = useAuiState(
     (s) => s.thread.messages.length === 0 && !s.thread.isRunning && !s.thread.isLoading,
   );
+  const canResumeChat = useAuiState((s) => s.thread.messages.length > 0 || s.thread.isRunning);
   const wasEmptyChat = useRef(emptyChat);
   useEffect(() => {
     if (wasEmptyChat.current && !emptyChat) setHistoryOpen(false);
@@ -141,6 +159,12 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
   };
   const openHistory = () => {
     setHistoryOpen(true);
+  };
+  const openGlobalHistory = () => {
+    useToolPanelStore.getState().closePanel();
+    setHistoryPath(null);
+    navigate("/?view=chat-history", { state: { preserveActiveChat: true } });
+    setCompactPane("content");
   };
   const historyShortcut = (
     <Button
@@ -163,8 +187,8 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
   const closePanel = useToolPanelStore((s) => s.closePanel);
   const requestedChat = useChatBubbleStore((s) => s.isOpen || s.isExpanded);
   const newConversation = useNewConversation({
-    navigateToChat: chatRoute,
-    preserveNavigation: !chatRoute,
+    navigateToChat: false,
+    preserveNavigation: true,
   });
 
   const startChat = () => {
@@ -186,10 +210,20 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
   return {
     panelOpen,
     currentPage: location.pathname,
+    globalHistory,
+    home,
     chatOnly,
     pageLabel,
     pageContextPending,
     entityId,
+    rootContext: Boolean(
+      routeItem &&
+      workspaceGroups?.[0]?.items.some(
+        (item) =>
+          normalizeWorkbenchPath(item.to.split("?")[0]) ===
+          normalizeWorkbenchPath(location.pathname),
+      ),
+    ),
     chatWidth,
     collapsed,
     running,
@@ -201,10 +235,12 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
     contentHidden,
     historyOpen,
     emptyChat,
+    canResumeChat,
     showHistory,
     spaciousChat,
     returnToChat,
     openHistory,
+    openGlobalHistory,
     historyShortcut,
     toggleNavigation,
     navGroups,

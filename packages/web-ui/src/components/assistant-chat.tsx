@@ -7,7 +7,9 @@ import {
   useCallback,
   useEffect,
   useContext,
+  useLayoutEffect,
 } from "react";
+import { useCurrentThreadId } from "./ag-ui-adapter-context.ts";
 import { ChatContentDefaultsContext } from "./chat-content-defaults.ts";
 import {
   ThreadPrimitive,
@@ -221,7 +223,7 @@ const EditComposer: FC = () => (
   </MessagePrimitive.Root>
 );
 
-const ComposerActionButton: FC = () => {
+export const ComposerActionButton: FC<{ onAction?: () => void }> = ({ onAction }) => {
   // With nothing typed, a module-supplied control (a voice button) may hold
   // the send corner instead of a Send that has nothing to send.
   const actionsOwnSend = useComposerActionsOwnSend();
@@ -230,7 +232,9 @@ const ComposerActionButton: FC = () => {
       <ThreadPrimitive.If running={false}>
         <ReasoningEffortPicker />
       </ThreadPrimitive.If>
-      <ChatComposerActionsSlot />
+      <div className="contents" onClick={onAction}>
+        <ChatComposerActionsSlot />
+      </div>
       <ThreadPrimitive.If running>
         <ComposerPrimitive.Cancel asChild>
           <Button
@@ -251,6 +255,7 @@ const ComposerActionButton: FC = () => {
               size="icon"
               className="rounded-full size-10 flex-shrink-0"
               aria-label="Send message"
+              onClick={onAction}
             >
               <ArrowUp className="size-5" />
             </Button>
@@ -430,6 +435,12 @@ export const DEFAULT_COMPOSER_PLACEHOLDER = "Do anything";
  * Renders inside a ThreadPrimitive.Root context.
  */
 export function ChatContent(props: ChatContentProps = {}) {
+  const threadId = useCurrentThreadId();
+  const noMessages = useAuiState((s) => s.thread.messages.length === 0);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (noMessages && viewportRef.current) viewportRef.current.scrollTop = 0;
+  }, [threadId, noMessages]);
   const defaults = useContext(ChatContentDefaultsContext);
   const {
     centerComposer = false,
@@ -495,6 +506,10 @@ export function ChatContent(props: ChatContentProps = {}) {
             </div>
           )}
           <ThreadPrimitive.Viewport
+            ref={viewportRef}
+            autoScroll={!noMessages}
+            scrollToBottomOnInitialize={!noMessages}
+            scrollToBottomOnThreadSwitch={!noMessages}
             className={cn(
               "absolute inset-0 overflow-y-auto bg-background",
               ThreadSurface && "invisible",
@@ -575,6 +590,7 @@ export function ChatContent(props: ChatContentProps = {}) {
         </div>
 
         <div
+          data-chat-composer-surface
           className={cn("shrink-0 bg-background", centerComposer && !ThreadSurface && "my-auto")}
           hidden={hideComposer}
         >

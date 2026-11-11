@@ -53,13 +53,15 @@ export const UserMenu: FC = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64">
         {user && (
           <>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col gap-0.5">
                 <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
+                <p className="truncate text-xs text-muted-foreground" title={user.email}>
+                  {user.email}
+                </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -76,6 +78,7 @@ export const UserMenu: FC = () => {
             key={toggle.id}
             checked={toggle.checked}
             onCheckedChange={toggle.onCheckedChange}
+            className="pl-2 pr-8 [&>span:first-child]:left-auto [&>span:first-child]:right-2 [&>span:first-child]:rounded-sm [&>span:first-child]:border [&>span:first-child]:border-muted-foreground/50 [&>span:first-child_svg]:size-3"
           >
             {toggle.label}
           </DropdownMenuCheckboxItem>

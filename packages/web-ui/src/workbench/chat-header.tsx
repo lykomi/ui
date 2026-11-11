@@ -1,12 +1,7 @@
+import { ChatPanelToggle } from "./chat-panel-toggle.tsx";
 import { TooltipIconButton } from "../index.ts";
-import {
-  SquarePen,
-  PanelLeft,
-  MessageSquare,
-  Menu,
-  MessagesSquare,
-  LoaderCircle,
-} from "lucide-react";
+import { Button } from "@iloveagents/foundry-web-primitives";
+import { SquarePen, PanelLeft, MessageSquare, Menu, MessagesSquare } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
 import { RunningChatsMenu } from "./running-chats-menu.tsx";
 export function WorkbenchChatHeader({
@@ -22,6 +17,8 @@ export function WorkbenchChatHeader({
   openHistory,
   chatOnly,
   setContentCollapsed,
+  home = false,
+  canResumeChat = false,
 }: {
   collapsed: boolean;
   running: boolean;
@@ -35,6 +32,8 @@ export function WorkbenchChatHeader({
   openHistory: () => void;
   chatOnly: boolean;
   setContentCollapsed: (value: boolean) => void;
+  home?: boolean;
+  canResumeChat?: boolean;
 }) {
   return (
     <>
@@ -42,7 +41,7 @@ export function WorkbenchChatHeader({
         data-chat-header
         className={`relative flex shrink-0 items-center ${collapsed ? "justify-center" : "gap-1 px-2"}`}
       >
-        {!collapsed && !chatWidth.compact && (
+        {!collapsed && (!chatWidth.compact || chatOnly) && (
           <TooltipIconButton
             tooltip="Open navigation"
             className={`${buttonClass} preview-mobile-navigation`}
@@ -53,28 +52,34 @@ export function WorkbenchChatHeader({
           </TooltipIconButton>
         )}
         {collapsed ? (
-          <TooltipIconButton
-            data-chat-expand
-            tooltip={running ? "AI is working — expand chat" : "Expand chat"}
-            className={buttonClass}
-            aria-label={running ? "AI is working — expand chat" : "Expand chat"}
-            onClick={() => setCollapsed(false)}
-          >
-            {running ? (
-              <LoaderCircle
-                size={18}
-                className="animate-spin motion-reduce:animate-none text-primary"
-              />
-            ) : (
-              <MessageSquare size={18} />
-            )}
-          </TooltipIconButton>
+          <ChatPanelToggle running={running} home={home} onOpen={() => setCollapsed(false)} />
         ) : (
           <>
             <div className="min-w-0 flex-1 px-2 py-2">
-              <div className="text-sm font-semibold">{showHistory ? "Chats" : "Chat"}</div>
+              <div className="text-sm font-semibold">{showHistory ? "Chat history" : "Chat"}</div>
             </div>
             <RunningChatsMenu onOpen={returnToChat} />
+            {showHistory && (canResumeChat || !chatOnly) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground"
+                onClick={returnToChat}
+              >
+                <MessageSquare size={16} aria-hidden />
+                {canResumeChat ? "Resume chat" : "Chat"}
+              </Button>
+            )}
+            {!showHistory && canResumeChat && (
+              <TooltipIconButton
+                tooltip="Chat history"
+                aria-label="Chat history"
+                className={buttonClass}
+                onClick={openHistory}
+              >
+                <MessagesSquare size={18} />
+              </TooltipIconButton>
+            )}
             <TooltipIconButton
               tooltip="New chat"
               className={buttonClass}
@@ -82,15 +87,6 @@ export function WorkbenchChatHeader({
               onClick={startChat}
             >
               <SquarePen size={18} />
-            </TooltipIconButton>
-            <TooltipIconButton
-              tooltip="Chat history"
-              className={buttonClass}
-              aria-label="Chat history"
-              aria-expanded={showHistory}
-              onClick={() => (showHistory ? returnToChat() : openHistory())}
-            >
-              <MessagesSquare size={18} />
             </TooltipIconButton>
             <TooltipIconButton
               tooltip="Collapse chat"
@@ -107,29 +103,6 @@ export function WorkbenchChatHeader({
           </>
         )}
       </div>
-      {collapsed && (
-        <div data-chat-rail data-chat-shortcuts className="flex flex-col items-center gap-1">
-          <TooltipIconButton
-            tooltip="Open navigation"
-            className={`${buttonClass} preview-mobile-navigation`}
-            aria-label="Open navigation"
-            onClick={toggleNavigation}
-          >
-            <Menu size={18} />
-          </TooltipIconButton>
-          <TooltipIconButton
-            tooltip="Chat history"
-            className={buttonClass}
-            aria-label="Chat history"
-            onClick={() => {
-              setCollapsed(false);
-              openHistory();
-            }}
-          >
-            <MessagesSquare size={18} />
-          </TooltipIconButton>
-        </div>
-      )}
     </>
   );
 }

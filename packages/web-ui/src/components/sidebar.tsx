@@ -640,7 +640,7 @@ function NavTwisty({
 }) {
   const cell = cn(NAV_TWISTY_CLASS, getNavDepthOffsets(depth).column);
 
-  if (!hasChildren && (!emptyContainer || !inTree)) {
+  if (!hasChildren && (!emptyContainer || !inTree || !childrenUnloaded)) {
     return (
       <span
         data-nav-twisty-cell
@@ -1061,6 +1061,7 @@ function hasMoreSpecificNavMatch(currentPage: string, target: string): boolean {
 /** A list owns the sidebar selection of descendants it deliberately does not draw.
  * The route lookup still resolves the actual descendant for chat and page actions. */
 function isSelectedNavItem(currentPage: string, item: NavItem): boolean {
+  if (item.meta?.recentSpacesMore) return false;
   return (
     (matchesNavLocation(currentPage, item.to) && !hasMoreSpecificNavMatch(currentPage, item.to)) ||
     Boolean(item.childrenHidden && isInSubtree(currentPage, item))
@@ -1444,6 +1445,8 @@ function CollapsibleNavItem({
 
   return (
     <NavLink
+      aria-current={item.meta?.recentSpacesMore ? false : "page"}
+      data-nav-secondary-link={item.meta?.recentSpacesMore ? "true" : undefined}
       data-active-nav-row={isActive ? "true" : undefined}
       data-nav-depth={0}
       to={item.to}
@@ -1747,6 +1750,7 @@ function findFirstStatusDot(items: readonly NavItem[]): NavStatusDot | undefined
  * — toggling one doesn't re-render siblings.
  */
 function NavGroupSection({ group }: { group: NavGroup }) {
+  const GroupIcon = group.icon;
   // Does anything in THIS group branch? The leaf dot exists to say "this
   // row has nothing under it", which is only information where a sibling
   // might — a tree. In a flat group (New Thread, Activity, a list of
@@ -1849,10 +1853,11 @@ function NavGroupSection({ group }: { group: NavGroup }) {
                 <NavLink
                   to={group.to}
                   end
-                  className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5"
+                  className="flex min-w-0 flex-1 items-center gap-2 py-1.5"
                 >
                   {({ isActive }) => (
                     <>
+                      {GroupIcon && <GroupIcon className="size-4 shrink-0" aria-hidden />}
                       <span
                         className={cn(
                           "truncate",
@@ -1943,19 +1948,26 @@ function NavGroupSection({ group }: { group: NavGroup }) {
               )}
             >
               <span aria-hidden="true" className={SIDEBAR_ITEM_ICON_CLASS} />
-              <NavLink to={group.to} end className="min-w-0 flex-1">
+              <NavLink
+                to={group.to}
+                end
+                className="flex min-w-0 flex-1 items-center gap-2 self-stretch"
+              >
                 {({ isActive }) => (
-                  <span
-                    className={cn(
-                      "block",
-                      SIDEBAR_GROUP_HEADER_LABEL_CLASS,
-                      isActive
-                        ? "text-sidebar-selected-foreground"
-                        : "text-sidebar-foreground/75 hover:text-sidebar-foreground",
-                    )}
-                  >
-                    {group.label}
-                  </span>
+                  <>
+                    {GroupIcon && <GroupIcon className="size-4 shrink-0" aria-hidden />}
+                    <span
+                      className={cn(
+                        "block",
+                        SIDEBAR_GROUP_HEADER_LABEL_CLASS,
+                        isActive
+                          ? "text-sidebar-selected-foreground"
+                          : "text-sidebar-foreground/75 hover:text-sidebar-foreground",
+                      )}
+                    >
+                      {group.label}
+                    </span>
+                  </>
                 )}
               </NavLink>
               {group.createActions && group.createActions.length > 0 && (
@@ -2043,6 +2055,8 @@ function CreateActionsMenu({ group }: { group: NavGroup }) {
 }
 
 interface SidebarViewProps {
+  /** Persistent shell actions above the content navigation. */
+  leadingActions?: ReactNode;
   /** Display-only navigation override; the navigation registry remains intact. */
   groups?: NavGroup[];
   onNewConversation?: () => void;
@@ -2056,6 +2070,7 @@ interface SidebarViewProps {
 }
 
 function SidebarContent({
+  leadingActions,
   collapsed,
   groups,
   onNewConversation,
@@ -2109,6 +2124,7 @@ function SidebarContent({
             <PanelLeftOpen className="size-5" />
           </TooltipIconButton>
         </div>
+        {leadingActions}
         {!hideNewConversation && !collapsedGroupsOnly && (
           <TooltipIconButton
             tooltip={newConversationLabel}
@@ -2265,6 +2281,7 @@ function SidebarContent({
         </TooltipIconButton>
       </div>
 
+      {leadingActions}
       {!hideNewConversation && !newConversationAfterGroup && newConversationAction}
 
       {/* ThreadIndicator removed — the active conversation's row in

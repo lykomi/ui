@@ -8,9 +8,9 @@ export function WorkbenchContentPane({
   chatWidth,
   contentCollapsed,
   collapsed,
-  buttonClass,
   setCollapsed,
   setContentCollapsed,
+  buttonClass,
   closePanel,
   page,
 }: {
@@ -48,7 +48,6 @@ export function WorkbenchContentPane({
           tooltip="Collapse content"
           className={buttonClass}
           aria-label="Collapse content"
-          style={contentHidden ? { display: "none" } : undefined}
           onClick={() => {
             setCollapsed(false);
             setContentCollapsed(true);
@@ -66,9 +65,7 @@ export function WorkbenchContentPane({
             className="flex shrink-0 items-center border-b border-border pl-3 pr-14"
             style={{ minHeight: 60 }}
           >
-            <button className={buttonClass} onClick={closePanel}>
-              ← Back to content
-            </button>
+            <button onClick={closePanel}>← Back to content</button>
           </div>
         )}
         <ToolPanelLayout contained>
