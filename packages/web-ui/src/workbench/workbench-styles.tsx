@@ -381,16 +381,22 @@ export function WorkbenchStyles() {
           padding-top: 0;
         }
         .workbench-preview :is([data-nav-group-label="Recent spaces"], [data-nav-group-label="Administration"]) > div:has(> [data-nav-group-header]) {
-          padding-top: 18px;
-          padding-bottom: 2px;
+          margin-top: 24px;
+          padding-top: 0;
+          padding-bottom: 6px;
         }
         .workbench-preview :is([data-nav-group-label="Recent spaces"], [data-nav-group-label="Administration"]) [data-nav-group-header] {
           height: 24px;
           min-height: 24px;
           font-size: 14px;
           line-height: 20px;
-          font-weight: 500;
-          color: var(--muted-foreground);
+          font-weight: 400;
+          text-transform: none;
+          letter-spacing: normal;
+          color: color-mix(in srgb, var(--sidebar-foreground) 60%, var(--sidebar));
+        }
+        .workbench-preview [data-home-content] [data-home-welcome] {
+          margin-block: auto;
         }
         .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-secondary-link="true"] {
           font-size: 14px;
