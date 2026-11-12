@@ -21,8 +21,8 @@ export function HomeContent({
 }) {
   return (
     <div data-home-content className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-10 sm:pt-16">
-        <div className="mx-auto w-full max-w-3xl">
+      <div data-home-scroll className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-10">
+        <div data-home-welcome className="mx-auto w-full max-w-3xl shrink-0">
           <WelcomeIntro navGroups={groups} historyShortcut={null} />
           <div className="mt-8 mb-6">
             {chatOpen ? (
