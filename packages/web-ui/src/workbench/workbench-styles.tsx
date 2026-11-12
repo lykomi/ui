@@ -495,7 +495,12 @@ export function WorkbenchStyles() {
             padding-bottom: 0;
           }
           .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) div[data-nav-depth="0"] > button:not([data-nav-twisty]) {
-            min-height: 30px;
+            height: 34px;
+            min-height: 34px;
+          }
+          .workbench-preview:not([data-workspace-navigation]) [data-sidebar-surface]:not([data-sidebar-collapsed]) [data-nav-depth="0"]:not([data-nav-branch-status]) {
+            height: 36px;
+            min-height: 36px;
           }
         }
 
