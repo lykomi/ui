@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.49.1
+
+### Patch Changes
+
+- a753e66: Center Home content when it fits while retaining scrolling on shorter screens. Clarify sidebar groups with quieter typography and consistent spacing.
+  - @iloveagents/foundry-agent@0.49.1
+  - @iloveagents/foundry-web-primitives@0.49.1
+
 ## 0.49.0
 
 ### Minor Changes
