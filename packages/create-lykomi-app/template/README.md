@@ -42,7 +42,25 @@ Home opens with the chat composer and three clickable prompts. The Guide route s
 
 The bundled tools live in `agent/app/tools.py`.
 
-The starter registers Guide navigation, page context, and an “About this starter” item in the lower interface menu through `src/starter-module.ts`. Open **Working draft** and **Architecture**, edit the draft, then select **Panels**. Pin, reorder and resize windows; switch back to **Tabs** or visit Home and return. The draft stays in memory until you close it or reload. Closing an edited draft asks before discarding it. `src/pages/guide-windows.ts` owns the app data; `WindowWorkbench` and `createWindowStore` from `@lykomi/web-ui` provide the shared window behaviour. The active window context, including the draft text, accompanies an AG-UI turn. Connect your own storage service before treating the draft as saved. Local demo auth has no user identity, so that control is an interface menu; after you wire real auth, the same menu shows the signed-in user and sign-out action.
+The starter registers Guide navigation, page context, and an “About this starter” item in the lower interface menu through `src/starter-module.ts`. Open **Working draft** and **Architecture**, select **Edit draft**, change the fields, then select **Panels**. Pin, reorder and resize windows; switch back to **Tabs** or visit Home and return. The draft stays in memory until you close it or reload. Closing an edited draft asks before discarding it. `src/pages/guide-windows.ts` owns the app data; `WindowWorkbench` and `createWindowStore` from `@lykomi/web-ui` provide the shared window behaviour. The active window context, including the draft text, accompanies an AG-UI turn. Connect your own storage service before treating the draft as saved. Local demo auth has no user identity, so that control is an interface menu; after you wire real auth, the same menu shows the signed-in user and sign-out action.
+
+## Form fields and agent context
+
+Open **Guide → Working draft → Edit draft**. Focus **Your idea**, select a few words,
+then open chat and ask “Make this idea more specific”. The context indicator shows
+**Your idea**; the AG-UI request includes its field path, current value and selected
+text. The active window also supplies the named form fields and edit mode.
+
+`src/pages/use-draft-context.ts` uses the public `useAppStore.setContextItem` and
+`usePageTools` APIs. Its `page_update_draft_field` tool validates the field and
+checks that its current value still matches the value the agent read. Updates
+appear in the same inputs you edit manually. **Save draft** accepts the changes
+in memory; **Cancel** restores the previous values. Closing the draft or switching
+to another window removes its field context and tools. Moving into chat keeps them.
+
+The leaf `Input`, `Textarea` and `Field` components do not automatically send values
+to a model. Your app explicitly chooses the fields to expose. Keep sensitive fields
+out of context, and connect your own authenticated persistence before saving remotely.
 
 ## Coding With AI Agents
 

@@ -306,15 +306,39 @@ async function runBrowserStarterSmoke() {
       const requestBody = JSON.parse(route.request().postData() || "{}");
       lastAgentRequest = requestBody;
       sentMessages = requestBody.messages ?? [];
+      const lastMessage = requestBody.messages?.at(-1);
+      const draftEdit =
+        lastMessage?.role === "user" && lastMessage.content === "Make this idea more specific";
+      const events = draftEdit
+        ? [
+            { type: "RUN_STARTED", threadId: requestBody.threadId, runId: requestBody.runId },
+            {
+              type: "TOOL_CALL_START",
+              toolCallId: "draft-edit",
+              toolCallName: "page_update_draft_field",
+            },
+            {
+              type: "TOOL_CALL_ARGS",
+              toolCallId: "draft-edit",
+              delta: JSON.stringify({
+                field: "text",
+                expectedValue: "Keep this draft across layouts",
+                value: "Help people turn ideas into actionable plans.",
+              }),
+            },
+            { type: "TOOL_CALL_END", toolCallId: "draft-edit" },
+            { type: "RUN_FINISHED", threadId: requestBody.threadId, runId: requestBody.runId },
+          ]
+        : screenshotPath
+          ? createShowcaseEvents(requestBody)
+          : createHelloWorldEvents(requestBody);
       await route.fulfill({
         status: 200,
         headers: {
           "cache-control": "no-cache",
           "content-type": "text/event-stream",
         },
-        body: encodeSse(
-          screenshotPath ? createShowcaseEvents(requestBody) : createHelloWorldEvents(requestBody),
-        ),
+        body: encodeSse(events),
       });
     });
 
@@ -345,6 +369,11 @@ async function runBrowserStarterSmoke() {
     if (await desktopNav.getByRole("button", { name: "Expand sidebar" }).count()) {
       await desktopNav.getByRole("button", { name: "Expand sidebar" }).click();
     }
+    const inactiveGuideBorder = await desktopNav
+      .getByRole("link", { name: "Guide" })
+      .evaluate((element) => getComputedStyle(element).borderTopColor);
+    if (inactiveGuideBorder !== "rgba(0, 0, 0, 0)")
+      throw new Error(`Inactive Guide has a visible border: ${inactiveGuideBorder}`);
     await desktopNav.getByRole("link", { name: "Guide" }).click();
     await page.getByRole("heading", { name: "Build an agent app around real work." }).waitFor();
     await desktopNav.locator('a[href="/guide"][aria-current="page"]').waitFor();
@@ -354,6 +383,16 @@ async function runBrowserStarterSmoke() {
       throw new Error("Home remained selected on the Guide route.");
     }
     await page.getByRole("button", { name: "Open working draft" }).click();
+    const fieldBeforeEdit = await page.locator("#starter-draft-text").boundingBox();
+    await page.getByRole("button", { name: "Edit draft", exact: true }).click();
+    const fieldAfterEdit = await page.locator("#starter-draft-text").boundingBox();
+    if (
+      !fieldBeforeEdit ||
+      !fieldAfterEdit ||
+      Math.abs(fieldBeforeEdit.y - fieldAfterEdit.y) > 1 ||
+      Math.abs(fieldBeforeEdit.height - fieldAfterEdit.height) > 1
+    )
+      throw new Error("Draft field geometry changed between read and edit modes.");
     await page.getByLabel("Your idea", { exact: true }).fill("Keep this draft across layouts");
     await page.getByRole("tab", { name: "Guide", exact: true }).click();
     await page.getByRole("button", { name: "Open architecture", exact: true }).click();
@@ -468,6 +507,10 @@ async function runBrowserStarterSmoke() {
         "Keep this draft across layouts"
       )
         throw new Error("Draft was lost after visiting Home.");
+      await page.getByLabel("Your idea", { exact: true }).focus();
+      await page.keyboard.press("Home");
+      for (let i = 0; i < 5; i += 1) await page.keyboard.press("ArrowRight");
+      for (let i = 0; i < 4; i += 1) await page.keyboard.press("Shift+ArrowRight");
       await page
         .getByRole("button", { name: "Ask the agent about this page" })
         .filter({ visible: true })
@@ -493,6 +536,50 @@ async function runBrowserStarterSmoke() {
         "Keep this draft across layouts"
       )
         throw new Error("The active window context did not reach the AG-UI request.");
+
+      const fieldContext = lastAgentRequest.state.contextItems.find(
+        (item) => item.meta?.fieldFocus === "active",
+      );
+      if (
+        fieldContext?.target?.label !== "Your idea" ||
+        fieldContext.target.currentValue !== "Keep this draft across layouts" ||
+        fieldContext.meta.caret.selectedText !== "this"
+      ) {
+        throw new Error(
+          `Active form field value/selection did not reach AG-UI after entering chat: ${JSON.stringify(fieldContext)}`,
+        );
+      }
+      if (!lastAgentRequest.tools.some((tool) => tool.name === "page_update_draft_field"))
+        throw new Error("Draft editing tool is missing.");
+      await page
+        .getByRole("textbox", { name: "Do anything", exact: true })
+        .fill("Make this idea more specific");
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await page.waitForFunction(
+        () =>
+          document.querySelector("#starter-draft-text")?.value ===
+          "Help people turn ideas into actionable plans.",
+      );
+      await page.getByRole("button", { name: "Send message", exact: true }).waitFor();
+      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await page.getByText("My agent app will help people…", { exact: true }).waitFor();
+      await page.getByRole("button", { name: "Edit draft", exact: true }).click();
+      await page.getByLabel("App name", { exact: true }).fill("My updated app");
+      await page.getByRole("button", { name: "Save draft", exact: true }).click();
+      await page.getByText("My updated app", { exact: true }).waitFor();
+      await page
+        .getByRole("textbox", { name: "Do anything", exact: true })
+        .fill("What can you see now?");
+      const viewRequest = page.waitForRequest(
+        (request) => request.method() === "POST" && request.url().endsWith("/api/agent"),
+      );
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await viewRequest;
+      if (
+        lastAgentRequest.tools.some((tool) => tool.name === "page_update_draft_field") ||
+        lastAgentRequest.state.contextItems.some((item) => item.meta?.fieldFocus === "active")
+      )
+        throw new Error("Read mode retained edit tools or stale active-field context.");
 
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(url, { waitUntil: "domcontentloaded" });

@@ -1,5 +1,5 @@
 import { MessageSquare, Plus } from "lucide-react";
-import { Button, Textarea } from "@lykomi/web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import { WindowWorkbench } from "@lykomi/web-ui/windows";
 import {
   useChatBubbleStore,
@@ -8,9 +8,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@lykomi/web-ui";
+import { DraftForm } from "./draft-form.tsx";
+import { useDraftContext } from "./use-draft-context.ts";
 import { guideWindows, openGuideWindow } from "./guide-windows.ts";
 
 export function GuidePage() {
+  useDraftContext();
   return (
     <WindowWorkbench
       controller={guideWindows}
@@ -48,6 +51,16 @@ export function GuidePage() {
             ? "Browser shell → AG-UI → FastAPI agent. Each page supplies its own context."
             : "The starter guide explains agent configuration, page context, tabs and panels."),
         unsavedChanges: Boolean(tab.dirty),
+        ...(tab.kind === "draft"
+          ? {
+              kind: "form",
+              mode: tab.editing ? "edit" : "view",
+              fields: {
+                name: { label: "App name", value: tab.name },
+                text: { label: "Your idea", value: tab.text },
+              },
+            }
+          : {}),
       })}
       renderWindow={(tab) => (
         <main className="mx-auto max-w-3xl px-6 py-8 sm:px-10" aria-label={String(tab.title)}>
@@ -94,31 +107,7 @@ export function GuidePage() {
               </p>
             </>
           )}
-          {tab.kind === "draft" && (
-            <>
-              <h1 className="mt-2 text-2xl font-semibold">Working draft</h1>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Edit this draft, switch layouts, reorder its tab, or visit Home. It stays here until
-                you close it. This example keeps your work in memory for this browser session.
-              </p>
-              <label htmlFor="starter-draft" className="mt-6 block text-sm font-medium">
-                Your idea
-              </label>
-              <Textarea
-                id="starter-draft"
-                className="mt-2 min-h-48"
-                value={tab.text ?? ""}
-                onChange={(event) =>
-                  guideWindows.update(tab.id, { text: event.target.value, dirty: true })
-                }
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                {tab.dirty
-                  ? "Unsaved changes · this demo has no storage service"
-                  : "Try editing, then switch to panels"}
-              </p>
-            </>
-          )}
+          {tab.kind === "draft" && <DraftForm tab={tab} />}
           <Button
             variant="outline"
             className="mt-6 gap-2"
