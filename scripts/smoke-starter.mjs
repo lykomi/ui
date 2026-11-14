@@ -358,6 +358,17 @@ async function runBrowserStarterSmoke() {
     await page.getByRole("tab", { name: "Guide", exact: true }).click();
     await page.getByRole("button", { name: "Open architecture", exact: true }).click();
     await page.getByRole("heading", { name: "Starter architecture" }).waitFor();
+    await page.getByRole("button", { name: "View as panels", exact: true }).click();
+    await page.getByRole("button", { name: "Close Guide", exact: true }).click();
+    if (
+      (await page
+        .getByRole("tab", { name: "Architecture", exact: true })
+        .getAttribute("aria-selected")) !== "true"
+    )
+      throw new Error("Closing an inactive panel changed the active window.");
+    await page.getByRole("button", { name: "Open window", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Guide", exact: true }).click();
+    await page.getByRole("button", { name: "View as tabs", exact: true }).click();
     await page.getByRole("tab", { name: /Working draft/ }).click();
     await page.getByRole("button", { name: "View as panels", exact: true }).click();
     await page.getByLabel("Your idea", { exact: true }).waitFor();

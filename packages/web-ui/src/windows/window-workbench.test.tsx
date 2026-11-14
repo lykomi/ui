@@ -61,3 +61,35 @@ it("keeps the same editor node and scroll while switching layouts, selection and
     vi.unstubAllGlobals();
   }
 });
+
+it("closing an inactive panel preserves the active working context", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const store = createWindowStore();
+  ["a", "b", "c"].forEach((id) =>
+    store.open({ id, title: id, close: () => store.remove(id) }, { mode: "new-tab" }),
+  );
+  store.setLayout("panels");
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <WindowWorkbench controller={store} renderWindow={(tab) => <p>{tab.title}</p>} />,
+      ),
+    );
+    const close = host.querySelector<HTMLButtonElement>('[aria-label="Close a"]')!;
+    await act(async () => {
+      close.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+      close.focus();
+    });
+    expect(store.get().active).toBe("c");
+    await act(async () => close.click());
+    expect(store.get().active).toBe("c");
+    expect(store.get().tabs.map((tab) => tab.id)).toEqual(["b", "c"]);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

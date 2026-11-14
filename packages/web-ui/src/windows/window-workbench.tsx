@@ -106,6 +106,15 @@ function WindowPane<T extends WorkbenchWindow>({
   }, [panels, active]);
   const visible = panels || active;
   const scroll = useWindowScroll(visible, panels);
+  const activateContent = (target: EventTarget) => {
+    if (
+      !active &&
+      target instanceof Element &&
+      frame.current?.contains(target) &&
+      !target.closest("[data-item-window-controls], [data-window-reorder]")
+    )
+      void controller.select(tab.id);
+  };
   return (
     <section
       ref={frame}
@@ -118,12 +127,8 @@ function WindowPane<T extends WorkbenchWindow>({
       role="tabpanel"
       aria-labelledby={`${idPrefix}tab-${tab.id}`}
       hidden={!visible}
-      onPointerDown={() => {
-        if (!active) void controller.select(tab.id);
-      }}
-      onFocusCapture={() => {
-        if (!active) void controller.select(tab.id);
-      }}
+      onPointerDown={(event) => activateContent(event.target)}
+      onFocusCapture={(event) => activateContent(event.target)}
       className={cn(
         "min-h-0 min-w-0 bg-background",
         !visible ? "hidden" : "flex flex-col",

@@ -1,7 +1,13 @@
 import { MessageSquare, Plus } from "lucide-react";
 import { Button, Textarea } from "@lykomi/web-primitives";
 import { WindowWorkbench } from "@lykomi/web-ui/windows";
-import { useChatBubbleStore } from "@lykomi/web-ui";
+import {
+  useChatBubbleStore,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@lykomi/web-ui";
 import { guideWindows, openGuideWindow } from "./guide-windows.ts";
 
 export function GuidePage() {
@@ -9,10 +15,23 @@ export function GuidePage() {
     <WindowWorkbench
       controller={guideWindows}
       toolbar={
-        <Button variant="ghost" size="sm" onClick={() => openGuideWindow("draft")}>
-          <Plus />
-          Draft
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" aria-label="Open window">
+              <Plus />
+              Open
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => openGuideWindow("overview")}>Guide</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openGuideWindow("architecture")}>
+              Architecture
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openGuideWindow("draft")}>
+              Working draft
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
       empty={
         <div className="p-8">
