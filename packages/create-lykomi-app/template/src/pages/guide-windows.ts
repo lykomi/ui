@@ -3,6 +3,10 @@ import { createWindowStore, type WorkbenchWindow } from "@lykomi/web-ui/windows"
 export interface GuideWindow extends WorkbenchWindow {
   kind: "overview" | "architecture" | "draft";
   text?: string;
+  name?: string;
+  editing?: boolean;
+  saved?: { name: string; text: string };
+  field?: { key: "name" | "text"; start: number; end: number };
 }
 
 // App-owned data; the UI framework owns selection, pinning, ordering and layouts.
@@ -20,6 +24,7 @@ export function openGuideWindow(kind: GuideWindow["kind"]) {
       title,
       independent: true,
       text: kind === "draft" ? "My agent app will help people…" : undefined,
+      name: kind === "draft" ? "My agent app" : undefined,
       close: () => {
         const tab = guideWindows.get().tabs.find((entry) => entry.id === kind);
         if (tab?.dirty && !window.confirm("Close this draft and discard your changes?")) return;
