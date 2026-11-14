@@ -1,5 +1,11 @@
 # create-lykomi-app
 
+## 0.11.0
+
+### Minor Changes
+
+- 12ad018: Provide automatic field context through shared Field and ReadOnlyField primitives. Centralize focus, text selection, current-value projection, visibility and opt-out handling in the UI framework, with a source adapter for richer application metadata. Remove per-field context wiring from the starter.
+
 ## 0.10.1
 
 ### Patch Changes
