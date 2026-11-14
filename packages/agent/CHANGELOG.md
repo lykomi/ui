@@ -1,5 +1,11 @@
 # @iloveagents/foundry-agent
 
+## 0.52.0
+
+### Minor Changes
+
+- 752559b: Add contextual teaching bubbles, internal app-view capture through AG-UI binary input, and optional manual screenshots hidden by default. The shell mounts the guidance host and rejects stale targets after view or conversation changes.
+
 ## 0.51.0
 
 ## 0.50.0

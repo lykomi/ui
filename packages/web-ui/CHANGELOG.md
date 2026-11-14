@@ -1,5 +1,18 @@
 # @iloveagents/foundry-web-ui
 
+## 0.52.0
+
+### Minor Changes
+
+- 752559b: Add contextual teaching bubbles, internal app-view capture through AG-UI binary input, and optional manual screenshots hidden by default. The shell mounts the guidance host and rejects stale targets after view or conversation changes.
+
+### Patch Changes
+
+- 752559b: Share the composer action size between voice, send and stop controls so typing does not change the input's height. Handle visual client-tool results explicitly in realtime voice sessions.
+- Updated dependencies [752559b]
+  - @lykomi/agent@0.52.0
+  - @lykomi/web-primitives@0.52.0
+
 ## 0.51.0
 
 ### Minor Changes

@@ -1,5 +1,19 @@
 # @iloveagents/foundry-web-shell
 
+## 0.52.0
+
+### Minor Changes
+
+- 752559b: Add contextual teaching bubbles, internal app-view capture through AG-UI binary input, and optional manual screenshots hidden by default. The shell mounts the guidance host and rejects stale targets after view or conversation changes.
+
+### Patch Changes
+
+- Updated dependencies [752559b]
+- Updated dependencies [752559b]
+  - @lykomi/web-ui@0.52.0
+  - @lykomi/agent@0.52.0
+  - @lykomi/web-primitives@0.52.0
+
 ## 0.51.0
 
 ### Patch Changes
