@@ -109,6 +109,9 @@ function useWorkbenchNavigation() {
     () =>
       navigationGroups.map((group) => ({
         ...group,
+        // The workbench supplies its own Home action. Keep the nav item in
+        // the context model without rendering a second link to the same URL.
+        items: group.items.filter((item) => item.to !== "/"),
         collapsible: group.meta?.type === "spaces-admin" || group.meta?.type === "recent-spaces",
       })),
     [navigationGroups],

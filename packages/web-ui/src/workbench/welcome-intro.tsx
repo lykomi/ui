@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   useNavStore,
 } from "../index.ts";
-import { ChatHomeStartersSlot } from "../components/chat-slots.tsx";
+import { ChatHomeStartersSlot, useChatSlotsStore } from "../components/chat-slots.tsx";
 import { Layers } from "lucide-react";
 export function WelcomeIntro({
   navGroups,
@@ -19,13 +19,15 @@ export function WelcomeIntro({
   /** Global home has no item context and must not reserve speculative starter rows. */
   contextual?: boolean;
 }) {
+  const hasStarters = useChatSlotsStore((state) => Boolean(state.homeStarters));
+  const navigationLoading = useNavStore((state) => state.navLoading);
   return (
     <div className="mb-4 text-center">
       <h1 className="text-2xl font-semibold tracking-tight">What would you like to get done?</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Ask a question, describe a task, or open a space to get started.
+        Ask a question, describe a task, or choose a page to get started.
       </p>
-      {contextual && (
+      {(contextual || (hasStarters && !navigationLoading)) && (
         <div className="mx-auto mt-4 max-w-sm text-left">
           <ChatHomeStartersSlot priority={10} />
         </div>

@@ -51,7 +51,7 @@ Always:
 - Keep the default generated app name and browser title as `LYKOMI UI`.
 - Document app theming through `theme` layers in `src/main.tsx`.
 - Keep `src/index.css` importing `@lykomi/web-ui/styles.css`.
-- Keep Tailwind v4 `@source "../node_modules/@iloveagents/.../dist"` directives.
+- Keep Tailwind v4 `@source "../node_modules/@lykomi/.../dist"` directives.
 - Keep `AGENTS.md` and `CLAUDE.md` in the generated template.
 - Keep Foundry IQ-specific code in the `foundry-iq` preset overlay, not in the default template.
 

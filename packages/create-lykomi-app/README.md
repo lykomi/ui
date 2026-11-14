@@ -10,6 +10,7 @@ LYKOMI UI is maintained at [lykomi/ui](https://github.com/lykomi/ui).
 npm create lykomi-app my-agent-app
 cd my-agent-app
 cp agent/.env.example agent/.env
+# Edit agent/.env with your project endpoint and model deployment.
 az login
 pnpm dev
 ```
@@ -20,7 +21,7 @@ Set these in `agent/.env`:
 
 ```bash
 FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>
-FOUNDRY_MODEL=gpt-5.4
+FOUNDRY_MODEL=<model-deployment-name>
 ```
 
 The generated app starts:
@@ -29,11 +30,13 @@ The generated app starts:
 - Agent service: `http://localhost:8020`
 - AG-UI endpoint: `/api/agent`
 
-The first screen is the chat. The bundled agent can call `hello_world` and `get_weather`.
+Home opens with a chat composer and clickable prompts. Guide demonstrates a page beside the persistent chat. The bundled agent can call `hello_world` and `get_weather`.
+
+The lower interface menu links to the Guide in local demo mode. Connecting a real auth provider makes it the signed-in user menu.
 
 ## Theme The App
 
-Generated apps default to `LYKOMI UI` for both the shell title and browser title. Change branding, logos, colors, radius, and fonts through the `theme` layers in `src/main.tsx`.
+Generated apps use LYKOMI's neutral and deep-petrol palette, light and dark V2 favicons, a locally bundled Manrope font, and `LYKOMI UI` for the shell and browser title. Edit `src/theme.ts` to change branding, colors, radius, and typography.
 
 ## Two Ways To Use It
 

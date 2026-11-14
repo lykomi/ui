@@ -27,7 +27,7 @@ it("describes navigation without treating it as a workspace boundary", () => {
     focused: false,
   });
   projection.navigation.label = "Chat";
-  expect(summarizeChatContext(projection).label).toBe("Your spaces");
+  expect(summarizeChatContext(projection).label).toBe("this conversation");
 });
 it("reads the active field and caret from module-supplied references", () => {
   const projection = state();

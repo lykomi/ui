@@ -2,7 +2,7 @@ import { processContextStore } from "./process/process-agent-context.ts";
 import { useEffect, useState } from "react";
 import { ChevronDown, FileText, Maximize2, TextCursorInput } from "lucide-react";
 import { useAppStore } from "../lib/app-store.ts";
-import { summarizeChatContext } from "../lib/chat-context-summary.ts";
+import { DEFAULT_CHAT_CONTEXT_LABEL, summarizeChatContext } from "../lib/chat-context-summary.ts";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover.tsx";
 import { ChatContextDetailsSlot } from "./chat-slots.tsx";
 import { ChatContextItems } from "./chat-context-items.tsx";
@@ -97,7 +97,7 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
           type="button"
           data-chat-context
           data-chat-context-default={
-            context.label === "Your spaces" &&
+            context.label === DEFAULT_CHAT_CONTEXT_LABEL &&
             !detail &&
             items.length === 0 &&
             !isPinned &&
@@ -160,7 +160,7 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
             {context.selectedText}
           </blockquote>
         )}
-        {!context.focused && context.label !== "Your spaces" && (
+        {!context.focused && context.label !== DEFAULT_CHAT_CONTEXT_LABEL && (
           <button
             type="button"
             aria-pressed={isPinned}

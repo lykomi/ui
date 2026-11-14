@@ -24,7 +24,7 @@ describe("findNavItem", () => {
     const result = findNavItem(DEFAULT_NAV_CONFIG, "/");
     expect(result).not.toBeNull();
     expect(result!.group).toBe("Pages");
-    expect(result!.item.label).toBe("Chat");
+    expect(result!.item.label).toBe("Home");
     expect(result!.item.description).toBeTruthy();
   });
 

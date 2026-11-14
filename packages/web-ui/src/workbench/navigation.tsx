@@ -1,6 +1,6 @@
 import { Sidebar, UserMenu, ThemeToggle, type NavGroup } from "../index.ts";
 import { useSidebarStore } from "../lib/sidebar-store.ts";
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 import { ArrowLeft, House } from "lucide-react";
 export function WorkbenchNavigation({
   groups,
@@ -16,6 +16,8 @@ export function WorkbenchNavigation({
   onHome: () => void;
 }) {
   const closeMobile = useSidebarStore((state) => state.closeMobile);
+  const { pathname } = useLocation();
+  const isHome = !workspace && !historyOpen && pathname === "/";
   const activate = (action: () => void) => {
     closeMobile();
     action();
@@ -38,7 +40,7 @@ export function WorkbenchNavigation({
               className="flex min-h-9 items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent aria-[current=page]:bg-sidebar-selected aria-[current=page]:text-sidebar-selected-foreground"
               data-space-exit={workspace || undefined}
               aria-label={workspace ? "All spaces" : "Home"}
-              aria-current={workspace || historyOpen ? false : "page"}
+              aria-current={isHome ? "page" : false}
               onClick={() => (workspace ? closeMobile() : activate(onHome))}
             >
               {workspace ? (

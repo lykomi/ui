@@ -272,11 +272,12 @@ async function runBrowserStarterSmoke() {
 
     const page = await browser.newPage(
       screenshotPath
-        ? { viewport: { width: 1440, height: 700 }, deviceScaleFactor: 2 }
+        ? { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 }
         : { viewport: { width: 1280, height: 900 } },
     );
     let sawAgentRequest = false;
     let sentMessages = [];
+    let lastAgentRequest = null;
     const prompt = "Say hello world using the hello_world tool";
     let parserRequests = 0;
     page.on("request", (request) => {
@@ -303,6 +304,7 @@ async function runBrowserStarterSmoke() {
     await page.route("**/api/agent", async (route) => {
       sawAgentRequest = true;
       const requestBody = JSON.parse(route.request().postData() || "{}");
+      lastAgentRequest = requestBody;
       sentMessages = requestBody.messages ?? [];
       await route.fulfill({
         status: 200,
@@ -339,6 +341,32 @@ async function runBrowserStarterSmoke() {
     await page
       .getByRole("heading", { name: "What would you like to get done?" })
       .waitFor({ timeout: 10_000 });
+    const desktopNav = page.locator('[data-sidebar-surface="desktop"]');
+    if (await desktopNav.getByRole("button", { name: "Expand sidebar" }).count()) {
+      await desktopNav.getByRole("button", { name: "Expand sidebar" }).click();
+    }
+    await desktopNav.getByRole("link", { name: "Guide" }).click();
+    await page.getByRole("heading", { name: "Build an agent app around real work." }).waitFor();
+    await desktopNav.locator('a[href="/guide"][aria-current="page"]').waitFor();
+    if (
+      (await desktopNav.getByRole("link", { name: "Home" }).getAttribute("aria-current")) === "page"
+    ) {
+      throw new Error("Home remained selected on the Guide route.");
+    }
+    await page.getByRole("tab", { name: "UI" }).click();
+    await page.getByRole("button", { name: "Open architecture panel" }).click();
+    await page.getByRole("heading", { name: "Starter architecture" }).waitFor();
+    await page.getByRole("button", { name: "Close panel" }).click();
+    await desktopNav.getByRole("link", { name: "Home" }).click();
+    await desktopNav.locator('a[aria-label="Home"][aria-current="page"]').waitFor();
+    if (
+      (await desktopNav.getByRole("link", { name: "Home" }).getAttribute("aria-current")) !== "page"
+    ) {
+      throw new Error("Home is not selected after returning from Guide.");
+    }
+    await page
+      .getByRole("button", { name: "Say hello world using the hello_world tool" })
+      .waitFor();
     if (parserRequests !== 0)
       throw new Error("Mermaid parser loaded before a diagram was requested.");
     // Home is a composer entry point into the same contextual chat panel.
@@ -373,6 +401,27 @@ async function runBrowserStarterSmoke() {
     }
     if (!sentMessages.some((message) => message.role === "user" && message.content === prompt)) {
       throw new Error("The Home-to-chat handoff did not preserve the submitted prompt.");
+    }
+
+    if (!screenshotPath) {
+      await desktopNav.getByRole("link", { name: "Guide" }).click();
+      await page.getByRole("heading", { name: "Build an agent app around real work." }).waitFor();
+      await page.getByRole("button", { name: "Ask the agent about this page" }).click();
+      await page
+        .getByRole("textbox", { name: "Do anything", exact: true })
+        .fill("Explain this guide");
+      const guideRequest = page.waitForRequest(
+        (request) => request.method() === "POST" && request.url().endsWith("/api/agent"),
+      );
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await guideRequest;
+      if (
+        !String(lastAgentRequest?.state?.navigation?.contextInstructions ?? "").includes(
+          "The user is reading the starter guide",
+        )
+      ) {
+        throw new Error("The Guide page context did not reach the AG-UI request.");
+      }
     }
 
     if (pageErrors.length > 0 || consoleErrors.length > 0) {

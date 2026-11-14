@@ -61,11 +61,11 @@ export default defineConfig({
           )
             return "lykomi-workbench";
           if (pkg.startsWith("@lykomi/web-ui/")) return "vendor-lykomi-ui";
-          if (pkg.startsWith("@lykomi/web-shell/")) return "vendor-foundry-shell";
+          if (pkg.startsWith("@lykomi/web-shell/")) return "vendor-lykomi-shell";
           if (pkg.startsWith("@lykomi/agent/")) return "vendor-lykomi-agent";
           // Voice is optional at runtime and heavy at build; its own chunk
           // keeps the main path light and the size gate honest.
-          if (pkg.startsWith("@lykomi/web-voice/")) return "vendor-foundry-voice";
+          if (pkg.startsWith("@lykomi/web-voice/")) return "vendor-lykomi-voice";
           // Before the react rule: recharts drags react-smooth + the d3
           // sub-packages along, and "react-smooth" would land in
           // vendor-react and push it past the chunk-size gate.

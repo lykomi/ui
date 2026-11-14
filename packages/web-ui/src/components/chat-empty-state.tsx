@@ -21,10 +21,7 @@ export function ChatEmptyState({
   const loadingContext =
     contextLoading ?? (navigationLoading && (!pageLabel || pageLabel.startsWith("/")));
   return (
-    <div
-      data-chat-empty-state
-      className="flex min-h-full flex-col justify-start gap-3 px-4 pb-8 pt-3"
-    >
+    <div data-chat-empty-state className="flex flex-col gap-3 px-4 pb-4 pt-3">
       <h1 className="text-base leading-6 font-semibold">What would you like to get done?</h1>
       {loadingContext ? (
         <div
@@ -44,18 +41,18 @@ export function ChatEmptyState({
         </div>
       ) : (
         <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-          {pageLabel && !pageLabel.startsWith("/") ? (
+          {pageLabel && !pageLabel.startsWith("/") && !/^chat$/i.test(pageLabel) ? (
             <>
-              Work with <span className="font-medium text-foreground">{pageLabel}</span> or across
-              your spaces: find information, create or edit content, and run actions.
+              Ask about <span className="font-medium text-foreground">{pageLabel}</span> or start a
+              new task.
             </>
           ) : (
-            "Find information, create or edit content, and run actions across your spaces."
+            "Ask a question, start a task, or try one of the prompts below."
           )}
         </p>
       )}
       <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-        Your chat continues as you browse. Select text or a field to work more specifically.
+        Your conversation stays open as you move through the app.
       </p>
       {showHomeStarters && <ChatHomeStartersSlot priority={homeStarterPriority} />}
       {children}
