@@ -86,22 +86,6 @@ export function getActiveFieldContext(): ActiveFieldContext | null {
   return active;
 }
 
-/** Programmatic selection uses the same DOM owner as pointer/keyboard focus. */
-export function setActiveFieldContext(refId: string | null) {
-  clearActiveFieldContext();
-  if (!refId || typeof document === "undefined") return;
-  for (const [source, options] of sources) {
-    const element = [...document.querySelectorAll<HTMLElement>(options.selector)].find(
-      (node) => options.getRefId(node) === refId,
-    );
-    if (element) {
-      active = { refId, element, target: element, source, caret: null };
-      element.setAttribute("data-agent-selected", "true");
-      return;
-    }
-  }
-}
-
 function trackFocus(event: Event) {
   if (!(event.target instanceof HTMLElement)) return;
   const target = event.target;

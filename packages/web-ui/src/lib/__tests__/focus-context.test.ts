@@ -38,3 +38,15 @@ it("keeps whole-page focus distinct from a table within the page", () => {
   expect(context?.content).toContain("Conclusion");
   expect(context).not.toHaveProperty("table");
 });
+
+it("excludes opted-out subtrees from document and table context", () => {
+  host = document.createElement("div");
+  host.innerHTML = `<section data-focused data-focus-kind="document"><p>Public brief</p><dl data-agent-context="off"><dt>Private</dt><dd>secret-value</dd></dl></section>`;
+  document.body.append(host);
+  expect(collectFocusContext()?.content).toBe("Public brief");
+  expect(JSON.stringify(useAppStore.getState().getAgentState())).not.toContain("secret-value");
+  host.innerHTML = `<section data-focused><table><tbody><tr><td>Public <span data-agent-context="off">secret-value</span></td><td data-agent-context="off">another-secret</td></tr></tbody></table></section>`;
+  expect(collectFocusContext()?.table?.rows).toEqual([["Public", ""]]);
+  host.setAttribute("data-agent-context", "off");
+  expect(collectFocusContext()).toBeNull();
+});

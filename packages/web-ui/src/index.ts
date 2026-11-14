@@ -346,7 +346,6 @@ export * from "./windows.ts";
 
 export {
   getActiveFieldContext,
-  setActiveFieldContext,
   clearActiveFieldContext,
   registerFieldContextSource,
   installFieldContextTracking,
