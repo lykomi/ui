@@ -106,14 +106,25 @@ function WindowPane<T extends WorkbenchWindow>({
   }, [panels, active]);
   const visible = panels || active;
   const scroll = useWindowScroll(visible, panels);
+  const pendingActivation = useRef<(() => boolean) | null>(null);
   const activateContent = (target: EventTarget) => {
     if (
       !active &&
       target instanceof Element &&
       frame.current?.contains(target) &&
       !target.closest("[data-item-window-controls], [data-window-reorder]")
-    )
-      void controller.select(tab.id);
+    ) {
+      if (pendingActivation.current?.()) return;
+      const selected = controller.select(tab.id);
+      if (typeof selected !== "boolean") {
+        const current = controller.captureSelection();
+        pendingActivation.current = current;
+        const clear = () => {
+          if (pendingActivation.current === current) pendingActivation.current = null;
+        };
+        void selected.then(clear, clear);
+      }
+    }
   };
   return (
     <section

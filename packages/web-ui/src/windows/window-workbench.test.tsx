@@ -93,3 +93,49 @@ it("closing an inactive panel preserves the active working context", async () =>
     vi.unstubAllGlobals();
   }
 });
+
+it("coalesces pointer and focus activation while awaiting one leave decision", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  let decide!: (allowed: boolean) => void;
+  const guard = vi.fn(
+    () =>
+      new Promise<boolean>((resolve) => {
+        decide = resolve;
+      }),
+  );
+  const store = createWindowStore({
+    tabs: ["a", "b"].map((id) => ({ id, title: id, close: vi.fn() })),
+    beforeLeave: guard,
+  });
+  store.setLayout("panels");
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <WindowWorkbench
+          controller={store}
+          renderWindow={(tab) => <input aria-label={`Edit ${tab.id}`} />}
+        />,
+      ),
+    );
+    const input = host.querySelector<HTMLInputElement>('[aria-label="Edit b"]')!;
+    await act(async () => {
+      input.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+      input.focus();
+    });
+    expect(guard).toHaveBeenCalledOnce();
+    expect(store.get().active).toBe("a");
+    await act(async () => decide(true));
+    expect(store.get().active).toBe("b");
+    await act(async () => host.querySelector<HTMLInputElement>('[aria-label="Edit a"]')!.focus());
+    expect(guard).toHaveBeenCalledTimes(2);
+    await act(async () => decide(true));
+    expect(store.get().active).toBe("a");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

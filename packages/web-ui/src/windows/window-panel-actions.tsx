@@ -25,9 +25,14 @@ export function WindowPanelActions<T extends WorkbenchWindow>({
   const tabs = controller.get().tabs;
   const name = typeof tab.title === "string" ? tab.title : "item";
   const showTab = () => {
-    onShowTab?.();
-    controller.select(tab.id);
-    controller.setLayout("tabs", { remember: true });
+    const apply = (selected: boolean) => {
+      if (!selected || controller.get().active !== tab.id) return;
+      onShowTab?.();
+      controller.setLayout("tabs", { remember: true });
+    };
+    const selected = controller.select(tab.id);
+    if (typeof selected === "boolean") apply(selected);
+    else void selected.then(apply, () => {});
   };
   return (
     <span data-item-window-controls className="ml-auto inline-flex shrink-0 items-center gap-0.5">
