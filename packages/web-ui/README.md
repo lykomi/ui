@@ -72,7 +72,8 @@ It rasterizes this app's DOM locally and sends the image as AG-UI binary input
 on the tool continuation. Tool metadata contains the timestamp and dimensions,
 not image bytes. This does not request desktop sharing or access another tab.
 Password inputs, `data-agent-context="off"`, `data-capture="off"`, embedded
-frames and video are excluded. DOM rasterization has limitations for external
+frames and video are excluded. Scrolled panes preserve their scroll positions.
+DOM rasterization has limitations for external
 media and is a point-in-time image, not a live stream.
 
 Manual capture is hidden in the composer by default. Custom composers can opt
@@ -80,7 +81,9 @@ in with `<ComposerAddMenu showCapture />`; this optional action uses the browser
 screen picker, captures one frame, stops its media tracks and lets the user
 review the image before attaching it. Both capture paths bound images to a
 1600-pixel long edge and 2 MB and follow the host's normal media persistence
-policy. Internal captures reject a view or conversation change during rendering.
+policy. Captured images remain available for follow-up questions in the live
+conversation while their tool result remains in history. Internal captures reject
+a view or conversation change during rendering.
 
 ## Process guidance
 

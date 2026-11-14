@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { toJpeg } from "html-to-image";
+import { domToJpeg } from "modern-screenshot";
 import { captureAppView, captureAppViewTool } from "../capture-app-view.ts";
 import { useChatRuns } from "../chat-runs-store.ts";
 
-vi.mock("html-to-image", () => ({ toJpeg: vi.fn() }));
+vi.mock("modern-screenshot", () => ({ domToJpeg: vi.fn() }));
 beforeEach(() => {
   useChatRuns.setState({ foregroundId: "chat-a" });
-  vi.mocked(toJpeg).mockResolvedValue("data:image/jpeg;base64,aW1hZ2U=");
+  vi.mocked(domToJpeg).mockResolvedValue("data:image/jpeg;base64,aW1hZ2U=");
 });
 afterEach(() => {
   vi.clearAllMocks();
@@ -25,10 +25,11 @@ it("captures the app viewport as binary input and excludes private surfaces", as
   expect(result.inputContent).toEqual([
     expect.objectContaining({ type: "binary", mimeType: "image/jpeg", data: "aW1hZ2U=" }),
   ]);
-  const [root, options] = vi.mocked(toJpeg).mock.calls[0];
+  const [root, options] = vi.mocked(domToJpeg).mock.calls[0];
   expect(root).toBe(document.documentElement);
   expect(options?.width).toBe(window.innerWidth);
   expect(options?.height).toBe(window.innerHeight);
+  expect(options?.features).toEqual({ restoreScrollPosition: true });
   const privateField = document.createElement("div");
   privateField.dataset.agentContext = "off";
   expect(options?.filter?.(privateField)).toBe(false);
@@ -38,7 +39,7 @@ it("captures the app viewport as binary input and excludes private surfaces", as
 });
 
 it("discards an image if the conversation changes while it is rendered", async () => {
-  vi.mocked(toJpeg).mockImplementation(async () => {
+  vi.mocked(domToJpeg).mockImplementation(async () => {
     useChatRuns.setState({ foregroundId: "chat-b" });
     return "data:image/jpeg;base64,aW1hZ2U=";
   });
@@ -46,7 +47,7 @@ it("discards an image if the conversation changes while it is rendered", async (
 });
 
 it("returns an actionable error rather than claiming the agent saw an image", async () => {
-  vi.mocked(toJpeg).mockRejectedValue(new Error("Canvas unavailable"));
+  vi.mocked(domToJpeg).mockRejectedValue(new Error("Canvas unavailable"));
   expect(await captureAppViewTool.execute("{}")).toBe(
     JSON.stringify({ status: "capture_failed", message: "Canvas unavailable" }),
   );

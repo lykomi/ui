@@ -76,6 +76,7 @@ function shouldPreserveAcrossVisibleHistory(message: Message): boolean {
 function mergeProtocolMessagesFromSnapshot(
   previousMessages: Message[],
   visibleMessages: Message[],
+  toolInputOwners: ReadonlyMap<string, string>,
 ): Message[] {
   if (previousMessages.length === 0) return [...visibleMessages];
 
@@ -111,7 +112,27 @@ function mergeProtocolMessagesFromSnapshot(
     }
   }
 
-  return merged;
+  // The UI regenerates message IDs, so reattach images by toolCallId, after
+  // the complete consecutive group of tool results (never between results).
+  const toolInputs = previousMessages.filter(
+    (message) => toolInputOwners.has(message.id) && !visibleById.has(message.id),
+  );
+  const withToolInputs: Message[] = [];
+  const pendingInputs: Message[] = [];
+  for (let index = 0; index < merged.length; index++) {
+    const message = merged[index];
+    withToolInputs.push(message);
+    if (message.role === "tool") {
+      pendingInputs.push(
+        ...toolInputs.filter((image) => toolInputOwners.get(image.id) === message.toolCallId),
+      );
+    }
+    if (merged[index + 1]?.role !== "tool") {
+      withToolInputs.push(...pendingInputs);
+      pendingInputs.length = 0;
+    }
+  }
+  return withToolInputs;
 }
 
 /**
@@ -168,6 +189,7 @@ class EventQueue<T> {
  */
 export class AGUIRunner {
   private readonly httpAgent: HttpAgent;
+  private readonly toolInputOwners = new Map<string, string>();
   private readonly stallAfterMs: number;
   private readonly autoCancelPendingToolCalls: boolean;
 
@@ -199,7 +221,12 @@ export class AGUIRunner {
     let currentMessages: Message[] = mergeProtocolMessagesFromSnapshot(
       this.httpAgent.messages,
       messages,
+      this.toolInputOwners,
     );
+    const retainedIds = new Set(currentMessages.map((message) => message.id));
+    for (const id of this.toolInputOwners.keys()) {
+      if (!retainedIds.has(id)) this.toolInputOwners.delete(id);
+    }
 
     // Replace once at the top with the reconciled AG-UI history. assistant-ui
     // stores only visible chat turns, while AG-UI snapshots may contain
@@ -660,8 +687,10 @@ export class AGUIRunner {
         // binary input after all matching tool results, never base64 in JSON.
         for (const tc of pendingClientTools) {
           if (!tc.inputContent?.length) continue;
+          const messageId = crypto.randomUUID();
+          this.toolInputOwners.set(messageId, tc.id);
           followUpMessages.push({
-            id: crypto.randomUUID(),
+            id: messageId,
             role: "user",
             content: [
               {

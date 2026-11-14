@@ -1,5 +1,5 @@
 import type { ClientToolEntry } from "@lykomi/agent";
-import { toJpeg } from "html-to-image";
+import { domToJpeg } from "modern-screenshot";
 import { useChatRuns } from "./chat-runs-store.ts";
 import { guidanceViewKey } from "./guidance-targets.ts";
 
@@ -20,17 +20,17 @@ export async function captureAppView() {
   let dataUrl: string;
   try {
     dataUrl = await Promise.race([
-      toJpeg(document.documentElement, {
+      domToJpeg(document.documentElement, {
         width,
         height,
-        canvasWidth: Math.round(width * scale),
-        canvasHeight: Math.round(height * scale),
-        pixelRatio: 1,
+        scale,
+        features: { restoreScrollPosition: true },
+        timeout: 10_000,
         quality: 0.85,
         backgroundColor: getComputedStyle(document.body).backgroundColor,
         style: { width: `${width}px`, height: `${height}px`, overflow: "hidden" },
         filter: (node) => !(node instanceof Element) || !node.matches(excluded),
-        fetchRequestInit: { signal: controller.signal },
+        fetch: { requestInit: { signal: controller.signal } },
       }),
       new Promise<never>((_, reject) => {
         timeout = setTimeout(

@@ -297,12 +297,12 @@ importers:
       dompurify:
         specifier: ^3.4.16
         version: 3.4.16
-      html-to-image:
-        specifier: ^1.11.13
-        version: 1.11.13
       mermaid:
         specifier: ^11.17.2
         version: 11.17.2
+      modern-screenshot:
+        specifier: ^4.7.0
+        version: 4.7.0
       react-markdown:
         specifier: ^10.0.0
         version: 10.1.0(@types/react@19.2.14)(react@19.2.5)
@@ -4382,12 +4382,6 @@ packages:
       }
     engines: { node: ^20.19.0 || ^22.12.0 || >=24.0.0 }
 
-  html-to-image@1.11.13:
-    resolution:
-      {
-        integrity: sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg==,
-      }
-
   html-url-attributes@3.0.1:
     resolution:
       {
@@ -5113,6 +5107,12 @@ packages:
         integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==,
       }
     engines: { node: ">=8.6" }
+
+  modern-screenshot@4.7.0:
+    resolution:
+      {
+        integrity: sha512-9YxN+ddPSMMlhylOv25VHzXrl9u67QRxoh7+SEewGtgUw7t6hHTrjptSDJUSne9oG4Xk/h2cwG15nIt4Hc9ujg==,
+      }
 
   mri@1.2.0:
     resolution:
@@ -9123,8 +9123,6 @@ snapshots:
     transitivePeerDependencies:
       - "@noble/hashes"
 
-  html-to-image@1.11.13: {}
-
   html-url-attributes@3.0.1: {}
 
   http-proxy-agent@7.0.2:
@@ -9716,6 +9714,8 @@ snapshots:
     dependencies:
       braces: 3.0.3
       picomatch: 2.3.2
+
+  modern-screenshot@4.7.0: {}
 
   mri@1.2.0: {}
 

@@ -1034,8 +1034,10 @@ it("sends a visual client-tool result as binary input once, keeping bytes out of
       await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
     },
   ];
-  const events = await collect(
-    new AGUIRunner(),
+  const runner = new AGUIRunner();
+  const events = await collectWithMessages(
+    runner,
+    [{ id: "capture-request", role: "user", content: "Look at this view." }],
     makeRegistry({
       isRegistered: (name) => name === "ui_capture_view",
       executeTool: async () => ({
@@ -1061,4 +1063,31 @@ it("sends a visual client-tool result as binary input once, keeping bytes out of
     "aW1hZ2U=",
   );
   expect(runCount).toBe(2);
+  const visible = (lastMessages as Parameters<AGUIRunner["run"]>[0]["messages"])
+    .filter((message) => !(message.role === "user" && Array.isArray(message.content)))
+    .map((message) => (message.role === "user" ? message : { ...message, id: `ui-${message.id}` }));
+  const followUp = { id: "follow-up", role: "user" as const, content: "Explain the same image." };
+  await collectWithMessages(
+    runner,
+    [...visible, followUp],
+    makeRegistry({ isRegistered: () => false }),
+  );
+  expect(
+    lastMessages.filter(
+      (message) =>
+        (message as { role: string; content: unknown }).role === "user" &&
+        Array.isArray((message as { content: unknown }).content),
+    ),
+  ).toHaveLength(1);
+  expect(JSON.stringify(lastMessages)).toContain("aW1hZ2U=");
+  expect((lastMessages as Array<{ role: string }>).map((message) => message.role)).toEqual([
+    "user",
+    "assistant",
+    "tool",
+    "user",
+    "user",
+  ]);
+  // Editing/truncating away the owning tool result drops its image too.
+  await collectWithMessages(runner, [followUp], makeRegistry({ isRegistered: () => false }));
+  expect(JSON.stringify(lastMessages)).not.toContain("aW1hZ2U=");
 });

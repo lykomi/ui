@@ -55,7 +55,7 @@ export function TeachingBubbleHost() {
   const bubble = useTeachingBubble((state) => state.bubble);
   const titleId = useId();
   const descriptionId = useId();
-  const anchor = useMemo(() => ({ current: bubble?.element ?? null }), [bubble]);
+  const anchor = useMemo(() => (bubble ? { current: bubble.element } : undefined), [bubble]);
   useEffect(mountTeachingBubbleHost, []);
   useEffect(() => {
     if (!bubble) return;
