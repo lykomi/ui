@@ -383,7 +383,16 @@ async function runBrowserStarterSmoke() {
       throw new Error("Home remained selected on the Guide route.");
     }
     await page.getByRole("button", { name: "Open working draft" }).click();
+    const fieldBeforeEdit = await page.locator("#starter-draft-text").boundingBox();
     await page.getByRole("button", { name: "Edit draft", exact: true }).click();
+    const fieldAfterEdit = await page.locator("#starter-draft-text").boundingBox();
+    if (
+      !fieldBeforeEdit ||
+      !fieldAfterEdit ||
+      Math.abs(fieldBeforeEdit.y - fieldAfterEdit.y) > 1 ||
+      Math.abs(fieldBeforeEdit.height - fieldAfterEdit.height) > 1
+    )
+      throw new Error("Draft field geometry changed between read and edit modes.");
     await page.getByLabel("Your idea", { exact: true }).fill("Keep this draft across layouts");
     await page.getByRole("tab", { name: "Guide", exact: true }).click();
     await page.getByRole("button", { name: "Open architecture", exact: true }).click();
