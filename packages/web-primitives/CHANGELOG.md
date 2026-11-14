@@ -1,5 +1,7 @@
 # @iloveagents/foundry-web-primitives
 
+## 0.50.0
+
 ## 0.49.2
 
 ### Patch Changes

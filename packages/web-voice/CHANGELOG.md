@@ -1,5 +1,15 @@
 # @iloveagents/foundry-web-voice
 
+## 0.1.34
+
+### Patch Changes
+
+- 9e52115: Update Foundry Voice Live to 0.7.0 and pin the documented proxy image to the matching release. Keep the existing relay and realtime integration while using the current SDK transport, microphone and response handling.
+- Updated dependencies [91e709b]
+- Updated dependencies [f939587]
+  - @lykomi/web-ui@0.50.0
+  - @lykomi/agent@0.50.0
+
 ## 0.1.33
 
 ### Patch Changes

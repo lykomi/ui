@@ -1,5 +1,15 @@
 # @iloveagents/foundry-web-shell
 
+## 0.50.0
+
+### Patch Changes
+
+- Updated dependencies [91e709b]
+- Updated dependencies [f939587]
+  - @lykomi/web-ui@0.50.0
+  - @lykomi/agent@0.50.0
+  - @lykomi/web-primitives@0.50.0
+
 ## 0.49.2
 
 ### Patch Changes
