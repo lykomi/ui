@@ -1,3 +1,4 @@
+import { guideWindows } from "./pages/guide-windows.ts";
 import { useEffect } from "react";
 import { BookOpen } from "lucide-react";
 import { useNavigate } from "react-router";
@@ -7,6 +8,13 @@ import { useNavStore } from "@lykomi/web-ui";
 function useStarterNavigation() {
   const navigate = useNavigate();
   useEffect(() => {
+    const protect = (event: BeforeUnloadEvent) => {
+      if (guideWindows.get().tabs.some((tab) => tab.dirty)) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", protect);
     useNavStore.getState().addGroup({
       label: "Starter",
       hideLabel: true,
@@ -29,6 +37,7 @@ function useStarterNavigation() {
       onSelect: () => navigate("/guide"),
     });
     return () => {
+      window.removeEventListener("beforeunload", protect);
       useNavStore.getState().removeGroup("Starter");
       useNavStore.getState().removeUserMenuAction("starter-guide");
     };

@@ -353,10 +353,67 @@ async function runBrowserStarterSmoke() {
     ) {
       throw new Error("Home remained selected on the Guide route.");
     }
-    await page.getByRole("tab", { name: "UI" }).click();
-    await page.getByRole("button", { name: "Open architecture panel" }).click();
+    await page.getByRole("button", { name: "Open working draft" }).click();
+    await page.getByLabel("Your idea", { exact: true }).fill("Keep this draft across layouts");
+    await page.getByRole("tab", { name: "Guide", exact: true }).click();
+    await page.getByRole("button", { name: "Open architecture", exact: true }).click();
     await page.getByRole("heading", { name: "Starter architecture" }).waitFor();
-    await page.getByRole("button", { name: "Close panel" }).click();
+    await page.getByRole("button", { name: "View as panels", exact: true }).click();
+    await page.getByRole("button", { name: "Close Guide", exact: true }).click();
+    if (
+      (await page
+        .getByRole("tab", { name: "Architecture", exact: true })
+        .getAttribute("aria-selected")) !== "true"
+    )
+      throw new Error("Closing an inactive panel changed the active window.");
+    await page.getByRole("button", { name: "Open window", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Guide", exact: true }).click();
+    await page.getByRole("button", { name: "View as tabs", exact: true }).click();
+    await page.getByRole("tab", { name: /Working draft/ }).click();
+    await page.getByRole("button", { name: "View as panels", exact: true }).click();
+    await page.getByLabel("Your idea", { exact: true }).waitFor();
+    await page.screenshot({ path: join(workDir, "windows-desktop.png") });
+    console.log(`Window screenshot: ${join(workDir, "windows-desktop.png")}`);
+    if (
+      (await page.getByLabel("Your idea", { exact: true }).inputValue()) !==
+      "Keep this draft across layouts"
+    )
+      throw new Error("Draft was lost when switching to panels.");
+    await page.getByRole("separator", { name: "Resize Working draft", exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Home");
+    await page.setViewportSize({ width: 1280, height: 500 });
+    const guideScroll = page.locator('[data-item-tab="overview"] [data-window-scroll]');
+    await guideScroll.evaluate((element) => {
+      element.scrollTop = 80;
+    });
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-item-tab="overview"] [data-window-scroll]')?.scrollTop === 80,
+    );
+    await page.getByRole("button", { name: "View as tabs", exact: true }).click();
+    await page.getByRole("tab", { name: "Guide", exact: true }).click();
+    if ((await guideScroll.evaluate((element) => element.scrollTop)) !== 80)
+      throw new Error("Window scroll was lost after hiding a panel.");
+    await page.getByRole("button", { name: "View as panels", exact: true }).click();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole("tab", { name: /Working draft/ }).click();
+    page.once("dialog", (dialog) => dialog.dismiss());
+    await page.getByRole("button", { name: "Close Working draft", exact: true }).click();
+    await page.getByLabel("Your idea", { exact: true }).waitFor();
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.screenshot({ path: join(workDir, "windows-dark.png") });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByLabel("Your idea", { exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(workDir, "windows-mobile.png") });
+    const horizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    );
+    if (horizontalOverflow) throw new Error("Windows overflow the mobile viewport.");
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.getByRole("button", { name: "View as tabs", exact: true }).click();
+    await page.getByRole("tab", { name: "Guide", exact: true }).click();
     await desktopNav.getByRole("link", { name: "Home" }).click();
     await desktopNav.locator('a[aria-label="Home"][aria-current="page"]').waitFor();
     if (
@@ -405,7 +462,16 @@ async function runBrowserStarterSmoke() {
     if (!screenshotPath) {
       await desktopNav.getByRole("link", { name: "Guide" }).click();
       await page.getByRole("heading", { name: "Build an agent app around real work." }).waitFor();
-      await page.getByRole("button", { name: "Ask the agent about this page" }).click();
+      await page.getByRole("tab", { name: /Working draft/ }).click();
+      if (
+        (await page.getByLabel("Your idea", { exact: true }).inputValue()) !==
+        "Keep this draft across layouts"
+      )
+        throw new Error("Draft was lost after visiting Home.");
+      await page
+        .getByRole("button", { name: "Ask the agent about this page" })
+        .filter({ visible: true })
+        .click();
       await page
         .getByRole("textbox", { name: "Do anything", exact: true })
         .fill("Explain this guide");
@@ -421,6 +487,12 @@ async function runBrowserStarterSmoke() {
       ) {
         throw new Error("The Guide page context did not reach the AG-UI request.");
       }
+
+      if (
+        lastAgentRequest?.state?.navigation?.meta?.focusedSurface?.content !==
+        "Keep this draft across layouts"
+      )
+        throw new Error("The active window context did not reach the AG-UI request.");
 
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(url, { waitUntil: "domcontentloaded" });

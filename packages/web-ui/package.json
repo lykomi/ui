@@ -35,6 +35,10 @@
     "./workbench": {
       "types": "./dist/workbench.d.ts",
       "import": "./dist/workbench.js"
+    },
+    "./windows": {
+      "types": "./dist/windows.d.ts",
+      "import": "./dist/windows.js"
     }
   },
   "files": [
