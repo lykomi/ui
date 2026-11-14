@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { agentStateStore, contextUsageStore } from "@iloveagents/foundry-agent";
+import { agentStateStore, contextUsageStore } from "@lykomi/agent";
 import {
   disposeChatRuns,
   publishChatAgentState,

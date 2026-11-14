@@ -1,5 +1,5 @@
 import { AlertCircle, Check, ChevronDown, Loader2 } from "lucide-react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import { type CSSProperties, useState } from "react";
 import type { NavItem } from "../lib/nav-config.ts";
 

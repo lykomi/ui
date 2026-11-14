@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "../ui/dropdown-menu.tsx";
-import { Button, Input } from "@iloveagents/foundry-web-primitives";
+import { Button, Input } from "@lykomi/web-primitives";
 import { Fragment, useState } from "react";
 import { Link } from "react-router";
 import {

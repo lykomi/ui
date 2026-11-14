@@ -3,7 +3,7 @@
 # scaffolded app's README title. This already happened once: the foundry-iq
 # preset shipped a README titled "**PROJECT_NAME**" because only the base
 # template was ignored here. Guarded by a unit test in
-# packages/create-foundry-ui-app/src/__tests__/template-docs.test.ts, which
+# packages/create-lykomi-app/src/__tests__/template-docs.test.ts, which
 # checks EVERY preset, not just the ones that exist today.
-packages/create-foundry-ui-app/template/README.md
-packages/create-foundry-ui-app/presets/*/files/README.md
+packages/create-lykomi-app/template/README.md
+packages/create-lykomi-app/presets/*/files/README.md

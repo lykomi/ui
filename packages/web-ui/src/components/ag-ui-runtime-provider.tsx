@@ -29,7 +29,7 @@ import { WorkbenchLayoutProvider } from "../workbench/layout-state.tsx";
 /**
  * Per-mount inputs the host shell passes when it wants a chat
  * conversation history wired to the runtime. Mirrors
- * :type:`ChatConversationFactoryArgs` in ``foundry-web-shell`` —
+ * :type:`ChatConversationFactoryArgs` in ``web-shell`` —
  * duplicated here (rather than imported) so the web-ui package stays
  * independent of the shell package's dependency graph.
  */

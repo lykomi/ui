@@ -1,4 +1,4 @@
-import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-agent";
+import { clientToolRegistry, type ClientToolEntry } from "@lykomi/agent";
 import { activeModel, type ModelHandle } from "./model-types.ts";
 
 type Args = Record<string, unknown>;

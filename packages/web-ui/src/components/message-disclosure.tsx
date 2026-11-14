@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible.tsx";
 import type { ReactNode } from "react";
 

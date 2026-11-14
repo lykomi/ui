@@ -2,7 +2,7 @@ import { type ComponentPropsWithRef, forwardRef } from "react";
 import { Slottable } from "@radix-ui/react-slot";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip.tsx";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 
 export type TooltipIconButtonProps = ComponentPropsWithRef<typeof Button> & {
   tooltip: string;

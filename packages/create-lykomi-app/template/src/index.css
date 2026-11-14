@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "@lykomi/web-ui/styles.css";
+
+/* Tailwind v4 needs explicit @source paths to scan package output
+ * for utility classes. Without these, the LYKOMI UI components render
+ * without spacing, borders, or theme tokens. */
+@source "../node_modules/@lykomi/web-primitives/dist";
+@source "../node_modules/@lykomi/web-ui/dist";
+@source "../node_modules/@lykomi/web-shell/dist";
+/* Voice is optional at RUNTIME, not at build time: the package is always a
+   dependency, so its utilities must be scanned or a voice-enabled app renders
+   unstyled. Scanning it costs nothing when voice is off — Tailwind emits only
+   the classes something references. */
+@source "../node_modules/@lykomi/web-voice/dist";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings:
+    "rlig" 1,
+    "calt" 1;
+}

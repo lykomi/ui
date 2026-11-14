@@ -2,7 +2,7 @@
  * Adapter shim regression tests.
  *
  * The shim is a generator-driven assistant-ui `ChatModelAdapter` wrapping
- * `@iloveagents/foundry-agent`'s `AGUIRunner`. The contract under test:
+ * `@lykomi/agent`'s `AGUIRunner`. The contract under test:
  *   - Every intermediate yield carries `status: { type: "running" }`.
  *   - The FINAL yield settles the message so the bubble unsticks (the
  *     previous adapter left it `running` and it got stuck loading — PR #116):
@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { RunnerEvent } from "@iloveagents/foundry-agent";
+import type { RunnerEvent } from "@lykomi/agent";
 
 const appStoreMock = vi.hoisted(() => ({
   agentState: {
@@ -31,7 +31,7 @@ const runnerMock = vi.fn().mockImplementation(() => ({
   run: runMock,
 }));
 
-vi.mock("@iloveagents/foundry-agent", () => ({
+vi.mock("@lykomi/agent", () => ({
   agentStateStore: { getState: () => ({ setAgentState: () => {}, reset: () => {} }) },
   citationStore: { setState: () => {}, getState: () => ({ clear: () => {} }) },
   contextUsageStore: {
@@ -59,7 +59,7 @@ vi.mock("@iloveagents/foundry-agent", () => ({
   },
 }));
 
-vi.mock("@iloveagents/foundry-agent/msal", () => ({
+vi.mock("@lykomi/agent/msal", () => ({
   tokenFetch: globalThis.fetch,
 }));
 

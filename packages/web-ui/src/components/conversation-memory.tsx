@@ -1,7 +1,7 @@
 import { useStore } from "zustand";
-import { contextUsageStore } from "@iloveagents/foundry-agent";
+import { contextUsageStore } from "@lykomi/agent";
 import { Info } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.tsx";
 

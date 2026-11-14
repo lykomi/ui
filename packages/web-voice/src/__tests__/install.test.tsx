@@ -15,7 +15,7 @@ import {
   useLocalRuntime,
   type ChatModelAdapter,
 } from "@assistant-ui/react";
-import { useChatSlotsStore, useVoiceAdapterStore } from "@iloveagents/foundry-web-ui";
+import { useChatSlotsStore, useVoiceAdapterStore } from "@lykomi/web-ui";
 import { FoundryVoice } from "../react/install.tsx";
 import { VoiceMicButton } from "../react/voice-mic-button.tsx";
 import { VoiceLauncherBadge } from "../react/voice-launcher-badge.tsx";

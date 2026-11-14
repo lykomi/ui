@@ -147,10 +147,10 @@ describe("packaging", () => {
     // Sibling packages in peerDependencies trigger the changesets
     // shouldBumpMajor cascade — the mistake that burned 1.0.0 and 1.0.1.
     for (const [name, range] of Object.entries(pkg.dependencies)) {
-      if (name.startsWith("@iloveagents/")) expect(range).toBe("workspace:^");
+      if (name.startsWith("@lykomi/")) expect(range).toBe("workspace:^");
     }
     for (const name of Object.keys(pkg.peerDependencies)) {
-      expect(name.startsWith("@iloveagents/")).toBe(false);
+      expect(name.startsWith("@lykomi/")).toBe(false);
     }
   });
 });

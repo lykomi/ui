@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../ui/tooltip.tsx";
 import { useProcessScroll } from "./use-process-scroll.ts";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 
 export type ProcessStepStatus =
   /** Awaiting availability or scheduling; not yet ready to execute. */
@@ -53,14 +53,24 @@ const statusIcons = {
 };
 
 /** Status remains visible when a completed or skipped step is inspected again. */
-function ProcessStatusIcon({ status, selected, optional }: { status: ProcessStepStatus; selected: boolean; optional?: boolean }) {
+function ProcessStatusIcon({
+  status,
+  selected,
+  optional,
+}: {
+  status: ProcessStepStatus;
+  selected: boolean;
+  optional?: boolean;
+}) {
   // Optionality changes the *unstarted* marker only. Running, completed,
   // blocked and failed steps keep their actual status symbols.
   if (optional && (status === "pending" || status === "ready")) {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <circle cx="12" cy="12" r="10" strokeDasharray="3 3" />
-        {status === "ready" && selected ? <circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" /> : null}
+        {status === "ready" && selected ? (
+          <circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" />
+        ) : null}
       </svg>
     );
   }
@@ -73,7 +83,7 @@ function ProcessStatusIcon({ status, selected, optional }: { status: ProcessStep
     );
   }
   const Icon = statusIcons[status];
-  return <Icon className={status === "running" ? "foundry-process-spinner" : undefined} />;
+  return <Icon className={status === "running" ? "lykomi-process-spinner" : undefined} />;
 }
 
 export interface ProcessStepsProps extends Omit<
@@ -135,19 +145,19 @@ export function ProcessSteps({
   return (
     <div
       {...props}
-      className={cn("foundry-process", className)}
+      className={cn("lykomi-process", className)}
       data-variant={variant}
       data-orientation={orientation}
       data-density={density}
       data-chevrons={showChevrons || undefined}
     >
-      <div ref={scroll.frame} className="foundry-process-scroller">
+      <div ref={scroll.frame} className="lykomi-process-scroller">
         {scroll.edges.overflow ? (
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="foundry-process-scroll-button"
+            className="lykomi-process-scroll-button"
             aria-label={scrollLabels.previous}
             disabled={!scroll.edges.previous}
             onClick={() => scroll.move(-1)}
@@ -157,7 +167,7 @@ export function ProcessSteps({
         ) : null}
         <div
           ref={scroll.viewport}
-          className="foundry-process-viewport"
+          className="lykomi-process-viewport"
           tabIndex={scroll.edges.overflow ? 0 : undefined}
           role={scroll.edges.overflow ? "region" : undefined}
           aria-labelledby={scroll.edges.overflow ? ariaLabelledBy : undefined}
@@ -193,7 +203,7 @@ export function ProcessSteps({
           <TooltipProvider delayDuration={200}>
             <ol
               ref={scroll.track}
-              className="foundry-process-steps"
+              className="lykomi-process-steps"
               aria-label={label ?? ariaLabel ?? "Process progress"}
               aria-labelledby={ariaLabelledBy}
             >
@@ -214,17 +224,21 @@ export function ProcessSteps({
                   [descriptionId, messageId].filter(Boolean).join(" ") || undefined;
                 const content = (
                   <>
-                    <span className="foundry-process-marker" aria-hidden="true">
-                        <ProcessStatusIcon status={step.status} selected={selected} optional={step.optional} />
+                    <span className="lykomi-process-marker" aria-hidden="true">
+                      <ProcessStatusIcon
+                        status={step.status}
+                        selected={selected}
+                        optional={step.optional}
+                      />
                     </span>
-                    <span className="foundry-process-copy">
-                      <span className="foundry-process-name">
-                        <span className="foundry-process-label">{step.label}</span>
+                    <span className="lykomi-process-copy">
+                      <span className="lykomi-process-name">
+                        <span className="lykomi-process-label">{step.label}</span>
                         {optionalLabel ? (
-                          <span className="foundry-process-optional">{optionalLabel}</span>
+                          <span className="lykomi-process-optional">{optionalLabel}</span>
                         ) : null}
                       </span>
-                      <span className="foundry-process-status">{status}</span>
+                      <span className="lykomi-process-status">{status}</span>
                     </span>
                   </>
                 );
@@ -232,7 +246,7 @@ export function ProcessSteps({
                   onStepSelect && step.selectable ? (
                     <button
                       type="button"
-                      className="foundry-process-target"
+                      className="lykomi-process-target"
                       onClick={() => onStepSelect(step.id)}
                       aria-pressed={selectedStepId !== undefined ? selected : undefined}
                       aria-label={accessibleStatus}
@@ -242,7 +256,7 @@ export function ProcessSteps({
                     </button>
                   ) : (
                     <div
-                      className="foundry-process-target"
+                      className="lykomi-process-target"
                       tabIndex={step.status === "blocked" && step.message ? 0 : undefined}
                       aria-label={step.status === "blocked" ? accessibleStatus : undefined}
                       aria-describedby={describedBy}
@@ -253,7 +267,7 @@ export function ProcessSteps({
                 return (
                   <li
                     key={step.id}
-                    className="foundry-process-step"
+                    className="lykomi-process-step"
                     data-status={step.status}
                     data-disclosure={stepDisclosure?.stepId === step.id || undefined}
                     data-connection-complete={
@@ -264,13 +278,13 @@ export function ProcessSteps({
                     data-selected={selected || undefined}
                     aria-current={current ? "step" : undefined}
                   >
-                    <div className="foundry-process-step-surface">
+                    <div className="lykomi-process-step-surface">
                       {step.status === "blocked" &&
                       typeof step.message === "string" &&
                       step.message ? (
                         <Tooltip>
                           <TooltipTrigger asChild>{target}</TooltipTrigger>
-                          <TooltipContent className="foundry-process-tooltip">
+                          <TooltipContent className="lykomi-process-tooltip">
                             {step.message}
                           </TooltipContent>
                         </Tooltip>
@@ -282,7 +296,7 @@ export function ProcessSteps({
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              className="foundry-process-step-disclosure"
+                              className="lykomi-process-step-disclosure"
                               aria-label={`${stepDisclosure.label}: ${step.label}`}
                               aria-expanded={stepDisclosure.open}
                               aria-controls={stepDisclosure.controls}
@@ -291,15 +305,15 @@ export function ProcessSteps({
                               <ChevronDown aria-hidden="true" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent className="foundry-process-tooltip">
+                          <TooltipContent className="lykomi-process-tooltip">
                             {stepDisclosure.label}
                           </TooltipContent>
                         </Tooltip>
                       ) : null}
                     </div>
-                    <div className="foundry-process-detail">
+                    <div className="lykomi-process-detail">
                       {variant === "overview" && step.description ? (
-                        <div id={descriptionId} className="foundry-process-description">
+                        <div id={descriptionId} className="lykomi-process-description">
                           {step.description}
                         </div>
                       ) : null}
@@ -310,8 +324,8 @@ export function ProcessSteps({
                             variant === "compact" &&
                             step.status === "blocked" &&
                             typeof step.message === "string"
-                              ? "foundry-process-sr foundry-process-compact-blocker"
-                              : "foundry-process-message"
+                              ? "lykomi-process-sr lykomi-process-compact-blocker"
+                              : "lykomi-process-message"
                           }
                         >
                           {step.message}
@@ -329,7 +343,7 @@ export function ProcessSteps({
             type="button"
             variant="ghost"
             size="icon"
-            className="foundry-process-scroll-button"
+            className="lykomi-process-scroll-button"
             aria-label={scrollLabels.next}
             disabled={!scroll.edges.next}
             onClick={() => scroll.move(1)}

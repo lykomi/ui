@@ -235,10 +235,10 @@ describe("theme runtime", () => {
     expect(getThemePreset("unknown-preset")).toEqual(getThemePreset("foundry-violet"));
   });
 
-  it("uses Foundry UI as the default app branding", () => {
+  it("uses LYKOMI UI as the default app branding", () => {
     const runtime = resolveThemeRuntime([], "light");
 
-    expect(runtime.branding.appName).toBe("Foundry UI");
-    expect(runtime.branding.appTitle).toBe("Foundry UI");
+    expect(runtime.branding.appName).toBe("LYKOMI UI");
+    expect(runtime.branding.appTitle).toBe("LYKOMI UI");
   });
 });

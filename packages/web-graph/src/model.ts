@@ -106,7 +106,7 @@ export interface GraphPayload {
    *
    * The AG-UI runner parses every tool result and marks the whole tool call
    * failed if the parsed object has a top-level `error` key
-   * (`onToolCallResultEvent` in `@iloveagents/foundry-agent`). A payload that
+   * (`onToolCallResultEvent` in `@lykomi/agent`). A payload that
    * reported, say, a partial failure under `error` would render as a red failed
    * tool call no matter how much good data it carried. Producers signal trouble
    * with `truncated` and `meta` instead; a genuine failure returns a plain

@@ -256,7 +256,7 @@ export function ThemeDocumentMetadata() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    document.title = runtime.branding.appTitle || runtime.branding.appName || "Foundry UI";
+    document.title = runtime.branding.appTitle || runtime.branding.appName || "LYKOMI UI";
   }, [runtime.branding.appName, runtime.branding.appTitle]);
 
   useEffect(() => {

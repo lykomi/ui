@@ -25,7 +25,7 @@ try {
         const url = new URL(base);
         url.search = [layout, dark ? "dark" : "", rtl ? "rtl" : ""].filter(Boolean).join("&");
         await page.goto(url.href);
-        await page.locator(".foundry-process-marker").first().waitFor();
+        await page.locator(".lykomi-process-marker").first().waitFor();
         const horizontal = !layout.includes("vertical") && !layout.includes("responsive");
         const overflow = horizontal && layout.includes("narrow");
         if (overflow) await page.getByRole("button", { name: "Show next steps" }).waitFor();
@@ -36,11 +36,11 @@ try {
           };
           const cards = [
             ...document.querySelectorAll(
-              ".foundry-process-marker, .foundry-process-copy, .foundry-process-detail",
+              ".lykomi-process-marker, .lykomi-process-copy, .lykomi-process-detail",
             ),
           ].map(rect);
           const connectors = [
-            ...document.querySelectorAll(".foundry-process-step:not(:last-child)"),
+            ...document.querySelectorAll(".lykomi-process-step:not(:last-child)"),
           ].map((step) => {
             const style = getComputedStyle(step, "::after");
             const box = rect(step);
@@ -54,16 +54,14 @@ try {
               visible: style.display !== "none" && style.content !== "none",
             };
           });
-          const marker = rect(document.querySelector(".foundry-process-marker"));
-          const buttons = [...document.querySelectorAll(".foundry-process-scroll-button")].map(
-            rect,
-          );
+          const marker = rect(document.querySelector(".lykomi-process-marker"));
+          const buttons = [...document.querySelectorAll(".lykomi-process-scroll-button")].map(rect);
           return {
             cards,
             connectors,
             marker,
             buttons,
-            direction: getComputedStyle(document.querySelector(".foundry-process-steps"))
+            direction: getComputedStyle(document.querySelector(".lykomi-process-steps"))
               .flexDirection,
             contained: document.documentElement.scrollWidth <= innerWidth,
           };
@@ -120,7 +118,7 @@ try {
   const touch = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true });
   await touch.goto(`${base}?narrow&compact&dense`);
   const arrow = await touch.getByRole("button", { name: "Show next steps" }).boundingBox();
-  const marker = await touch.locator(".foundry-process-marker").first().boundingBox();
+  const marker = await touch.locator(".lykomi-process-marker").first().boundingBox();
   assert.ok(arrow && marker && arrow.width >= 44 && arrow.height >= 44, "Touch target size");
   assert.ok(
     Math.abs(arrow.y + arrow.height / 2 - marker.y - marker.height / 2) <= 1,

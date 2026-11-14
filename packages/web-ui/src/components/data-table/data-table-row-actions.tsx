@@ -1,7 +1,7 @@
 /** The "…" menu at the end of a row. Items are data, so agents and tests can read them. */
 import { MoreHorizontal } from "lucide-react";
 import type { ComponentType } from "react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,

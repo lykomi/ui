@@ -190,7 +190,7 @@ export { SurfaceCard, surfaceCardVariants } from "./components/surface-card.tsx"
 
 // --- Composite UI primitives (theme-runtime-coupled — stay here for now) ---
 // Button, Checkbox, Input, Textarea, Field, FieldSet have moved to
-// @iloveagents/foundry-web-primitives (#94). The primitives below have a runtime
+// @lykomi/web-primitives (#94). The primitives below have a runtime
 // coupling to ThemeScope (theme-runtime-provider.tsx) — they need a
 // theme-system refactor before they can move to the leaf primitives
 // package. Tracked for a follow-up under #95/#96.
@@ -269,9 +269,9 @@ export type {
   ThemeAppSlots,
   ThemeBranding,
 } from "./lib/theme-runtime.ts";
-// Stores moved to @iloveagents/foundry-agent (#95): authStore, citationStore,
+// Stores moved to @lykomi/agent (#95): authStore, citationStore,
 // streamingStatusStore, clientToolRegistry. Consumers import directly from
-// `@iloveagents/foundry-agent` / `@iloveagents/foundry-agent/msal` — no re-exports here per
+// `@lykomi/agent` / `@lykomi/agent/msal` — no re-exports here per
 // the no-shim rule.
 export { useDevStore } from "./lib/dev-store.ts";
 
@@ -311,11 +311,11 @@ export {
 
 // --- Auth ---
 // `AuthProvider` is the React MSAL bootstrap (uses `@azure/msal-react`).
-// Token store, config, fetch wrapper all live in `@iloveagents/foundry-agent/msal`.
+// Token store, config, fetch wrapper all live in `@lykomi/agent/msal`.
 export { AuthProvider } from "./lib/auth-provider.tsx";
 
 // --- Utils ---
-// `cn` is sourced from @iloveagents/foundry-web-primitives (the leaf primitives package).
+// `cn` is sourced from @lykomi/web-primitives (the leaf primitives package).
 // Re-exporting here would create two canonical sources for the same
 // utility — banned per the "no shims" pre-1.0 rule (#90).
 

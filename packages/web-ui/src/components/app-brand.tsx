@@ -1,5 +1,5 @@
 import { Layers3 } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import type { ThemeBranding } from "../lib/theme-runtime.ts";
 import { useThemeRuntime } from "./theme-runtime-provider.tsx";
 
@@ -72,7 +72,7 @@ export function _resolveBrandLockup(
   return {
     markUrl,
     isIcon: Boolean(iconUrl),
-    name: branding.appName || "Foundry UI",
+    name: branding.appName || "LYKOMI UI",
     showName: showName && (Boolean(iconUrl) || !markUrl),
     height: _safeLogoHeight(branding.logoHeight),
   };

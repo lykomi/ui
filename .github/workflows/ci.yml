@@ -1,4 +1,4 @@
-# CI for the foundry-ui workspace.
+# CI for the lykomi-ui workspace.
 #
 # Runs the merge quality gate on every push and PR to main.
 

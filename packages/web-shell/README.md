@@ -1,14 +1,14 @@
-# @iloveagents/foundry-web-shell
+# @lykomi/web-shell
 
-Browser bootstrap and layout package for Foundry UI apps.
+Browser bootstrap and layout package for LYKOMI UI apps.
 
 `web-shell` mounts the SPA with `bootstrapShell`, wires routes/modules, applies
-theme layers, chooses auth, and hosts `@iloveagents/foundry-web-ui`.
+theme layers, chooses auth, and hosts `@lykomi/web-ui`.
 
 ## Usage
 
 ```tsx
-import { bootstrapShell } from "@iloveagents/foundry-web-shell";
+import { bootstrapShell } from "@lykomi/web-shell";
 
 bootstrapShell({
   pages,

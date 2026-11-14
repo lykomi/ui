@@ -7,7 +7,7 @@
  * first, and re-resolved when the theme flips — otherwise a light-mode graph
  * stays light-on-light after the user switches to dark.
  *
- * Tokens come from the host's stylesheet (`@iloveagents/foundry-web-ui/styles.css`
+ * Tokens come from the host's stylesheet (`@lykomi/web-ui/styles.css`
  * plus this package's `styles.css`), so a themed app gets a themed graph for
  * free.
  */
@@ -39,8 +39,8 @@ const PALETTE_TOKENS = [
 ] as const;
 
 /**
- * Second choice: the chart tokens every Foundry UI app already has from
- * `@iloveagents/foundry-web-ui/styles.css`. Five hues instead of eight, but a
+ * Second choice: the chart tokens every LYKOMI UI app already has from
+ * `@lykomi/web-ui/styles.css`. Five hues instead of eight, but a
  * themed app that forgot to import this package's stylesheet still gets colours
  * that match its brand rather than the generic fallback below.
  */

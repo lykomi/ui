@@ -14,7 +14,7 @@
  * identically whether it was called by voice or by typing.
  */
 
-import type { ToolRegistry } from "@iloveagents/foundry-agent";
+import type { ToolRegistry } from "@lykomi/agent";
 import type { ToolExecutor } from "@iloveagents/foundry-voice-live-react";
 
 /**

@@ -1,4 +1,4 @@
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { useToolPanelStore } from "../lib/tool-panel-store.ts";
 import { ToolPanel } from "./tool-panel.tsx";
 

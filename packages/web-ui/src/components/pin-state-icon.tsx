@@ -1,5 +1,5 @@
 import { Pin } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 /** State glyph; controls retain explicit Pin/Unpin action labels. */
 export function PinStateIcon({ pinned, className }: { pinned: boolean; className?: string }) {

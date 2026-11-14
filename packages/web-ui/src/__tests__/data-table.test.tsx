@@ -36,7 +36,7 @@ import {
 } from "../components/data-table/state.ts";
 import { selectionColumn } from "../components/data-table/selection-column.tsx";
 import { DataTableSelectionBar } from "../components/data-table/data-table-selection-bar.tsx";
-import { Checkbox } from "@iloveagents/foundry-web-primitives";
+import { Checkbox } from "@lykomi/web-primitives";
 import {
   defaultHiddenColumns,
   useDataTable,

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Checkbox, Field, Input, ReadOnlyField } from "@iloveagents/foundry-web-primitives";
+import { Checkbox, Field, Input, ReadOnlyField } from "@lykomi/web-primitives";
 import type { ReactNode } from "react";
 
 it("preserves custom value components' original boolean children", () => {

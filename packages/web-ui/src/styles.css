@@ -365,43 +365,43 @@ tr[data-active] > [data-pinned="cell"] {
 }
 
 /* ProcessSteps / ProcessGuide: host-independent layout and semantic theme colors. */
-.foundry-process {
+.lykomi-process {
   container-type: inline-size;
   min-width: 0;
 }
-.foundry-process-steps {
+.lykomi-process-steps {
   display: flex;
   list-style: none;
   margin: 0;
   padding: 0;
   gap: calc(var(--spacing, 0.25rem) * 4);
 }
-.foundry-process-step {
+.lykomi-process-step {
   --process-tone: var(--muted-foreground);
   position: relative;
   flex: 1;
   min-width: 0;
   color: var(--foreground);
 }
-.foundry-process-step[data-status="complete"] {
+.lykomi-process-step[data-status="complete"] {
   --process-tone: var(--primary);
 }
-.foundry-process-step[data-status="error"] {
+.lykomi-process-step[data-status="error"] {
   --process-tone: var(--destructive);
 }
-.foundry-process-step[data-status="blocked"] {
+.lykomi-process-step[data-status="blocked"] {
   --process-tone: var(--warning);
 }
-.foundry-process-step[data-current] {
+.lykomi-process-step[data-current] {
   --process-tone: var(--primary);
 }
-.foundry-process-step[data-current][data-status="error"] {
+.lykomi-process-step[data-current][data-status="error"] {
   --process-tone: var(--destructive);
 }
-.foundry-process-step[data-current][data-status="blocked"] {
+.lykomi-process-step[data-current][data-status="blocked"] {
   --process-tone: var(--warning);
 }
-.foundry-process-step:not(:last-child)::after {
+.lykomi-process-step:not(:last-child)::after {
   content: "";
   position: absolute;
   height: 1px;
@@ -410,22 +410,22 @@ tr[data-active] > [data-pinned="cell"] {
   inset-inline-start: calc(var(--spacing, 0.25rem) * 14);
   inset-inline-end: calc(var(--spacing, 0.25rem) * -2);
 }
-.foundry-process-step[data-connection-complete]::after {
+.lykomi-process-step[data-connection-complete]::after {
   background: var(--primary);
 }
 /* Overview steps share a marker rail. Selection highlights the label rather
    than drawing a large empty card around one step. */
-.foundry-process[data-variant="overview"] {
+.lykomi-process[data-variant="overview"] {
   --process-overview-gap: calc(var(--spacing, 0.25rem) * 6);
 }
-.foundry-process[data-variant="overview"] .foundry-process-steps {
+.lykomi-process[data-variant="overview"] .lykomi-process-steps {
   gap: var(--process-overview-gap);
 }
-.foundry-process[data-variant="overview"] .foundry-process-step:not(:last-child)::after {
+.lykomi-process[data-variant="overview"] .lykomi-process-step:not(:last-child)::after {
   inset-inline-start: calc(var(--spacing, 0.25rem) * 13);
   inset-inline-end: calc(var(--spacing, 0.25rem) * -1 - var(--process-overview-gap));
 }
-.foundry-process-target {
+.lykomi-process-target {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -440,47 +440,45 @@ tr[data-active] > [data-pinned="cell"] {
   color: inherit;
   background: transparent;
 }
-.foundry-process-target:is(button) {
+.lykomi-process-target:is(button) {
   cursor: pointer;
 }
-.foundry-process-target:is(button):hover {
+.lykomi-process-target:is(button):hover {
   background: var(--muted);
 }
-.foundry-process-target:is(button):focus-visible {
+.lykomi-process-target:is(button):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.foundry-process-step[data-selected] .foundry-process-target {
+.lykomi-process-step[data-selected] .lykomi-process-target {
   border-color: var(--primary);
   background: color-mix(in srgb, var(--primary) 5%, var(--background));
 }
-.foundry-process[data-variant="overview"] .foundry-process-target {
+.lykomi-process[data-variant="overview"] .lykomi-process-target {
   border-color: transparent;
   background: transparent;
 }
-.foundry-process[data-variant="overview"] .foundry-process-copy {
+.lykomi-process[data-variant="overview"] .lykomi-process-copy {
   width: fit-content;
   max-width: 100%;
 }
-.foundry-process[data-variant="overview"] .foundry-process-label {
+.lykomi-process[data-variant="overview"] .lykomi-process-label {
   padding-block-end: calc(var(--spacing, 0.25rem) * 1);
   border-block-end: 2px solid transparent;
 }
-.foundry-process[data-variant="overview"]
-  .foundry-process-step[data-selected]
-  .foundry-process-label {
+.lykomi-process[data-variant="overview"] .lykomi-process-step[data-selected] .lykomi-process-label {
   color: var(--primary);
   border-block-end-color: var(--primary);
 }
-.foundry-process[data-variant="overview"] .foundry-process-target:is(button):hover {
+.lykomi-process[data-variant="overview"] .lykomi-process-target:is(button):hover {
   background: color-mix(in srgb, var(--muted) 35%, transparent);
 }
-.foundry-process-detail {
+.lykomi-process-detail {
   display: grid;
   gap: calc(var(--spacing, 0.25rem) * 1);
   padding-inline: calc(var(--spacing, 0.25rem) * 3);
 }
-.foundry-process-marker {
+.lykomi-process-marker {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
@@ -496,80 +494,80 @@ tr[data-active] > [data-pinned="cell"] {
   font-size: 0.8125rem;
   font-weight: 600;
 }
-.foundry-process-marker svg {
+.lykomi-process-marker svg {
   width: 100%;
   height: 100%;
   stroke-width: 1.5;
 }
-.foundry-process-step[data-status="complete"] .foundry-process-marker {
+.lykomi-process-step[data-status="complete"] .lykomi-process-marker {
   background: transparent;
   color: var(--primary);
 }
-.foundry-process-copy {
+.lykomi-process-copy {
   display: grid;
   gap: calc(var(--spacing, 0.25rem) * 1);
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.foundry-process-label {
+.lykomi-process-label {
   font-size: 0.875rem;
   font-weight: 600;
 }
-.foundry-process-status {
+.lykomi-process-status {
   font-size: 0.75rem;
   color: var(--foreground);
 }
-.foundry-process-description {
+.lykomi-process-description {
   color: var(--muted-foreground);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
-.foundry-process-message {
+.lykomi-process-message {
   color: var(--foreground);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
-.foundry-process-guide {
+.lykomi-process-guide {
   min-width: 0;
   display: grid;
   gap: calc(var(--spacing, 0.25rem) * 4);
 }
-.foundry-process-focus {
+.lykomi-process-focus {
   padding-block-start: calc(var(--spacing, 0.25rem) * 4);
   border-top: 1px solid var(--border);
   display: grid;
   gap: calc(var(--spacing, 0.25rem) * 2);
 }
-.foundry-process-focus-header {
+.lykomi-process-focus-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: calc(var(--spacing, 0.25rem) * 3);
 }
-.foundry-process-position {
+.lykomi-process-position {
   margin: 0 0 calc(var(--spacing, 0.25rem) * 1);
   font-size: 0.75rem;
   color: var(--muted-foreground);
 }
-.foundry-process-title {
+.lykomi-process-title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--heading, var(--foreground));
 }
-.foundry-process-guidance {
+.lykomi-process-guidance {
   color: var(--muted-foreground);
   font-size: 0.875rem;
   line-height: 1.5;
 }
-.foundry-process-actions {
+.lykomi-process-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: calc(var(--spacing, 0.25rem) * 2);
 }
-.foundry-process-sr {
+.lykomi-process-sr {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -580,27 +578,27 @@ tr[data-active] > [data-pinned="cell"] {
   white-space: nowrap;
   border: 0;
 }
-.foundry-process-spinner {
-  animation: foundry-process-spin 1s linear infinite;
+.lykomi-process-spinner {
+  animation: lykomi-process-spin 1s linear infinite;
 }
-@keyframes foundry-process-spin {
+@keyframes lykomi-process-spin {
   to {
     transform: rotate(360deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .foundry-process-spinner {
+  .lykomi-process-spinner {
     animation: none;
   }
 }
-.foundry-process[data-orientation="vertical"] .foundry-process-steps {
+.lykomi-process[data-orientation="vertical"] .lykomi-process-steps {
   flex-direction: column;
 }
-.foundry-process[data-orientation="vertical"] .foundry-process-target {
+.lykomi-process[data-orientation="vertical"] .lykomi-process-target {
   flex-direction: row;
   align-items: flex-start;
 }
-.foundry-process[data-orientation="vertical"] .foundry-process-step:not(:last-child)::after {
+.lykomi-process[data-orientation="vertical"] .lykomi-process-step:not(:last-child)::after {
   top: calc(var(--spacing, 0.25rem) * 11);
   bottom: calc(var(--spacing, 0.25rem) * -7);
   inset-inline-start: calc(var(--spacing, 0.25rem) * 7 + 1px);
@@ -608,26 +606,26 @@ tr[data-active] > [data-pinned="cell"] {
   height: auto;
   width: 1px;
 }
-.foundry-process[data-variant="overview"][data-orientation="vertical"]
-  .foundry-process-step:not(:last-child)::after {
+.lykomi-process[data-variant="overview"][data-orientation="vertical"]
+  .lykomi-process-step:not(:last-child)::after {
   top: calc(var(--spacing, 0.25rem) * 13);
   bottom: calc(var(--spacing, 0.25rem) * -1 - var(--process-overview-gap));
 }
-.foundry-process[data-variant="overview"][data-orientation="vertical"] .foundry-process-detail {
+.lykomi-process[data-variant="overview"][data-orientation="vertical"] .lykomi-process-detail {
   margin-inline-start: calc(var(--spacing, 0.25rem) * 13);
   padding-inline-start: 0;
 }
 @container (max-width: 38rem) {
-  .foundry-process:not([data-orientation="horizontal"]) .foundry-process-steps {
+  .lykomi-process:not([data-orientation="horizontal"]) .lykomi-process-steps {
     flex-direction: column;
     gap: calc(var(--spacing, 0.25rem) * 2);
   }
-  .foundry-process:not([data-orientation="horizontal"]) .foundry-process-target {
+  .lykomi-process:not([data-orientation="horizontal"]) .lykomi-process-target {
     flex-direction: row;
     align-items: flex-start;
   }
-  .foundry-process:not([data-orientation="horizontal"])
-    .foundry-process-step:not(:last-child)::after {
+  .lykomi-process:not([data-orientation="horizontal"])
+    .lykomi-process-step:not(:last-child)::after {
     top: calc(var(--spacing, 0.25rem) * 11);
     bottom: calc(var(--spacing, 0.25rem) * -5);
     inset-inline-start: calc(var(--spacing, 0.25rem) * 7 + 1px);
@@ -635,17 +633,17 @@ tr[data-active] > [data-pinned="cell"] {
     height: auto;
     width: 1px;
   }
-  .foundry-process[data-variant="overview"]:not([data-orientation="horizontal"])
-    .foundry-process-detail {
+  .lykomi-process[data-variant="overview"]:not([data-orientation="horizontal"])
+    .lykomi-process-detail {
     margin-inline-start: calc(var(--spacing, 0.25rem) * 13);
     padding-inline-start: 0;
   }
-  .foundry-process[data-variant="overview"]:not([data-orientation="horizontal"])
-    .foundry-process-steps {
+  .lykomi-process[data-variant="overview"]:not([data-orientation="horizontal"])
+    .lykomi-process-steps {
     gap: var(--process-overview-gap);
   }
-  .foundry-process[data-variant="overview"]:not([data-orientation="horizontal"])
-    .foundry-process-step:not(:last-child)::after {
+  .lykomi-process[data-variant="overview"]:not([data-orientation="horizontal"])
+    .lykomi-process-step:not(:last-child)::after {
     top: calc(var(--spacing, 0.25rem) * 13);
     bottom: calc(var(--spacing, 0.25rem) * -1 - var(--process-overview-gap));
   }
@@ -653,10 +651,10 @@ tr[data-active] > [data-pinned="cell"] {
 
 /* A monochrome process rail uses brand color for progress. Selection is a
    subtle surface treatment, independent of completion and semantic success. */
-.foundry-process[data-variant="compact"] .foundry-process-steps {
+.lykomi-process[data-variant="compact"] .lykomi-process-steps {
   gap: 0;
 }
-.foundry-process[data-variant="compact"] .foundry-process-target {
+.lykomi-process[data-variant="compact"] .lykomi-process-target {
   flex-direction: row;
   align-items: flex-start;
   gap: calc(var(--spacing, 0.25rem) * 3);
@@ -665,49 +663,45 @@ tr[data-active] > [data-pinned="cell"] {
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--muted) 50%, var(--background));
 }
-.foundry-process[data-variant="compact"] .foundry-process-target:is(button):hover {
+.lykomi-process[data-variant="compact"] .lykomi-process-target:is(button):hover {
   background: var(--muted);
 }
-.foundry-process[data-variant="compact"]
-  .foundry-process-step[data-selected]
-  .foundry-process-target {
+.lykomi-process[data-variant="compact"] .lykomi-process-step[data-selected] .lykomi-process-target {
   background: color-mix(in srgb, var(--primary) 6%, var(--background));
 }
-.foundry-process[data-variant="compact"]
-  .foundry-process-step[data-selected]
-  .foundry-process-label {
+.lykomi-process[data-variant="compact"] .lykomi-process-step[data-selected] .lykomi-process-label {
   color: color-mix(in srgb, var(--primary) 70%, var(--foreground));
 }
-.foundry-process[data-variant="compact"] .foundry-process-status {
+.lykomi-process[data-variant="compact"] .lykomi-process-status {
   color: var(--muted-foreground);
 }
-.foundry-process[data-variant="compact"] .foundry-process-marker {
+.lykomi-process[data-variant="compact"] .lykomi-process-marker {
   width: calc(var(--spacing, 0.25rem) * 5);
   height: calc(var(--spacing, 0.25rem) * 5);
 }
-.foundry-process[data-variant="compact"] .foundry-process-step::after {
+.lykomi-process[data-variant="compact"] .lykomi-process-step::after {
   display: none;
 }
 @container (min-width: 38.001rem) {
-  .foundry-process[data-variant="compact"][data-orientation="responsive"] .foundry-process-step {
+  .lykomi-process[data-variant="compact"][data-orientation="responsive"] .lykomi-process-step {
     display: flex;
     flex-direction: column;
     padding-block-start: calc(var(--spacing, 0.25rem) * 3);
   }
-  .foundry-process[data-variant="compact"][data-orientation="responsive"]
-    .foundry-process-step-surface {
+  .lykomi-process[data-variant="compact"][data-orientation="responsive"]
+    .lykomi-process-step-surface {
     flex: 1;
     height: auto;
     width: calc(100% - var(--spacing, 0.25rem) * 2);
     min-height: calc(var(--spacing, 0.25rem) * 16);
   }
-  .foundry-process[data-variant="compact"][data-orientation="responsive"]
-    .foundry-process-step:last-child
-    .foundry-process-step-surface {
+  .lykomi-process[data-variant="compact"][data-orientation="responsive"]
+    .lykomi-process-step:last-child
+    .lykomi-process-step-surface {
     width: 100%;
   }
-  .foundry-process[data-variant="compact"][data-orientation="responsive"]
-    .foundry-process-step::before {
+  .lykomi-process[data-variant="compact"][data-orientation="responsive"]
+    .lykomi-process-step::before {
     content: "";
     position: absolute;
     inset-block-start: 0;
@@ -715,28 +709,28 @@ tr[data-active] > [data-pinned="cell"] {
     height: 2px;
     background: var(--border);
   }
-  .foundry-process[data-variant="compact"][data-orientation="responsive"]
-    .foundry-process-step[data-status="complete"]::before {
+  .lykomi-process[data-variant="compact"][data-orientation="responsive"]
+    .lykomi-process-step[data-status="complete"]::before {
     background: var(--primary);
   }
 }
-.foundry-process-guide .foundry-process-position {
+.lykomi-process-guide .lykomi-process-position {
   color: color-mix(in srgb, var(--primary) 70%, var(--foreground));
 }
-.foundry-process[data-variant="compact"]
-  .foundry-process-step[data-status="complete"]
-  .foundry-process-marker {
+.lykomi-process[data-variant="compact"]
+  .lykomi-process-step[data-status="complete"]
+  .lykomi-process-marker {
   border-color: var(--primary);
   color: var(--primary);
 }
-.foundry-process-guidance-body {
+.lykomi-process-guidance-body {
   display: grid;
   gap: calc(var(--spacing, 0.25rem) * 3);
 }
-.foundry-process-guidance-body[hidden] {
+.lykomi-process-guidance-body[hidden] {
   display: none;
 }
-.foundry-process-disclosure {
+.lykomi-process-disclosure {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -750,39 +744,38 @@ tr[data-active] > [data-pinned="cell"] {
   font-size: 0.8125rem;
   cursor: pointer;
 }
-.foundry-process-disclosure:hover {
+.lykomi-process-disclosure:hover {
   background: var(--muted);
 }
-.foundry-process-disclosure:focus-visible {
+.lykomi-process-disclosure:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.foundry-process-disclosure svg {
+.lykomi-process-disclosure svg {
   width: 1rem;
   height: 1rem;
 }
-.foundry-process-disclosure[aria-expanded="true"] svg {
+.lykomi-process-disclosure[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
-.foundry-process[data-variant="compact"][data-orientation="vertical"] .foundry-process-steps {
+.lykomi-process[data-variant="compact"][data-orientation="vertical"] .lykomi-process-steps {
   gap: calc(var(--spacing, 0.25rem) * 2);
 }
-.foundry-process[data-variant="compact"][data-orientation="vertical"]
-  .foundry-process-step::before {
+.lykomi-process[data-variant="compact"][data-orientation="vertical"] .lykomi-process-step::before {
   display: none;
 }
 @container (max-width: 38rem) {
-  .foundry-process:not([data-orientation="horizontal"])[data-variant="compact"]
-    .foundry-process-steps {
+  .lykomi-process:not([data-orientation="horizontal"])[data-variant="compact"]
+    .lykomi-process-steps {
     gap: calc(var(--spacing, 0.25rem) * 2);
   }
-  .foundry-process:not([data-orientation="horizontal"])[data-variant="compact"]
-    .foundry-process-step::before {
+  .lykomi-process:not([data-orientation="horizontal"])[data-variant="compact"]
+    .lykomi-process-step::before {
     display: none;
   }
 }
-.foundry-process[data-variant="compact"][data-orientation="vertical"]
-  .foundry-process-step:not(:last-child)::after {
+.lykomi-process[data-variant="compact"][data-orientation="vertical"]
+  .lykomi-process-step:not(:last-child)::after {
   display: block;
   top: calc(var(--spacing, 0.25rem) * 9);
   bottom: calc(var(--spacing, 0.25rem) * -4);
@@ -792,8 +785,8 @@ tr[data-active] > [data-pinned="cell"] {
   height: auto;
 }
 @container (max-width: 38rem) {
-  .foundry-process:not([data-orientation="horizontal"])[data-variant="compact"]
-    .foundry-process-step:not(:last-child)::after {
+  .lykomi-process:not([data-orientation="horizontal"])[data-variant="compact"]
+    .lykomi-process-step:not(:last-child)::after {
     display: block;
     top: calc(var(--spacing, 0.25rem) * 9);
     bottom: calc(var(--spacing, 0.25rem) * -4);
@@ -804,37 +797,37 @@ tr[data-active] > [data-pinned="cell"] {
   }
 }
 
-.foundry-process-guidance-message[data-status="blocked"] {
+.lykomi-process-guidance-message[data-status="blocked"] {
   color: var(--foreground);
 }
-.foundry-process-guidance-message[data-status="error"] {
+.lykomi-process-guidance-message[data-status="error"] {
   color: var(--foreground);
 }
 
-.foundry-process-target[tabindex]:focus-visible {
+.lykomi-process-target[tabindex]:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.foundry-process-tooltip {
+.lykomi-process-tooltip {
   max-width: 18rem;
   white-space: normal;
   line-height: 1.5;
 }
 
-.foundry-process-guide[data-framed] {
+.lykomi-process-guide[data-framed] {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: calc(var(--spacing, 0.25rem) * 4);
   background: var(--card, var(--background));
   color: var(--card-foreground, var(--foreground));
 }
-.foundry-process-guide[data-framed] .foundry-process-focus {
+.lykomi-process-guide[data-framed] .lykomi-process-focus {
   margin-top: calc(var(--spacing, 0.25rem) * 2);
 }
-.foundry-process-step[data-status="blocked"] .foundry-process-marker {
+.lykomi-process-step[data-status="blocked"] .lykomi-process-marker {
   color: var(--muted-foreground);
 }
-.foundry-process-tooltip {
+.lykomi-process-tooltip {
   background: var(--popover);
   color: var(--popover-foreground);
   border: 1px solid var(--border);
@@ -842,7 +835,7 @@ tr[data-active] > [data-pinned="cell"] {
 
 /* Touch users need inline blockers because hover explanations are unavailable. */
 @media (hover: none), (pointer: coarse) {
-  .foundry-process-compact-blocker {
+  .lykomi-process-compact-blocker {
     position: static;
     width: auto;
     height: auto;
@@ -854,19 +847,19 @@ tr[data-active] > [data-pinned="cell"] {
     font-size: 0.8125rem;
     line-height: 1.5;
   }
-  .foundry-process[data-variant="compact"] .foundry-process-detail {
+  .lykomi-process[data-variant="compact"] .lykomi-process-detail {
     flex: 1;
     min-width: 0;
   }
 }
 
 /* Progress-only density: retain status in accessible text without a second row. */
-.foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-target {
+.lykomi-process[data-variant="compact"][data-density="compact"] .lykomi-process-target {
   padding: calc(var(--spacing, 0.25rem) * 2);
   align-items: flex-start;
   min-height: calc(var(--spacing, 0.25rem) * 10);
 }
-.foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-status {
+.lykomi-process[data-variant="compact"][data-density="compact"] .lykomi-process-status {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -878,22 +871,22 @@ tr[data-active] > [data-pinned="cell"] {
   border: 0;
 }
 @container (min-width: 38.001rem) {
-  .foundry-process[data-variant="compact"][data-density="compact"][data-orientation="responsive"]
-    .foundry-process-step {
+  .lykomi-process[data-variant="compact"][data-density="compact"][data-orientation="responsive"]
+    .lykomi-process-step {
     padding-block-start: calc(var(--spacing, 0.25rem) * 2);
   }
 }
-.foundry-process[data-variant="compact"][data-density="compact"][data-orientation="vertical"]
-  .foundry-process-step:not(:last-child)::after {
+.lykomi-process[data-variant="compact"][data-density="compact"][data-orientation="vertical"]
+  .lykomi-process-step:not(:last-child)::after {
   top: calc(var(--spacing, 0.25rem) * 8);
   bottom: calc(var(--spacing, 0.25rem) * -3);
   inset-inline-start: calc(var(--spacing, 0.25rem) * 4 + 2px);
 }
 @container (max-width: 38rem) {
-  .foundry-process:not(
+  .lykomi-process:not(
       [data-orientation="horizontal"]
     )[data-variant="compact"][data-density="compact"]
-    .foundry-process-step:not(:last-child)::after {
+    .lykomi-process-step:not(:last-child)::after {
     top: calc(var(--spacing, 0.25rem) * 8);
     bottom: calc(var(--spacing, 0.25rem) * -3);
     inset-inline-start: calc(var(--spacing, 0.25rem) * 4 + 2px);
@@ -901,14 +894,14 @@ tr[data-active] > [data-pinned="cell"] {
 }
 
 /* Optional chevrons occupy their own gap; progress stays on the rail above. */
-.foundry-process[data-variant="compact"]:is(
+.lykomi-process[data-variant="compact"]:is(
     [data-orientation="responsive"],
     [data-orientation="horizontal"]
   )[data-chevrons] {
   --process-chevron-gap: calc(var(--spacing, 0.25rem) * 8);
   --process-chevron-size: calc(var(--spacing, 0.25rem) * 2);
 }
-.foundry-process[data-variant="compact"]:is(
+.lykomi-process[data-variant="compact"]:is(
     [data-orientation="responsive"],
     [data-orientation="horizontal"]
   )[data-chevrons][data-density="compact"] {
@@ -916,14 +909,14 @@ tr[data-active] > [data-pinned="cell"] {
   --process-chevron-size: calc(var(--spacing, 0.25rem) * 1.25);
 }
 @container (min-width: 38.001rem) {
-  .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
-    .foundry-process-step:not(:last-child)
-    .foundry-process-step-surface {
+  .lykomi-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
+    .lykomi-process-step:not(:last-child)
+    .lykomi-process-step-surface {
     width: calc(100% - var(--process-chevron-gap));
   }
-  .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
-    .foundry-process-step:not(:last-child)
-    .foundry-process-step-surface::after {
+  .lykomi-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]
+    .lykomi-process-step:not(:last-child)
+    .lykomi-process-step-surface::after {
     content: "";
     display: block;
     position: absolute;
@@ -939,34 +932,34 @@ tr[data-active] > [data-pinned="cell"] {
     transform: translateY(-50%) rotate(-45deg);
     opacity: 0.65;
   }
-  .foundry-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]:dir(rtl)
-    .foundry-process-step:not(:last-child)
-    .foundry-process-step-surface::after {
+  .lykomi-process[data-variant="compact"][data-orientation="responsive"][data-chevrons]:dir(rtl)
+    .lykomi-process-step:not(:last-child)
+    .lykomi-process-step-surface::after {
     transform: translateY(-50%) rotate(135deg);
   }
 }
 
 /* Horizontal overflow preserves readable steps without widening the host page. */
 
-.foundry-process[data-variant="compact"][data-orientation="horizontal"] .foundry-process-step {
+.lykomi-process[data-variant="compact"][data-orientation="horizontal"] .lykomi-process-step {
   display: flex;
   flex-direction: column;
   padding-block-start: calc(var(--spacing, 0.25rem) * 3);
 }
-.foundry-process[data-variant="compact"][data-orientation="horizontal"]
-  .foundry-process-step-surface {
+.lykomi-process[data-variant="compact"][data-orientation="horizontal"]
+  .lykomi-process-step-surface {
   flex: 1;
   height: auto;
   width: calc(100% - var(--spacing, 0.25rem) * 2);
   min-height: calc(var(--spacing, 0.25rem) * 16);
 }
-.foundry-process[data-variant="compact"][data-orientation="horizontal"]
-  .foundry-process-step:last-child
-  .foundry-process-step-surface {
+.lykomi-process[data-variant="compact"][data-orientation="horizontal"]
+  .lykomi-process-step:last-child
+  .lykomi-process-step-surface {
   width: 100%;
 }
-.foundry-process[data-variant="compact"][data-orientation="horizontal"]
-  .foundry-process-step::before {
+.lykomi-process[data-variant="compact"][data-orientation="horizontal"]
+  .lykomi-process-step::before {
   content: "";
   position: absolute;
   inset-block-start: 0;
@@ -974,24 +967,24 @@ tr[data-active] > [data-pinned="cell"] {
   height: 2px;
   background: var(--border);
 }
-.foundry-process[data-variant="compact"][data-orientation="horizontal"]
-  .foundry-process-step[data-status="complete"]::before {
+.lykomi-process[data-variant="compact"][data-orientation="horizontal"]
+  .lykomi-process-step[data-status="complete"]::before {
   background: var(--primary);
 }
 
-.foundry-process[data-variant="compact"][data-density="compact"][data-orientation="horizontal"]
-  .foundry-process-step {
+.lykomi-process[data-variant="compact"][data-density="compact"][data-orientation="horizontal"]
+  .lykomi-process-step {
   padding-block-start: calc(var(--spacing, 0.25rem) * 2);
 }
 
-.foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]
-  .foundry-process-step:not(:last-child)
-  .foundry-process-step-surface {
+.lykomi-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]
+  .lykomi-process-step:not(:last-child)
+  .lykomi-process-step-surface {
   width: calc(100% - var(--process-chevron-gap));
 }
-.foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]
-  .foundry-process-step:not(:last-child)
-  .foundry-process-step-surface::after {
+.lykomi-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]
+  .lykomi-process-step:not(:last-child)
+  .lykomi-process-step-surface::after {
   content: "";
   display: block;
   position: absolute;
@@ -1007,32 +1000,32 @@ tr[data-active] > [data-pinned="cell"] {
   transform: translateY(-50%) rotate(-45deg);
   opacity: 0.65;
 }
-.foundry-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]:dir(rtl)
-  .foundry-process-step:not(:last-child)
-  .foundry-process-step-surface::after {
+.lykomi-process[data-variant="compact"][data-orientation="horizontal"][data-chevrons]:dir(rtl)
+  .lykomi-process-step:not(:last-child)
+  .lykomi-process-step-surface::after {
   transform: translateY(-50%) rotate(135deg);
 }
 
-.foundry-process {
+.lykomi-process {
   --process-step-width: calc(var(--spacing, 0.25rem) * 56);
   --process-marker-center: calc(var(--spacing, 0.25rem) * 7 + 1px);
 }
-.foundry-process[data-variant="compact"] {
+.lykomi-process[data-variant="compact"] {
   --process-marker-center: calc(var(--spacing, 0.25rem) * 8.5);
 }
-.foundry-process[data-density="compact"] {
+.lykomi-process[data-density="compact"] {
   --process-step-width: calc(var(--spacing, 0.25rem) * 48);
 }
-.foundry-process[data-variant="compact"][data-density="compact"] {
+.lykomi-process[data-variant="compact"][data-density="compact"] {
   --process-marker-center: calc(var(--spacing, 0.25rem) * 6.5);
 }
-.foundry-process-scroller {
+.lykomi-process-scroller {
   display: flex;
   align-items: flex-start;
   min-width: 0;
   gap: calc(var(--spacing, 0.25rem) * 1);
 }
-.foundry-process-viewport {
+.lykomi-process-viewport {
   flex: 1;
   min-width: 0;
   overflow-x: auto;
@@ -1040,15 +1033,15 @@ tr[data-active] > [data-pinned="cell"] {
   scrollbar-width: none;
   overscroll-behavior-inline: contain;
 }
-.foundry-process-viewport::-webkit-scrollbar {
+.lykomi-process-viewport::-webkit-scrollbar {
   display: none;
 }
-.foundry-process-viewport:focus-visible {
+.lykomi-process-viewport:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: -2px;
   border-radius: var(--radius);
 }
-.foundry-process-scroll-button {
+.lykomi-process-scroll-button {
   --process-scroll-button-size: calc(var(--spacing, 0.25rem) * 8);
   flex-shrink: 0;
   width: var(--process-scroll-button-size);
@@ -1058,7 +1051,7 @@ tr[data-active] > [data-pinned="cell"] {
       var(--process-scroll-button-size) / 2
   );
 }
-.foundry-process-viewport {
+.lykomi-process-viewport {
   --process-fade-left: 0px;
   --process-fade-right: 0px;
   mask-image: linear-gradient(
@@ -1069,79 +1062,79 @@ tr[data-active] > [data-pinned="cell"] {
     transparent
   );
 }
-.foundry-process-viewport[data-previous] {
+.lykomi-process-viewport[data-previous] {
   --process-fade-left: calc(var(--spacing, 0.25rem) * 5);
 }
-.foundry-process-viewport[data-next] {
+.lykomi-process-viewport[data-next] {
   --process-fade-right: calc(var(--spacing, 0.25rem) * 5);
 }
-.foundry-process-viewport:dir(rtl)[data-previous] {
+.lykomi-process-viewport:dir(rtl)[data-previous] {
   --process-fade-right: calc(var(--spacing, 0.25rem) * 5);
   --process-fade-left: 0px;
 }
-.foundry-process-viewport:dir(rtl)[data-next] {
+.lykomi-process-viewport:dir(rtl)[data-next] {
   --process-fade-left: calc(var(--spacing, 0.25rem) * 5);
 }
-.foundry-process-viewport:dir(rtl):not([data-previous]) {
+.lykomi-process-viewport:dir(rtl):not([data-previous]) {
   --process-fade-right: 0px;
 }
-.foundry-process-viewport:focus-within {
+.lykomi-process-viewport:focus-within {
   mask-image: none;
 }
-.foundry-process[data-orientation="horizontal"] .foundry-process-step {
+.lykomi-process[data-orientation="horizontal"] .lykomi-process-step {
   flex: 1 0 var(--process-step-width);
   min-width: var(--process-step-width);
 }
 @container (min-width: 38.001rem) {
-  .foundry-process[data-orientation="responsive"] .foundry-process-step {
+  .lykomi-process[data-orientation="responsive"] .lykomi-process-step {
     flex: 1 0 var(--process-step-width);
     min-width: var(--process-step-width);
   }
 }
 @media (pointer: coarse) {
-  .foundry-process-scroll-button {
+  .lykomi-process-scroll-button {
     --process-scroll-button-size: calc(var(--spacing, 0.25rem) * 11);
   }
 }
 
-.foundry-process[data-orientation="horizontal"] .foundry-process-steps::after {
+.lykomi-process[data-orientation="horizontal"] .lykomi-process-steps::after {
   content: "";
   flex: 0 0 calc(var(--spacing, 0.25rem) * 1.5);
 }
 @container (min-width: 38.001rem) {
-  .foundry-process[data-orientation="responsive"] .foundry-process-steps::after {
+  .lykomi-process[data-orientation="responsive"] .lykomi-process-steps::after {
     content: "";
     flex: 0 0 calc(var(--spacing, 0.25rem) * 1.5);
   }
 }
 
-.foundry-process-name {
+.lykomi-process-name {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: calc(var(--spacing, 0.25rem) * 2);
 }
-.foundry-process-optional {
+.lykomi-process-optional {
   color: var(--muted-foreground);
   font-size: 0.75rem;
   font-weight: 400;
 }
-.foundry-process-step[data-status="ready"] .foundry-process-marker {
+.lykomi-process-step[data-status="ready"] .lykomi-process-marker {
   border: 0;
   color: var(--process-tone);
 }
-.foundry-process-step[data-status="ready"] .foundry-process-marker svg {
+.lykomi-process-step[data-status="ready"] .lykomi-process-marker svg {
   width: 100%;
   height: 100%;
   stroke-width: 1.5;
 }
 
-.foundry-process-step[data-status="ready"][data-selected] .foundry-process-marker {
+.lykomi-process-step[data-status="ready"][data-selected] .lykomi-process-marker {
   color: var(--primary);
 }
 
 /* One shared surface owns geometry; selection and disclosure are grid siblings. */
-.foundry-process-step-surface {
+.lykomi-process-step-surface {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1149,20 +1142,20 @@ tr[data-active] > [data-pinned="cell"] {
   min-width: 0;
   border-radius: var(--radius);
 }
-.foundry-process[data-variant="compact"] .foundry-process-step-surface {
+.lykomi-process[data-variant="compact"] .lykomi-process-step-surface {
   background: color-mix(in srgb, var(--muted) 50%, var(--background));
 }
-.foundry-process[data-variant="compact"]
-  .foundry-process-step[data-selected]
-  .foundry-process-step-surface {
+.lykomi-process[data-variant="compact"]
+  .lykomi-process-step[data-selected]
+  .lykomi-process-step-surface {
   background: color-mix(in srgb, var(--primary) 6%, var(--background));
 }
-.foundry-process[data-variant="compact"] .foundry-process-step-surface .foundry-process-target {
+.lykomi-process[data-variant="compact"] .lykomi-process-step-surface .lykomi-process-target {
   background: transparent;
   width: 100%;
   min-width: 0;
 }
-.foundry-process-step-disclosure {
+.lykomi-process-step-disclosure {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1175,36 +1168,36 @@ tr[data-active] > [data-pinned="cell"] {
   color: var(--primary);
   cursor: pointer;
 }
-.foundry-process-step-disclosure svg {
+.lykomi-process-step-disclosure svg {
   width: 1rem;
   height: 1rem;
 }
-.foundry-process-step-disclosure[aria-expanded="true"] svg {
+.lykomi-process-step-disclosure[aria-expanded="true"] svg {
   transform: rotate(180deg);
 }
-.foundry-process-step-disclosure:hover {
+.lykomi-process-step-disclosure:hover {
   background: var(--muted);
 }
-.foundry-process-step-disclosure:focus-visible {
+.lykomi-process-step-disclosure:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.foundry-process-focus[hidden] {
+.lykomi-process-focus[hidden] {
   display: none;
 }
 @media (pointer: coarse) {
-  .foundry-process-step-disclosure {
+  .lykomi-process-step-disclosure {
     width: 44px;
     min-height: 44px;
   }
 }
-.foundry-process[data-variant="compact"][data-density="compact"] .foundry-process-step-surface {
+.lykomi-process[data-variant="compact"][data-density="compact"] .lykomi-process-step-surface {
   min-height: calc(var(--spacing, 0.25rem) * 10);
 }
 
 /* The track stays continuous; only the final completed segment has a small inset. */
-.foundry-process[data-variant="compact"]
-  .foundry-process-step[data-status="complete"]:not([data-connection-complete]):not(
+.lykomi-process[data-variant="compact"]
+  .lykomi-process-step[data-status="complete"]:not([data-connection-complete]):not(
     :last-child
   )::before {
   background: linear-gradient(
@@ -1213,8 +1206,8 @@ tr[data-active] > [data-pinned="cell"] {
     var(--border) calc(100% - var(--spacing, 0.25rem) * 4)
   );
 }
-.foundry-process[data-variant="compact"]:dir(rtl)
-  .foundry-process-step[data-status="complete"]:not([data-connection-complete]):not(
+.lykomi-process[data-variant="compact"]:dir(rtl)
+  .lykomi-process-step[data-status="complete"]:not([data-connection-complete]):not(
     :last-child
   )::before {
   background: linear-gradient(

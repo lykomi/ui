@@ -2,7 +2,7 @@
  * `RelayAnswerWatcher` — speaks the agent's answer, in `relay` mode.
  *
  * Render-less, mounted inside the assistant runtime (the same shape as
- * foundry-web-ui's `ComposerSubmitBridge`). It watches the last assistant
+ * web-ui's `ComposerSubmitBridge`). It watches the last assistant
  * message as it streams and hands the prose to the bridge, which cuts it
  * into sentences and speaks them one at a time.
  *

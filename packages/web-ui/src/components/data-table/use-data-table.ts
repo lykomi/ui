@@ -166,7 +166,11 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
   const tableOptions: TableOptions<T> = {
     data,
     columns,
-    defaultColumn: { minSize: DEFAULT_COLUMN_MIN_SIZE, maxSize: DEFAULT_COLUMN_MAX_SIZE, ...defaultColumn },
+    defaultColumn: {
+      minSize: DEFAULT_COLUMN_MIN_SIZE,
+      maxSize: DEFAULT_COLUMN_MAX_SIZE,
+      ...defaultColumn,
+    },
     getRowId,
     state: { ...state, grouping: groupBy ? [groupBy] : [] },
     onGlobalFilterChange: (updater) => update("globalFilter", updater),

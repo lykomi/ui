@@ -1,4 +1,4 @@
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import type { GraphStyleMap } from "./use-graph-styling.ts";
 
 export interface GraphLegendProps {

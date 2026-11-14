@@ -6,8 +6,8 @@ import {
   REASONING_EFFORT_LABELS,
   type ReasoningEffort,
   type ResolvedReasoningEffort,
-} from "@iloveagents/foundry-agent";
-import { cn } from "@iloveagents/foundry-web-primitives";
+} from "@lykomi/agent";
+import { cn } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,

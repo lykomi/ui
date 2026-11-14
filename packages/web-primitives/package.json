@@ -1,14 +1,14 @@
 {
-  "name": "@iloveagents/foundry-web-primitives",
+  "name": "@lykomi/web-primitives",
   "version": "0.49.1",
   "license": "MIT",
-  "description": "Leaf React UI primitives for Foundry UI — Button, Checkbox, Input, Textarea, Field, FieldSet, cn().",
+  "description": "Leaf React UI primitives for LYKOMI UI — Button, Checkbox, Input, Textarea, Field, FieldSet, cn().",
   "keywords": [
     "react",
     "ui",
     "primitives",
     "tailwind",
-    "foundry-ui",
+    "lykomi-ui",
     "ag-ui"
   ],
   "repository": {

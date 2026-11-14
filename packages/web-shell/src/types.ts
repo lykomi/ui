@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import type { ThemeLayer } from "@iloveagents/foundry-web-ui";
+import type { ThemeLayer } from "@lykomi/web-ui";
 
 /**
  * Per-mount inputs the shell hands the module's history-adapter

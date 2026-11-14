@@ -1,6 +1,6 @@
 import { type FC, createElement } from "react";
 import { TextSelect, FileText, Link2, StickyNote, type LucideIcon } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip.tsx";
 import { useAppStore, type ContextItem, type ContextItemType } from "../lib/app-store.ts";
 

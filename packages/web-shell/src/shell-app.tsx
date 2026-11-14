@@ -1,12 +1,9 @@
 import { useFreshConversationId } from "./use-fresh-conversation-id.ts";
 import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router";
-import { AGUIRuntimeProvider } from "@iloveagents/foundry-web-ui";
-import type {
-  AGUIChatConversationFactoryArgs,
-  AGUIHistoryAdapterFactory,
-} from "@iloveagents/foundry-web-ui";
-import type { ThemeLayer } from "@iloveagents/foundry-web-ui";
+import { AGUIRuntimeProvider } from "@lykomi/web-ui";
+import type { AGUIChatConversationFactoryArgs, AGUIHistoryAdapterFactory } from "@lykomi/web-ui";
+import type { ThemeLayer } from "@lykomi/web-ui";
 import type { ChatConversationConfig, ChatModule, AuthAdapter, ShellPage } from "./types.ts";
 import { ShellAuth } from "./auth-default.tsx";
 import { ShellLayout } from "./shell-layout.tsx";

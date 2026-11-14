@@ -20,7 +20,7 @@ import { describe, expect, it, vi } from "vitest";
 let authGateOpen = false;
 const fetchCalledWhileUnauthenticated = { value: false };
 
-vi.mock("@iloveagents/foundry-web-ui", () => ({
+vi.mock("@lykomi/web-ui", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   AGUIRuntimeProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   Sidebar: () => null,
@@ -49,21 +49,21 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   useThemeStore: (selector: (s: any) => unknown) => selector({ mode: "system" }),
 }));
 
-vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
+vi.mock("@lykomi/web-ui/workbench", () => ({
   WorkbenchPreview: ({ page }: { page: ReactNode }) => <>{page}</>,
 }));
 
-vi.mock("@iloveagents/foundry-web-primitives", () => ({
+vi.mock("@lykomi/web-primitives", () => ({
   cn: (...c: unknown[]) => c.filter(Boolean).join(" "),
 }));
 
-vi.mock("@iloveagents/foundry-agent", () => ({
+vi.mock("@lykomi/agent", () => ({
   createServiceFetch: () => fetch,
   reasoningDefaultStore: { getState: () => ({ setResolved: () => {} }) },
   contextUsageStore: { getState: () => ({ setWindow: () => {} }) },
 }));
 
-vi.mock("@iloveagents/foundry-agent/msal", () => ({
+vi.mock("@lykomi/agent/msal", () => ({
   authStore: { getState: () => ({ getAccessToken: () => Promise.resolve("") }) },
 }));
 

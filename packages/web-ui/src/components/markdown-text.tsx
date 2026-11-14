@@ -5,15 +5,10 @@ import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { Components } from "react-markdown";
 import { Children, type ReactElement, type ReactNode } from "react";
 import { Check, Copy } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { MermaidDiagram, MermaidStreamingContext } from "./mermaid-diagram.tsx";
 import { useStore } from "zustand";
-import {
-  citationStore,
-  linkStore,
-  resolveLinkHandler,
-  type CitationResult,
-} from "@iloveagents/foundry-agent";
+import { citationStore, linkStore, resolveLinkHandler, type CitationResult } from "@lykomi/agent";
 
 /* ---------- Shared copy-to-clipboard button ---------- */
 

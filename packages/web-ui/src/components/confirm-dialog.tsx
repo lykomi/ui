@@ -1,4 +1,4 @@
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import { FormDialog } from "./form-dialog.tsx";
 
 export function ConfirmDialog({

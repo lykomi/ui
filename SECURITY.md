@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Foundry UI is pre-1.0; only the latest published `0.x` release line receives
+LYKOMI UI is pre-1.0; only the latest published `0.x` release line receives
 security fixes.
 
 ## Reporting a vulnerability
@@ -12,5 +12,5 @@ Please report vulnerabilities privately via
 — do **not** open a public issue.
 
 We aim to acknowledge reports within 3 business days. Please include a
-reproduction, the affected package(s) (`@iloveagents/foundry-*` or
+reproduction, the affected package(s) (`@lykomi/*` or
 `create-lykomi-app`), and the version.

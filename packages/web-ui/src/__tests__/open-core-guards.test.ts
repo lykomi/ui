@@ -2,13 +2,13 @@
  * Open-core packaging guards.
  *
  * Four data-driven guards (the customer-isolation + Python guards from the
- * lastspace-origin version were dropped — foundry-ui is TS-only, no
+ * lastspace-origin version were dropped — lykomi-ui is TS-only, no
  * customer-specific code lives here):
  *
  *  1. Banned imports inside `packages/agent/src/` — no React, no DOM, no
  *     `@assistant-ui/*`, no bare `"zustand"`. The MSAL subpath is the
  *     single exception that may import `@azure/msal-browser`.
- *  2. Open-core import-direction graph — each `@iloveagents/foundry-*`
+ *  2. Open-core import-direction graph — each `@lykomi/*`
  *     package may only import from a declared subset of siblings.
  *  3. File-count ceiling on `packages/web-shell/src` — the shell stays
  *     thin (composition layer, not application surface).
@@ -26,7 +26,7 @@ const ROOT = join(import.meta.dirname!, "../../../..");
 // ----------------------------------------------------------------------------
 
 /**
- * Open-core package import graph. For each package, list which `@iloveagents/*`
+ * Open-core package import graph. For each package, list which `@lykomi/*`
  * packages it MAY import. Empty array = none.
  *
  * Packages that do not yet exist on disk are skipped at runtime by
@@ -34,47 +34,28 @@ const ROOT = join(import.meta.dirname!, "../../../..");
  * extraction.
  */
 const OPEN_CORE_GRAPH: Record<string, string[]> = {
-  "@iloveagents/foundry-agent": [],
-  "@iloveagents/foundry-web-primitives": [],
-  "@iloveagents/foundry-web-ui": [
-    "@iloveagents/foundry-web-primitives",
-    "@iloveagents/foundry-agent",
-  ],
+  "@lykomi/agent": [],
+  "@lykomi/web-primitives": [],
+  "@lykomi/web-ui": ["@lykomi/web-primitives", "@lykomi/agent"],
   // The graph package sits ABOVE web-ui, never below it: web-ui must not gain
   // an edge to web-graph, or `react-force-graph-2d` would land in the install
   // of every consumer that only wants a chat.
-  "@iloveagents/foundry-web-graph": [
-    "@iloveagents/foundry-web-primitives",
-    "@iloveagents/foundry-web-ui",
-    "@iloveagents/foundry-agent",
-  ],
-  "@iloveagents/foundry-web-3d": [
-    "@iloveagents/foundry-web-primitives",
-    "@iloveagents/foundry-agent",
-  ],
-  "@iloveagents/foundry-web-shell": [
-    "@iloveagents/foundry-web-primitives",
-    "@iloveagents/foundry-web-ui",
-    "@iloveagents/foundry-agent",
-  ],
+  "@lykomi/web-graph": ["@lykomi/web-primitives", "@lykomi/web-ui", "@lykomi/agent"],
+  "@lykomi/web-3d": ["@lykomi/web-primitives", "@lykomi/agent"],
+  "@lykomi/web-shell": ["@lykomi/web-primitives", "@lykomi/web-ui", "@lykomi/agent"],
   // The optional voice tier is a *module*: it composes the UI packages, and
   // nothing composes it. It must never appear in another package's allowed
   // list, or "optional" stops being true.
   //
-  // `foundry-voice-live-react` shares the @iloveagents scope but is a
-  // different product (the Azure Voice Live SDK), consumed from npm like any
-  // third-party dependency — not a sibling in this workspace.
-  "@iloveagents/foundry-web-voice": [
-    "@iloveagents/foundry-web-ui",
-    "@iloveagents/foundry-agent",
-    "@iloveagents/foundry-voice-live-react",
-  ],
+  // The Azure Voice Live SDK remains in the @iloveagents scope; it is a
+  // third-party dependency, not a sibling in this workspace.
+  "@lykomi/web-voice": ["@lykomi/web-ui", "@lykomi/agent"],
 };
 
 /**
  * Banned bare-package imports inside `packages/agent/src/`.
  *
- * `@iloveagents/foundry-agent` is the cross-runtime transport — pure TS, zero React,
+ * `@lykomi/agent` is the cross-runtime transport — pure TS, zero React,
  * zero `@assistant-ui/*`. The MSAL subpath (`packages/agent/src/msal/`) may
  * pull in `@azure/msal-browser` (dynamic import keeps it optional). Bare
  * `"zustand"` is banned everywhere — must use `"zustand/vanilla"`.
@@ -160,8 +141,8 @@ function importsOf(content: string): string[] {
 
 describe("open-core guards", () => {
   // 1. Agent package: no React / no assistant-ui / no bare zustand
-  describe("@iloveagents/foundry-agent banned-import guard", () => {
-    const agentRoot = findPackageDir("@iloveagents/foundry-agent");
+  describe("@lykomi/agent banned-import guard", () => {
+    const agentRoot = findPackageDir("@lykomi/agent");
 
     if (!agentRoot) {
       it.skip("agent package not yet extracted", () => undefined);
@@ -224,16 +205,16 @@ describe("open-core guards", () => {
         for (const file of files) {
           const content = readFileSync(file, "utf-8");
           for (const imp of importsOf(content)) {
-            // Foundry-ui packages must never import commercial downstream
+            // LYKOMI UI packages must never import commercial downstream
             // packages (@ltwlf/* today; @lastspace/* was the pre-rename scope);
-            // allow-listing is enforced for sibling @iloveagents/* deps.
+            // allow-listing is enforced for sibling @lykomi/* deps.
             if (imp.startsWith("@lastspace/") || imp.startsWith("@ltwlf/")) {
               violations.push(
                 `${relative(ROOT, file)} -> ${imp} (commercial downstream import forbidden)`,
               );
               continue;
             }
-            if (!imp.startsWith("@iloveagents/")) continue;
+            if (!imp.startsWith("@lykomi/")) continue;
             // Self-imports allowed (subpath exports etc).
             if (imp === pkg || imp.startsWith(`${pkg}/`)) continue;
             // Strip subpath off the imported package.
@@ -377,7 +358,7 @@ describe("open-core guards", () => {
       ).toBe(true);
     });
 
-    // 5. Sibling foundry-* packages must never be peerDependencies.
+    // 5. Sibling @lykomi/* packages must never be peerDependencies.
     //
     // The four packages ship together as a coordinated `fixed` changesets
     // group, so they belong in `dependencies` with `workspace:*`. As peerDeps
@@ -388,19 +369,19 @@ describe("open-core guards", () => {
     // This has fired for real, which is why the published version line has a
     // permanent hole in it. Encoded as a test rather than prose so it cannot
     // quietly stop being true.
-    it("no @iloveagents/foundry-* sibling appears in peerDependencies", () => {
+    it("no @lykomi/* sibling appears in peerDependencies", () => {
       const violations: string[] = [];
       for (const { dir, json } of workspacePackageJsons()) {
         const peers = (json.peerDependencies ?? {}) as Record<string, string>;
         for (const dep of Object.keys(peers)) {
-          if (dep.startsWith("@iloveagents/foundry-")) {
+          if (dep.startsWith("@lykomi/")) {
             violations.push(`${relative(ROOT, dir)} peerDependencies.${dep}=${peers[dep]}`);
           }
         }
       }
       expect(
         violations,
-        "sibling foundry-* packages must be `dependencies` (workspace:*), never peerDependencies — " +
+        "sibling @lykomi/* packages must be `dependencies` (workspace:*), never peerDependencies — " +
           "peerDeps trigger the changesets major-bump cascade across the whole fixed group",
       ).toEqual([]);
     });

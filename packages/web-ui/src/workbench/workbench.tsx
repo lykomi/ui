@@ -7,7 +7,7 @@ import { WelcomeIntro } from "./welcome-intro.tsx";
 import { useWorkbenchState } from "./use-workbench-state.tsx";
 import { WorkbenchStyles } from "./workbench-styles.tsx";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import { ChatContent, TooltipIconButton } from "../index.ts";
 import type { ChatContentProps } from "../components/assistant-chat.tsx";
 import { ChatContentDefaultsContext } from "../components/chat-content-defaults.ts";

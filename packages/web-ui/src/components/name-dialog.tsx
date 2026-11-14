@@ -1,9 +1,9 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 
-import { Button } from "@iloveagents/foundry-web-primitives";
-import { Input } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
+import { Input } from "@lykomi/web-primitives";
 import { FormDialog } from "./form-dialog.tsx";
-import { Field } from "@iloveagents/foundry-web-primitives";
+import { Field } from "@lykomi/web-primitives";
 
 export function NameDialog({
   open,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, type CSSProperties } from "react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import { X } from "lucide-react";
 import { FocusPaneResize } from "./data-table/focus-pane-resize.tsx";
 import { PanelContentRenderer } from "./tool-panel.tsx";

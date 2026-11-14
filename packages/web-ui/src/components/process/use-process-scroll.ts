@@ -102,7 +102,7 @@ export function useProcessScroll(inspectedId: string | undefined, layoutKey: str
       return;
     lastReveal.current = { id: inspectedId, layout: layoutKey, overflow: edges.overflow };
     const selected = track.current?.querySelector<HTMLElement>(
-      "[data-selected] .foundry-process-target",
+      "[data-selected] .lykomi-process-target",
     );
     if (selected) reveal(selected);
     // Scroll events only update edge hints, so manual browsing is never snapped back.

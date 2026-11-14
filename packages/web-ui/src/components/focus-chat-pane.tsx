@@ -1,7 +1,7 @@
 import { ChatEmptyState } from "./chat-empty-state.tsx";
 import { useAppStore } from "../lib/app-store.ts";
 import { type CSSProperties } from "react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import { X, PanelLeft, MessageSquare } from "lucide-react";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { FocusPaneResize } from "./data-table/focus-pane-resize.tsx";

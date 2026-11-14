@@ -16,7 +16,7 @@ import { join, relative } from "node:path";
 const PACKAGE_ROOT = join(import.meta.dirname!, "../..");
 const ADAPTER_DIR = join(PACKAGE_ROOT, "src/adapter");
 
-const BANNED = ["react", "react-dom", "react/jsx-runtime", "@iloveagents/foundry-web-ui"];
+const BANNED = ["react", "react-dom", "react/jsx-runtime", "@lykomi/web-ui"];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {

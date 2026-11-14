@@ -1,6 +1,6 @@
 import { ChatPanelToggle } from "./chat-panel-toggle.tsx";
 import { TooltipIconButton } from "../index.ts";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import { SquarePen, PanelLeft, MessageSquare, Menu, MessagesSquare } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
 import { RunningChatsMenu } from "./running-chats-menu.tsx";

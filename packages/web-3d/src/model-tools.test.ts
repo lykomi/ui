@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clientToolRegistry } from "@iloveagents/foundry-agent";
+import { clientToolRegistry } from "@lykomi/agent";
 import { connectModel, type ModelHandle } from "./model-types.ts";
 import { registerModelClientTools } from "./model-tools.ts";
 

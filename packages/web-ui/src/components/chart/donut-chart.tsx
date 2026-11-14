@@ -1,7 +1,7 @@
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "./chart.tsx";
 import {

@@ -1,7 +1,7 @@
 # Voice
 
-Foundry UI can be talked to. Voice is a separate, optional package —
-[`@iloveagents/foundry-web-voice`](../packages/web-voice/README.md) — so an app that does not want
+LYKOMI UI can be talked to. Voice is a separate, optional package —
+[`@lykomi/web-voice`](../packages/web-voice/README.md) — so an app that does not want
 it carries none of it.
 
 This document is the _why_: which mode to choose, what each one costs, and the two constraints that
@@ -18,7 +18,7 @@ Not here. `@assistant-ui/react` 0.15 already models a realtime voice session:
 | `useVoiceControls()`                              | `connect` / `disconnect` / `mute` / `unmute`      |
 | `useVoiceState()` / `useVoiceVolume()`            | status, muted, listening-vs-speaking, level       |
 
-So the integration is: implement `RealtimeVoiceAdapter` over Azure Voice Live. `foundry-web-ui`
+So the integration is: implement `RealtimeVoiceAdapter` over Azure Voice Live. `web-ui`
 contributes two seams and no voice knowledge — `registerVoiceAdapter()` and a `composerActions`
 chat slot. Any other voice backend registers the same way and gets the same mic button.
 

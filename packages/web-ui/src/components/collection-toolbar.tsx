@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 export function CollectionToolbar({
   search,

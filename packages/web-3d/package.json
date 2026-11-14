@@ -1,8 +1,8 @@
 {
-  "name": "@iloveagents/foundry-web-3d",
+  "name": "@lykomi/web-3d",
   "version": "0.1.16",
   "license": "MIT",
-  "description": "Optional preview GLB viewer with part hierarchy and AG-UI model tools for Foundry UI.",
+  "description": "Optional preview GLB viewer with part hierarchy and AG-UI model tools for LYKOMI UI.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,8 +31,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@iloveagents/foundry-agent": "workspace:^",
-    "@iloveagents/foundry-web-primitives": "workspace:^",
+    "@lykomi/agent": "workspace:^",
+    "@lykomi/web-primitives": "workspace:^",
     "three": "0.186.1"
   },
   "peerDependencies": {

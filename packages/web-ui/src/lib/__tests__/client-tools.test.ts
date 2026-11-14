@@ -11,7 +11,7 @@ vi.stubGlobal(
   }),
 );
 
-const { clientToolRegistry } = await import("@iloveagents/foundry-agent");
+const { clientToolRegistry } = await import("@lykomi/agent");
 await import("../client-tools"); // triggers registerGlobalTools()
 
 const registry = () => clientToolRegistry.getState();

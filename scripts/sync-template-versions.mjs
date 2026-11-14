@@ -1,4 +1,4 @@
-// Sync the scaffold template's @iloveagents/foundry-* pins to the versions the
+// Sync the scaffold template's @lykomi/* pins to the versions the
 // workspace publishes.
 //
 // The template is deliberately NOT a workspace member (it ships its own
@@ -16,16 +16,16 @@
 // the CLI a patch release in the same Version Packages PR — unless a changeset
 // already bumped it. Leaving that to a hand-written changeset failed twice
 // (web-voice 0.1.1 while the CLI still pinned 0.1.0; foundry 0.33.0 while
-// `npx create-foundry-ui-app` still scaffolded 0.32.4).
+// `npx create-lykomi-app` still scaffolded 0.32.4).
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { CLI_ROOT, foundryWorkspaceVersions, scaffoldPinSources } from "./scaffold-pins.mjs";
+import { CLI_ROOT, lykomiWorkspaceVersions, scaffoldPinSources } from "./scaffold-pins.mjs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
-const versions = foundryWorkspaceVersions();
+const versions = lykomiWorkspaceVersions();
 let changed = false;
 const moved = [];
 

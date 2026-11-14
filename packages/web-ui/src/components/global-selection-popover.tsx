@@ -7,7 +7,7 @@
 
 import { type FormEvent, useState, useEffect, useCallback, useRef } from "react";
 import { PencilLine, Send, TextSelect, X } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { useAppStore } from "../lib/app-store.ts";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 import { submitComposerText } from "../lib/composer-submit-store.ts";

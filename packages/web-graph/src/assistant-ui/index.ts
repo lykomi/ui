@@ -3,7 +3,7 @@
  *
  * Split into its own entry point so the root export stays free of
  * `@assistant-ui/react` — a host that only wants to draw a graph (a dashboard,
- * a report page) imports `@iloveagents/foundry-web-graph` and never loads the
+ * a report page) imports `@lykomi/web-graph` and never loads the
  * chat runtime.
  */
 

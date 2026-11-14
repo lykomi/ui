@@ -1,4 +1,4 @@
-// Shared definition of "where does a scaffolded app's @iloveagents/foundry-*
+// Shared definition of "where does a scaffolded app's @lykomi/*
 // pins come from" — used by both the sync step (`pnpm changeset:version`) and
 // the guard (`pnpm pack:check`) so the two can never disagree about scope.
 //
@@ -23,12 +23,12 @@ const RUNTIME_PACKAGE_DIRS = [
   "packages/web-voice",
 ];
 
-export const CLI_ROOT = "packages/create-foundry-ui-app";
+export const CLI_ROOT = "packages/create-lykomi-app";
 export const TEMPLATE_PACKAGE_JSON = join(CLI_ROOT, "template/package.json");
 const PRESETS_DIR = join(CLI_ROOT, "presets");
 
 /** Package name → version, for the published runtime packages. */
-export function foundryWorkspaceVersions() {
+export function lykomiWorkspaceVersions() {
   return Object.fromEntries(
     RUNTIME_PACKAGE_DIRS.map((dir) => {
       const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
@@ -38,7 +38,7 @@ export function foundryWorkspaceVersions() {
 }
 
 /**
- * Every file that pins `@iloveagents/foundry-*` for generated apps.
+ * Every file that pins `@lykomi/*` for generated apps.
  * `fields` are paths into the JSON ("dependencies", or a dotted path for
  * preset manifests).
  */

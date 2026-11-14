@@ -1,14 +1,14 @@
 /**
  * AG-UI Adapter for assistant-ui.
  *
- * Thin shim around `@iloveagents/foundry-agent`'s `AGUIRunner`:
+ * Thin shim around `@lykomi/agent`'s `AGUIRunner`:
  *   - converts assistant-ui `Message[]` → AG-UI `Message[]` on input,
  *   - feeds the runner, drains its `RunnerEvent` stream,
  *   - accumulates text + tool-call state,
  *   - yields cumulative `ChatModelRunResult` snapshots (assistant-ui requires
  *     each yield to carry the *complete* content array — never deltas).
  *
- * Wires the React-only stores that don't belong in `@iloveagents/foundry-agent`:
+ * Wires the React-only stores that don't belong in `@lykomi/agent`:
  *   - `useAppStore` for context-item snapshot + lifecycle hooks
  *   - `useDevStore` for dev-panel request/tool capture (driven by the
  *     runner's `request-sent` event).
@@ -27,8 +27,8 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 import type { Context, Message as AGUIMessage } from "@ag-ui/core";
-import { AGUIRunner, clientToolRegistry, contextUsageStore } from "@iloveagents/foundry-agent";
-import { tokenFetch } from "@iloveagents/foundry-agent/msal";
+import { AGUIRunner, clientToolRegistry, contextUsageStore } from "@lykomi/agent";
+import { tokenFetch } from "@lykomi/agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
 import { useDevStore } from "./dev-store.ts";
 

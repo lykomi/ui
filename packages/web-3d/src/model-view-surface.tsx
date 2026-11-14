@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import { ModelPartsTree } from "./model-parts-tree.tsx";
 import { ModelRuntime } from "./model-runtime.ts";
 import { disposeModel, parseModel, readModelResponse } from "./model-resources.ts";

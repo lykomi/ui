@@ -22,7 +22,7 @@ import type {
   Tool,
   VoiceLiveSessionConfig,
 } from "@iloveagents/foundry-voice-live-react";
-import type { ToolRegistry } from "@iloveagents/foundry-agent";
+import type { ToolRegistry } from "@lykomi/agent";
 import type { VoiceMode } from "./types.ts";
 
 /**

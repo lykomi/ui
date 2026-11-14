@@ -12,7 +12,7 @@ import {
   registerVoiceAdapter,
   useChatSlotsStore,
   useVoiceAdapterStore,
-} from "@iloveagents/foundry-web-ui";
+} from "@lykomi/web-ui";
 import { installVoice } from "../react/install.tsx";
 
 const config = { connection: { proxyUrl: "ws://localhost:8080/ws" } };

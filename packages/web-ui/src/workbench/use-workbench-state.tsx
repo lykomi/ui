@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router";
 import { useAuiState } from "@assistant-ui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import {
   useSidebarStore,
   useChatBubbleStore,

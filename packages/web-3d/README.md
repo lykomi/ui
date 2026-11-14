@@ -1,6 +1,6 @@
 # Foundry 3D model preview
 
-`@iloveagents/foundry-web-3d` is an optional MIT package for self-contained
+`@lykomi/web-3d` is an optional MIT package for self-contained
 GLB files and agent-controlled part inspection. It versions independently of the
 core packages. Neither the core shell nor the graph module imports it.
 
@@ -12,8 +12,8 @@ rendering, AR and backend indexing are outside this package.
 Install the package when your app needs 3D previews. Add its module to the shell:
 
 ```tsx
-import { bootstrapShell } from "@iloveagents/foundry-web-shell";
-import { ModelView, model3dModule } from "@iloveagents/foundry-web-3d";
+import { bootstrapShell } from "@lykomi/web-shell";
+import { ModelView, model3dModule } from "@lykomi/web-3d";
 
 bootstrapShell({
   modules: [model3dModule],
@@ -36,7 +36,7 @@ authentication nor file storage. Multiple active viewers require a `modelId`.
 Add the package to the host's Tailwind scan (adjust relative paths):
 
 ```css
-@source "../node_modules/@iloveagents/foundry-web-3d/dist";
+@source "../node_modules/@lykomi/web-3d/dist";
 ```
 
 Controls use the host's existing theme tokens. The left structure tree retains

@@ -1,7 +1,7 @@
 import { LayoutGrid, Rows3, TableProperties } from "lucide-react";
 
-import { Button } from "@iloveagents/foundry-web-primitives";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 export type CollectionViewMode = "table" | "grid" | "tiles";
 

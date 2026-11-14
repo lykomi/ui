@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 
 import { resolvePnpmCommand } from "./lib/local-packs.mjs";
-import { foundryWorkspaceVersions, scaffoldPinSources } from "./scaffold-pins.mjs";
+import { lykomiWorkspaceVersions, scaffoldPinSources } from "./scaffold-pins.mjs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -36,7 +36,7 @@ const packages = [
     runtime: true,
   },
   {
-    dir: "packages/create-foundry-ui-app",
+    dir: "packages/create-lykomi-app",
     runtime: false,
   },
 ];
@@ -73,7 +73,7 @@ function assertNoWorkspaceRanges(dir, pkg, source) {
 }
 
 function packToTemp(dir) {
-  const packDir = join(tmpdir(), "foundry-ui-pack-check");
+  const packDir = join(tmpdir(), "lykomi-ui-pack-check");
   execFileSync("mkdir", ["-p", packDir]);
   const raw = execFileSync(
     pnpmCommand.command,
@@ -91,7 +91,7 @@ function packToTemp(dir) {
 function tarballPath(dir, packed) {
   if (packed.path) return packed.path;
   if (packed.filename?.startsWith("/")) return packed.filename;
-  return join(packed.dest ?? join(tmpdir(), "foundry-ui-pack-check"), packed.filename);
+  return join(packed.dest ?? join(tmpdir(), "lykomi-ui-pack-check"), packed.filename);
 }
 
 function listTarballFiles(tarball) {
@@ -186,7 +186,7 @@ function assertDeclarationExtensions(dir) {
 // `pnpm changeset:version` runs scripts/sync-template-versions.mjs to keep
 // these in step; this guard is the backstop if that is ever bypassed.
 function assertScaffoldPinsCurrent() {
-  const versions = foundryWorkspaceVersions();
+  const versions = lykomiWorkspaceVersions();
 
   for (const { file, fields, label } of scaffoldPinSources({ existsSync, readdirSync })) {
     const json = JSON.parse(readFileSync(file, "utf8"));

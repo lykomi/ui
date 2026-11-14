@@ -18,7 +18,7 @@
 
 import { useEffect, useRef } from "react";
 import { useAuiState } from "@assistant-ui/react";
-import { useToolPanelStore, useIsForegroundChat } from "@iloveagents/foundry-web-ui";
+import { useToolPanelStore, useIsForegroundChat } from "@lykomi/web-ui";
 import { graphToolBindings } from "./graph-tool-registry.ts";
 import { GRAPH_PANEL_TYPE, graphPanelContent } from "./graph-panel-content.ts";
 import { mergeIntoOpenGraph } from "./merge-into-panel.ts";

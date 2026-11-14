@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
+import { useToolPanelStore } from "@lykomi/web-ui";
 import { GRAPH_PANEL_TYPE, graphPanelPayload } from "./graph-panel-content.ts";
 
 const GraphPanelRenderer = lazy(() => import("./graph-panel.tsx"));

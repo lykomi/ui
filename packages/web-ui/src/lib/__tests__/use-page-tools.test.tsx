@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { clientToolRegistry } from "@iloveagents/foundry-agent";
+import { clientToolRegistry } from "@lykomi/agent";
 import { usePageTools } from "../use-page-tools.ts";
 
 const schemaNames = () =>

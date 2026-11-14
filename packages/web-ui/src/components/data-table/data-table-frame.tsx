@@ -8,7 +8,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
 } from "react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { TooltipProvider } from "../../ui/tooltip.tsx";
 import { Dialog, DialogPortal } from "../../ui/dialog.tsx";
 import { FocusDialog } from "../focus-dialog.tsx";

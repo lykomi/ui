@@ -1,6 +1,6 @@
 import type { FC, ReactNode } from "react";
-import { AuthProvider } from "@iloveagents/foundry-web-ui";
-import type { MsalAuthConfig } from "@iloveagents/foundry-agent/msal";
+import { AuthProvider } from "@lykomi/web-ui";
+import type { MsalAuthConfig } from "@lykomi/agent/msal";
 import type { AuthAdapter } from "./types.ts";
 import { runtimeConfig } from "./runtime-config.ts";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ToolRegistry } from "@iloveagents/foundry-agent";
+import type { ToolRegistry } from "@lykomi/agent";
 import { createRegistryToolExecutor } from "../adapter/tool-bridge.ts";
 
 function registry(over: Partial<ToolRegistry> = {}): ToolRegistry {

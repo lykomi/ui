@@ -6,7 +6,7 @@
  * installed those would test the last release rather than the working tree.
  * Packing locally is what makes the check about the change in hand.
  *
- * `pnpm pack`, never `npm pack` — the sibling `@iloveagents/foundry-*` deps
+ * `pnpm pack`, never `npm pack` — the sibling `@lykomi/*` deps
  * carry `workspace:^`, and only pnpm rewrites that into a real range. A tarball
  * built by npm installs nowhere.
  */

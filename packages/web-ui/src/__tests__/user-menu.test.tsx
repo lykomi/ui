@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import { authStore } from "@iloveagents/foundry-agent/msal";
+import { authStore } from "@lykomi/agent/msal";
 import { UserMenu } from "../components/user-menu.tsx";
 import { useNavStore } from "../lib/nav-store.ts";
 

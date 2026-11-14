@@ -1,7 +1,7 @@
 /**
- * `@iloveagents/foundry-web-voice` — spoken conversation for Foundry UI.
+ * `@lykomi/web-voice` — spoken conversation for LYKOMI UI.
  *
- * Optional by construction: nothing in `@iloveagents/foundry-web-ui` imports
+ * Optional by construction: nothing in `@lykomi/web-ui` imports
  * this package, and an app that never installs it has an unchanged composer
  * and an unchanged runtime.
  *

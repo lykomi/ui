@@ -1,6 +1,6 @@
 /** A leading checkbox column: header selects the page, cells select the row. */
 import type { ColumnDef } from "@tanstack/react-table";
-import { Checkbox } from "@iloveagents/foundry-web-primitives";
+import { Checkbox } from "@lykomi/web-primitives";
 
 export const SELECTION_COLUMN_ID = "__select";
 

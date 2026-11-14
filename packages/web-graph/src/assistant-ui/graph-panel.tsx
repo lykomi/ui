@@ -13,15 +13,10 @@ import {
 } from "../model.ts";
 import { GraphEmptyState } from "../graph-notice.tsx";
 import { graphWorkspaceStore } from "../graph-workspace.ts";
-import {
-  DataTableFrame,
-  useDataTableFrame,
-  submitComposerText,
-  useAppStore,
-} from "@iloveagents/foundry-web-ui";
+import { DataTableFrame, useDataTableFrame, submitComposerText, useAppStore } from "@lykomi/web-ui";
 import { graphPanelPayload, type GraphPanelContentLike } from "./graph-panel-content.ts";
 import { graphExpander } from "./graph-expander.ts";
-import { resolveLinkHandler } from "@iloveagents/foundry-agent";
+import { resolveLinkHandler } from "@lykomi/agent";
 import { mergeIntoOpenGraph } from "./merge-into-panel.ts";
 import {
   GraphContextPinButton,

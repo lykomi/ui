@@ -5,7 +5,7 @@ import {
   contextUsageStore,
   streamingStatusStore,
   type StreamingStatus,
-} from "@iloveagents/foundry-agent";
+} from "@lykomi/agent";
 
 export type ChatRunStatus = "running" | "waiting" | "completed" | "failed" | "cancelled";
 export interface ChatRun {

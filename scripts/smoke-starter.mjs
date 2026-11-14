@@ -23,7 +23,7 @@ import {
 } from "./lib/local-packs.mjs";
 
 const root = resolve(import.meta.dirname, "..");
-const workDir = mkdtempSync(join(tmpdir(), "foundry-ui-starter-"));
+const workDir = mkdtempSync(join(tmpdir(), "lykomi-ui-starter-"));
 const packDir = join(workDir, "packs");
 const appDir = join(workDir, "app");
 // `--screenshot <path>` reuses the browser smoke end-to-end (same scaffold,
@@ -181,7 +181,7 @@ function createHelloWorldEvents(requestBody) {
   const messageId = `${runId}-assistant`;
   const toolCallId = `${runId}-hello-world`;
   const answer =
-    "Hello from the hello_world tool. Your Foundry UI starter is rendering an AG-UI streamed response.\n\n```mermaid\nflowchart TD\nA[Draft]-->B[Review]\n```";
+    "Hello from the hello_world tool. Your LYKOMI UI starter is rendering an AG-UI streamed response.\n\n```mermaid\nflowchart TD\nA[Draft]-->B[Review]\n```";
 
   return [
     { type: "RUN_STARTED", threadId, runId },
@@ -193,14 +193,14 @@ function createHelloWorldEvents(requestBody) {
     {
       type: "TOOL_CALL_ARGS",
       toolCallId,
-      delta: JSON.stringify({ name: "Foundry UI" }),
+      delta: JSON.stringify({ name: "LYKOMI UI" }),
     },
     { type: "TOOL_CALL_END", toolCallId },
     {
       type: "TOOL_CALL_RESULT",
       messageId: `${toolCallId}-result`,
       toolCallId,
-      content: JSON.stringify({ greeting: "Hello, Foundry UI.", source: "hello_world" }),
+      content: JSON.stringify({ greeting: "Hello, LYKOMI UI.", source: "hello_world" }),
       role: "tool",
     },
     { type: "TEXT_MESSAGE_START", messageId, role: "assistant" },
@@ -218,7 +218,7 @@ function createShowcaseEvents(requestBody) {
   const messageId = `${runId}-assistant`;
   const toolCallId = `${runId}-hello-world`;
   const answer = [
-    "Hello from the `hello_world` tool — your Foundry UI starter is rendering a live ",
+    "Hello from the `hello_world` tool — your LYKOMI UI starter is rendering a live ",
     "AG-UI stream.\n\nWhat just happened:\n",
     "- The agent called a **server-side tool**, streamed over the AG-UI protocol\n",
     "- The call rendered as a tool card above, with its arguments and result\n",
@@ -229,13 +229,13 @@ function createShowcaseEvents(requestBody) {
   return [
     { type: "RUN_STARTED", threadId, runId },
     { type: "TOOL_CALL_START", toolCallId, toolCallName: "hello_world" },
-    { type: "TOOL_CALL_ARGS", toolCallId, delta: JSON.stringify({ name: "Foundry UI" }) },
+    { type: "TOOL_CALL_ARGS", toolCallId, delta: JSON.stringify({ name: "LYKOMI UI" }) },
     { type: "TOOL_CALL_END", toolCallId },
     {
       type: "TOOL_CALL_RESULT",
       messageId: `${toolCallId}-result`,
       toolCallId,
-      content: JSON.stringify({ greeting: "Hello, Foundry UI.", source: "hello_world" }),
+      content: JSON.stringify({ greeting: "Hello, LYKOMI UI.", source: "hello_world" }),
       role: "tool",
     },
     { type: "TEXT_MESSAGE_START", messageId, role: "assistant" },
@@ -332,8 +332,8 @@ async function runBrowserStarterSmoke() {
     await page.goto(url, { waitUntil: "domcontentloaded" });
 
     const title = await page.title();
-    if (title !== "Foundry UI") {
-      throw new Error(`Expected browser title "Foundry UI", got "${title}".`);
+    if (title !== "LYKOMI UI") {
+      throw new Error(`Expected browser title "LYKOMI UI", got "${title}".`);
     }
 
     await page
@@ -410,7 +410,7 @@ async function runBrowserStarterSmoke() {
 
 const tarballs = packWorkspace({ root, packDir, packages, pnpm: pnpmCommand });
 
-run("node", ["packages/create-foundry-ui-app/dist/index.mjs", appDir, "--no-install"]);
+run("node", ["packages/create-lykomi-app/dist/index.mjs", appDir, "--no-install"]);
 
 assertNoAssistantUiPins(join(appDir, "pnpm-workspace.yaml"), { existsSync });
 applyLocalPacks(appDir, tarballs);
@@ -440,7 +440,7 @@ const readAssets = (ext) =>
     .join("\n");
 
 const defaultJs = readAssets(".js");
-if (!readdirSync(assetsDir).some((file) => file.startsWith("foundry-workbench-"))) {
+if (!readdirSync(assetsDir).some((file) => file.startsWith("lykomi-workbench-"))) {
   throw new Error(
     "The workbench preview was folded into the initial vendor bundle instead of its lazy chunk.",
   );

@@ -18,7 +18,7 @@
  */
 
 import { useAuiState, useVoiceControls, useVoiceState, useVoiceVolume } from "@assistant-ui/react";
-import { TooltipIconButton } from "@iloveagents/foundry-web-ui";
+import { TooltipIconButton } from "@lykomi/web-ui";
 import { AudioLines, Loader2, Mic, MicOff, X } from "lucide-react";
 import { useVoiceUiStore } from "./voice-ui-store.ts";
 

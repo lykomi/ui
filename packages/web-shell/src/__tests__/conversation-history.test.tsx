@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { MessageSquare } from "lucide-react";
-import { ConversationHistory } from "@iloveagents/foundry-web-ui/workbench";
+import { ConversationHistory } from "@lykomi/web-ui/workbench";
 
 vi.hoisted(() => {
   Object.defineProperty(window, "matchMedia", {

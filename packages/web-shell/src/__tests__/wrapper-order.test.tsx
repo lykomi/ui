@@ -42,7 +42,7 @@ function RouteProbe() {
 // can probe their nesting order. Don't spread the real module — its
 // stores call window.matchMedia at import time and jsdom doesn't have
 // that.
-vi.mock("@iloveagents/foundry-web-ui", () => ({
+vi.mock("@lykomi/web-ui", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => {
     const incoming = useContext(DepthContext);
     seen["auth-provider"] = incoming;
@@ -79,15 +79,15 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
   useThemeStore: (selector: (s: any) => unknown) => selector({ mode: "system" }),
 }));
 
-vi.mock("@iloveagents/foundry-web-ui/workbench", () => ({
+vi.mock("@lykomi/web-ui/workbench", () => ({
   WorkbenchPreview: ({ page }: { page: ReactNode }) => <>{page}</>,
 }));
 
-vi.mock("@iloveagents/foundry-web-primitives", () => ({
+vi.mock("@lykomi/web-primitives", () => ({
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
 }));
 
-vi.mock("@iloveagents/foundry-agent", () => ({
+vi.mock("@lykomi/agent", () => ({
   createServiceFetch: () => fetch,
   // load-chat-config imports this on shell boot; a set-only stub keeps the
   // mock honest without pulling zustand into the test graph.
@@ -95,14 +95,14 @@ vi.mock("@iloveagents/foundry-agent", () => ({
   contextUsageStore: { getState: () => ({ setWindow: () => {} }) },
 }));
 
-vi.mock("@iloveagents/foundry-agent/msal", () => ({
+vi.mock("@lykomi/agent/msal", () => ({
   authStore: { getState: () => ({ getAccessToken: () => Promise.resolve("") }) },
 }));
 
 import { ShellApp } from "../shell-app.tsx";
 import type { AuthAdapter } from "../types.ts";
 // Imported AFTER vi.mock so this resolves to the mocked AuthProvider.
-import { AuthProvider as MockedAuthProvider } from "@iloveagents/foundry-web-ui";
+import { AuthProvider as MockedAuthProvider } from "@lykomi/web-ui";
 
 describe("Shell wrapper ordering contract", () => {
   it("nests BrowserRouter > AuthProvider > [module wrappers] > AGUIRuntimeProvider > Routes", async () => {

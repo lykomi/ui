@@ -69,11 +69,11 @@ small {
   align-items: center;
   margin-bottom: 24px;
 }
-.foundry-process-guidance-body {
+.lykomi-process-guidance-body {
   display: grid;
   gap: 20px;
 }
-.foundry-process-guidance-body[hidden] {
+.lykomi-process-guidance-body[hidden] {
   display: none;
 }
 

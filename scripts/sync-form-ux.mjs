@@ -17,12 +17,12 @@ if (!existsSync(guidePath) || readFileSync(guidePath, "utf8") !== processGuide) 
   stale.push("docs/PROCESS_GUIDE.md");
   if (!check) writeFileSync(guidePath, processGuide);
 }
-for (const name of ["foundry-author-chat-module", "foundry-verify-agent-apis"]) {
+for (const name of ["lykomi-author-chat-module", "lykomi-verify-agent-apis"]) {
   for (const [file, body] of [
     ["form-ux.md", content],
     ["PROCESS_GUIDE.md", processGuide],
   ]) {
-    const relative = `plugins/foundry-ui/skills/${name}/references/${file}`;
+    const relative = `plugins/lykomi-ui/skills/${name}/references/${file}`;
     const target = resolve(root, relative);
     if (existsSync(target) && readFileSync(target, "utf8") === body) continue;
     stale.push(relative);

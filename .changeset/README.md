@@ -1,6 +1,6 @@
 # Changesets
 
-Per-package versioning + changelogs for `@iloveagents/foundry-*`.
+Per-package versioning + changelogs for `@lykomi/*`.
 
 ## Adding a changeset
 
