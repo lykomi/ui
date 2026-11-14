@@ -21,14 +21,8 @@ export function DraftForm({ tab }: { tab: GuideWindow }) {
       saved: undefined,
       editing: false,
       dirty: false,
-      field: undefined,
     });
     requestAnimationFrame(() => editButton.current?.focus());
-  };
-  const track = (key: "name" | "text", input: HTMLInputElement | HTMLTextAreaElement) => {
-    const field = { key, start: input.selectionStart ?? 0, end: input.selectionEnd ?? 0 };
-    const current = guideWindows.get().tabs.find((entry) => entry.id === tab.id)?.field;
-    if (JSON.stringify(current) !== JSON.stringify(field)) guideWindows.update(tab.id, { field });
   };
   return (
     <FormLayout
@@ -89,15 +83,13 @@ export function DraftForm({ tab }: { tab: GuideWindow }) {
           >
             {tab.editing ? (
               <Control
+                name={key}
                 id={`starter-draft-${key}`}
                 value={tab[key] ?? ""}
                 className={valueClass}
                 maxLength={2000}
-                onFocus={(event) => track(key, event.currentTarget)}
-                onSelect={(event) => track(key, event.currentTarget)}
                 onChange={(event) => {
                   guideWindows.update(tab.id, { [key]: event.target.value, dirty: true });
-                  track(key, event.currentTarget);
                 }}
               />
             ) : (

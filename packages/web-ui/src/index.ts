@@ -343,3 +343,13 @@ export type {
 } from "./components/process/process-agent-context.ts";
 
 export * from "./windows.ts";
+
+export {
+  getActiveFieldContext,
+  setActiveFieldContext,
+  clearActiveFieldContext,
+  registerFieldContextSource,
+  installFieldContextTracking,
+  isFieldContextVisible,
+} from "./lib/field-context-tracking.ts";
+export type { ActiveFieldContext, FieldContextSource } from "./lib/field-context-tracking.ts";

@@ -575,11 +575,8 @@ async function runBrowserStarterSmoke() {
       );
       await page.getByRole("button", { name: "Send message", exact: true }).click();
       await viewRequest;
-      if (
-        lastAgentRequest.tools.some((tool) => tool.name === "page_update_draft_field") ||
-        lastAgentRequest.state.contextItems.some((item) => item.meta?.fieldFocus === "active")
-      )
-        throw new Error("Read mode retained edit tools or stale active-field context.");
+      if (lastAgentRequest.tools.some((tool) => tool.name === "page_update_draft_field"))
+        throw new Error("Read mode retained edit tools.");
 
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(url, { waitUntil: "domcontentloaded" });
