@@ -42,7 +42,7 @@ pnpm dev
 
 Set `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` to your own Foundry project
 and deployment before sending a message. Home shows the composer and clickable
-tool demos; Guide demonstrates chat beside a regular page. Both use the LYKOMI
+tool demos; Guide demonstrates chat beside editable work, with shared window tabs, resizable panels and active-window context. Both use the LYKOMI
 palette and locally bundled Manrope. The FastAPI Agent Framework service and
 hello/weather tools are ready to replace with your own. The generated app ships
 its own `AGENTS.md` + README covering theming, adding tools, and MCP servers.

@@ -341,3 +341,5 @@ export type {
   ProcessAgentContext,
   ProcessContextSnapshot,
 } from "./components/process/process-agent-context.ts";
+
+export * from "./windows.ts";

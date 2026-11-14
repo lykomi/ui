@@ -34,7 +34,7 @@ FOUNDRY_MODEL=<model-deployment-name>
 
 ## Try It
 
-Home opens with the chat composer and three clickable prompts. The Guide route shows how a page sits beside the same persistent conversation, with keyboard-accessible tabs and a built-in details panel. Try:
+Home opens with the chat composer and three clickable prompts. The Guide route shows how a page sits beside the same persistent conversation, with real workbench tabs and resizable panels. Try:
 
 - `Say hello world using the hello_world tool`
 - `Check the weather in Seattle`
@@ -42,7 +42,7 @@ Home opens with the chat composer and three clickable prompts. The Guide route s
 
 The bundled tools live in `agent/app/tools.py`.
 
-The starter registers Guide navigation, page context, and an “About this starter” item in the lower interface menu through `src/starter-module.ts`. The Guide uses Radix tabs and opens the shell's existing tool panel, so you can see the same UI surfaces available to AG-UI tool results. Local demo auth has no user identity, so that control is an interface menu; after you wire real auth, the same menu shows the signed-in user and sign-out action.
+The starter registers Guide navigation, page context, and an “About this starter” item in the lower interface menu through `src/starter-module.ts`. Open **Working draft** and **Architecture**, edit the draft, then select **Panels**. Pin, reorder and resize windows; switch back to **Tabs** or visit Home and return. The draft stays in memory until you close it or reload. Closing an edited draft asks before discarding it. `src/pages/guide-windows.ts` owns the app data; `WindowWorkbench` and `createWindowStore` from `@lykomi/web-ui` provide the shared window behaviour. The active window context, including the draft text, accompanies an AG-UI turn. Connect your own storage service before treating the draft as saved. Local demo auth has no user identity, so that control is an interface menu; after you wire real auth, the same menu shows the signed-in user and sign-out action.
 
 ## Coding With AI Agents
 

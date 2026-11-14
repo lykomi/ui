@@ -265,3 +265,52 @@ it never navigates or changes permissions. After the last page, publish
 
 Branch expansion is document-local. Persistent collapsed group preferences
 remain separate; opening a fresh browser tab does not restore unrelated trees.
+
+## Windows: tabs and panels
+
+`WindowWorkbench` keeps the same keyed content mounted while switching between
+keyboard-accessible tabs and resizable panels. Pinning, ordering, preview
+replacement and asynchronous leave decisions use `createWindowController`.
+There is no global window singleton or dependency on a content service.
+
+Create an app-owned `createWindowStore` outside the route if windows should
+survive route navigation. Render each window with `renderWindow`; supply
+`getWindowContext` to make its current data available to the AG-UI state
+projection. Layout preference can persist through an app-specific `storageKey`.
+Window contents and drafts are in-memory unless the app persists them.
+
+```tsx
+import { createWindowStore, WindowWorkbench } from "@lykomi/web-ui/windows";
+
+const windows = createWindowStore({ storageKey: "my-app.windows.layout" });
+windows.open({
+  id: "notes",
+  title: "Notes",
+  independent: true,
+  close: () => windows.remove("notes"),
+});
+
+export function Workspace() {
+  return (
+    <WindowWorkbench
+      controller={windows}
+      renderWindow={(tab) => <article>{tab.title}</article>}
+      getWindowContext={(tab) => ({ windowId: tab.id, title: tab.title })}
+    />
+  );
+}
+```
+
+An app can extend `WorkbenchWindow` with its own data. Use `update(id, patch)`
+for draft state and provide a `close` callback that saves or confirms discarding
+it before calling `remove`. `open(window, { mode: "preview" })` reuses a clean,
+unpinned, non-independent window; `new-tab` retains the existing working set.
+`beforeLeave` may return an asynchronous decision. A newer navigation cancels
+the effect of a stale decision. `remove` is a committed removal, not a draft prompt.
+
+For hosts that already own a store or render content through portals,
+`createWindowController({ get, set, subscribe, ... })` adapts that state directly.
+Use `WindowTabStrip`, `WindowPanelActions` and `PaneResizeHandle` with the same
+controller. The host retains its routes, permissions, content loading and
+specialized detail relationships; the framework owns the common interactions.
+See the generated starter's Guide for a working editable example.
