@@ -1,6 +1,6 @@
 {
   "name": "@lykomi/web-graph",
-  "version": "0.3.18",
+  "version": "0.3.19",
   "license": "MIT",
   "description": "Graph visualization for LYKOMI UI — a Bloom-like force-directed graph view, a source-agnostic graph payload contract, and an optional assistant-ui tool card + panel renderer.",
   "keywords": [

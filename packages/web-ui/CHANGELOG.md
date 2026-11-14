@@ -1,5 +1,17 @@
 # @iloveagents/foundry-web-ui
 
+## 0.51.0
+
+### Minor Changes
+
+- 12ad018: Provide automatic field context through shared Field and ReadOnlyField primitives. Centralize focus, text selection, current-value projection, visibility and opt-out handling in the UI framework, with a source adapter for richer application metadata. Remove per-field context wiring from the starter.
+
+### Patch Changes
+
+- Updated dependencies [12ad018]
+  - @lykomi/web-primitives@0.51.0
+  - @lykomi/agent@0.51.0
+
 ## 0.50.0
 
 ### Minor Changes

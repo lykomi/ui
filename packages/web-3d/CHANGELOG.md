@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-3d
 
+## 0.1.19
+
+### Patch Changes
+
+- Updated dependencies [12ad018]
+  - @lykomi/web-primitives@0.51.0
+  - @lykomi/agent@0.51.0
+
 ## 0.1.18
 
 ### Patch Changes
