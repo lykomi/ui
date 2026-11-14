@@ -1,5 +1,16 @@
 # create-lykomi-app
 
+## 0.10.0
+
+### Minor Changes
+
+- 91e709b: Add reusable window controllers, tabs, panel actions and resize controls. The standalone Guide now demonstrates editable work across tabs and panels with active-window AG-UI context.
+
+### Patch Changes
+
+- 9e52115: Update Foundry Voice Live to 0.7.0 and pin the documented proxy image to the matching release. Keep the existing relay and realtime integration while using the current SDK transport, microphone and response handling.
+- f939587: Give the generated app a LYKOMI theme, Guide page with agent context, tabs, a details panel, and a working interface menu. Fix Home selection, duplicate navigation, mobile drawer collapse, and the local AG-UI endpoint with current Agent Framework releases. Remove Spaces copy from standalone chat.
+
 ## 0.9.22
 
 ### Patch Changes
