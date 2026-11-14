@@ -24,7 +24,16 @@ it("keeps the same editor node and scroll while switching layouts, selection and
     const input = host.querySelector<HTMLInputElement>('[aria-label="draft"]')!;
     input.value = "unsaved text";
     const scroller = input.closest<HTMLElement>("[data-window-scroll]")!;
-    scroller.scrollTop = 120;
+    let offset = 120;
+    // Emulate the browser: a hidden pane reports a zero scroll offset.
+    Object.defineProperty(scroller, "scrollTop", {
+      configurable: true,
+      get: () => (scroller.closest("[hidden]") ? 0 : offset),
+      set: (value: number) => {
+        offset = value;
+      },
+    });
+    await act(async () => scroller.dispatchEvent(new Event("scroll", { bubbles: false })));
     await act(async () => {
       store.select("reference");
     });

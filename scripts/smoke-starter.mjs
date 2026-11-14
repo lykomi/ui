@@ -371,6 +371,22 @@ async function runBrowserStarterSmoke() {
     await page.getByRole("separator", { name: "Resize Working draft", exact: true }).focus();
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Home");
+    await page.setViewportSize({ width: 1280, height: 500 });
+    const guideScroll = page.locator('[data-item-tab="overview"] [data-window-scroll]');
+    await guideScroll.evaluate((element) => {
+      element.scrollTop = 80;
+    });
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-item-tab="overview"] [data-window-scroll]')?.scrollTop === 80,
+    );
+    await page.getByRole("button", { name: "View as tabs", exact: true }).click();
+    await page.getByRole("tab", { name: "Guide", exact: true }).click();
+    if ((await guideScroll.evaluate((element) => element.scrollTop)) !== 80)
+      throw new Error("Window scroll was lost after hiding a panel.");
+    await page.getByRole("button", { name: "View as panels", exact: true }).click();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole("tab", { name: /Working draft/ }).click();
     page.once("dialog", (dialog) => dialog.dismiss());
     await page.getByRole("button", { name: "Close Working draft", exact: true }).click();
     await page.getByLabel("Your idea", { exact: true }).waitFor();

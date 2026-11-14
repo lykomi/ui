@@ -1,3 +1,4 @@
+import { useWindowScroll } from "./use-window-scroll.ts";
 import { useId, useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { Columns2, PanelsTopLeft } from "lucide-react";
 import { Button, cn } from "@lykomi/web-primitives";
@@ -103,23 +104,8 @@ function WindowPane<T extends WorkbenchWindow>({
   useLayoutEffect(() => {
     if (panels && active) frame.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [panels, active]);
-  const content = useRef<HTMLDivElement>(null);
-  const offsets = useRef<{ node: HTMLElement; top: number; left: number }[]>([]);
   const visible = panels || active;
-  useLayoutEffect(() => {
-    if (!visible || !content.current) return;
-    offsets.current.forEach(({ node, top, left }) => {
-      node.scrollTop = top;
-      node.scrollLeft = left;
-    });
-    const element = content.current;
-    return () => {
-      offsets.current = [
-        element,
-        ...element.querySelectorAll<HTMLElement>("[data-window-scroll]"),
-      ].map((node) => ({ node, top: node.scrollTop, left: node.scrollLeft }));
-    };
-  }, [visible, panels]);
+  const scroll = useWindowScroll(visible, panels);
   return (
     <section
       ref={frame}
@@ -163,7 +149,7 @@ function WindowPane<T extends WorkbenchWindow>({
         <h2 className="min-w-0 truncate text-sm font-medium">{tab.title}</h2>
         <WindowPanelActions controller={controller} tab={tab} />
       </div>
-      <div ref={content} data-window-scroll className="min-h-0 flex-1 overflow-auto">
+      <div {...scroll} data-window-scroll className="min-h-0 flex-1 overflow-auto">
         {children}
       </div>
       {panels && (
