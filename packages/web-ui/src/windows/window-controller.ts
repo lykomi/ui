@@ -46,6 +46,7 @@ export function createWindowController<T extends WorkbenchWindow, S extends Wind
   host: WindowHost<T, S>,
 ) {
   let revision = 0;
+  let pendingTarget: string | undefined;
   const hasDraft = host.hasDraft ?? ((tab: T) => Boolean(tab.dirty));
   const patch = (values: Partial<S>) => host.set({ ...host.get(), ...values });
   const update = (id: string, values: Partial<T>) =>
@@ -67,9 +68,12 @@ export function createWindowController<T extends WorkbenchWindow, S extends Wind
       action: () => void,
       cancelled?: () => void,
       signal?: AbortSignal,
+      targetId?: string,
     ): boolean | Promise<boolean> {
       const requested = ++revision;
+      pendingTarget = targetId;
       const apply = (allowed: boolean) => {
+        if (requested === revision) pendingTarget = undefined;
         if (!allowed || requested !== revision || signal?.aborted) {
           cancelled?.();
           return false;
@@ -91,11 +95,12 @@ export function createWindowController<T extends WorkbenchWindow, S extends Wind
       };
       if (host.get().active === id) {
         ++revision;
+        pendingTarget = undefined;
         if (options?.signal?.aborted) return false;
         host.afterSelect?.(id, notify, false);
         return true;
       }
-      return controller.transition(apply, undefined, options?.signal);
+      return controller.transition(apply, undefined, options?.signal, id);
     },
     open(tab: T, { mode = "preview" }: { mode?: "preview" | "new-tab" } = {}) {
       if (host.get().tabs.some((entry) => entry.id === tab.id)) return controller.select(tab.id);
@@ -119,10 +124,16 @@ export function createWindowController<T extends WorkbenchWindow, S extends Wind
           host.afterSelect?.(tab.id, true, true);
           previous?.close();
         },
-        () => tab.close(),
+        undefined,
+        undefined,
+        tab.id,
       );
     },
     remove(id: string) {
+      if (pendingTarget === id) {
+        ++revision;
+        pendingTarget = undefined;
+      }
       host.beforeRemove?.(id);
       const state = host.get();
       if (state.active === id) host.captureScroll?.(id);

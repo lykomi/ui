@@ -82,7 +82,7 @@ it("denial, abort and failed leave guards preserve the current window", async ()
   });
   const close = vi.fn();
   expect(await windows.open({ id: "b", title: "b", close })).toBe(false);
-  expect(close).toHaveBeenCalledOnce();
+  expect(close).not.toHaveBeenCalled();
   const abort = new AbortController();
   abort.abort();
   expect(await windows.select("b", { signal: abort.signal })).toBe(false);
@@ -106,4 +106,56 @@ it("keeps stores independent and tolerates unavailable browser storage", () => {
   } finally {
     spy.mockRestore();
   }
+});
+
+it("a stale open never closes a newer window with the same id or its draft", async () => {
+  const pending: ((allowed: boolean) => void)[] = [];
+  const windows = createWindowStore({
+    beforeLeave: () => new Promise<boolean>((resolve) => pending.push(resolve)),
+  });
+  const close = vi.fn(() => windows.remove("b"));
+  const first = windows.open({ id: "b", title: "old", close });
+  const second = windows.open({ id: "b", title: "new", close });
+  pending[1]!(true);
+  expect(await second).toBe(true);
+  windows.update("b", { title: "edited draft", dirty: true });
+  pending[0]!(true);
+  expect(await first).toBe(false);
+  expect(close).not.toHaveBeenCalled();
+  expect(windows.get().tabs).toMatchObject([{ id: "b", title: "edited draft", dirty: true }]);
+});
+
+it("cancels a selection if its destination closes while the leave decision is pending", async () => {
+  const pending: ((allowed: boolean) => void)[] = [];
+  const windows = createWindowStore({
+    tabs: ["a", "b", "c"].map((id) => ({ id, title: id, close: vi.fn() })),
+    beforeLeave: () => new Promise<boolean>((resolve) => pending.push(resolve)),
+  });
+  const selection = windows.select("b");
+  windows.remove("b");
+  pending[0]!(true);
+  expect(await selection).toBe(false);
+  expect(windows.get().active).toBe("a");
+  const next = windows.select("c");
+  windows.remove("missing");
+  pending[1]!(true);
+  expect(await next).toBe(true);
+  expect(windows.get().active).toBe("c");
+});
+
+it("removing a pending open cancels it without calling a committed window's close callback", async () => {
+  let decide!: (allowed: boolean) => void;
+  const windows = createWindowStore({
+    beforeLeave: () =>
+      new Promise<boolean>((resolve) => {
+        decide = resolve;
+      }),
+  });
+  const close = vi.fn();
+  const opening = windows.open({ id: "b", title: "b", close });
+  windows.remove("b");
+  decide(true);
+  expect(await opening).toBe(false);
+  expect(windows.get().tabs).toEqual([]);
+  expect(close).not.toHaveBeenCalled();
 });

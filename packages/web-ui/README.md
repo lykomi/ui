@@ -306,7 +306,9 @@ for draft state and provide a `close` callback that saves or confirms discarding
 it before calling `remove`. `open(window, { mode: "preview" })` reuses a clean,
 unpinned, non-independent window; `new-tab` retains the existing working set.
 `beforeLeave` may return an asynchronous decision. A newer navigation cancels
-the effect of a stale decision. `remove` is a committed removal, not a draft prompt.
+the effect of a stale decision; removing a pending destination cancels that transition.
+A rejected or superseded `open` never calls the window's `close` callback, because
+that window has not been committed. `remove` is a committed removal, not a draft prompt.
 
 For hosts that already own a store or render content through portals,
 `createWindowController({ get, set, subscribe, ... })` adapts that state directly.
