@@ -1,5 +1,15 @@
 # @iloveagents/foundry-web-voice
 
+## 0.1.36
+
+### Patch Changes
+
+- 752559b: Share the composer action size between voice, send and stop controls so typing does not change the input's height. Handle visual client-tool results explicitly in realtime voice sessions.
+- Updated dependencies [752559b]
+- Updated dependencies [752559b]
+  - @lykomi/web-ui@0.52.0
+  - @lykomi/agent@0.52.0
+
 ## 0.1.35
 
 ### Patch Changes

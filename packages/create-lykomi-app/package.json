@@ -1,6 +1,6 @@
 {
   "name": "create-lykomi-app",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "license": "MIT",
   "description": "Scaffold a new LYKOMI app — AG-UI protocol + Microsoft Agent Framework + Azure Foundry, ready to run.",
   "keywords": [

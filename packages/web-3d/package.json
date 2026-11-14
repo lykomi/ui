@@ -1,6 +1,6 @@
 {
   "name": "@lykomi/web-3d",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "license": "MIT",
   "description": "Optional preview GLB viewer with part hierarchy and AG-UI model tools for LYKOMI UI.",
   "type": "module",
