@@ -1,5 +1,7 @@
 import type { AgentStateProjection } from "./app-store.ts";
 
+export const DEFAULT_CHAT_CONTEXT_LABEL = "this conversation";
+
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
@@ -41,7 +43,7 @@ export function summarizeChatContext(state: AgentStateProjection) {
   const pageLabel =
     nav.label && !nav.label.startsWith("/") && !/^\/?chat$/i.test(nav.label)
       ? nav.label
-      : "Your spaces";
+      : DEFAULT_CHAT_CONTEXT_LABEL;
   const label = text(focused.title) || pageLabel;
   const open = references.filter((item) => item.meta.windowState === "open");
   return {

@@ -26,7 +26,8 @@ describe("template docs", () => {
     expect(agents).toContain("MCPStreamableHTTPTool");
     expect(agents).toContain("Package-backed mode");
     expect(agents).toContain("Copy/template mode");
-    expect(agents).toContain("`theme` layers in `src/main.tsx`");
+    expect(agents).toContain("src/theme.ts");
+    expect(agents).toContain("src/starter-module.ts");
     expect(agents).toContain("browser title as `LYKOMI UI`");
   });
 
@@ -69,7 +70,8 @@ describe("template docs", () => {
     expect(readme).toContain("## Add A Tool");
     expect(readme).toContain("## Add An MCP Server");
     expect(readme).toContain("MCPStreamableHTTPTool");
-    expect(readme).toContain('appTitle: "LYKOMI UI"');
+    expect(readme).toContain("src/theme.ts");
+    expect(readme).toContain("Guide route");
     expect(readme).toContain("AGENTS.md");
     expect(readme).not.toContain("DWX");
   });

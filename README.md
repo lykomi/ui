@@ -4,11 +4,12 @@
 [![npm](https://img.shields.io/npm/v/%40lykomi%2Fweb-ui)](https://www.npmjs.com/package/@lykomi/web-ui)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**The fastest way to a production-grade agent UI on the [AG-UI protocol](https://github.com/ag-ui-protocol/ag-ui), [Microsoft Agent Framework](https://github.com/microsoft/agent-framework), and [Microsoft Foundry](https://learn.microsoft.com/azure/foundry/).**
+**An opinionated starter for agent apps on the [AG-UI protocol](https://github.com/ag-ui-protocol/ag-ui), [Microsoft Agent Framework](https://github.com/microsoft/agent-framework), and [Microsoft Foundry](https://learn.microsoft.com/azure/foundry/).**
 
-One command scaffolds a chat-first React app wired end-to-end to a streaming
-FastAPI agent — tool calls rendered as live UI, MSAL auth ready, and a module
-system that keeps your features composable instead of hardcoded.
+One command scaffolds a React app with a Home composer, a contextual Guide
+page, and a streaming FastAPI agent. Tool calls render as live UI; modules
+compose pages and features. The framework includes an MSAL adapter for apps
+that need sign-in.
 
 LYKOMI UI is an independent open-source project, not a Microsoft product.
 
@@ -39,10 +40,12 @@ az login
 pnpm dev
 ```
 
-You get a running chat app with quick starts, a FastAPI Agent Framework
-service, and hello/weather tools to replace with your own. The generated app
-ships its own `AGENTS.md` + README covering theming, adding tools, and MCP
-servers.
+Set `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL` to your own Foundry project
+and deployment before sending a message. Home shows the composer and clickable
+tool demos; Guide demonstrates chat beside a regular page. Both use the LYKOMI
+palette and locally bundled Manrope. The FastAPI Agent Framework service and
+hello/weather tools are ready to replace with your own. The generated app ships
+its own `AGENTS.md` + README covering theming, adding tools, and MCP servers.
 
 ## Packages
 

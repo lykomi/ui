@@ -4,7 +4,11 @@ This is a LYKOMI UI starter app: React chat UI, AG-UI transport, and a Microsoft
 
 ```text
 src/main.tsx              LYKOMI UI shell bootstrap
-src/pages/chat-page.tsx   Chat screen and starter prompts
+src/pages/chat-page.tsx   Chat route
+src/pages/starter-prompts.tsx  Home prompts
+src/pages/guide-page.tsx       Example content page
+src/starter-module.ts          Navigation, agent context, interface menu
+src/theme.ts                   App palette and branding
 src/index.css             Tailwind v4 plus @lykomi/web-ui/styles.css
 agent/app/main.py         FastAPI app and AG-UI endpoint
 agent/app/agent.py        FoundryChatClient + Agent configuration
@@ -28,7 +32,7 @@ Set these in `agent/.env`:
 
 ```bash
 FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>
-FOUNDRY_MODEL=gpt-5.4
+FOUNDRY_MODEL=your-model-deployment
 ```
 
 `FoundryChatClient` reads the Microsoft Agent Framework env vars directly. The Python agent passes `DefaultAzureCredential`; prefer `az login` locally and managed identity or service principal env vars in hosted environments.
@@ -50,11 +54,12 @@ FOUNDRY_MODEL=gpt-5.4
 # UI
 
 - Keep the starter chat-first. Do not add landing pages, marketing heroes, or domain-specific clutter.
-- Configure quick starts in `src/pages/chat-page.tsx`.
-- Configure app name, browser title, logos, colors, radius, and fonts through `theme` layers in `src/main.tsx`.
+- Configure quick starts in `src/pages/starter-prompts.tsx`.
+- Configure app name, browser title, logos, colors, radius, and fonts in `src/theme.ts`.
+- Keep the Guide page and its `ChatModule` as an example of page context and persistent chat; replace them when building your app.
 - Keep the default generated app name and browser title as `LYKOMI UI` unless the app is intentionally rebranded.
 - Use LYKOMI UI components from `@lykomi/web-ui` and primitives from `@lykomi/web-primitives`.
-- Keep `@source "../node_modules/@iloveagents/.../dist"` entries in `src/index.css`; Tailwind v4 needs them to scan package component classes.
+- Keep `@source "../node_modules/@lykomi/.../dist"` entries in `src/index.css`; Tailwind v4 needs them to scan package component classes.
 - Keep `@import "@lykomi/web-ui/styles.css";`; it provides the LYKOMI UI theme tokens.
 
 # Attachments

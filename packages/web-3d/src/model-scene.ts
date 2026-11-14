@@ -58,8 +58,7 @@ export class ModelScene {
       if (!ownMeshes) this.assemblies.add(object);
       const index = Number(id.slice(5));
       const source = gltf.parser.json.nodes?.[index] as
-        | { name?: string; extras?: Record<string, unknown> }
-        | undefined;
+        { name?: string; extras?: Record<string, unknown> } | undefined;
       this.parts.push({
         id,
         name: source?.name || object.name || `Part ${index + 1}`,

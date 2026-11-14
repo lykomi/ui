@@ -220,9 +220,9 @@ export const DEFAULT_NAV_CONFIG: NavGroup[] = [
     items: [
       {
         to: "/",
-        label: "Chat",
+        label: "Home",
         icon: MessageSquare,
-        description: "Chat with the AI assistant",
+        description: "Start a conversation or open a page",
       },
       // {
       //   to: "/dashboard",

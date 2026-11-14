@@ -110,11 +110,9 @@ export function seedableGraphResults(
 export function GraphResultSeeder() {
   const foreground = useIsForegroundChat();
   const messages = useAuiState((s) => s.thread.messages) as
-    | readonly { parts?: readonly ToolishPart[] }[]
-    | undefined;
+    readonly { parts?: readonly ToolishPart[] }[] | undefined;
   const threadId = useAuiState((s) => (s.thread as { threadId?: string }).threadId) as
-    | string
-    | undefined;
+    string | undefined;
   // A GRAPH panel, not any panel. `isOpen` alone let a result be marked
   // handled while a PDF was up: the merge rejected the non-graph content and
   // the call was consumed anyway, so opening the graph later could never

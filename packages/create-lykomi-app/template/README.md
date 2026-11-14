@@ -1,12 +1,14 @@
 # __PROJECT_NAME__
 
-LYKOMI UI starter: a chat-first React app with a Microsoft Agent Framework service exposed through AG-UI.
+LYKOMI UI starter: a React app with a Home composer, a contextual Guide page,
+and a Microsoft Agent Framework service exposed through AG-UI.
 
 ## Quick Start
 
 ```bash
 pnpm install
 cp agent/.env.example agent/.env
+# Set your Foundry project endpoint and model deployment in agent/.env.
 az login
 pnpm dev
 ```
@@ -25,20 +27,22 @@ Edit `agent/.env`:
 
 ```bash
 FOUNDRY_PROJECT_ENDPOINT=https://<account>.services.ai.azure.com/api/projects/<project>
-FOUNDRY_MODEL=gpt-5.4
+FOUNDRY_MODEL=<model-deployment-name>
 ```
 
 `FoundryChatClient` reads the Microsoft Agent Framework environment variables directly. The starter passes `DefaultAzureCredential`, so local development works with `az login`. In Azure, use managed identity or the standard service principal environment variables.
 
 ## Try It
 
-The first screen is the chat. Try:
+Home opens with the chat composer and three clickable prompts. The Guide route shows how a page sits beside the same persistent conversation, with keyboard-accessible tabs and a built-in details panel. Try:
 
 - `Say hello world using the hello_world tool`
 - `Check the weather in Seattle`
 - `What tools can you use?`
 
 The bundled tools live in `agent/app/tools.py`.
+
+The starter registers Guide navigation, page context, and an “About this starter” item in the lower interface menu through `src/starter-module.ts`. The Guide uses Radix tabs and opens the shell's existing tool panel, so you can see the same UI surfaces available to AG-UI tool results. Local demo auth has no user identity, so that control is an interface menu; after you wire real auth, the same menu shows the signed-in user and sign-out action.
 
 ## Coding With AI Agents
 
@@ -65,33 +69,16 @@ Template changes such as new files or folder structure are not applied automatic
 
 ## Theme The App
 
-App name, browser title, logos, colors, radius, and fonts are configured through the `theme` layers in `src/main.tsx`.
+The starter uses LYKOMI's neutral and deep-petrol palette, light and dark V2 favicons, and a locally bundled, OFL-licensed Manrope font. Change the app name, browser title, colors, radius, and fonts in `src/theme.ts`; add logo assets under `public/` and reference them in the theme's `branding` entry.
 
 ```ts
-bootstrapShell({
-  pages: customerPages,
-  authProvider: localDemoAuth,
-  agentFetch: fetch,
-  theme: [
-    {
-      id: "app-branding",
-      definition: {
-        branding: {
-          appName: "LYKOMI UI",
-          appTitle: "LYKOMI UI",
-          logoUrl: "/logo.svg",
-          darkLogoUrl: "/logo-dark.svg",
-        },
-        light: {
-          primary: "oklch(0.54 0.21 282)",
-        },
-        radius: {
-          radius: "0.5rem",
-        },
-      },
-    },
-  ],
-});
+export const starterTheme: ThemeLayer = {
+  id: "my-app",
+  definition: {
+    light: { primary: "#3F666B" },
+    branding: { appName: "My app", appTitle: "My app" },
+  },
+};
 ```
 
 Keep `@import "@lykomi/web-ui/styles.css";` in `src/index.css`; it exposes the package theme tokens to Tailwind.
@@ -103,7 +90,7 @@ variable and a microphone appears in the composer:
 
 ```bash
 # .env
-VITE_VOICE_PROXY_URL=ws://localhost:8080/ws?model=gpt-realtime
+VITE_VOICE_PROXY_URL=ws://localhost:8080/ws?model=your-voice-deployment
 ```
 
 Leave it unset and nothing is registered — no microphone, no cost, the app is
@@ -118,9 +105,6 @@ docker run -p 8080:8080 \
   -e ALLOWED_ORIGINS="http://localhost:8010" \
   ghcr.io/iloveagents/foundry-voice-live-proxy:latest
 ```
-
-> The default model (`gpt-realtime`) is available in **East US 2** and
-> **Sweden Central**.
 
 The default mode is **relay**: Voice Live transcribes what you say and speaks
 the answer, but *your* agent still answers it. A spoken turn is an ordinary
@@ -176,13 +160,20 @@ Agent Framework connects the MCP server when the agent runs. The AG-UI endpoint 
 agent/                  FastAPI + Microsoft Agent Framework AG-UI endpoint
 agent/app/tools.py      Add agent tools here
 src/main.tsx            LYKOMI UI shell bootstrap
-src/pages/chat-page.tsx Chat screen and quick starts
+src/theme.ts             App colors, typography, and branding
+src/pages/starter-prompts.tsx  Home quick starts
+src/pages/guide-page.tsx       A page beside the persistent chat
+src/starter-module.ts          Guide navigation and agent context
+src/pages/chat-page.tsx  Chat route
 src/index.css           Tailwind v4 + LYKOMI UI theme resource and package dist scanning
+public/fonts/            Manrope and its OFL license
 ```
 
 ## Auth
 
 This starter uses local pass-through auth so the demo runs without an Entra app registration.
+
+The AG-UI endpoint declares `single_user=True` for this local demo. Before serving multiple users, replace that setting with an authorization scope resolver and protect the API with your chosen auth scheme. A browser-only MSAL setup does not protect the FastAPI endpoint by itself.
 
 For production MSAL auth, remove `authProvider` and `agentFetch` from `src/main.tsx`, then set:
 

@@ -2,7 +2,11 @@ import "./index.css";
 import { bootstrapShell } from "@lykomi/web-shell";
 import type { AuthAdapter } from "@lykomi/web-shell";
 import { createVoiceModule } from "@lykomi/web-voice";
+import { registerChatSlots } from "@lykomi/web-ui";
 import { customerPages } from "@/pages/index.tsx";
+import { starterTheme } from "./theme.ts";
+import { StarterPrompts } from "./pages/starter-prompts.tsx";
+import { starterModule } from "./starter-module.ts";
 
 const localDemoAuth: AuthAdapter = {
   Provider: ({ children }) => <>{children}</>,
@@ -26,20 +30,12 @@ const voiceModules = voiceProxyUrl
   ? [createVoiceModule({ connection: { proxyUrl: voiceProxyUrl } })]
   : [];
 
+registerChatSlots({ homeStarters: StarterPrompts });
+
 bootstrapShell({
-  modules: [...voiceModules], // Add your own ChatModules here.
+  modules: [starterModule, ...voiceModules], // Add your own ChatModules here.
   pages: customerPages,
   authProvider: localDemoAuth,
   agentFetch: fetch,
-  theme: [
-    {
-      id: "app-branding",
-      definition: {
-        branding: {
-          appName: "LYKOMI UI",
-          appTitle: "LYKOMI UI",
-        },
-      },
-    },
-  ],
+  theme: [starterTheme],
 });

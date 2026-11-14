@@ -49,6 +49,13 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/chat/config")
+async def chat_config() -> dict[str, object]:
+    # The scaffold does not set a reasoning level or context-window limit.
+    # Leave those values unknown until the app's backend can report them.
+    return {}
+
+
 try:
     from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint
 except ImportError:
@@ -59,4 +66,7 @@ add_agent_framework_fastapi_endpoint(
     get_agent(),
     path="/api/agent",
     state_schema=STATE_SCHEMA,
+    # This local starter deliberately has no user sign-in. An authenticated
+    # deployment must replace this with an authorization scope resolver.
+    single_user=True,
 )

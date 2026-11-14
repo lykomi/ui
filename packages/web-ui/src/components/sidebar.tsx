@@ -2079,7 +2079,8 @@ function SidebarContent({
   collapsedGroupsOnly,
   newConversationAfterGroup,
   newConversationLabel = "New chat",
-}: SidebarViewProps & { collapsed: boolean }) {
+  onCollapse,
+}: SidebarViewProps & { collapsed: boolean; onCollapse?: () => void }) {
   const toggle = useSidebarStore((s) => s.toggle);
   const defaultNewConversation = useNewConversation();
   const handleNewConversation = onNewConversation ?? defaultNewConversation;
@@ -2276,7 +2277,7 @@ function SidebarContent({
             labelClassName="truncate text-sm font-semibold text-sidebar-foreground"
           />
         </NavLink>
-        <TooltipIconButton tooltip="Collapse sidebar" side="right" onClick={toggle}>
+        <TooltipIconButton tooltip="Collapse sidebar" side="right" onClick={onCollapse ?? toggle}>
           <PanelLeft className="size-5" />
         </TooltipIconButton>
       </div>
@@ -2408,7 +2409,7 @@ function MobileDrawer({ footer, ...view }: SidebarViewProps & { footer?: ReactNo
         role="complementary"
         aria-label="Navigation sidebar"
       >
-        <SidebarContent collapsed={false} {...view} />
+        <SidebarContent collapsed={false} onCollapse={closeMobile} {...view} />
         {footer}
       </aside>
     </>

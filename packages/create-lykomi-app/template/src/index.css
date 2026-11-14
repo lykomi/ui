@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "@lykomi/web-ui/styles.css";
 
+/* Manrope is bundled locally under the SIL Open Font License. */
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-Variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+
 /* Tailwind v4 needs explicit @source paths to scan package output
  * for utility classes. Without these, the LYKOMI UI components render
  * without spacing, borders, or theme tokens. */
