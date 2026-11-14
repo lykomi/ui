@@ -12,6 +12,8 @@ import { useThemeStore, type ThemeMode } from "./theme-store.ts";
 import { useToolPanelStore } from "./tool-panel-store.ts";
 import { useAppStore } from "./app-store.ts";
 import { clientToolRegistry, type ClientToolEntry } from "@lykomi/agent";
+import { guidanceTools } from "./guidance-tools.ts";
+import { captureAppViewTool } from "./capture-app-view.ts";
 
 // ---------------------------------------------------------------------------
 // Navigate function injection (needs React Router context)
@@ -293,7 +295,7 @@ const GLOBAL_TOOLS: ClientToolEntry[] = [
 
 export function registerGlobalTools() {
   const registry = clientToolRegistry.getState();
-  for (const tool of GLOBAL_TOOLS) {
+  for (const tool of [...GLOBAL_TOOLS, ...guidanceTools, captureAppViewTool]) {
     registry.registerGlobal(tool);
   }
 }

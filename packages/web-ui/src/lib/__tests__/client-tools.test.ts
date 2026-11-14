@@ -23,8 +23,11 @@ describe("Global tool registration", () => {
       .map((s) => s.name)
       .sort();
     expect(names).toEqual([
+      "ui_capture_view",
       "ui_confirm",
+      "ui_dismiss_teaching_bubble",
       "ui_get_context",
+      "ui_get_guidance_targets",
       "ui_highlight",
       "ui_navigate",
       "ui_open_panel",
@@ -32,6 +35,7 @@ describe("Global tool registration", () => {
       "ui_process_select_step",
       "ui_select_item",
       "ui_set_theme",
+      "ui_show_teaching_bubble",
       "ui_update_content",
     ]);
   });
@@ -59,12 +63,12 @@ describe("isRegistered", () => {
 describe("executeTool", () => {
   it("ui_set_theme returns success", async () => {
     const result = await registry().executeTool("ui_set_theme", '{"mode":"dark"}');
-    expect(JSON.parse(result).status).toBe("success");
+    expect(JSON.parse(typeof result === "string" ? result : result.result).status).toBe("success");
   });
 
   it("ui_confirm returns pending", async () => {
     const result = await registry().executeTool("ui_confirm", '{"action":"Delete"}');
-    expect(JSON.parse(result).status).toBe("pending");
+    expect(JSON.parse(typeof result === "string" ? result : result.result).status).toBe("pending");
   });
 
   it("ui_update_content updates multiple fields", async () => {
@@ -72,14 +76,16 @@ describe("executeTool", () => {
       "ui_update_content",
       '{"fields":{"title":"Test","priority":"High"}}',
     );
-    const parsed = JSON.parse(result);
+    const parsed = JSON.parse(typeof result === "string" ? result : result.result);
     expect(parsed.status).toBe("success");
     expect(parsed.fields).toEqual({ title: "Test", priority: "High" });
   });
 
   it("unknown tool returns error", async () => {
     const result = await registry().executeTool("unknown", "{}");
-    expect(JSON.parse(result).error).toContain("Unknown client tool");
+    expect(JSON.parse(typeof result === "string" ? result : result.result).error).toContain(
+      "Unknown client tool",
+    );
   });
 });
 
@@ -121,7 +127,7 @@ describe("Page tools", () => {
     ]);
 
     const result = await registry().executeTool("page_my_tool", '{"value":"hello"}');
-    expect(JSON.parse(result).received).toBe("hello");
+    expect(JSON.parse(typeof result === "string" ? result : result.result).received).toBe("hello");
   });
 });
 
@@ -136,7 +142,10 @@ it("returns the active form acknowledgement instead of writing the shared draft"
       "ui_update_content",
       '{"fields":{"unknown":"value"}}',
     );
-    expect(JSON.parse(result)).toMatchObject({ status: "error", error: "Invalid field" });
+    expect(JSON.parse(typeof result === "string" ? result : result.result)).toMatchObject({
+      status: "error",
+      error: "Invalid field",
+    });
   } finally {
     window.removeEventListener("ui:update-content", handle);
   }

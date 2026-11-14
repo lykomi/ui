@@ -10,7 +10,12 @@ export {
 } from "./client/service-fetch.ts";
 
 // --- Tool registry ---
-export { clientToolRegistry, type ClientToolEntry, type ToolRegistry } from "./tools/registry.ts";
+export {
+  clientToolRegistry,
+  type ClientToolEntry,
+  type ClientToolResult,
+  type ToolRegistry,
+} from "./tools/registry.ts";
 
 // --- Stores (vanilla) ---
 export { agentStateStore } from "./store/agent-state-store.ts";

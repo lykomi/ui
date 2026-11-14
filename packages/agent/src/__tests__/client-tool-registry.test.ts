@@ -60,12 +60,14 @@ describe("clientToolRegistry", () => {
     it("executes a registered tool", async () => {
       clientToolRegistry.getState().registerGlobal(makeTool("ui_navigate"));
       const result = await clientToolRegistry.getState().executeTool("ui_navigate", "{}");
-      expect(JSON.parse(result)).toEqual({ ok: true });
+      expect(JSON.parse(typeof result === "string" ? result : result.result)).toEqual({ ok: true });
     });
 
     it("returns error for unknown tool", async () => {
       const result = await clientToolRegistry.getState().executeTool("unknown_tool", "{}");
-      expect(JSON.parse(result).error).toContain("Unknown client tool");
+      expect(JSON.parse(typeof result === "string" ? result : result.result).error).toContain(
+        "Unknown client tool",
+      );
     });
 
     it("page tool takes precedence over global", async () => {

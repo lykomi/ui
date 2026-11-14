@@ -37,6 +37,7 @@ vi.mock("@lykomi/web-ui", () => ({
   ThemeScope: ({ children }: { children: ReactNode }) => <>{children}</>,
   ThemeDocumentMetadata: () => null,
   GlobalSelectionPopover: () => null,
+  TeachingBubbleHost: () => null,
   TooltipIconButton: ({ children }: { children: ReactNode }) => <>{children}</>,
   findNavItem: () => undefined,
   useAppStore: (selector: (s: any) => unknown) =>

@@ -12,6 +12,12 @@ export {
   useIsForegroundChat,
 } from "./components/ag-ui-runtime-provider.tsx";
 export { useCurrentThreadId } from "./components/ag-ui-adapter-context.ts";
+export { TeachingBubbleHost } from "./components/teaching-bubble-host.tsx";
+export {
+  registerGuidanceSource,
+  type GuidanceTargetSource,
+  type GuidanceTarget,
+} from "./lib/guidance-targets.ts";
 export type {
   AGUIChatConversationFactoryArgs,
   AGUIHistoryAdapterFactory,

@@ -38,6 +38,50 @@ components are generated:
 @source "../node_modules/@lykomi/web-ui/dist";
 ```
 
+## Contextual teaching bubbles
+
+`@lykomi/web-shell` mounts `TeachingBubbleHost` once. Custom shells can mount it
+inside their theme provider. The existing AG-UI client-tool registry provides
+`ui_get_guidance_targets`, `ui_show_teaching_bubble` and
+`ui_dismiss_teaching_bubble`. No backend transport change is required.
+
+Framework `Field` components and semantic controls (buttons, links, tabs, inputs
+and the chat composer) are available automatically through their accessible
+labels. Add `data-guidance-target="Short label"` to a custom target when needed.
+Applications can register domain field boundaries without duplicating form state:
+
+```tsx
+const unregister = registerGuidanceSource("profile", {
+  selector: "[data-profile-field]",
+  label: (element) => element.dataset.profileField ?? "",
+  contextRefId: (element) => element.dataset.contextRefId,
+});
+// Call unregister when the contributing module is disposed.
+```
+
+Targets contain bounded labels and required/disabled/invalid flags, never field
+values. Values remain in the existing `ui_get_context` projection. Hidden,
+inactive-window, password and `data-agent-context="off"` surfaces are excluded.
+`data-guidance-ignore` excludes helper chrome. A snapshot is scoped to its view
+and conversation and expires after two minutes; a stale or missing target must
+be read again. A bubble displays text only and does not edit or submit a form.
+The user can close it or press Escape.
+
+The agent can call `ui_capture_view` to inspect the current visible app viewport.
+It rasterizes this app's DOM locally and sends the image as AG-UI binary input
+on the tool continuation. Tool metadata contains the timestamp and dimensions,
+not image bytes. This does not request desktop sharing or access another tab.
+Password inputs, `data-agent-context="off"`, `data-capture="off"`, embedded
+frames and video are excluded. DOM rasterization has limitations for external
+media and is a point-in-time image, not a live stream.
+
+Manual capture is hidden in the composer by default. Custom composers can opt
+in with `<ComposerAddMenu showCapture />`; this optional action uses the browser
+screen picker, captures one frame, stops its media tracks and lets the user
+review the image before attaching it. Both capture paths bound images to a
+1600-pixel long edge and 2 MB and follow the host's normal media persistence
+policy. Internal captures reject a view or conversation change during rendering.
+
 ## Process guidance
 
 `ProcessSteps` provides a connected status rail. `ProcessGuide` adds focused

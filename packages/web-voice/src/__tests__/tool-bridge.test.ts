@@ -22,6 +22,20 @@ describe("createRegistryToolExecutor", () => {
     expect(result).toBe('{"navigated":"/contracts"}');
   });
 
+  it("does not claim that realtime voice received visual tool output", async () => {
+    const run = createRegistryToolExecutor(
+      registry({
+        executeTool: async () => ({
+          result: '{"status":"captured"}',
+          inputContent: [{ type: "binary", mimeType: "image/jpeg", data: "image" }],
+        }),
+      }),
+    );
+    const result = JSON.parse((await run("ui_capture_view", "{}", "capture")) as string);
+    expect(result.error).toContain("did not receive the image");
+    expect(result.status).toBeUndefined();
+  });
+
   it("answers an unknown tool instead of leaving the call dangling", async () => {
     const run = createRegistryToolExecutor(registry({ isRegistered: () => false }));
     const result = await run("nope", "{}", "call_1");

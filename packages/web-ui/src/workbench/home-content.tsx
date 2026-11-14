@@ -35,7 +35,7 @@ export function HomeContent({
               </Button>
             ) : (
               <ThreadPrimitive.Root>
-                <ComposerPrimitive.Root className="@container rounded-2xl border border-input bg-muted/30 px-4 py-2 focus-within:border-primary/50">
+                <ComposerPrimitive.Root className="@container [--composer-action-size:2.5rem] rounded-2xl border border-input bg-muted/30 px-4 py-2 focus-within:border-primary/50">
                   <ComposerPrimitive.Attachments components={composerAttachmentComponents} />
                   <div className="flex items-center gap-2">
                     <ComposerAddMenu />
