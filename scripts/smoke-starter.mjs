@@ -516,7 +516,7 @@ async function runBrowserStarterSmoke() {
         .filter({ visible: true })
         .click();
       await page
-        .getByRole("textbox", { name: "Do anything", exact: true })
+        .getByRole("textbox", { name: "Chat message", exact: true })
         .fill("Explain this guide");
       const guideRequest = page.waitForRequest(
         (request) => request.method() === "POST" && request.url().endsWith("/api/agent"),
@@ -552,7 +552,7 @@ async function runBrowserStarterSmoke() {
       if (!lastAgentRequest.tools.some((tool) => tool.name === "page_update_draft_field"))
         throw new Error("Draft editing tool is missing.");
       await page
-        .getByRole("textbox", { name: "Do anything", exact: true })
+        .getByRole("textbox", { name: "Chat message", exact: true })
         .fill("Make this idea more specific");
       await page.getByRole("button", { name: "Send message", exact: true }).click();
       await page.waitForFunction(
@@ -568,7 +568,7 @@ async function runBrowserStarterSmoke() {
       await page.getByRole("button", { name: "Save draft", exact: true }).click();
       await page.getByText("My updated app", { exact: true }).waitFor();
       await page
-        .getByRole("textbox", { name: "Do anything", exact: true })
+        .getByRole("textbox", { name: "Chat message", exact: true })
         .fill("What can you see now?");
       const viewRequest = page.waitForRequest(
         (request) => request.method() === "POST" && request.url().endsWith("/api/agent"),
@@ -593,7 +593,7 @@ async function runBrowserStarterSmoke() {
         .filter({ visible: true })
         .click();
       await page
-        .getByRole("textbox", { name: "Do anything", exact: true })
+        .getByRole("textbox", { name: "Chat message", exact: true })
         .fill("Explain my selected field");
       const mobileFieldRequest = page.waitForRequest(
         (request) => request.method() === "POST" && request.url().endsWith("/api/agent"),
