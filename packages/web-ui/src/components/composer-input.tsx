@@ -19,6 +19,7 @@ export function ComposerInput(props: ComponentProps<typeof ComposerPrimitive.Inp
   }, []);
   return (
     <ComposerPrimitive.Input
+      aria-label="Chat message"
       {...props}
       ref={ref}
       data-composer-width={width}

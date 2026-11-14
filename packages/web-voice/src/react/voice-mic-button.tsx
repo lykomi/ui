@@ -27,10 +27,10 @@ const RING_FLOOR = 0.05;
 
 /**
  * Exactly Send's footprint, because it stands in that position: the composer
- * is a query container, and Send is `size-8` in the bubble and `size-10`
- * expanded.
+ * sets the action size explicitly: 2rem in the bubble and 2.5rem
+ * expanded, independent of its current width.
  */
-const CIRCLE = "size-8 @md:size-10 rounded-full shrink-0";
+const CIRCLE = "size-[var(--composer-action-size,2.5rem)] rounded-full shrink-0";
 
 export function VoiceMicButton() {
   const canVoice = useAuiState((s) => s.optional.thread?.capabilities.voice ?? false);
@@ -97,7 +97,7 @@ export function VoiceMicButton() {
             button and non-interactive, so it never eats the click. */}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute size-8 @md:size-10 rounded-full bg-primary/25 transition-transform duration-75"
+          className="pointer-events-none absolute size-[var(--composer-action-size,2.5rem)] rounded-full bg-primary/25 transition-transform duration-75"
           style={{ transform: `scale(${volume > RING_FLOOR ? 1 + volume * 0.4 : 0})` }}
         />
         <TooltipIconButton

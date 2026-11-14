@@ -2,6 +2,7 @@ import { type ReactNode, lazy, Suspense, useEffect, useRef } from "react";
 import { matchPath, Outlet, useLocation } from "react-router";
 import {
   ThemeDocumentMetadata,
+  TeachingBubbleHost,
   ThemeRuntimeProvider,
   ThemeScope,
   GlobalSelectionPopover,
@@ -129,6 +130,7 @@ export function ShellLayout({
           />
         </Suspense>
         <GlobalSelectionPopover />
+        <TeachingBubbleHost />
       </ThemeScope>
     </ThemeRuntimeProvider>
   );

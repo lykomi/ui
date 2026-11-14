@@ -30,7 +30,14 @@ export function createRegistryToolExecutor(registry: ToolRegistry): ToolExecutor
       return JSON.stringify({ error: `Unknown client tool: ${name}` });
     }
     try {
-      return await registry.executeTool(name, args);
+      const output = await registry.executeTool(name, args);
+      if (typeof output === "string") return output;
+      if (output.inputContent.length)
+        return JSON.stringify({
+          error:
+            "Visual tool output requires the text chat. This voice session did not receive the image.",
+        });
+      return output.result;
     } catch (err) {
       return JSON.stringify({
         error: err instanceof Error ? err.message : "Client-side tool failed",

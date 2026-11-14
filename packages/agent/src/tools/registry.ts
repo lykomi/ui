@@ -1,5 +1,8 @@
 import { createStore } from "zustand/vanilla";
-import type { Tool as AGUITool } from "@ag-ui/core";
+import type { Tool as AGUITool, InputContent } from "@ag-ui/core";
+
+/** Text metadata stays in the tool result; visual content travels as AG-UI input. */
+export type ClientToolResult = string | { result: string; inputContent: InputContent[] };
 
 /**
  * Dynamic Client Tool Registry — vanilla zustand store for client-side AG-UI
@@ -22,7 +25,7 @@ export interface ClientToolEntry {
   /** JSON Schema for tool parameters */
   parameters: Record<string, unknown>;
   /** Execution function — called by the runner at TOOL_CALL_END */
-  execute: (argsJson: string) => Promise<string>;
+  execute: (argsJson: string) => Promise<ClientToolResult>;
 }
 
 interface ClientToolRegistryState {
@@ -56,7 +59,7 @@ interface ClientToolRegistryState {
 
   getActiveSchemas: () => AGUITool[];
   isRegistered: (name: string) => boolean;
-  executeTool: (name: string, argsJson: string) => Promise<string>;
+  executeTool: (name: string, argsJson: string) => Promise<ClientToolResult>;
 }
 
 export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get) => ({
@@ -142,6 +145,6 @@ export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get
 
 export interface ToolRegistry {
   isRegistered: (name: string) => boolean;
-  executeTool: (name: string, argsJson: string) => Promise<string>;
+  executeTool: (name: string, argsJson: string) => Promise<ClientToolResult>;
   getActiveSchemas: () => AGUITool[];
 }

@@ -26,6 +26,7 @@ import {
   Highlighter,
   ShieldCheck,
   Info,
+  Camera,
 } from "lucide-react";
 
 const NavigateUI = makeAssistantToolUI<{ path: string }, { status: string }>({
@@ -204,6 +205,25 @@ const GetContextUI = makeAssistantToolUI<unknown, unknown>({
   ),
 });
 
+const CaptureViewUI = makeAssistantToolUI<unknown, { status?: string; message?: string }>({
+  toolName: "ui_capture_view",
+  render: ({ status, result }) => (
+    <ToolCallCard
+      icon={<Camera className="size-3.5" />}
+      title="View app"
+      description={
+        status.type === "running"
+          ? "Looking at your current view…"
+          : result?.status === "captured"
+            ? "Current app view captured"
+            : (result?.message ?? "View unavailable")
+      }
+      status={status}
+      className="w-full"
+    />
+  ),
+});
+
 export function ClientToolExecutor() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -220,6 +240,7 @@ export function ClientToolExecutor() {
       <HighlightUI />
       <ConfirmUI />
       <GetContextUI />
+      <CaptureViewUI />
     </>
   );
 }

@@ -82,14 +82,6 @@ export function WorkbenchStyles() {
           height: 16px;
         }
 
-        .workbench-preview #preview-assistant button[aria-label="Send message"],
-        .workbench-preview #preview-assistant button[aria-label="Stop generating"] {
-          width: 32px;
-          height: 32px;
-          min-width: 32px;
-          padding: 0;
-        }
-
         .workbench-preview .preview-mobile-navigation { display: none; }
         @media (max-width: 767px) {
           .workbench-preview .preview-mobile-navigation { display: inline-flex; }

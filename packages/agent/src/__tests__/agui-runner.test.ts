@@ -52,12 +52,12 @@ vi.mock("@ag-ui/client", () => {
 });
 
 import { AGUIRunner } from "../client/agui-runner.ts";
-import { clientToolRegistry } from "../tools/registry.ts";
+import { clientToolRegistry, type ToolRegistry } from "../tools/registry.ts";
 import type { RunnerEvent } from "../client/runner-events.ts";
 
 function makeRegistry(client: {
   isRegistered: (name: string) => boolean;
-  executeTool?: (name: string, args: string) => Promise<string>;
+  executeTool?: ToolRegistry["executeTool"];
 }) {
   return {
     isRegistered: client.isRegistered,
@@ -1004,4 +1004,90 @@ describe("stream integrity", () => {
     expect(statuses.slice(stalledIdx + 1)).toContain("thinking");
     expect(events.some((e) => e.type === "run-error")).toBe(false);
   });
+});
+
+it("sends a visual client-tool result as binary input once, keeping bytes out of tool metadata", async () => {
+  runCount = 0;
+  lastMessages = [];
+  nextScript = [
+    async (s, agent) => {
+      await s.onToolCallStartEvent?.({
+        event: { type: "TOOL_CALL_START", toolCallId: "view-1", toolCallName: "ui_capture_view" },
+      } as never);
+      await s.onToolCallEndEvent?.({
+        event: { type: "TOOL_CALL_END", toolCallId: "view-1" },
+      } as never);
+      agent.messages.push({
+        id: "assistant-view",
+        role: "assistant",
+        toolCalls: [
+          {
+            id: "view-1",
+            type: "function",
+            function: { name: "ui_capture_view", arguments: "{}" },
+          },
+        ],
+      });
+      await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+    },
+    async (s) => {
+      await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+    },
+  ];
+  const runner = new AGUIRunner();
+  const events = await collectWithMessages(
+    runner,
+    [{ id: "capture-request", role: "user", content: "Look at this view." }],
+    makeRegistry({
+      isRegistered: (name) => name === "ui_capture_view",
+      executeTool: async () => ({
+        result: '{"status":"captured"}',
+        inputContent: [{ type: "binary", mimeType: "image/jpeg", data: "aW1hZ2U=" }],
+      }),
+    }),
+  );
+  const messages = lastMessages as Array<{ role: string; content: unknown }>;
+  const toolResults = messages.filter((message) => message.role === "tool");
+  expect(toolResults).toHaveLength(1);
+  expect(toolResults[0].content).toBe('{"status":"captured"}');
+  const images = messages.filter(
+    (message) => message.role === "user" && Array.isArray(message.content),
+  );
+  expect(images).toHaveLength(1);
+  expect(images[0].content).toContainEqual({
+    type: "binary",
+    mimeType: "image/jpeg",
+    data: "aW1hZ2U=",
+  });
+  expect(JSON.stringify(events.filter((event) => event.type === "tool-call-end"))).not.toContain(
+    "aW1hZ2U=",
+  );
+  expect(runCount).toBe(2);
+  const visible = (lastMessages as Parameters<AGUIRunner["run"]>[0]["messages"])
+    .filter((message) => !(message.role === "user" && Array.isArray(message.content)))
+    .map((message) => (message.role === "user" ? message : { ...message, id: `ui-${message.id}` }));
+  const followUp = { id: "follow-up", role: "user" as const, content: "Explain the same image." };
+  await collectWithMessages(
+    runner,
+    [...visible, followUp],
+    makeRegistry({ isRegistered: () => false }),
+  );
+  expect(
+    lastMessages.filter(
+      (message) =>
+        (message as { role: string; content: unknown }).role === "user" &&
+        Array.isArray((message as { content: unknown }).content),
+    ),
+  ).toHaveLength(1);
+  expect(JSON.stringify(lastMessages)).toContain("aW1hZ2U=");
+  expect((lastMessages as Array<{ role: string }>).map((message) => message.role)).toEqual([
+    "user",
+    "assistant",
+    "tool",
+    "user",
+    "user",
+  ]);
+  // Editing/truncating away the owning tool result drops its image too.
+  await collectWithMessages(runner, [followUp], makeRegistry({ isRegistered: () => false }));
+  expect(JSON.stringify(lastMessages)).not.toContain("aW1hZ2U=");
 });
