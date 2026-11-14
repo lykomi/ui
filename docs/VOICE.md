@@ -7,6 +7,11 @@ it carries none of it.
 This document is the _why_: which mode to choose, what each one costs, and the two constraints that
 are properties of the platform rather than of this code.
 
+The voice module uses Foundry Voice Live SDK 0.7.x. Use proxy image
+`ghcr.io/iloveagents/foundry-voice-live-proxy:0.7.0` with this release.
+The SDK defaults to Voice Live API `2026-07-15`; WebRTC remains preview.
+See the [upstream release](https://github.com/iLoveAgents/foundry-voice-live/releases/tag/v0.7.0).
+
 ## Where voice actually lives
 
 Not here. `@assistant-ui/react` 0.15 already models a realtime voice session:

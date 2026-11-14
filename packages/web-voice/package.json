@@ -44,7 +44,7 @@
   "dependencies": {
     "@lykomi/agent": "workspace:^",
     "@lykomi/web-ui": "workspace:^",
-    "@iloveagents/foundry-voice-live-react": "^0.5.0"
+    "@iloveagents/foundry-voice-live-react": "^0.7.0"
   },
   "peerDependencies": {
     "@assistant-ui/react": "^0.15.1",
