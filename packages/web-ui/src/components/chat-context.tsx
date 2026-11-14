@@ -42,7 +42,7 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
     const events = ["focusin", "pointerup", "input", "selectionchange"];
     for (const event of events) document.addEventListener(event, refresh);
     const handles =
-      "[data-focused], [data-context-ref-type='entity-field'], [data-agent-component]";
+      "[data-agent-field], [data-focused], [data-context-ref-type='entity-field'], [data-agent-component]";
     const observer =
       typeof MutationObserver === "undefined"
         ? null
@@ -67,6 +67,8 @@ export function ChatContext({ centered = false }: { centered?: boolean }) {
       attributes: true,
       attributeFilter: [
         "data-agent-selected",
+        "data-agent-context",
+        "data-window-active",
         "data-agent-component-label",
         "data-focused",
         "data-focus-title",

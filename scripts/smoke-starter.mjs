@@ -575,13 +575,39 @@ async function runBrowserStarterSmoke() {
       );
       await page.getByRole("button", { name: "Send message", exact: true }).click();
       await viewRequest;
-      if (
-        lastAgentRequest.tools.some((tool) => tool.name === "page_update_draft_field") ||
-        lastAgentRequest.state.contextItems.some((item) => item.meta?.fieldFocus === "active")
-      )
-        throw new Error("Read mode retained edit tools or stale active-field context.");
+      if (lastAgentRequest.tools.some((tool) => tool.name === "page_update_draft_field"))
+        throw new Error("Read mode retained edit tools.");
 
       await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`${url}guide`, { waitUntil: "domcontentloaded" });
+      await page.getByRole("button", { name: "Content", exact: true }).click();
+      await page.getByRole("button", { name: "Open working draft" }).click();
+      await page.getByRole("button", { name: "Edit draft", exact: true }).click();
+      await page.getByLabel("Your idea", { exact: true }).fill("Mobile field context");
+      await page.getByLabel("Your idea", { exact: true }).evaluate((input) => {
+        input.setSelectionRange(7, 12);
+        input.dispatchEvent(new Event("select", { bubbles: true }));
+      });
+      await page
+        .getByRole("button", { name: "Ask the agent about this page" })
+        .filter({ visible: true })
+        .click();
+      await page
+        .getByRole("textbox", { name: "Do anything", exact: true })
+        .fill("Explain my selected field");
+      const mobileFieldRequest = page.waitForRequest(
+        (request) => request.method() === "POST" && request.url().endsWith("/api/agent"),
+      );
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
+      await mobileFieldRequest;
+      const mobileField = lastAgentRequest.state.contextItems.find(
+        (item) => item.meta?.fieldFocus === "active",
+      );
+      if (
+        mobileField?.target?.currentValue !== "Mobile field context" ||
+        mobileField.meta?.caret?.selectedText !== "field"
+      )
+        throw new Error(`Mobile chat lost the active field: ${JSON.stringify(mobileField)}`);
       await page.goto(url, { waitUntil: "domcontentloaded" });
       const mobileRequest = page.waitForRequest(
         (request) => request.method() === "POST" && request.url().endsWith("/api/agent"),

@@ -1,10 +1,21 @@
+/** Exclude private subtrees from every built-in text projection. */
+function publicText(node: Element): string {
+  if (node.closest('[data-agent-context="off"]')) return "";
+  const copy = node.cloneNode(true) as Element;
+  copy.querySelectorAll('[data-agent-context="off"]').forEach((child) => child.remove());
+  return copy.textContent || "";
+}
+
 /** Request-time projection of the focused surface, not a persistent page pin. */
 export function collectFocusContext() {
   if (typeof document === "undefined") return null;
   const candidates = Array.from(document.querySelectorAll<HTMLElement>("[data-focused]"));
   const frame = candidates
     .reverse()
-    .find((node) => !node.closest('[hidden], [inert], [aria-hidden="true"]'));
+    .find(
+      (node) =>
+        !node.closest('[hidden], [inert], [aria-hidden="true"], [data-agent-context="off"]'),
+    );
   if (!frame) return null;
   // Specialized surfaces (for example canvas graphs) can report their drawn view.
   const request = new CustomEvent<{ context?: Record<string, unknown> }>("focus:collect-context", {
@@ -18,7 +29,7 @@ export function collectFocusContext() {
   let remaining = 8000;
   let truncated = false;
   const text = (node: Element) => {
-    const raw = (node.textContent || "").replace(/\s+/g, " ").trim();
+    const raw = publicText(node).replace(/\s+/g, " ").trim();
     const value = raw.slice(0, Math.min(remaining, 300));
     remaining -= value.length;
     if (value.length < raw.length) truncated = true;
@@ -48,7 +59,7 @@ export function collectFocusContext() {
     .closest('[role="dialog"]')
     ?.querySelector<HTMLElement>("[data-focus-source-title]");
   const documentText = isDocument
-    ? (frame.querySelector("[data-document-prose]")?.textContent || frame.textContent || "").trim()
+    ? publicText(frame.querySelector("[data-document-prose]") ?? frame).trim()
     : "";
   return {
     title: frame.dataset.focusTitle || frame.getAttribute("aria-label") || "Focused content",

@@ -51,16 +51,18 @@ then open chat and ask “Make this idea more specific”. The context indicator
 **Your idea**; the AG-UI request includes its field path, current value and selected
 text. The active window also supplies the named form fields and edit mode.
 
-`src/pages/use-draft-context.ts` uses the public `useAppStore.setContextItem` and
-`usePageTools` APIs. Its `page_update_draft_field` tool validates the field and
+`Field` and `ReadOnlyField` automatically supply the selected field context through
+`@lykomi/web-ui`. No per-field focus handlers or context hook are required.
+`src/pages/use-draft-tools.ts` uses `usePageTools` for the app-owned edits. Its `page_update_draft_field` tool validates the field and
 checks that its current value still matches the value the agent read. Updates
 appear in the same inputs you edit manually. **Save draft** accepts the changes
 in memory; **Cancel** restores the previous values. Closing the draft or switching
 to another window removes its field context and tools. Moving into chat keeps them.
 
-The leaf `Input`, `Textarea` and `Field` components do not automatically send values
-to a model. Your app explicitly chooses the fields to expose. Keep sensitive fields
-out of context, and connect your own authenticated persistence before saving remotely.
+Wrap native inputs in `Field` to get automatic field context. Use
+`agentContext={false}` on `Field` or `ReadOnlyField` for sensitive values;
+password inputs are always excluded. Your app owns validation and persistence.
+Connect an authenticated storage service before saving remotely.
 
 ## Coding With AI Agents
 

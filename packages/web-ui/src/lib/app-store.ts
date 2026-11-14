@@ -1,3 +1,5 @@
+import { collectFieldContextItems } from "./field-context.ts";
+import { clearActiveFieldContext, installFieldContextTracking } from "./field-context-tracking.ts";
 import { createUiId } from "./create-ui-id.ts";
 import { collectProcessContextItems } from "../components/process/process-agent-context.ts";
 import { collectFocusContext } from "./focus-context.ts";
@@ -309,6 +311,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCurrentPage: (page) => {
     const prev = get().currentPage;
     if (prev === page) return;
+    clearActiveFieldContext();
 
     // Clear ephemeral context on navigation — and every KEYED item, whatever
     // its persistence: those track a piece of UI, and that UI is gone. A pin
@@ -423,9 +426,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   consumeContextForMessage: (messageId) => {
     const { contextItems, sentContext } = get();
     const liveProcessItems = collectProcessContextItems();
-    if (contextItems.length === 0 && liveProcessItems.length === 0) return [];
+    const liveFieldItems = collectFieldContextItems(get().currentPage);
+    if (!contextItems.length && !liveProcessItems.length && !liveFieldItems.length) return [];
 
-    const snapshot = [...contextItems, ...liveProcessItems];
+    const snapshot = [...contextItems, ...liveProcessItems, ...liveFieldItems];
 
     // Keep persistent, remove ephemeral — except context that TRACKS the UI
     // (a keyed item, e.g. a live list selection). Those rows are still
@@ -472,40 +476,42 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedItemId: s.selectedItemId,
       content: toAgentData(s.content),
       highlights: s.highlights,
-      contextItems: [...s.contextItems, ...collectProcessContextItems()].map(
-        ({ type, label, payload, sourcePage }) => {
-          switch (payload.kind) {
-            case "text":
-              return {
-                type,
-                label: label.slice(0, 200),
-                text: payload.text.slice(0, 500),
-                sourcePage,
-              };
-            case "page":
-              return { type, label, path: payload.path, sourcePage };
-            case "ref":
-              return {
-                type,
-                label: label.slice(0, 200),
-                refType: payload.refType,
-                refId: payload.refId,
-                preview: payload.preview?.slice(0, 100),
-                target: compactReferenceTarget(payload.target),
-                meta: payload.meta ? toAgentData(payload.meta) : payload.meta,
-                targetPath:
-                  typeof payload.target?.path === "string"
-                    ? payload.target.path
-                    : typeof payload.meta?.targetPath === "string"
-                      ? payload.meta.targetPath
-                      : undefined,
-                sourcePage,
-              };
-            default:
-              return { type, label, sourcePage };
-          }
-        },
-      ),
+      contextItems: [
+        ...s.contextItems,
+        ...collectProcessContextItems(),
+        ...collectFieldContextItems(s.currentPage),
+      ].map(({ type, label, payload, sourcePage }) => {
+        switch (payload.kind) {
+          case "text":
+            return {
+              type,
+              label: label.slice(0, 200),
+              text: payload.text.slice(0, 500),
+              sourcePage,
+            };
+          case "page":
+            return { type, label, path: payload.path, sourcePage };
+          case "ref":
+            return {
+              type,
+              label: label.slice(0, 200),
+              refType: payload.refType,
+              refId: payload.refId,
+              preview: payload.preview?.slice(0, 100),
+              target: compactReferenceTarget(payload.target),
+              meta: payload.meta ? toAgentData(payload.meta) : payload.meta,
+              targetPath:
+                typeof payload.target?.path === "string"
+                  ? payload.target.path
+                  : typeof payload.meta?.targetPath === "string"
+                    ? payload.meta.targetPath
+                    : undefined,
+              sourcePage,
+            };
+          default:
+            return { type, label, sourcePage };
+        }
+      }),
     };
   },
 
@@ -522,3 +528,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       sentContext: {},
     }),
 }));
+
+// The same delegated tracker serves the shell and direct UI-framework consumers.
+installFieldContextTracking();

@@ -28,6 +28,7 @@ export function Field({
   action,
   className,
   children,
+  agentContext = true,
 }: {
   label?: ReactNode;
   hint?: ReactNode;
@@ -36,6 +37,8 @@ export function Field({
   action?: ReactNode;
   className?: string;
   children: ReactNode;
+  /** Disable automatic agent context for private fields. */
+  agentContext?: boolean;
 }) {
   const id = useId();
   const singleChild = unwrapSingleChild(children);
@@ -81,13 +84,17 @@ export function Field({
         })
       : children;
   return (
-    <div className={cn("grid gap-1.5", className)}>
+    <div
+      data-agent-field={id}
+      data-agent-context={agentContext ? undefined : "off"}
+      className={cn("grid gap-1.5", className)}
+    >
       {singleControl || htmlFor ? (
         <>
           {(label || action) && (
             <div className="flex items-center justify-between gap-3">
               {label ? (
-                <label htmlFor={controlId} className={labelClass}>
+                <label data-agent-field-label htmlFor={controlId} className={labelClass}>
                   {labelContent}
                 </label>
               ) : (
@@ -102,7 +109,11 @@ export function Field({
         <>
           {action && <div className="flex justify-end">{action}</div>}
           <label className="grid gap-1.5">
-            {label && <span className={labelClass}>{labelContent}</span>}
+            {label && (
+              <span data-agent-field-label className={labelClass}>
+                {labelContent}
+              </span>
+            )}
             {control}
           </label>
         </>

@@ -6,7 +6,6 @@ export interface GuideWindow extends WorkbenchWindow {
   name?: string;
   editing?: boolean;
   saved?: { name: string; text: string };
-  field?: { key: "name" | "text"; start: number; end: number };
 }
 
 // App-owned data; the UI framework owns selection, pinning, ordering and layouts.

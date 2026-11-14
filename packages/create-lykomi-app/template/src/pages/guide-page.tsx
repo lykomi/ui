@@ -9,11 +9,11 @@ import {
   DropdownMenuItem,
 } from "@lykomi/web-ui";
 import { DraftForm } from "./draft-form.tsx";
-import { useDraftContext } from "./use-draft-context.ts";
+import { useDraftTools } from "./use-draft-tools.ts";
 import { guideWindows, openGuideWindow } from "./guide-windows.ts";
 
 export function GuidePage() {
-  useDraftContext();
+  useDraftTools();
   return (
     <WindowWorkbench
       controller={guideWindows}

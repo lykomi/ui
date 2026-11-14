@@ -89,6 +89,34 @@ do not put another card around every field or another form inside a form.
 The application supplies its save handlers and one outer `<form>` if needed.
 Preset layout components do not submit, fetch or store data.
 
+## Automatic field context
+
+`Field` and `ReadOnlyField` participate in agent context automatically when used
+with `@lykomi/web-ui`. Focus or click a field, then enter chat: the request carries
+its label, current value, target path and text selection. Values are read from the
+current control at request time. No page-specific focus handlers, context store
+updates or context hook are needed. `Input` and `Textarea` remain leaf controls;
+wrap them in `Field` to supply their label and field boundary.
+
+Use `name` on the control for a semantic target path. The control ID is the
+fallback. Hidden/inert fields, closed windows and inactive workbench windows
+cannot remain the active subject. The mobile switch to Chat retains the current
+field, while changing the route clears it. Password inputs are excluded. For
+other sensitive values set `agentContext={false}` on `Field` or `ReadOnlyField`,
+or `data-agent-context="off"` on a containing surface.
+
+This gives the agent context, not write access. The application owns validation,
+draft updates, saving and permissions through its registered tools. The starter's
+`use-draft-tools.ts` demonstrates guarded, unsaved edits using `usePageTools`.
+
+Applications with richer field metadata can register a `FieldContextSource`
+through `registerFieldContextSource(id, { selector, getRefId, ignoreSelector })`.
+Their source takes precedence over nested primitive fields, preventing duplicate
+context. `getActiveFieldContext()` supplies the shared element, target and caret
+snapshot to their domain projection. Registration returns a cleanup function.
+The shared tracker owns focus and selection; entity identifiers, change tracking
+and persistence remain in the application.
+
 ## Interaction contract
 
 - Open (including a list double-click or keyboard activation) starts in reading mode.

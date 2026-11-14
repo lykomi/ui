@@ -1,5 +1,6 @@
 import {
   cloneElement,
+  useId,
   Fragment,
   isValidElement,
   type ComponentPropsWithoutRef,
@@ -39,20 +40,31 @@ export function ReadOnlyField({
   multiline = false,
   valueAppearance = "field",
   className,
+  agentContext = true,
   ...props
 }: ComponentPropsWithoutRef<"dl"> & {
   label: ReactNode;
+  agentContext?: boolean;
   multiline?: boolean;
   /** Field preserves an editable slot; content presents fixed information without input chrome. */
   valueAppearance?: "field" | "content";
   hint?: ReactNode;
   emptyLabel?: ReactNode;
 }) {
+  const id = useId();
   const empty = isEmptyValue(children);
   return (
-    <dl {...props} className={cn("grid min-w-0 gap-1.5", className)}>
-      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+    <dl
+      {...props}
+      data-agent-field={id}
+      data-agent-context={agentContext ? undefined : "off"}
+      className={cn("grid min-w-0 gap-1.5", className)}
+    >
+      <dt data-agent-field-label className="text-xs font-medium text-muted-foreground">
+        {label}
+      </dt>
       <dd
+        data-agent-field-value
         data-value-appearance={valueAppearance}
         className={cn(
           "m-0 min-w-0 break-words whitespace-pre-wrap text-sm text-foreground",
