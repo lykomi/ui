@@ -103,7 +103,7 @@ docker run -p 8080:8080 \
   -e FOUNDRY_RESOURCE_NAME=your-foundry-resource \
   -e FOUNDRY_API_KEY="…" \
   -e ALLOWED_ORIGINS="http://localhost:8010" \
-  ghcr.io/iloveagents/foundry-voice-live-proxy:latest
+  ghcr.io/iloveagents/foundry-voice-live-proxy:0.7.0
 ```
 
 The default mode is **relay**: Voice Live transcribes what you say and speaks

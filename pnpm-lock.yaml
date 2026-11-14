@@ -365,8 +365,8 @@ importers:
   packages/web-voice:
     dependencies:
       "@iloveagents/foundry-voice-live-react":
-        specifier: ^0.5.0
-        version: 0.5.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+        specifier: ^0.7.0
+        version: 0.7.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       "@lykomi/agent":
         specifier: workspace:^
         version: link:../agent
@@ -1121,10 +1121,10 @@ packages:
         integrity: sha512-JZHlwdID+dy+lTgbYC8NEC4zeugqeYsc6jewvzb4c58kHauJn+X7rNwQjxz5p2qSjqaEeQoLkCIQ9v/H4PK0/w==,
       }
 
-  "@iloveagents/foundry-voice-live-react@0.5.0":
+  "@iloveagents/foundry-voice-live-react@0.7.0":
     resolution:
       {
-        integrity: sha512-3RG1jDUqYlsYpVgps21pf1X522C38trL8PKmUHZwdoc/4JusHX6ihP71l4ppuGzWwcuzbvegGEa21gHSOUbBLA==,
+        integrity: sha512-7xQAtEPXeFJdPVoaj4peDHFPqbCzviWddriEtDm0uqNul2PnBY4q2qyuGCefqgrso1eAxC5XG0qxFoYlWCCuwg==,
       }
     peerDependencies:
       react: ">=16.8.0"
@@ -6919,7 +6919,7 @@ snapshots:
       "@iconify/types": 2.0.0
       import-meta-resolve: 4.2.0
 
-  "@iloveagents/foundry-voice-live-react@0.5.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)":
+  "@iloveagents/foundry-voice-live-react@0.7.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)":
     dependencies:
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
