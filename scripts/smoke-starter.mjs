@@ -364,16 +364,15 @@ async function runBrowserStarterSmoke() {
     ) {
       throw new Error("Home is not selected after returning from Guide.");
     }
-    await page
-      .getByRole("button", { name: "Say hello world using the hello_world tool" })
-      .waitFor();
+    const quickStart = page
+      .getByRole("region", { name: "Working content" })
+      .getByRole("button", { name: prompt });
+    await quickStart.waitFor();
     if (parserRequests !== 0)
       throw new Error("Mermaid parser loaded before a diagram was requested.");
-    // Home is a composer entry point into the same contextual chat panel.
-    // Typing opens that panel; the draft must survive the handoff.
-    await page.getByRole("textbox", { name: "Message", exact: true }).fill(prompt);
+    // A one-click Home suggestion must reveal the conversation it starts.
+    await quickStart.click();
     await page.getByRole("button", { name: "Collapse chat", exact: true }).waitFor();
-    await page.getByRole("button", { name: "Send message", exact: true }).click();
     await page.getByText("Hello from the", { exact: false }).first().waitFor({ timeout: 10_000 });
 
     if (!screenshotPath) {
@@ -422,6 +421,16 @@ async function runBrowserStarterSmoke() {
       ) {
         throw new Error("The Guide page context did not reach the AG-UI request.");
       }
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      const mobileRequest = page.waitForRequest(
+        (request) => request.method() === "POST" && request.url().endsWith("/api/agent"),
+      );
+      await page.getByRole("button", { name: prompt }).click();
+      await mobileRequest;
+      await page.getByRole("button", { name: "Chat", pressed: true }).waitFor();
+      await page.getByText("Hello from the", { exact: false }).first().waitFor();
     }
 
     if (pageErrors.length > 0 || consoleErrors.length > 0) {
