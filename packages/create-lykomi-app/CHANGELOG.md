@@ -1,5 +1,11 @@
 # create-lykomi-app
 
+## 0.9.22
+
+### Patch Changes
+
+- 63b9ed1: Publish the LYKOMI UI packages under the `@lykomi` scope and update the starter to use them.
+
 ## 0.9.21
 
 ### Patch Changes

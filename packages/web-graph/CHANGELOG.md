@@ -1,5 +1,15 @@
 # @iloveagents/foundry-web-graph
 
+## 0.3.17
+
+### Patch Changes
+
+- 63b9ed1: Publish the LYKOMI UI packages under the `@lykomi` scope and update the starter to use them.
+- Updated dependencies [63b9ed1]
+  - @lykomi/agent@0.49.2
+  - @lykomi/web-primitives@0.49.2
+  - @lykomi/web-ui@0.49.2
+
 ## 0.3.16
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @iloveagents/foundry-web-voice
 
+## 0.1.33
+
+### Patch Changes
+
+- 63b9ed1: Publish the LYKOMI UI packages under the `@lykomi` scope and update the starter to use them.
+- Updated dependencies [63b9ed1]
+  - @lykomi/agent@0.49.2
+  - @lykomi/web-ui@0.49.2
+
 ## 0.1.32
 
 ### Patch Changes
