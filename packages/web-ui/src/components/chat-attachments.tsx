@@ -10,7 +10,7 @@
 import { type FC } from "react";
 import { AttachmentPrimitive } from "@assistant-ui/react";
 import { FileText, X } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 /** Renders a pending file attachment chip in the composer with a remove button. */
 export const ComposerAttachment: FC = () => (

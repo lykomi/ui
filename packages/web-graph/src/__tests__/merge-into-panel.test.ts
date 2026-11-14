@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
+import { useToolPanelStore } from "@lykomi/web-ui";
 
 import { GRAPH_PAYLOAD_KIND, GRAPH_PAYLOAD_VERSION, type GraphPayload } from "../model.ts";
 import { _resetGraphWorkspace, graphWorkspaceStore } from "../graph-workspace.ts";

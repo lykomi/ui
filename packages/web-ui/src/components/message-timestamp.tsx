@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { useAuiState } from "@assistant-ui/react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 /**
  * Message send/receive time — revealed on hover in the same row as the

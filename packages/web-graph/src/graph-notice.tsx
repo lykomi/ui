@@ -1,5 +1,5 @@
 import { AlertTriangle, Network } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import type { GraphModelLoss } from "./use-graph-model.ts";
 
 /** Shown in place of the canvas when there is nothing to draw. */

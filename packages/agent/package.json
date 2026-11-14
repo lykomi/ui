@@ -1,14 +1,14 @@
 {
-  "name": "@iloveagents/foundry-agent",
+  "name": "@lykomi/agent",
   "version": "0.49.1",
   "license": "MIT",
-  "description": "Cross-runtime AG-UI transport for Foundry UI — AGUIRunner protocol engine, vanilla zustand stores, optional MSAL auth subpath, service-fetch factory. Zero React, zero DOM.",
+  "description": "Cross-runtime AG-UI transport for LYKOMI UI — AGUIRunner protocol engine, vanilla zustand stores, optional MSAL auth subpath, service-fetch factory. Zero React, zero DOM.",
   "keywords": [
     "ag-ui",
     "agent",
     "agent-framework",
     "azure-foundry",
-    "foundry-ui",
+    "lykomi-ui",
     "msal",
     "zustand"
   ],

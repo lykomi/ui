@@ -18,7 +18,7 @@ import {
   type RealtimeVoiceAdapter,
   type ThreadMessage,
 } from "@assistant-ui/react";
-import { TooltipProvider } from "@iloveagents/foundry-web-ui";
+import { TooltipProvider } from "@lykomi/web-ui";
 import { VoiceBridge, type VoiceTransportControls } from "../adapter/voice-bridge.ts";
 import type { VoiceConfig } from "../adapter/types.ts";
 import { VoiceMicButton } from "../react/voice-mic-button.tsx";

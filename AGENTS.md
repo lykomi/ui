@@ -1,14 +1,14 @@
-Foundry UI — open-source agent UI starter for the AG-UI protocol, Microsoft Agent Framework, and Microsoft Foundry. Multi-package monorepo publishing built ESM JavaScript and `.d.ts` declarations.
+LYKOMI UI — open-source agent UI starter for the AG-UI protocol, Microsoft Agent Framework, and Microsoft Foundry. Multi-package monorepo publishing built ESM JavaScript and `.d.ts` declarations.
 
 # Vision & Architecture
 
 ```
-packages/agent/           → @iloveagents/foundry-agent (cross-runtime transport — AGUIRunner, vanilla zustand stores, MSAL subpath, service-fetch factory)
-packages/web-primitives/  → @iloveagents/foundry-web-primitives (leaf primitives — Button, Checkbox, Input, Textarea, Field, FieldSet, cn)
-packages/web-ui/          → @iloveagents/foundry-web-ui (React UI core — hooks, registries, assistant-ui adapter shim, ChatPanel, sidebar)
-packages/web-shell/       → @iloveagents/foundry-web-shell (browser bootstrap — bootstrapShell + ChatModule protocol)
-packages/web-voice/       → @iloveagents/foundry-web-voice (OPTIONAL spoken conversation — Azure Voice Live as an assistant-ui RealtimeVoiceAdapter)
-packages/create-foundry-ui-app/ → create-lykomi-app (scaffolding CLI — `npm create lykomi-app`)
+packages/agent/           → @lykomi/agent (cross-runtime transport — AGUIRunner, vanilla zustand stores, MSAL subpath, service-fetch factory)
+packages/web-primitives/  → @lykomi/web-primitives (leaf primitives — Button, Checkbox, Input, Textarea, Field, FieldSet, cn)
+packages/web-ui/          → @lykomi/web-ui (React UI core — hooks, registries, assistant-ui adapter shim, ChatPanel, sidebar)
+packages/web-shell/       → @lykomi/web-shell (browser bootstrap — bootstrapShell + ChatModule protocol)
+packages/web-voice/       → @lykomi/web-voice (OPTIONAL spoken conversation — Azure Voice Live as an assistant-ui RealtimeVoiceAdapter)
+packages/create-lykomi-app/ → create-lykomi-app (scaffolding CLI — `npm create lykomi-app`)
 ```
 
 **`web-voice` is optional and versions on its own.** Nothing in this repo imports it, and it is
@@ -21,7 +21,7 @@ unset the call is unreachable and the bundler drops the package entirely (assert
 `smoke:starter` — a default scaffold's build contains no Voice Live code). An app that never sets
 it therefore has an unchanged composer, an unchanged runtime, and no added bytes.
 
-**Tier convention:** `foundry-` prefix on every package projects the brand. `foundry-agent` has no runtime-tier suffix because it's pure cross-runtime transport (zero React, zero DOM). `foundry-web-*` packages are React-DOM tier. Future tiers reserved by convention: `foundry-native-*` (React Native), `foundry-unity-*` (Unity), `foundry-outlook-shell`, `foundry-teams-shell`.
+**Tier convention:** Packages use the `@lykomi` scope. `agent` has no runtime-tier prefix because it is pure cross-runtime transport (zero React, zero DOM). `web-*` packages are React-DOM tier. Future tiers reserved by convention: `native-*` (React Native), `unity-*` (Unity), `outlook-shell`, and `teams-shell`.
 
 # Stack & Versions
 
@@ -57,8 +57,8 @@ Rules:
 
   Revisit when it exposes a CUSTOM/RAW event hook, leaves 0.0.x, and stabilises resume/threadList. Its interrupt/HITL and A2UI machinery would then be a genuine upgrade over this adapter.
 
-- **Cross-runtime contract** — `@iloveagents/foundry-agent` has zero React, zero `@assistant-ui/*`, zero DOM. Enforced by `packages/web-ui/src/__tests__/open-core-guards.test.ts`. Future Outlook / Teams / native shells consume it directly.
-- **Zustand pattern** — `@iloveagents/foundry-agent` uses `zustand/vanilla`; React consumers bind via `useStore(store, selector)` from `"zustand"`.
+- **Cross-runtime contract** — `@lykomi/agent` has zero React, zero `@assistant-ui/*`, zero DOM. Enforced by `packages/web-ui/src/__tests__/open-core-guards.test.ts`. Future Outlook / Teams / native shells consume it directly.
+- **Zustand pattern** — `@lykomi/agent` uses `zustand/vanilla`; React consumers bind via `useStore(store, selector)` from `"zustand"`.
 - **Built packages** — runtime packages publish `dist/` ESM JavaScript and `.d.ts` declarations. Keep package exports pointed at `dist`, and keep CI package checks green before merging.
 
 # Boundaries
@@ -73,14 +73,14 @@ Rules:
 - Use `@/` path aliases in packages (relative imports only).
 - Add backward-compatibility shims pre-1.0 — every caller updates lock-step in the same PR.
 - Import `react`, `react-dom`, `@assistant-ui/*`, or bare `"zustand"` inside `packages/agent/src/` (msal subpath excepted for `@azure/msal-browser`).
-- **Re-introduce sibling `@iloveagents/foundry-*` packages into `peerDependencies`.** They belong in `dependencies` with `workspace:*` — the four ship together as a coordinated `fixed` changesets group, and pnpm hoists by name so consumers still get a single instance. As peerDeps they trigger changesets' `shouldBumpMajor` cascade: one `minor` on any sibling exits the strict `^0.x.y` peer range, promotes every dependent to a major bump, and the `fixed` group then syncs all four to it. This has fired once — `1.0.0` and `1.0.1` exist on npm as a result and can never be reused, which is why the version line skips them. Enforced by [`open-core-guards.test.ts`](packages/web-ui/src/__tests__/open-core-guards.test.ts).
-- **Publish by hand with `npm publish`.** The sibling `@iloveagents/foundry-*` deps carry
+- **Re-introduce sibling `@lykomi/*` packages into `peerDependencies`.** They belong in `dependencies` with `workspace:*` — the four ship together as a coordinated `fixed` changesets group, and pnpm hoists by name so consumers still get a single instance. As peerDeps they trigger changesets' `shouldBumpMajor` cascade: one `minor` on any sibling exits the strict `^0.x.y` peer range, promotes every dependent to a major bump, and the `fixed` group then syncs all four to it. This has fired once — `1.0.0` and `1.0.1` exist on npm as a result and can never be reused, which is why the version line skips them. Enforced by [`open-core-guards.test.ts`](packages/web-ui/src/__tests__/open-core-guards.test.ts).
+- **Publish by hand with `npm publish`.** The sibling `@lykomi/*` deps carry
   `workspace:^`, and only pnpm rewrites that into a real range when packing — `npm publish` uploads
   the protocol string verbatim, and every install of the result fails with
   `ERR_PNPM_WORKSPACE_PKG_NOT_FOUND`. It also skips `pack:check`, which already refuses workspace
   ranges in a packed tarball. Releases go through the Release npm workflow; a version published
   around it cannot be taken back, only superseded. This has fired once, on
-  `@iloveagents/foundry-web-voice@0.1.0`.
+  `@lykomi/web-voice@0.1.0`.
 
 - **Name a private deployment** — an organisation, tenant, or internal project — anywhere in this repo, including code comments, changesets, generated changelogs, docs, and **commit messages**. Enforced by `pnpm check:sensitive` (in `pnpm test` and CI). Phrase it generically instead: "a downstream app", "a production deployment". Commit messages are checked too, because anything reachable from a pull-request ref is retained by the forge indefinitely — a later branch rewrite does not undo it.
 
@@ -113,14 +113,14 @@ whether the module registered its tools at all.
 
 # Open-core packaging (history)
 
-Foundry UI was extracted from a commercial product on 2026-04-26. The four packages here were renamed — useful if you are migrating off the old scope:
+LYKOMI UI was extracted from a commercial product on 2026-04-26. The four packages here were renamed — useful if you are migrating off the old scope:
 
-| Origin                      | Now                                   |
-| --------------------------- | ------------------------------------- |
-| `@lastspace/agent`          | `@iloveagents/foundry-agent`          |
-| `@lastspace/web-primitives` | `@iloveagents/foundry-web-primitives` |
-| `@lastspace/web-ui`         | `@iloveagents/foundry-web-ui`         |
-| `@lastspace/web-shell`      | `@iloveagents/foundry-web-shell`      |
+| Origin                      | Now                      |
+| --------------------------- | ------------------------ |
+| `@lastspace/agent`          | `@lykomi/agent`          |
+| `@lastspace/web-primitives` | `@lykomi/web-primitives` |
+| `@lastspace/web-ui`         | `@lykomi/web-ui`         |
+| `@lastspace/web-shell`      | `@lykomi/web-shell`      |
 
 # Where to find more
 
@@ -137,11 +137,11 @@ Foundry UI was extracted from a commercial product on 2026-04-26. The four packa
 - **Codex**: reads this file natively. Layering: nearest `AGENTS.md` wins for a given path.
 - **Claude Code**: reads `CLAUDE.md` which `@`-imports this file, plus per-package `CLAUDE.md` files. Repo-local config: `.claude/settings.json` (permissions) + `.mcp.json` (grounding MCPs).
 - **GitHub Copilot / Cursor**: both read root + nested `AGENTS.md` natively; Copilot coding agent preinstalls deps via `.github/workflows/copilot-setup-steps.yml`.
-- **Downstream apps** (generated starters, products built on these packages): install the Claude Code plugin — `/plugin marketplace add lykomi/ui` → `/plugin install foundry-ui@foundry-ui`. Source: [`plugins/foundry-ui/`](plugins/foundry-ui/) (grounding skill, ChatModule authoring skill, doc MCPs). Keep the plugin's skills in sync with this file's Grounding + conventions sections when they change.
+- **Downstream apps** (generated starters, products built on these packages): install the Claude Code plugin — `/plugin marketplace add lykomi/ui` → `/plugin install lykomi-ui@lykomi-ui`. Source: [`plugins/lykomi-ui/`](plugins/lykomi-ui/) (grounding skill, ChatModule authoring skill, doc MCPs). Keep the plugin's skills in sync with this file's Grounding + conventions sections when they change.
 
 # What ships is the published package, not the workspace
 
-Consumers install `@iloveagents/foundry-*` from npm. A sibling workspace
+Consumers install `@lykomi/*` from npm. A sibling workspace
 (`lastspace-meta`) links this source directly, which is convenient and
 misleading: an export that exists only here looks fine to a linked consumer
 and is missing for everyone else until it is released.
@@ -149,7 +149,7 @@ and is missing for everyone else until it is released.
 - **A new export is not usable by a consumer until it is published.** If a
   downstream repo needs it, the order is: merge here → merge the changesets
   version PR → confirm npm has it → bump the consumer's pin.
-- **Check the artifact, not the build.** `npm pack @iloveagents/foundry-web-ui@<v>`
+- **Check the artifact, not the build.** `npm pack @lykomi/web-ui@<v>`
   and look inside: the symbol, and `dist/styles.css` if the change ships CSS.
   A green build says the source compiles, not that the package carries it.
 - **Every change needs a changeset.** No changeset, no release, and a

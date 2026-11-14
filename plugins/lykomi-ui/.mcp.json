@@ -1,0 +1,13 @@
+{
+  "//": "Grounding servers for the LYKOMI UI stack: current library docs (context7) + Microsoft Learn (Agent Framework / Foundry).",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "microsoft_docs_mcp": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    }
+  }
+}

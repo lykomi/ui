@@ -1,10 +1,10 @@
 /**
- * The chart subpath — `@iloveagents/foundry-web-ui/chart`.
+ * The chart subpath — `@lykomi/web-ui/chart`.
  *
  * Charts are an optional tier: recharts is a real dependency, and a host
  * that never draws one should not carry it into its module graph. The
  * root barrel therefore does not re-export this file (same reasoning as
- * `@iloveagents/foundry-agent/msal`); import from the subpath.
+ * `@lykomi/agent/msal`); import from the subpath.
  */
 
 export {

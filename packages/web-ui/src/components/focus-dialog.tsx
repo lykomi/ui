@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuiState } from "@assistant-ui/react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import { X } from "lucide-react";
 import { DialogContent, DialogTitle } from "../ui/dialog.tsx";
 import { useToolPanelStore, type ToolPanelContent } from "../lib/tool-panel-store.ts";

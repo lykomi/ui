@@ -320,10 +320,10 @@ it("honors native region labels and lets the explicit guide label take precedenc
 it("routes native naming attributes to the progress list", () => {
   act(() => root.render(<ProcessSteps steps={steps} aria-label="Import progress" />));
   expect(host.querySelector("ol")?.getAttribute("aria-label")).toBe("Import progress");
-  expect(host.querySelector(".foundry-process")?.hasAttribute("aria-label")).toBe(false);
+  expect(host.querySelector(".lykomi-process")?.hasAttribute("aria-label")).toBe(false);
   act(() => root.render(<ProcessSteps steps={steps} aria-labelledby="workflow-heading" />));
   expect(host.querySelector("ol")?.getAttribute("aria-labelledby")).toBe("workflow-heading");
-  expect(host.querySelector(".foundry-process")?.hasAttribute("aria-labelledby")).toBe(false);
+  expect(host.querySelector(".lykomi-process")?.hasAttribute("aria-labelledby")).toBe(false);
 });
 
 it("shares a heading-based guide name with the progress list", () => {
@@ -400,7 +400,7 @@ it("compact standalone progress delegates clicks to the host and retains accessi
   act(() => button.click());
   expect(action).toHaveBeenCalledWith("docs");
   expect(button.hasAttribute("aria-pressed")).toBe(false);
-  expect(host.querySelector(".foundry-process-focus")).toBeNull();
+  expect(host.querySelector(".lykomi-process-focus")).toBeNull();
   expect(host.querySelector('[aria-current="step"]')).toBeNull();
   act(() =>
     root.render(
@@ -415,17 +415,17 @@ it("expanded guidance omits redundant counts and keeps the owning step label", (
     { ...steps[0], title: "Choose source files", content: <input aria-label="Source" /> },
   ];
   act(() => root.render(<ProcessGuide steps={guided} currentStepId="docs" />));
-  expect(host.querySelector(".foundry-process-position")?.textContent).toBe("Documents");
+  expect(host.querySelector(".lykomi-process-position")?.textContent).toBe("Documents");
   expect(host.textContent).not.toContain("Step 1 of 1");
-  expect(host.querySelector(".foundry-process-guidance-body")?.hasAttribute("hidden")).toBe(false);
-  expect(host.querySelector(".foundry-process-disclosure")).toBeNull();
+  expect(host.querySelector(".lykomi-process-guidance-body")?.hasAttribute("hidden")).toBe(false);
+  expect(host.querySelector(".lykomi-process-disclosure")).toBeNull();
 });
 
 it("keeps chevrons opt-in and forwards the option from guidance to progress", () => {
   act(() => root.render(<ProcessGuide steps={steps} currentStepId="setup" />));
   expect(host.querySelector("[data-chevrons]")).toBeNull();
   act(() => root.render(<ProcessGuide steps={steps} currentStepId="setup" showChevrons />));
-  expect(host.querySelector(".foundry-process")?.hasAttribute("data-chevrons")).toBe(true);
+  expect(host.querySelector(".lykomi-process")?.hasAttribute("data-chevrons")).toBe(true);
 });
 it("keeps optionality independent of navigation and localizes compact optional labels", () => {
   const onStepSelect = vi.fn();
@@ -469,14 +469,20 @@ it("keeps optionality independent of navigation and localizes compact optional l
 it("shows a dashed circle only while an optional step is unstarted", () => {
   const optional = { id: "extra", label: "Extra", optional: true };
   act(() => root.render(<ProcessSteps steps={[{ ...optional, status: "pending" }]} />));
-  expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).not.toBeNull();
+  expect(
+    host.querySelector('.lykomi-process-marker circle[stroke-dasharray="3 3"]'),
+  ).not.toBeNull();
 
   act(() => root.render(<ProcessSteps steps={[{ ...optional, status: "complete" }]} />));
-  expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).toBeNull();
-  expect(host.querySelector('.foundry-process-step[data-status="complete"] svg')).not.toBeNull();
+  expect(host.querySelector('.lykomi-process-marker circle[stroke-dasharray="3 3"]')).toBeNull();
+  expect(host.querySelector('.lykomi-process-step[data-status="complete"] svg')).not.toBeNull();
 
-  act(() => root.render(<ProcessSteps steps={[{ id: "required", label: "Required", status: "pending" }]} />));
-  expect(host.querySelector('.foundry-process-marker circle[stroke-dasharray="3 3"]')).toBeNull();
+  act(() =>
+    root.render(
+      <ProcessSteps steps={[{ id: "required", label: "Required", status: "pending" }]} />,
+    ),
+  );
+  expect(host.querySelector('.lykomi-process-marker circle[stroke-dasharray="3 3"]')).toBeNull();
 });
 it("only completes optional steps after the host records completion or a skip", () => {
   const extra: GuidedProcessStep = { id: "extra", label: "Extra", status: "ready", optional: true };
@@ -502,18 +508,18 @@ it("keeps compact guidance folded initially and separates selection from disclos
     ),
   );
   const disclosure = () =>
-    host.querySelector<HTMLButtonElement>(".foundry-process-step-disclosure")!;
+    host.querySelector<HTMLButtonElement>(".lykomi-process-step-disclosure")!;
   const body = () => document.getElementById(disclosure().getAttribute("aria-controls")!)!;
   expect(disclosure().getAttribute("aria-expanded")).toBe("false");
   expect(body().hidden).toBe(true);
-  expect(host.querySelector(".foundry-process-disclosure")).toBeNull();
+  expect(host.querySelector(".lykomi-process-disclosure")).toBeNull();
   act(() => disclosure().click());
   expect(select).not.toHaveBeenCalled();
   expect(body().hidden).toBe(false);
   act(() => disclosure().click());
   expect(body().hidden).toBe(true);
   act(() =>
-    host.querySelector<HTMLButtonElement>("li[data-selected] .foundry-process-target")!.click(),
+    host.querySelector<HTMLButtonElement>("li[data-selected] .lykomi-process-target")!.click(),
   );
   expect(select).toHaveBeenCalledWith("setup");
   expect(body().hidden).toBe(false);
@@ -542,13 +548,13 @@ it("respects host-controlled compact disclosure and retains fields while folded"
   render(false);
   const input = host.querySelector("input")!;
   act(() =>
-    host.querySelector<HTMLButtonElement>("li[data-selected] .foundry-process-target")!.click(),
+    host.querySelector<HTMLButtonElement>("li[data-selected] .lykomi-process-target")!.click(),
   );
   expect(change).toHaveBeenCalledWith(true);
-  expect(host.querySelector(".foundry-process-focus")?.hasAttribute("hidden")).toBe(true);
+  expect(host.querySelector(".lykomi-process-focus")?.hasAttribute("hidden")).toBe(true);
   render(true);
   input.value = "Unsaved";
-  act(() => host.querySelector<HTMLButtonElement>(".foundry-process-step-disclosure")!.click());
+  act(() => host.querySelector<HTMLButtonElement>(".lykomi-process-step-disclosure")!.click());
   expect(change).toHaveBeenLastCalledWith(false);
   render(false);
   expect(host.querySelector("input")).toBe(input);

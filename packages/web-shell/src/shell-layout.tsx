@@ -10,10 +10,10 @@ import {
   findNavItem,
   useThemeStore,
   type ThemeLayer,
-} from "@iloveagents/foundry-web-ui";
+} from "@lykomi/web-ui";
 import type { ChatModule } from "./types.ts";
 const WorkbenchPreview = lazy(() =>
-  import("@iloveagents/foundry-web-ui/workbench").then((module) => ({
+  import("@lykomi/web-ui/workbench").then((module) => ({
     default: module.WorkbenchPreview,
   })),
 );

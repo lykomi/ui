@@ -2,7 +2,7 @@ import { PinStateIcon } from "./pin-state-icon.tsx";
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { X, Maximize2, Minimize2, Copy, Check, FolderOpen } from "lucide-react";
 import { useNavigate } from "react-router";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import {
   clampPanelWidth,
   MIN_PANEL_WIDTH,

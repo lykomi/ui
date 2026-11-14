@@ -2,7 +2,7 @@ import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { clientToolRegistry } from "@iloveagents/foundry-agent";
+import { clientToolRegistry } from "@lykomi/agent";
 import { useAppStore } from "../../lib/app-store.ts";
 import { summarizeChatContext } from "../../lib/chat-context-summary.ts";
 import { ProcessGuide, type GuidedProcessStep } from "./process-guide.tsx";
@@ -226,7 +226,7 @@ it("follows the focused process when several guides are present and cleans focus
       </>,
     ),
   );
-  const guides = host.querySelectorAll<HTMLElement>(".foundry-process-guide");
+  const guides = host.querySelectorAll<HTMLElement>(".lykomi-process-guide");
   act(() => guides[1].dispatchEvent(new Event("pointerdown", { bubbles: true })));
   expect(summarizeChatContext(useAppStore.getState().getAgentState()).detail).toBe(
     "Other › Documents",

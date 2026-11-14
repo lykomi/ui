@@ -1,5 +1,5 @@
 /**
- * Guard test: @iloveagents/foundry-web-ui must never import from @lastspace/spaces-web-ui.
+ * Guard test: @lykomi/web-ui must never import from @lastspace/spaces-web-ui.
  * This prevents SPACES code from leaking back into the React UI core package.
  */
 import { describe, expect, it } from "vitest";
@@ -20,7 +20,7 @@ function findFiles(dir: string, ext: string[]): string[] {
   return results;
 }
 
-describe("@iloveagents/foundry-web-ui import boundaries", () => {
+describe("@lykomi/web-ui import boundaries", () => {
   const srcDir = join(import.meta.dirname!, "..");
   const files = findFiles(srcDir, [".ts", ".tsx"]);
 

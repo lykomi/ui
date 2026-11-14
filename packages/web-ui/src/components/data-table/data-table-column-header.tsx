@@ -1,7 +1,7 @@
 /** Sortable column header with an asc / desc / hide menu. */
 import type { Column } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ChevronsUpDown, EyeOff } from "lucide-react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,

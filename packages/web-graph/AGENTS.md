@@ -1,4 +1,4 @@
-`@iloveagents/foundry-web-graph` — the graph visualization package. A force-directed `GraphView`, a source-neutral payload contract, and an optional assistant-ui card + panel renderer.
+`@lykomi/web-graph` — the graph visualization package. A force-directed `GraphView`, a source-neutral payload contract, and an optional assistant-ui card + panel renderer.
 
 # Entry points, and why they are split
 
@@ -16,7 +16,7 @@ The split is the point. A dashboard that only draws a graph must not load the ch
 - **`react-force-graph-2d` is imported by `graph-canvas.tsx` and nowhere else.** It is loaded through `React.lazy`, so the engine and the d3 force/zoom/drag stack stay out of the bundle until a graph is actually rendered. A guard test enforces the single import site.
 - **Nothing outside `adapters/` may mention Neo4j.** The visualizer is source-neutral or it is not reusable. A guard test enforces this too.
 - **`web-ui` must never depend on this package.** The dependency runs one way — `web-graph` -> `web-ui` — or `react-force-graph-2d` lands in the install of every consumer that only wants a chat. Encoded in `OPEN_CORE_GRAPH` in `packages/web-ui/src/__tests__/open-core-guards.test.ts`.
-- **Sibling `@iloveagents/foundry-*` deps go in `dependencies` with `workspace:^`, never `peerDependencies`** — see the changesets `shouldBumpMajor` cascade note in the root `AGENTS.md`.
+- **Sibling `@lykomi/*` deps go in `dependencies` with `workspace:^`, never `peerDependencies`** — see the changesets `shouldBumpMajor` cascade note in the root `AGENTS.md`.
 - **The tooltip must return an `HTMLElement`, never a string.** `force-graph`'s tooltip assigns a string via `innerHTML` (`float-tooltip` calls d3's `.html()`), and captions come out of a database. `graph-tooltip.ts` builds DOM with `textContent`. Do not "simplify" it into a template literal.
 
 # The panel is a workspace, and that shapes the API

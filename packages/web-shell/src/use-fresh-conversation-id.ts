@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { createUiId, useChatLifecycleStore } from "@iloveagents/foundry-web-ui";
+import { createUiId, useChatLifecycleStore } from "@lykomi/web-ui";
 
 /** New-chat intent advances the fallback ID even without a host sticky-ID hook. */
 export function useFreshConversationId(sticky: string | null) {

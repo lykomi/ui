@@ -29,7 +29,7 @@ import {
 } from "./lib/local-packs.mjs";
 
 const root = resolve(import.meta.dirname, "..");
-const workDir = mkdtempSync(join(tmpdir(), "foundry-ui-neo4j-"));
+const workDir = mkdtempSync(join(tmpdir(), "lykomi-ui-neo4j-"));
 const packDir = join(workDir, "packs");
 
 // `--out <dir>` puts the scaffold somewhere the caller chose, so CI can run the
@@ -59,13 +59,13 @@ const step = (message) => console.log(`\n▸ ${message}`);
 
 step("Packing the workspace");
 const tarballs = packWorkspace({ root, packDir, pnpm });
-if (!tarballs.has("@iloveagents/foundry-web-graph")) {
-  throw new Error("foundry-web-graph was not packed — the preset would install it from npm.");
+if (!tarballs.has("@lykomi/web-graph")) {
+  throw new Error("web-graph was not packed — the preset would install it from npm.");
 }
 
 step("Scaffolding --preset neo4j");
 run("node", [
-  "packages/create-foundry-ui-app/dist/index.mjs",
+  "packages/create-lykomi-app/dist/index.mjs",
   appDir,
   "--preset",
   "neo4j",
@@ -74,7 +74,7 @@ run("node", [
 
 assertNoAssistantUiPins(join(appDir, "pnpm-workspace.yaml"), { existsSync });
 
-// The preset pins foundry-web-graph EXACTLY, and `sync-template-versions.mjs`
+// The preset pins web-graph EXACTLY, and `sync-template-versions.mjs`
 // rewrites that pin on every release. If the two ever disagree the scaffold
 // installs a version the workspace is not building — so check the manifest
 // names the workspace version before the packs paper over it.
@@ -82,10 +82,10 @@ const workspaceGraphVersion = JSON.parse(
   readFileSync(join(root, "packages/web-graph/package.json"), "utf8"),
 ).version;
 const scaffoldGraphPin = JSON.parse(readFileSync(join(appDir, "package.json"), "utf8"))
-  .dependencies["@iloveagents/foundry-web-graph"];
+  .dependencies["@lykomi/web-graph"];
 if (scaffoldGraphPin !== workspaceGraphVersion) {
   throw new Error(
-    `The neo4j preset pins @iloveagents/foundry-web-graph ${scaffoldGraphPin}, but the ` +
+    `The neo4j preset pins @lykomi/web-graph ${scaffoldGraphPin}, but the ` +
       `workspace builds ${workspaceGraphVersion}. Run \`pnpm sync:template-versions\`.`,
   );
 }
@@ -113,13 +113,13 @@ const readAll = (ext) =>
 
 step("Checking the bundle");
 
-if (!assets.some((file) => file.startsWith("foundry-workbench-"))) {
+if (!assets.some((file) => file.startsWith("lykomi-workbench-"))) {
   throw new Error(
     "The workbench preview was folded into the initial vendor bundle instead of its lazy chunk.",
   );
 }
 
-// `react-force-graph-2d`, `react-kapsule` and `foundry-web-graph` all contain
+// `react-force-graph-2d`, `react-kapsule` and `web-graph` all contain
 // "react", so the vendor-graph rule in vite.config.ts has to come BEFORE the
 // react rule. Get that wrong and the whole force engine lands in vendor-react:
 // still builds, still runs, and every visitor downloads d3 to read a chat.
@@ -180,13 +180,11 @@ if (!scannedOnlyUtilities.some((utility) => css.includes(utility))) {
   throw new Error(
     "None of the graph chrome's utility classes are in the built CSS, so Tailwind did not " +
       "scan the package. src/index.css needs its @source directive for " +
-      "@iloveagents/foundry-web-graph/dist — without it the graph builds and renders unstyled.",
+      "@lykomi/web-graph/dist — without it the graph builds and renders unstyled.",
   );
 }
 if (!css.includes("--graph-1")) {
-  throw new Error(
-    "The --graph-1 palette is missing — foundry-web-graph/styles.css is not imported.",
-  );
+  throw new Error("The --graph-1 palette is missing — web-graph/styles.css is not imported.");
 }
 
 // The cards and the client tools are registered by two different calls, and
@@ -206,7 +204,7 @@ for (const marker of ["foundry.graph", "graph_show"]) {
   }
 }
 // `graph_schema` and `graph_expand_node` appear NOWHERE in
-// @iloveagents/foundry-web-graph's dist, so in this bundle they can only come
+// @lykomi/web-graph's dist, so in this bundle they can only come
 // from the scaffold's own `makeGraphToolUI` bindings. `graph_read_cypher` is
 // deliberately not in this list: the package carries it in a JSDoc example, and
 // a comment that survives bundling would make the check vacuous.

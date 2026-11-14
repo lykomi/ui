@@ -2,7 +2,7 @@
  * `createVoiceModule` — the voice tier as a `bootstrapShell` module.
  *
  * The returned object is structurally a `ChatModule`. It is typed locally
- * rather than imported from `@iloveagents/foundry-web-shell` on purpose: the
+ * rather than imported from `@lykomi/web-shell` on purpose: the
  * shell composes modules, so a module importing the shell would invert the
  * dependency and make every voice consumer install the shell — including the
  * ones that build their own runtime. Only the three fields this module
@@ -12,7 +12,7 @@
 import type { ReactNode } from "react";
 import { installVoice, type VoiceInstallOptions } from "./install.tsx";
 
-/** The slice of `foundry-web-shell`'s `ChatModule` contract this module fills. */
+/** The slice of `web-shell`'s `ChatModule` contract this module fills. */
 export interface VoiceChatModule {
   name: string;
   layoutExtras?: ReactNode;

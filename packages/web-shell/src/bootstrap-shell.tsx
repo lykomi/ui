@@ -33,7 +33,7 @@ export function bootstrapShell(opts: BootstrapShellOptions = {}): void {
   const root = rootElement ?? document.getElementById("root");
   if (!root) {
     throw new Error(
-      "[@iloveagents/foundry-web-shell] No mount target — pass `rootElement` or ensure a #root element exists.",
+      "[@lykomi/web-shell] No mount target — pass `rootElement` or ensure a #root element exists.",
     );
   }
 

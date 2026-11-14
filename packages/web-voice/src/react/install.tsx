@@ -23,7 +23,7 @@ import {
   registerVoiceAdapter,
   useChatSlotsStore,
   useVoiceAdapterStore,
-} from "@iloveagents/foundry-web-ui";
+} from "@lykomi/web-ui";
 import { VoiceBridge } from "../adapter/voice-bridge.ts";
 import type { VoiceConfig } from "../adapter/types.ts";
 import { VoiceMicButton } from "./voice-mic-button.tsx";

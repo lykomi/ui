@@ -3,7 +3,7 @@ import type { StreamingStatus } from "../store/streaming-status-store.ts";
 /**
  * Normalized event stream emitted by `AGUIRunner.run()`. The runner is
  * framework-agnostic; consumers (e.g. the assistant-ui shim in
- * `@iloveagents/foundry-web-ui`) translate these events into their own runtime model.
+ * `@lykomi/web-ui`) translate these events into their own runtime model.
  *
  * `request-sent` carries the exact AG-UI request payload — used by host
  * dev-tooling to capture each turn.

@@ -1,7 +1,7 @@
 /** Selection summary, rows-per-page, page x of y, first/prev/next/last. */
 import type { Table } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import { Select } from "../../ui/select.tsx";
 
 export interface DataTablePaginationProps<T> {

@@ -24,7 +24,7 @@ import {
   ChevronLeft,
   LoaderCircle,
 } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import {
   useSidebarStore,
   RAIL_WIDTH,
@@ -49,7 +49,7 @@ import {
   hasExternalFilesData,
 } from "../lib/nav-dnd.ts";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1648,7 +1648,7 @@ function CollapsedNavShortcut({
 // updates (toggle one group, all SidebarContent instances re-render).
 // ---------------------------------------------------------------------------
 
-// Generic package-scoped key — ``foundry-web-ui`` is consumed beyond
+// Generic package-scoped key — ``web-ui`` is consumed beyond
 // the Spaces app, so we avoid consumer-specific names like
 // ``spaces.nav.collapsed``. Matches the keying style used by the
 // adjacent sidebar-store helpers (``sidebar``, ``sidebar-width``,

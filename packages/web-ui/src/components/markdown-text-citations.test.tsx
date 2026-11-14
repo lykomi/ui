@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { citationStore, linkStore } from "@iloveagents/foundry-agent";
+import { citationStore, linkStore } from "@lykomi/agent";
 const message = vi.hoisted(() => ({ text: "" }));
 vi.mock("@assistant-ui/react", async (original) => ({
   ...(await original<Record<string, unknown>>()),

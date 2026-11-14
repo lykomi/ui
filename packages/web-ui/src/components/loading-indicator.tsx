@@ -1,5 +1,5 @@
 import { useStore } from "zustand";
-import { streamingStatusStore } from "@iloveagents/foundry-agent";
+import { streamingStatusStore } from "@lykomi/agent";
 
 function formatToolName(name: string): string {
   return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

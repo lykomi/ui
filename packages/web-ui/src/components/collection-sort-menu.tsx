@@ -6,8 +6,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu.tsx";
-import { Button } from "@iloveagents/foundry-web-primitives";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 export interface CollectionSortOption {
   value: string;

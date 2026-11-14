@@ -1,5 +1,5 @@
 import { useId, useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import {
   ProcessSteps,
   processStatusLabels,
@@ -123,7 +123,7 @@ export function ProcessGuide({
         focusContext();
         onFocusCapture?.(event);
       }}
-      className={cn("foundry-process-guide", className)}
+      className={cn("lykomi-process-guide", className)}
       aria-label={accessibleLabel}
       aria-labelledby={ariaLabelledBy}
       data-framed={framed || undefined}
@@ -153,7 +153,7 @@ export function ProcessGuide({
         aria-labelledby={ariaLabelledBy}
       />
       {/* Announce state changes, not whole forms or high-frequency progress updates. */}
-      <span className="foundry-process-sr" role="status" aria-atomic="true">
+      <span className="lykomi-process-sr" role="status" aria-atomic="true">
         {liveStep
           ? `${liveStep.label}: ${liveStep.statusLabel ?? processStatusLabels[liveStep.status]}`
           : ""}

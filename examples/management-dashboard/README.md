@@ -9,11 +9,11 @@ From this repository, after the documented workspace install and build:
 
 ```sh
 pnpm dlx @tailwindcss/cli@4 -i examples/management-dashboard/styles.css -o examples/management-dashboard/generated.css
-pnpm --filter @iloveagents/foundry-web-shell exec vite ../../examples/management-dashboard --host 127.0.0.1
+pnpm --filter @lykomi/web-shell exec vite ../../examples/management-dashboard --host 127.0.0.1
 ```
 
 Open the printed local URL, or add `?gallery` for the full component gallery.
 Use **All components** / **Show dashboard** to switch views. Check desktop and phone widths, light/dark,
 keyboard controls and chart tooltips. This example imports source to preview
 unreleased framework APIs. Consumers must wait for the Changesets release,
-then import from `@iloveagents/foundry-web-ui/chart`.
+then import from `@lykomi/web-ui/chart`.

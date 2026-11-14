@@ -61,7 +61,7 @@ function Preview() {
       <div className="preview-shell">
         <header>
           <div>
-            <small>Foundry UI · local preview</small>
+            <small>LYKOMI UI · local preview</small>
             <h1>Process guidance</h1>
           </div>
           <Button variant="outline" onClick={() => setDark(!dark)}>

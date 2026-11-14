@@ -1,4 +1,4 @@
-Optional spoken-conversation tier. Published as `@iloveagents/foundry-web-voice`. Wraps the Azure Voice Live SDK (`@iloveagents/foundry-voice-live-react`, from npm) in assistant-ui's `RealtimeVoiceAdapter` contract.
+Optional spoken-conversation tier. Published as `@lykomi/web-voice`. Wraps the Azure Voice Live SDK (`@iloveagents/foundry-voice-live-react`, from npm) in assistant-ui's `RealtimeVoiceAdapter` contract.
 
 # Architecture
 
@@ -131,7 +131,7 @@ src/
 
 # Boundaries
 
-- `src/adapter/` MUST NOT import `react`, `react-dom`, or `@iloveagents/foundry-web-ui`. It MAY
+- `src/adapter/` MUST NOT import `react`, `react-dom`, or `@lykomi/web-ui`. It MAY
   import `@assistant-ui/react` for the voice contract itself. Enforced by `layering.test.ts`.
 - Store writes NEVER happen during render. `installVoice` mutates zustand stores, so
   `<FoundryVoice/>` installs in an effect — a `useState` initializer runs twice under StrictMode
@@ -145,10 +145,10 @@ src/
   unreachable and the bundler drops the package. "Optional" here is a runtime property enforced by
   tree-shaking, not an absence from the scaffold.
 - `ChatModule` is typed locally in `voice-module.tsx` rather than imported from
-  `@iloveagents/foundry-web-shell`: the shell composes modules, so importing it would invert the
+  `@lykomi/web-shell`: the shell composes modules, so importing it would invert the
   dependency and force every voice consumer to install the shell.
 
-# What `foundry-web-ui` contributes
+# What `web-ui` contributes
 
 Three seams, none of which name Voice Live:
 
@@ -162,8 +162,8 @@ Three seams, none of which name Voice Live:
 # Verifying
 
 ```bash
-pnpm --filter @iloveagents/foundry-web-voice test:unit
-pnpm --filter @iloveagents/foundry-web-voice typecheck
+pnpm --filter @lykomi/web-voice test:unit
+pnpm --filter @lykomi/web-voice typecheck
 ```
 
 `adapter/` is driven by a fake `VoiceTransportControls`, so the mode policies, barge-in, the speech

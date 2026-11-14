@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { primaryLabel, safeStringify, type GraphPayload } from "../model.ts";
 
 /** Rows the producer put in `meta` when a query returned scalars, not a graph. */

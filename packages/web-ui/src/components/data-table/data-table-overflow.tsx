@@ -1,6 +1,6 @@
 import { useEffect, useState, type RefObject } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 
 export const DATA_TABLE_PAGE_OVERFLOW_HEIGHT = 40;
 export const DATA_TABLE_PAGE_OVERFLOW_WIDTH = 96;

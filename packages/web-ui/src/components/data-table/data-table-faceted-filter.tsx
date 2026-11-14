@@ -6,7 +6,7 @@
 import type { Column } from "@tanstack/react-table";
 import { Check, PlusCircle } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.tsx";
 import {
   columnLabel,

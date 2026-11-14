@@ -1,10 +1,10 @@
-React UI core for the AG-UI protocol starter — hooks, stores, extension-point registries, assistant-ui adapter shim, ChatPanel, sidebar, layout components. Published as `@iloveagents/foundry-web-ui`.
+React UI core for the AG-UI protocol starter — hooks, stores, extension-point registries, assistant-ui adapter shim, ChatPanel, sidebar, layout components. Published as `@lykomi/web-ui`.
 
-Depends on `@iloveagents/foundry-web-primitives` (leaf primitives) and `@iloveagents/foundry-agent` (cross-runtime agent transport: AG-UI runner, vanilla stores, MSAL subpath, service-fetch factory).
+Depends on `@lykomi/web-primitives` (leaf primitives) and `@lykomi/agent` (cross-runtime agent transport: AG-UI runner, vanilla stores, MSAL subpath, service-fetch factory).
 
 # Architecture
 
-Relative imports only (no `@/` alias). Cross-package consumers use `@iloveagents/foundry-web-ui`.
+Relative imports only (no `@/` alias). Cross-package consumers use `@lykomi/web-ui`.
 
 ```
 src/
@@ -20,7 +20,7 @@ src/
 - MUST NOT import from `@ltwlf/spaces-web-ui` (or any commercial downstream package)
 - MUST NOT use `@/` path aliases (relative imports only)
 - MUST NOT import from `features/` or `pages/` (those are app-level)
-- Cross-runtime transport (AG-UI runner, registry, vanilla stores, MSAL token store) lives in `@iloveagents/foundry-agent`. Re-exporting it from this package is forbidden by the no-shim rule.
+- Cross-runtime transport (AG-UI runner, registry, vanilla stores, MSAL token store) lives in `@lykomi/agent`. Re-exporting it from this package is forbidden by the no-shim rule.
 
 # Lists (the DataTable family)
 
@@ -58,7 +58,7 @@ SPACES and other feature modules plug in via these registries:
 - **NavGroup.collapsedRail** (`nav-config.ts`): module-supplied renderer for the collapsed sidebar rail. Used when a group's collapsed view isn't a flat icon list — e.g. Spaces' "header link + active workspace's root".
 - **NavFooterAction** (`nav-store.ts`): action buttons in the sidebar footer
 - **Panel renderer registry** (`tool-panel-store.ts`): custom content renderers for the side panel (PDF, entity pages)
-- **Citation handler** (`citationStore` in `@iloveagents/foundry-agent`): handles `[n]` citation clicks in markdown
+- **Citation handler** (`citationStore` in `@lykomi/agent`): handles `[n]` citation clicks in markdown
 - **Tool UI** (via `makeAssistantToolUI` from `@assistant-ui/react`): custom rendering for agent tools
 
 # Adding Extension Points
@@ -70,14 +70,14 @@ SPACES and other feature modules plug in via these registries:
 
 # AG-UI Adapter
 
-- This package ships an `AGUIAdapterSDK` shim (`src/lib/ag-ui-adapter.ts`) that implements assistant-ui's `ChatModelAdapter` by wrapping `AGUIRunner` from `@iloveagents/foundry-agent`. The runner does the protocol; the shim translates `RunnerEvent`s into cumulative `ChatModelRunResult` yields.
+- This package ships an `AGUIAdapterSDK` shim (`src/lib/ag-ui-adapter.ts`) that implements assistant-ui's `ChatModelAdapter` by wrapping `AGUIRunner` from `@lykomi/agent`. The runner does the protocol; the shim translates `RunnerEvent`s into cumulative `ChatModelRunResult` yields.
 - `@assistant-ui/react` is pinned to **0.15.x**. We do not use the official `@assistant-ui/react-ag-ui` provider — see the root `AGENTS.md` for the blockers (it drops CUSTOM/RAW events, so heartbeats and citations vanish).
 - Tool UIs use `makeAssistantToolUI(...)`. The legacy `useAssistantToolUI` hook is no longer used.
 - Runtime state is read through the `aui` client: `useAui()`, `useAuiState()`, `useAuiEvent()`. The per-scope runtime hooks (`useComposerRuntime`, `useThreadRuntime`, `useMessageRuntime`, …) were **removed in 0.15** — reach the composer via `useAui().composer` (`setText`, `send`, `addAttachment`).
 
 # Client-Side Tools
 
-Tools live in `clientToolRegistry` (vanilla zustand store in `@iloveagents/foundry-agent`). The runner sends schemas to the backend, intercepts `TOOL_CALL_END` for any client-side tool, executes it locally, and replays the assistant + tool messages on the next turn with the same `toolCallId`.
+Tools live in `clientToolRegistry` (vanilla zustand store in `@lykomi/agent`). The runner sends schemas to the backend, intercepts `TOOL_CALL_END` for any client-side tool, executes it locally, and replays the assistant + tool messages on the next turn with the same `toolCallId`.
 
 - **`ui_*`** — global tools registered at app init in `lib/client-tools.ts` (`ui_navigate`, `ui_set_theme`, `ui_open_panel`, `ui_select_item`, `ui_update_content`, `ui_highlight`, `ui_get_context`, `ui_confirm`).
 - **`page_*`** — page-specific tools registered via `usePageTools([{ name, description, parameters, execute }])`.
@@ -86,7 +86,7 @@ Custom tool UIs are top-level `makeAssistantToolUI(...)` constants rendered as c
 
 **A tool UI must not be where a result gets ACTED on.** Cards render inside `TurnActivity`, which is collapsed by default, and Radix unmounts a closed `CollapsibleContent` — so anything a card DOES when its result lands (open a panel, fold the result into what is on screen, start a poll) never happens unless the reader expands that turn. Downstream this has cost two real bugs: a deep-research task nobody polled (ltwlf/lastspace#650) and a graph expansion the panel never received.
 
-The answer is a **headless watcher over the thread's own parts**, mounted once alongside the tool UIs and independent of what is expanded — `CitationSeeder`/`TaskSeeder` in `@ltwlf/spaces-web-ui`, `GraphResultSeeder` in `@iloveagents/foundry-web-graph`. Give it a baseline taken on the first non-empty view of a thread, or reopening a saved conversation replays its entire history. Force-mounting the fold is the tempting one-line alternative and it is worse: every card in every transcript then costs something, and history replays anyway.
+The answer is a **headless watcher over the thread's own parts**, mounted once alongside the tool UIs and independent of what is expanded — `CitationSeeder`/`TaskSeeder` in `@ltwlf/spaces-web-ui`, `GraphResultSeeder` in `@lykomi/web-graph`. Give it a baseline taken on the first non-empty view of a thread, or reopening a saved conversation replays its entire history. Force-mounting the fold is the tempting one-line alternative and it is worse: every card in every transcript then costs something, and history replays anyway.
 
 `ShowDocumentToolUI` in this package still auto-opens from render and so is subject to exactly this — it works when the turn is expanded and not otherwise.
 

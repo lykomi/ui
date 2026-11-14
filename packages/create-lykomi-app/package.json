@@ -1,0 +1,54 @@
+{
+  "name": "create-lykomi-app",
+  "version": "0.9.21",
+  "license": "MIT",
+  "description": "Scaffold a new LYKOMI app — AG-UI protocol + Microsoft Agent Framework + Azure Foundry, ready to run.",
+  "keywords": [
+    "create-app",
+    "lykomi-ui",
+    "ag-ui",
+    "agent-framework",
+    "azure-foundry",
+    "scaffold"
+  ],
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "bin": {
+    "create-lykomi-app": "./dist/index.mjs"
+  },
+  "files": [
+    "dist",
+    "presets",
+    "template",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lykomi/ui.git",
+    "directory": "packages/create-lykomi-app"
+  },
+  "homepage": "https://github.com/lykomi/ui/tree/main/packages/create-lykomi-app#readme",
+  "bugs": "https://github.com/lykomi/ui/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepublishOnly": "pnpm build",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsdown": "^0.21.10",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.4"
+  }
+}

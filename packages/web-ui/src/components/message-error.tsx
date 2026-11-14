@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { MessagePrimitive, ErrorPrimitive } from "@assistant-ui/react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 /**
  * Visible, styled run-error for an assistant message — rendered whenever the

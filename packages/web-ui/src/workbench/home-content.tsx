@@ -1,5 +1,5 @@
 import { ComposerPrimitive, ThreadPrimitive } from "@assistant-ui/react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import { MessageSquare } from "lucide-react";
 import { ComposerInput } from "../components/composer-input.tsx";
 import { ComposerAddMenu } from "../components/composer-add-menu.tsx";

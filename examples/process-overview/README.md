@@ -7,7 +7,7 @@ From the repository after the documented workspace install/build:
 
 ```sh
 pnpm dlx @tailwindcss/cli@4 -i examples/process-overview/styles.css -o examples/process-overview/generated.css
-pnpm --filter @iloveagents/foundry-web-shell exec vite ../../examples/process-overview --host 127.0.0.1 --port 5190
+pnpm --filter @lykomi/web-shell exec vite ../../examples/process-overview --host 127.0.0.1 --port 5190
 ```
 
 Query flags: `narrow`, `vertical`, `responsive`, `rtl`, `dark`, `details`,

@@ -1,7 +1,7 @@
 import type { FC } from "react";
 import { ComposerPrimitive } from "@assistant-ui/react";
 import { Paperclip, Plus } from "lucide-react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,

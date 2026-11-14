@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { PinStateIcon } from "./pin-state-icon.tsx";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 
 /** Pinned glyphs are upright; unpinned glyphs tilt. Labels describe the action. */
 export function PinToggle({

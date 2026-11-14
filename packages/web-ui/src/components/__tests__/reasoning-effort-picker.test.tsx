@@ -19,7 +19,7 @@ vi.mock("zustand", () => ({
     ),
 }));
 
-vi.mock("@iloveagents/foundry-agent", () => ({
+vi.mock("@lykomi/agent", () => ({
   reasoningEffortStore: { __which: "effort" },
   reasoningDefaultStore: { __which: "default" },
   REASONING_EFFORT_LABELS: {

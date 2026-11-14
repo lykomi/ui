@@ -1,6 +1,6 @@
 /**
  * Lifecycle DI store for chat-related cross-cutting concerns that
- * foundry-ui needs to invoke but spaces-web-ui owns the implementation
+ * lykomi-ui needs to invoke but spaces-web-ui owns the implementation
  * for. Avoids a circular dependency between the two packages.
  *
  * Today's only hook: ``onNewConversation`` — called when the user

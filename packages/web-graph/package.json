@@ -1,8 +1,8 @@
 {
-  "name": "@iloveagents/foundry-web-graph",
+  "name": "@lykomi/web-graph",
   "version": "0.3.16",
   "license": "MIT",
-  "description": "Graph visualization for Foundry UI — a Bloom-like force-directed graph view, a source-agnostic graph payload contract, and an optional assistant-ui tool card + panel renderer.",
+  "description": "Graph visualization for LYKOMI UI — a Bloom-like force-directed graph view, a source-agnostic graph payload contract, and an optional assistant-ui tool card + panel renderer.",
   "keywords": [
     "react",
     "graph",
@@ -10,7 +10,7 @@
     "force-directed",
     "neo4j",
     "cypher",
-    "foundry-ui",
+    "lykomi-ui",
     "assistant-ui"
   ],
   "repository": {
@@ -64,9 +64,9 @@
     }
   },
   "dependencies": {
-    "@iloveagents/foundry-agent": "workspace:^",
-    "@iloveagents/foundry-web-primitives": "workspace:^",
-    "@iloveagents/foundry-web-ui": "workspace:^",
+    "@lykomi/agent": "workspace:^",
+    "@lykomi/web-primitives": "workspace:^",
+    "@lykomi/web-ui": "workspace:^",
     "react-force-graph-2d": "^1.29.1"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
+import { useToolPanelStore } from "@lykomi/web-ui";
 import {
   deepEqual,
   mergeGraphPayloads,

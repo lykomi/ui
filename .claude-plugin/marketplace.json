@@ -1,14 +1,14 @@
 {
-  "name": "foundry-ui",
+  "name": "lykomi-ui",
   "owner": {
-    "name": "iLoveAgents",
-    "url": "https://github.com/iLoveAgents"
+    "name": "LYKOMI",
+    "url": "https://github.com/lykomi"
   },
   "plugins": [
     {
-      "name": "foundry-ui",
-      "source": "./plugins/foundry-ui",
-      "description": "Agent toolkit for apps built on Foundry UI — grounding skill for the fast-moving assistant-ui/AG-UI/Agent Framework stack, a ChatModule authoring skill, and the doc MCP servers.",
+      "name": "lykomi-ui",
+      "source": "./plugins/lykomi-ui",
+      "description": "Agent toolkit for apps built on LYKOMI UI — grounding skill for the fast-moving assistant-ui/AG-UI/Agent Framework stack, a ChatModule authoring skill, and the doc MCP servers.",
       "version": "0.1.0"
     }
   ]

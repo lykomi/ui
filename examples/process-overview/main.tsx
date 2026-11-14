@@ -41,7 +41,7 @@ function Demo() {
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs text-muted-foreground">Foundry UI · synthetic layout fixture</p>
+            <p className="text-xs text-muted-foreground">LYKOMI UI · synthetic layout fixture</p>
             <h1 className="text-xl font-semibold">Process overview</h1>
           </div>
           <button

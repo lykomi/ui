@@ -60,26 +60,26 @@ export function ProcessGuidance({
   }
   return (
     <div
-      className="foundry-process-focus"
+      className="lykomi-process-focus"
       aria-labelledby={`${id}-title`}
       data-status={step.status}
       hidden={disclosureInStep && !open}
     >
-      <div className="foundry-process-focus-header">
-        <div className="foundry-process-focus-summary">
+      <div className="lykomi-process-focus-header">
+        <div className="lykomi-process-focus-summary">
           {position || (step.title && step.title !== step.label) ? (
-            <p className="foundry-process-position">
+            <p className="lykomi-process-position">
               {position ? `${position} · ${step.label}` : step.label}
             </p>
           ) : null}
-          <Heading id={`${id}-title`} className="foundry-process-title">
+          <Heading id={`${id}-title`} className="lykomi-process-title">
             {step.title ?? step.label}
           </Heading>
         </div>
         {collapsible && !disclosureInStep ? (
           <button
             type="button"
-            className="foundry-process-disclosure"
+            className="lykomi-process-disclosure"
             aria-expanded={open}
             aria-controls={`${id}-body`}
             onClick={() => changeOpen(!open)}
@@ -92,20 +92,20 @@ export function ProcessGuidance({
       {/* Keep forms mounted so folding guidance never discards unsaved input. */}
       <div
         id={bodyId ?? `${id}-body`}
-        className="foundry-process-guidance-body"
+        className="lykomi-process-guidance-body"
         hidden={!open}
         onInvalidCapture={revealInvalid}
       >
         {step.message ? (
-          <div className="foundry-process-guidance-message" data-status={step.status}>
+          <div className="lykomi-process-guidance-message" data-status={step.status}>
             {step.message}
           </div>
         ) : null}
         {step.description ? (
-          <div className="foundry-process-guidance">{step.description}</div>
+          <div className="lykomi-process-guidance">{step.description}</div>
         ) : null}
         {step.content}
-        {step.actions ? <div className="foundry-process-actions">{step.actions}</div> : null}
+        {step.actions ? <div className="lykomi-process-actions">{step.actions}</div> : null}
       </div>
     </div>
   );

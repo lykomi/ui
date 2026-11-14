@@ -17,7 +17,7 @@
 import type { Table } from "@tanstack/react-table";
 import { Maximize2, Minimize2, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { Button, Input, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, Input, cn } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,

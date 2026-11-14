@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 /**
  * The frame every dashboard chart sits in, and the bento grid that lays the

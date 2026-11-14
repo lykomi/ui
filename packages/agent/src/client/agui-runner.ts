@@ -1,5 +1,5 @@
 /**
- * AG-UI Runner — protocol engine for `@iloveagents/foundry-agent`.
+ * AG-UI Runner — protocol engine for `@lykomi/agent`.
  *
  * Drives the AG-UI SDK's `HttpAgent.runAgent()` with an `AgentSubscriber`,
  * fans the subscriber callbacks out as a normalized `RunnerEvent` stream,
@@ -7,7 +7,7 @@
  * client-side tool produces a result.
  *
  * Framework-agnostic — no React, no `@assistant-ui/*`. The assistant-ui shim
- * in `@iloveagents/foundry-web-ui` (and future Outlook / Teams / native shells)
+ * in `@lykomi/web-ui` (and future Outlook / Teams / native shells)
  * translate `RunnerEvent`s into their own model.
  *
  * @see https://docs.ag-ui.com/sdk/js/client/http-agent

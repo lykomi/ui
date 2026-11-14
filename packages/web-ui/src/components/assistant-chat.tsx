@@ -37,8 +37,8 @@ import {
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import { TooltipIconButton } from "./tooltip-icon-button.tsx";
 import { userAttachmentComponents, composerAttachmentComponents } from "./chat-attachments.tsx";
 import { SentContextBadges } from "./context-badges.tsx";

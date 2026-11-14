@@ -7,7 +7,7 @@
 import type { Row, Table } from "@tanstack/react-table";
 import { X } from "lucide-react";
 import { createContext, useContext, type ReactNode } from "react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 
 /**
  * Whether the bar has a row to itself or shares one.

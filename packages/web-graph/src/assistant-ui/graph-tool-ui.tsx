@@ -1,7 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { Share2 } from "lucide-react";
-import { ToolCallCard, useToolPanelStore } from "@iloveagents/foundry-web-ui";
+import { ToolCallCard, useToolPanelStore } from "@lykomi/web-ui";
 import { coerceGraphPayload, type GraphNode, type GraphPayload } from "../model.ts";
 import { GraphView } from "../graph-view.tsx";
 import { GraphProvenance } from "./graph-provenance.tsx";
@@ -137,7 +137,7 @@ export function makeGraphToolUI(options: MakeGraphToolUIOptions) {
 /**
  * The generic "show me this as a graph" card, bound to a `show_graph` tool.
  *
- * Mirrors `ShowDocumentToolUI` in `@iloveagents/foundry-web-ui`: an agent that
+ * Mirrors `ShowDocumentToolUI` in `@lykomi/web-ui`: an agent that
  * wants to put a graph in front of the user calls `show_graph` with the payload
  * and the panel opens itself.
  */

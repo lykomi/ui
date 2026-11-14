@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 export interface SparklineProps extends Omit<React.ComponentProps<"svg">, "children"> {
   /** Equally spaced samples. Missing/non-finite samples leave a gap. */

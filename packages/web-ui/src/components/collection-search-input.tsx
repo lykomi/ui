@@ -1,8 +1,8 @@
 import { Search, X } from "lucide-react";
 
-import { Button } from "@iloveagents/foundry-web-primitives";
-import { Input } from "@iloveagents/foundry-web-primitives";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
+import { Input } from "@lykomi/web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 export function CollectionSearchInput({
   value,

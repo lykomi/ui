@@ -26,7 +26,7 @@ import { useTableViewport } from "./use-table-viewport.ts";
 import { boundedColumnWidth } from "./column-sizing.ts";
 import { DataTableColumnResize } from "./data-table-column-resize.tsx";
 import { useElementWidth } from "./use-element-width.ts";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 import { useVirtualTableRows } from "./use-virtual-table-rows.js";
 

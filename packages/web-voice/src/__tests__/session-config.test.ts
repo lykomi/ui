@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ToolRegistry } from "@iloveagents/foundry-agent";
+import type { ToolRegistry } from "@lykomi/agent";
 import { buildVoiceSession, toVoiceLiveTools } from "../adapter/session-config.ts";
 
 function fakeRegistry(

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const setResolved = vi.fn();
 const setWindow = vi.fn();
 
-vi.mock("@iloveagents/foundry-agent", () => ({
+vi.mock("@lykomi/agent", () => ({
   reasoningDefaultStore: { getState: () => ({ setResolved }) },
   contextUsageStore: { getState: () => ({ setWindow }) },
 }));

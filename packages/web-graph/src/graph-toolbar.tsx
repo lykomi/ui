@@ -9,7 +9,7 @@ import {
   Table2,
   X,
 } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import type { GraphLayout } from "./graph-canvas.tsx";
 
 /** The layouts offered, in the order a reader thinks of them. */

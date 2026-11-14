@@ -1,7 +1,7 @@
 import { act } from "react";
 import { renderHook } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
-import { useChatLifecycleStore } from "@iloveagents/foundry-web-ui";
+import { useChatLifecycleStore } from "@lykomi/web-ui";
 import { useFreshConversationId } from "../use-fresh-conversation-id.ts";
 
 vi.hoisted(() => {

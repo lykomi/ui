@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { Button, cn } from "@iloveagents/foundry-web-primitives";
+import { Button, cn } from "@lykomi/web-primitives";
 import { useThemeRuntime } from "./theme-runtime-provider.tsx";
 import { mermaidDocument, mermaidTheme, renderMermaid } from "../lib/mermaid-render.ts";
 

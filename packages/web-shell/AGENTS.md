@@ -1,8 +1,8 @@
-Browser bootstrap for Foundry UI agent apps. Published as `@iloveagents/foundry-web-shell`. Composes `@iloveagents/foundry-web-primitives`, `@iloveagents/foundry-agent` (and `@iloveagents/foundry-agent/msal`), and `@iloveagents/foundry-web-ui` into a generic mounting point — customers and modules contribute pages, theme layers, layout extras, tool UIs, and per-request fetch interceptors via the `ChatModule` protocol.
+Browser bootstrap for LYKOMI UI agent apps. Published as `@lykomi/web-shell`. Composes `@lykomi/web-primitives`, `@lykomi/agent` (and `@lykomi/agent/msal`), and `@lykomi/web-ui` into a generic mounting point — customers and modules contribute pages, theme layers, layout extras, tool UIs, and per-request fetch interceptors via the `ChatModule` protocol.
 
 # Architecture
 
-Publishes built ESM JavaScript plus `.d.ts` declarations from `dist/`, same convention as the other `@iloveagents/foundry-*` runtime packages.
+Publishes built ESM JavaScript plus `.d.ts` declarations from `dist/`, same convention as the other `@lykomi/*` runtime packages.
 
 ```
 src/
@@ -11,7 +11,7 @@ src/
   shell-app.tsx            ← <BrowserRouter> → AuthProvider → [wrappers outer→inner] → AGUIRuntimeProvider → {toolUIs} → Suspense → Routes
   shell-layout.tsx         ← generic workbench layout (WorkbenchPreview + GlobalSelectionPopover + module layoutExtras)
   types.ts                 ← ChatModule, ChatConversationConfig, ShellPage, AuthAdapter, BootstrapShellOptions
-  auth-default.tsx         ← default authProvider (wraps @iloveagents/foundry-web-ui's AuthProvider; reads MsalAuthConfig from import.meta.env)
+  auth-default.tsx         ← default authProvider (wraps @lykomi/web-ui's AuthProvider; reads MsalAuthConfig from import.meta.env)
   service-fetch-default.ts ← default fetchFn (createServiceFetch + tokenFetch wiring)
   runtime-config.ts        ← runtime config resolution helpers
 ```
@@ -19,7 +19,7 @@ src/
 # Public API
 
 ```ts
-import { bootstrapShell, defineChatModule, type ChatModule } from "@iloveagents/foundry-web-shell";
+import { bootstrapShell, defineChatModule, type ChatModule } from "@lykomi/web-shell";
 ```
 
 `bootstrapShell({ modules, pages, theme, authProvider, agentFetch, strictMode, rootElement })` mounts the SPA — `agentFetch` overrides the MSAL-backed default agent transport (local demo agents, mocks, custom backends), `rootElement` overrides the mount node. Each `ChatModule` may contribute:
@@ -60,7 +60,7 @@ Asserted by `src/__tests__/wrapper-order.test.tsx`.
 
 # Import boundary (enforced by guard test)
 
-`@iloveagents/foundry-web-shell` MAY import: `@iloveagents/foundry-web-primitives`, `@iloveagents/foundry-web-ui`, `@iloveagents/foundry-agent` (+ subpaths). MUST NOT import `@ltwlf/spaces-web-ui` (or any commercial downstream package) — modules are runtime parameters, never compile-time deps. Enforced by `OPEN_CORE_GRAPH` in `packages/web-ui/src/__tests__/open-core-guards.test.ts`.
+`@lykomi/web-shell` MAY import: `@lykomi/web-primitives`, `@lykomi/web-ui`, `@lykomi/agent` (+ subpaths). MUST NOT import `@ltwlf/spaces-web-ui` (or any commercial downstream package) — modules are runtime parameters, never compile-time deps. Enforced by `OPEN_CORE_GRAPH` in `packages/web-ui/src/__tests__/open-core-guards.test.ts`.
 
 `packages/web-shell/src/` MUST stay ≤ 15 files (file-count ceiling, hardFail).
 
@@ -75,8 +75,8 @@ The default `authProvider` reads `VITE_MSAL_CLIENT_ID`, `VITE_MSAL_AUTHORITY`, `
 # Commands
 
 ```bash
-pnpm --filter @iloveagents/foundry-web-shell test:unit   # vitest run
-pnpm --filter @iloveagents/foundry-web-shell typecheck   # tsc --noEmit
+pnpm --filter @lykomi/web-shell test:unit   # vitest run
+pnpm --filter @lykomi/web-shell typecheck   # tsc --noEmit
 ```
 
 # Authoring a module

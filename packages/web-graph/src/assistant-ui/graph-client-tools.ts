@@ -1,6 +1,6 @@
 import { graphViewSummary } from "../graph-view-summary.ts";
-import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-agent";
-import { useToolPanelStore } from "@iloveagents/foundry-web-ui";
+import { clientToolRegistry, type ClientToolEntry } from "@lykomi/agent";
+import { useToolPanelStore } from "@lykomi/web-ui";
 import {
   coerceGraphPayload,
   edgeCaption,

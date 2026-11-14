@@ -1,5 +1,5 @@
 import { createStore } from "zustand/vanilla";
-import { clientToolRegistry, type ClientToolEntry } from "@iloveagents/foundry-agent";
+import { clientToolRegistry, type ClientToolEntry } from "@lykomi/agent";
 import type { ContextItem } from "../../lib/app-store.ts";
 import type { ProcessStepStatus } from "./process-steps.tsx";
 

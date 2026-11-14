@@ -2,7 +2,7 @@ import {
   contextUsageStore,
   reasoningDefaultStore,
   type ResolvedReasoningEffort,
-} from "@iloveagents/foundry-agent";
+} from "@lykomi/agent";
 
 const VALID: readonly string[] = ["low", "medium", "high", "xhigh"];
 

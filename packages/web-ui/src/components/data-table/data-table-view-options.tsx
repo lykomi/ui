@@ -1,7 +1,7 @@
 /** The "Columns" menu: toggle column visibility. */
 import type { Table } from "@tanstack/react-table";
 import { Settings2 } from "lucide-react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,

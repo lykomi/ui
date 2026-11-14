@@ -27,7 +27,7 @@ overrides:
   # `pnpm update`.
   #
   # Measured against this repo's suite: 0.9.8 and 0.9.12 green, 0.9.13, 0.9.14
-  # and 0.9.15 red. Re-test with `pnpm -F @iloveagents/foundry-web-ui test:unit`
+  # and 0.9.15 red. Re-test with `pnpm -F @lykomi/web-ui test:unit`
   # before moving it — `composer-input-strictmode.test.tsx` and
   # `voice-adapter-registry.test.tsx` are the ones that catch it. Drop the pin
   # when a tap release restores the behaviour, or when `@assistant-ui/react`

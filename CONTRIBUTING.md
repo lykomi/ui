@@ -1,4 +1,4 @@
-# Contributing to Foundry UI
+# Contributing to LYKOMI UI
 
 Thanks for contributing! This is a pnpm monorepo publishing four runtime
 packages plus a scaffolding CLI. The short version:
@@ -29,7 +29,7 @@ pnpm test           # build + lint + typecheck + unit tests — must pass before
 
 Merged changesets accumulate on `main`; the release workflow
 (`.github/workflows/release-npm.yml`) opens a version PR and publishes to npm
-when it merges. Never list sibling `@iloveagents/foundry-*` packages in
+when it merges. Never list sibling `@lykomi/*` packages in
 `peerDependencies` — see the "Never do" section of `AGENTS.md` for why.
 
 ## Checks that must be green

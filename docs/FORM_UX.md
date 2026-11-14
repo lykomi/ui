@@ -1,6 +1,6 @@
 # Opinionated form and renderer UX
 
-This is the default contract for developers and coding agents using Foundry UI.
+This is the default contract for developers and coding agents using LYKOMI UI.
 Use it for native UI, generated forms, list-item inspectors and custom renderers.
 Depart from the default only when the user explicitly requests the different interaction
 or layout. A request for a domain-specific renderer does not request a different UX.
@@ -64,9 +64,9 @@ change must stop writes without silently losing a draft. Do not use blur to save
 ## Compose the shipped presets
 
 Import `FormLayout`, `FormHeader`, `FormSection`, `FormActions`, `Field`, `FieldSet`,
-`ReadOnlyField`, `Input`, `Textarea` and `Button` from `@iloveagents/foundry-web-primitives`.
+`ReadOnlyField`, `Input`, `Textarea` and `Button` from `@lykomi/web-primitives`.
 Use the existing themed `FormDialog`, `SurfaceCard` and `CollectionSurface` from
-`@iloveagents/foundry-web-ui` for the host surface. These presets compose with them;
+`@lykomi/web-ui` for the host surface. These presets compose with them;
 do not put another card around every field or another form inside a form.
 
 ```tsx
@@ -398,15 +398,15 @@ Context is refreshed on each user request and by the live read tools; it is not 
 
 Use these exact `ProcessStepStatus` values; do not infer execution state from selection or optionality.
 
-| `status` | Default label | Symbol | Meaning |
-| --- | --- | --- | --- |
-| `pending` | Waiting | Outlined clock | Awaiting availability or scheduling; not ready yet. Use `blocked` for a known preventing condition. |
-| `ready` | Ready | Open circle | Available to start, but not started. The inspected ready step adds a centered dot. |
-| `running` | In progress | Spinner | Execution has actually started; honor reduced motion. |
-| `complete` | Completed | Outlined check-circle | Work was completed and accepted by the host. |
-| `blocked` | Blocked | Standalone lock | A prerequisite or permission prevents execution; explain it with `message`. |
-| `error` | Needs attention | Outlined alert-circle | Failure or invalid result requires correction or retry; keep `message` visible. |
-| `skipped` | Skipped | Outlined minus-circle | The host recorded an explicit skip decision; do not present it as completed work. |
+| `status`   | Default label   | Symbol                | Meaning                                                                                             |
+| ---------- | --------------- | --------------------- | --------------------------------------------------------------------------------------------------- |
+| `pending`  | Waiting         | Outlined clock        | Awaiting availability or scheduling; not ready yet. Use `blocked` for a known preventing condition. |
+| `ready`    | Ready           | Open circle           | Available to start, but not started. The inspected ready step adds a centered dot.                  |
+| `running`  | In progress     | Spinner               | Execution has actually started; honor reduced motion.                                               |
+| `complete` | Completed       | Outlined check-circle | Work was completed and accepted by the host.                                                        |
+| `blocked`  | Blocked         | Standalone lock       | A prerequisite or permission prevents execution; explain it with `message`.                         |
+| `error`    | Needs attention | Outlined alert-circle | Failure or invalid result requires correction or retry; keep `message` visible.                     |
+| `skipped`  | Skipped         | Outlined minus-circle | The host recorded an explicit skip decision; do not present it as completed work.                   |
 
 `currentStepId` is the actual process position. `selectedStepId` is the step being inspected; its surface highlights which guidance belongs to it. The dot is an additional selection cue only for `ready`: inspecting a completed, running, blocked or skipped step preserves its status symbol. Without a valid selection, the component inspects the current step. Avoid an ambiguous `active` or `disabled` boolean for these distinct concepts.
 
@@ -450,18 +450,18 @@ inline guidance. Omit the callback for a passive progress indicator.
 `ProcessGuide` accepts the same props and adds per-step `title` (text), plus `content` and
 `actions` (React nodes), plus these guide-level props:
 
-| Prop                                         | Contract                                                                                    |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `framed`                                     | Optional themed frame; default false.                                                       |
-| `headingLevel`                               | 2, 3 or 4; default 3.                                                                       |
-| `guidance`                                   | `expanded` (default) or `collapsible`.                                                      |
-| `defaultGuidanceOpen`                        | Initial uncontrolled disclosure state; default false.                                       |
-| `guidanceOpen`, `onGuidanceOpenChange(open)` | Optional host-controlled disclosure state.                                                  |
-| `guidanceToggleLabel`                        | Localized disclosure text; default `Guidance & actions`.                                    |
+| Prop                                         | Contract                                                                                                                                                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `framed`                                     | Optional themed frame; default false.                                                                                                                                                                              |
+| `headingLevel`                               | 2, 3 or 4; default 3.                                                                                                                                                                                              |
+| `guidance`                                   | `expanded` (default) or `collapsible`.                                                                                                                                                                             |
+| `defaultGuidanceOpen`                        | Initial uncontrolled disclosure state; default false.                                                                                                                                                              |
+| `guidanceOpen`, `onGuidanceOpenChange(open)` | Optional host-controlled disclosure state.                                                                                                                                                                         |
+| `guidanceToggleLabel`                        | Localized disclosure text; default `Guidance & actions`.                                                                                                                                                           |
 | `guidanceTogglePlacement`                    | `guidance` (default) or `step`; compact collapsible guides can place the disclosure in the inspected step. Explicit step selection opens guidance, including reselection. Initial open state remains configurable. |
-| `showPosition`                              | Optional numeric position in guidance; default false. The owning step label remains when the task title differs. |
-| `formatPosition(index, total)`               | Localized position text when `showPosition` is true; index is one-based.                                                |
-| `completion`                                 | Content shown only when no step is inspected/current and every step is complete or skipped. |
+| `showPosition`                               | Optional numeric position in guidance; default false. The owning step label remains when the task title differs.                                                                                                   |
+| `formatPosition(index, total)`               | Localized position text when `showPosition` is true; index is one-based.                                                                                                                                           |
+| `completion`                                 | Content shown only when no step is inspected/current and every step is complete or skipped.                                                                                                                        |
 
 The selected step falls back to the current step if its ID is absent/invalid.
 Changing inspected steps remounts their content; hosts must retain drafts outside

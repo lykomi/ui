@@ -20,8 +20,8 @@ vi.mock("@assistant-ui/react", async (importOriginal) => ({
 }));
 
 const visibility = vi.hoisted(() => ({ foreground: true }));
-vi.mock("@iloveagents/foundry-web-ui", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@iloveagents/foundry-web-ui")>()),
+vi.mock("@lykomi/web-ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@lykomi/web-ui")>()),
   useIsForegroundChat: () => visibility.foreground,
 }));
 
@@ -34,7 +34,7 @@ vi.mock("../assistant-ui/merge-into-panel.ts", () => ({
 }));
 
 const { GraphResultSeeder } = await import("../assistant-ui/graph-result-seeder.tsx");
-const { useToolPanelStore } = await import("@iloveagents/foundry-web-ui");
+const { useToolPanelStore } = await import("@lykomi/web-ui");
 const { _resetGraphToolBindings, registerGraphTool } =
   await import("../assistant-ui/graph-tool-registry.ts");
 const { graphPanelContent } = await import("../assistant-ui/graph-panel-content.ts");

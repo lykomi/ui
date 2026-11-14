@@ -1,7 +1,7 @@
 {
-  "name": "@iloveagents/foundry-web-voice",
+  "name": "@lykomi/web-voice",
   "version": "0.1.32",
-  "description": "Optional spoken-conversation tier for Foundry UI — Azure Voice Live wired into assistant-ui's realtime voice contract",
+  "description": "Optional spoken-conversation tier for LYKOMI UI — Azure Voice Live wired into assistant-ui's realtime voice contract",
   "keywords": [
     "foundry",
     "voice-live",
@@ -13,7 +13,7 @@
     "avatar"
   ],
   "license": "MIT",
-  "author": "iLoveAgents",
+  "author": "LYKOMI",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lykomi/ui.git",
@@ -42,8 +42,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@iloveagents/foundry-agent": "workspace:^",
-    "@iloveagents/foundry-web-ui": "workspace:^",
+    "@lykomi/agent": "workspace:^",
+    "@lykomi/web-ui": "workspace:^",
     "@iloveagents/foundry-voice-live-react": "^0.5.0"
   },
   "peerDependencies": {

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { Pin, PinOff } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
-import { useAppStore } from "@iloveagents/foundry-web-ui";
+import { cn } from "@lykomi/web-primitives";
+import { useAppStore } from "@lykomi/web-ui";
 import {
   edgeCaption,
   jsonSafe,

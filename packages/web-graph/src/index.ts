@@ -1,10 +1,10 @@
 /**
- * `@iloveagents/foundry-web-graph` — the source-agnostic graph visualizer.
+ * `@lykomi/web-graph` — the source-agnostic graph visualizer.
  *
  * Nothing exported from here knows about Neo4j, assistant-ui, or the chat
- * shell. The Neo4j mapping is `@iloveagents/foundry-web-graph/adapters/neo4j`;
+ * shell. The Neo4j mapping is `@lykomi/web-graph/adapters/neo4j`;
  * the chat card and panel renderer are
- * `@iloveagents/foundry-web-graph/assistant-ui`.
+ * `@lykomi/web-graph/assistant-ui`.
  */
 
 export {

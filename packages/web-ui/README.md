@@ -1,17 +1,17 @@
-# @iloveagents/foundry-web-ui
+# @lykomi/web-ui
 
-React UI core for Foundry UI apps.
+React UI core for LYKOMI UI apps.
 
 `web-ui` is the package that renders the actual agent experience: chat UI,
 composer, AG-UI adapter, message rendering, tool-call cards, side panels,
 sidebar, theme runtime, context pins, attachment handling, and UI stores. It
-depends on `@iloveagents/foundry-web-primitives` for leaf primitives (Button,
+depends on `@lykomi/web-primitives` for leaf primitives (Button,
 Input, Field, Checkbox, Textarea, `cn`).
 
 ## Install
 
 ```bash
-pnpm add @iloveagents/foundry-web-ui @iloveagents/foundry-web-primitives
+pnpm add @lykomi/web-ui @lykomi/web-primitives
 ```
 
 ## Usage
@@ -24,8 +24,8 @@ import {
   ToolPanel,
   useAppStore,
   usePageTools,
-} from "@iloveagents/foundry-web-ui";
-import { cn } from "@iloveagents/foundry-web-primitives";
+} from "@lykomi/web-ui";
+import { cn } from "@lykomi/web-primitives";
 ```
 
 This package publishes built ESM JavaScript and `.d.ts` declarations. Host apps
@@ -33,9 +33,9 @@ must include Tailwind v4 `@source` directives so classes used inside package
 components are generated:
 
 ```css
-@import "@iloveagents/foundry-web-ui/styles.css";
-@source "../node_modules/@iloveagents/foundry-web-primitives/dist";
-@source "../node_modules/@iloveagents/foundry-web-ui/dist";
+@import "@lykomi/web-ui/styles.css";
+@source "../node_modules/@lykomi/web-primitives/dist";
+@source "../node_modules/@lykomi/web-ui/dist";
 ```
 
 ## Process guidance
@@ -149,14 +149,14 @@ with the slack at the end, the way a spreadsheet looks.
 
 ## Charts and management dashboards
 
-Import charts from `@iloveagents/foundry-web-ui/chart`; this optional subpath
+Import charts from `@lykomi/web-ui/chart`; this optional subpath
 keeps Recharts out of hosts that do not draw charts. Use `DashboardGrid` and
 `DashboardTile` for layout, `ChartCard` for consistent frames, and `StatCard`
 for headline metrics. `TimeSeriesChart`, `CategoryBarChart` and `DonutChart`
 share theme colors, legends and tooltips.
 
 ```tsx
-import { GaugeChart, Sparkline, StatCard } from "@iloveagents/foundry-web-ui/chart";
+import { GaugeChart, Sparkline, StatCard } from "@lykomi/web-ui/chart";
 
 <GaugeChart
   label="On-time delivery"
@@ -221,7 +221,7 @@ mixes, selection and borders continue to work. Existing themes default to `none`
 
 ## Extension Points
 
-Feature modules (like SPACES) plug into `@iloveagents/foundry-web-ui` via registries — no direct imports needed:
+Feature modules (like SPACES) plug into `@lykomi/web-ui` via registries — no direct imports needed:
 
 - **NavItem.dnd** — drag-and-drop behavior on sidebar items
 - **UserMenuAction** — ordinary actions in the account menu across shell layouts

@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { useAppStore } from "@iloveagents/foundry-web-ui";
+import { useAppStore } from "@lykomi/web-ui";
 import {
   GRAPH_SELECTION_CONTEXT_KEY,
   GraphContextPinButton,

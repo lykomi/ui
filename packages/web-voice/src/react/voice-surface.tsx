@@ -20,12 +20,8 @@ import type {
   VoiceLiveServerEvent,
   VoiceLiveSessionConfig,
 } from "@iloveagents/foundry-voice-live-react";
-import { clientToolRegistry } from "@iloveagents/foundry-agent";
-import {
-  registerChatSlots,
-  submitComposerText,
-  useChatSlotsStore,
-} from "@iloveagents/foundry-web-ui";
+import { clientToolRegistry } from "@lykomi/agent";
+import { registerChatSlots, submitComposerText, useChatSlotsStore } from "@lykomi/web-ui";
 import { buildVoiceSession } from "../adapter/session-config.ts";
 import { createRegistryToolExecutor } from "../adapter/tool-bridge.ts";
 import { ToolSync } from "../adapter/tool-sync.ts";

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 import { GaugeSegments, validGaugeSegments, type GaugeSegment } from "./gauge-segments.tsx";
 export type { GaugeSegment } from "./gauge-segments.tsx";

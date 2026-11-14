@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

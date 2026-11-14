@@ -1,6 +1,6 @@
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { ChevronRight, ExternalLink, Maximize2, Snowflake, X } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import {
   edgeCaption,
   primaryLabel,

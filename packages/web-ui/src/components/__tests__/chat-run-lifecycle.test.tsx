@@ -12,7 +12,7 @@ import {
   beginChatRun,
   updateChatRun,
 } from "../../lib/chat-runs-store.ts";
-import { streamingStatusStore } from "@iloveagents/foundry-agent";
+import { streamingStatusStore } from "@lykomi/agent";
 
 vi.mock("../client-tool-executor.tsx", () => ({ ClientToolExecutor: () => null }));
 vi.mock("../show-document-tool-ui.tsx", () => ({ ShowDocumentToolUI: () => null }));

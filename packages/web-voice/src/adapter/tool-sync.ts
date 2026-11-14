@@ -18,7 +18,7 @@
  *   Comparing the serialized catalogue collapses those to nothing.
  */
 
-import type { ToolRegistry } from "@iloveagents/foundry-agent";
+import type { ToolRegistry } from "@lykomi/agent";
 import type { Tool } from "@iloveagents/foundry-voice-live-react";
 import { sessionTools } from "./session-config.ts";
 

@@ -1,5 +1,5 @@
 import { ChevronDown, Layers3, Plus, type LucideIcon } from "lucide-react";
-import { Button } from "@iloveagents/foundry-web-primitives";
+import { Button } from "@lykomi/web-primitives";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

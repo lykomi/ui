@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ToolRegistry } from "@iloveagents/foundry-agent";
+import type { ToolRegistry } from "@lykomi/agent";
 import { ToolSync } from "../adapter/tool-sync.ts";
 
 function registry(names: string[]): ToolRegistry {

@@ -1,11 +1,11 @@
-import { createServiceFetch } from "@iloveagents/foundry-agent";
-import { authStore } from "@iloveagents/foundry-agent/msal";
+import { createServiceFetch } from "@lykomi/agent";
+import { authStore } from "@lykomi/agent/msal";
 import { runtimeConfig } from "./runtime-config.ts";
 
 /**
  * Default agent fetch client wired to the MSAL token store and the host's
  * Vite env. Customers can build their own via `createServiceFetch` from
- * `@iloveagents/foundry-agent` if they need different acquireToken / baseUrl behavior.
+ * `@lykomi/agent` if they need different acquireToken / baseUrl behavior.
  *
  * Forward the optional ``{ forceRefresh }`` argument that the fetch
  * interceptor passes on the 401 retry path. Without it, the retry would

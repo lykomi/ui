@@ -15,7 +15,7 @@ describe("_resolveBrandLockup", () => {
   it("falls back to the generic glyph and the default name", () => {
     const l = _resolveBrandLockup({}, "light", true);
     expect(l.markUrl).toBeUndefined();
-    expect(l.name).toBe("Foundry UI");
+    expect(l.name).toBe("LYKOMI UI");
     // No mark at all → the name is the only thing identifying the app, so it
     // must render.
     expect(l.showName).toBe(true);

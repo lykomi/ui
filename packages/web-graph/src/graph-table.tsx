@@ -1,4 +1,4 @@
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { useMemo } from "react";
 import { primaryLabel, type GraphEdge, type GraphEdgeEmphasis, type GraphNode } from "./model.ts";
 import { endpointId, type GraphModel } from "./use-graph-model.ts";

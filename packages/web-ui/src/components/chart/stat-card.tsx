@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 
 import { formatCompactNumber } from "./chart-config.ts";
 

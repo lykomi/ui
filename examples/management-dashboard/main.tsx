@@ -269,7 +269,7 @@ function Demo() {
           </>
         )}
         <footer className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-          <span>Foundry UI · Management dashboard components</span>
+          <span>LYKOMI UI · Management dashboard components</span>
           <span>Illustrative data · static demonstration</span>
         </footer>
       </div>

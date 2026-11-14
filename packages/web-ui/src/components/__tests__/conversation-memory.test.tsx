@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const store = vi.hoisted(() => ({ ref: null as unknown }));
 
-vi.mock("@iloveagents/foundry-agent", async () => {
+vi.mock("@lykomi/agent", async () => {
   const { createStore } = await import("zustand/vanilla");
   const contextUsageStore = createStore<{
     windowTokens: number | null;

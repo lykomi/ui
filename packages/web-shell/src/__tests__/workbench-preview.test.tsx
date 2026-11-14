@@ -1,7 +1,7 @@
 import { TooltipProvider } from "../../../web-ui/dist/ui/tooltip.js";
 import { Link, MemoryRouter, useLocation } from "react-router";
 import { Folder, MessageSquare } from "lucide-react";
-import type { NavGroup } from "@iloveagents/foundry-web-ui";
+import type { NavGroup } from "@lykomi/web-ui";
 import { type ReactNode, useContext, useEffect } from "react";
 import { ChatContentDefaultsContext } from "../../../web-ui/dist/components/chat-content-defaults.js";
 import {
@@ -45,7 +45,7 @@ vi.mock("@assistant-ui/react", async (importOriginal) => ({
       composer: { text: "" },
     }),
 }));
-vi.mock("@iloveagents/foundry-web-ui", () => ({
+vi.mock("@lykomi/web-ui", () => ({
   Sidebar: (props: unknown) => {
     state.sidebar(props);
     return null;
@@ -86,7 +86,7 @@ vi.mock("@iloveagents/foundry-web-ui", () => ({
     { getState: () => ({ close: vi.fn() }) },
   ),
 }));
-import { WorkbenchPreview } from "@iloveagents/foundry-web-ui/workbench";
+import { WorkbenchPreview } from "@lykomi/web-ui/workbench";
 
 function Editor() {
   useEffect(() => () => state.unmount(), []);

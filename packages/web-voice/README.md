@@ -1,18 +1,18 @@
-# @iloveagents/foundry-web-voice
+# @lykomi/web-voice
 
-Spoken conversation for [Foundry UI](https://github.com/lykomi/ui), backed by
+Spoken conversation for [LYKOMI UI](https://github.com/lykomi/ui), backed by
 [Microsoft Foundry Voice Live](https://learn.microsoft.com/azure/ai-services/speech-service/voice-live).
 
-Optional by construction: no other `@iloveagents/foundry-*` package imports this one, so an app
+Optional by construction: no other `@lykomi/*` package imports this one, so an app
 that never installs it has an unchanged composer and an unchanged runtime.
 
 ```bash
-npm install @iloveagents/foundry-web-voice
+npm install @lykomi/web-voice
 ```
 
 ```ts
-import { bootstrapShell } from "@iloveagents/foundry-web-shell";
-import { createVoiceModule } from "@iloveagents/foundry-web-voice";
+import { bootstrapShell } from "@lykomi/web-shell";
+import { createVoiceModule } from "@lykomi/web-voice";
 
 bootstrapShell({
   modules: [
@@ -152,7 +152,7 @@ and `useVoiceControls()` / `useVoiceState()` / `useVoiceVolume()` expose the ses
 implements that one interface over Voice Live — which is why the mic button is ordinary
 assistant-ui code and would work for any other voice backend registered the same way.
 
-`foundry-web-ui` contributes only the seams: `registerVoiceAdapter()` and a `composerActions` chat
+`web-ui` contributes only the seams: `registerVoiceAdapter()` and a `composerActions` chat
 slot. Neither mentions Voice Live.
 
 ## API

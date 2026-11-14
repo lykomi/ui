@@ -17,7 +17,7 @@
  * its next mount.
  *
  * Nothing here knows about any particular voice service.
- * ``@iloveagents/foundry-web-voice`` registers an Azure Voice Live adapter;
+ * ``@lykomi/web-voice`` registers an Azure Voice Live adapter;
  * a different backend is a different registration and no change here.
  *
  * Two independent slots, because they answer different questions:

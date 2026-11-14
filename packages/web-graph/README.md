@@ -1,6 +1,6 @@
-# @iloveagents/foundry-web-graph
+# @lykomi/web-graph
 
-Interactive graph visualization for [Foundry UI](https://github.com/lykomi/ui).
+Interactive graph visualization for [LYKOMI UI](https://github.com/lykomi/ui).
 
 A force-directed graph view with the interactions people expect from a graph
 explorer — colour and caption by type, a filtering legend, hover, select,
@@ -12,7 +12,7 @@ knows nothing about where the data came from. Neo4j is one adapter, in its own
 entry point; the chat integration is in another. Import only what you use.
 
 ```bash
-pnpm add @iloveagents/foundry-web-graph
+pnpm add @lykomi/web-graph
 ```
 
 ### Tailwind v4 hosts: point Tailwind at this package
@@ -24,9 +24,9 @@ utility classes, and Tailwind v4 does not scan `node_modules`, so without a
 
 ```css
 @import "tailwindcss";
-@source "../node_modules/@iloveagents/foundry-web-graph/dist";
+@source "../node_modules/@lykomi/web-graph/dist";
 
-@import "@iloveagents/foundry-web-graph/styles.css";
+@import "@lykomi/web-graph/styles.css";
 ```
 
 (Adjust the relative path to your stylesheet\'s location. Apps scaffolded by
@@ -35,8 +35,8 @@ utility classes, and Tailwind v4 does not scan `node_modules`, so without a
 ## Drawing a graph
 
 ```tsx
-import { GraphView } from "@iloveagents/foundry-web-graph";
-import "@iloveagents/foundry-web-graph/styles.css";
+import { GraphView } from "@lykomi/web-graph";
+import "@lykomi/web-graph/styles.css";
 
 const data = {
   kind: "foundry.graph",
@@ -62,11 +62,8 @@ the host's `--chart-*` tokens, and then to a built-in palette.
 ## In a chat
 
 ```tsx
-import { defineChatModule } from "@iloveagents/foundry-web-shell";
-import {
-  makeGraphToolUI,
-  registerGraphPanelRenderer,
-} from "@iloveagents/foundry-web-graph/assistant-ui";
+import { defineChatModule } from "@lykomi/web-shell";
+import { makeGraphToolUI, registerGraphPanelRenderer } from "@lykomi/web-graph/assistant-ui";
 
 const CypherToolUI = makeGraphToolUI({ toolName: "graph_read_cypher" });
 
@@ -103,7 +100,7 @@ tools:
 import {
   registerGraphClientTools,
   registerGraphPanelRenderer,
-} from "@iloveagents/foundry-web-graph/assistant-ui";
+} from "@lykomi/web-graph/assistant-ui";
 
 export const graphModule = defineChatModule({
   name: "graph",
@@ -122,7 +119,7 @@ directly if you want to build your own UI on top of it.
 ## From Neo4j
 
 ```ts
-import { graphFromNeo4j } from "@iloveagents/foundry-web-graph/adapters/neo4j";
+import { graphFromNeo4j } from "@lykomi/web-graph/adapters/neo4j";
 
 const payload = graphFromNeo4j(records);
 ```
@@ -175,7 +172,7 @@ interface GraphDetail {
 `details` are what a person should read about a node or edge, curated by the
 producer. A detail's `href` opens in a new browser tab when it is `http(s)` or a
 same-origin path; an app's own address (`spaces://…`) is followed when the host
-registered a link handler that claims it (`linkStore` in `@iloveagents/foundry-agent`),
+registered a link handler that claims it (`linkStore` in `@lykomi/agent`),
 as a plain link the host's click handling opens in place. Anything else is shown
 as text. The inspector shows them first, links opening in a new tab, and keeps
 the raw `properties` and secondary labels in a collapsed **Advanced** section;

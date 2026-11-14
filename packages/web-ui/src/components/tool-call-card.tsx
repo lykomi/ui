@@ -1,5 +1,5 @@
 import { Loader2, CheckCircle2, XCircle, AlertCircle, ChevronDown } from "lucide-react";
-import { cn } from "@iloveagents/foundry-web-primitives";
+import { cn } from "@lykomi/web-primitives";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible.tsx";
 import { useState } from "react";
 import type { ReactNode } from "react";

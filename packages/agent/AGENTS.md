@@ -1,4 +1,4 @@
-Pure-TS agent transport for the Foundry UI open-core stack. Published as `@iloveagents/foundry-agent`. Zero DOM, zero React, zero `@assistant-ui/*`. Cross-runtime — consumed by `@iloveagents/foundry-web-ui` today, future Outlook / Teams / native shells tomorrow.
+Pure-TS agent transport for the LYKOMI UI open-core stack. Published as `@lykomi/agent`. Zero DOM, zero React, zero `@assistant-ui/*`. Cross-runtime — consumed by `@lykomi/web-ui` today, future Outlook / Teams / native shells tomorrow.
 
 # Architecture
 
@@ -14,7 +14,7 @@ src/
     link-store.ts              ← vanilla zustand store (link handling)
   tools/
     registry.ts       ← clientToolRegistry (vanilla zustand store).
-  msal/               ← subpath export: @iloveagents/foundry-agent/msal
+  msal/               ← subpath export: @lykomi/agent/msal
     auth-store.ts     ← authStore (vanilla zustand store)
     auth-config.ts    ← MsalAuthConfig + initializeMsal singleton.
     token-fetch.ts    ← Bearer-token-attaching fetch.
@@ -32,13 +32,13 @@ Files under `packages/agent/src/` (excluding `msal/`) MUST NOT import:
 - `@azure/msal-*` (anywhere — including under `msal/` for `msal-react`; only `@azure/msal-browser` is allowed under `msal/`)
 - bare `"zustand"` — use `"zustand/vanilla"` (`zustand/middleware` is allowed)
 
-Files under `packages/agent/src/msal/` MAY import `@azure/msal-browser` (dynamic import only — keeps the dep optional). They MUST NOT import `@azure/msal-react` (which is React-bound and lives in `@iloveagents/foundry-web-ui`).
+Files under `packages/agent/src/msal/` MAY import `@azure/msal-browser` (dynamic import only — keeps the dep optional). They MUST NOT import `@azure/msal-react` (which is React-bound and lives in `@lykomi/web-ui`).
 
-`packages/agent/` MUST NOT import from any other `@iloveagents/foundry-*` package — agent is the leaf of the open-core graph. (No package here may import commercial downstream packages — `@ltwlf/*` — either.)
+`packages/agent/` MUST NOT import from any other `@lykomi/*` package — agent is the leaf of the open-core graph. (No package here may import commercial downstream packages — `@ltwlf/*` — either.)
 
 # Why `zustand/vanilla`
 
-`import { create } from "zustand"` resolves to the React build (`useSyncExternalStore`). Importing it in a "zero React" package would silently take a React dependency and defeat the cross-runtime goal. Every store in this package uses `import { createStore } from "zustand/vanilla"`. React consumers (in `@iloveagents/foundry-web-ui` / `apps/web/`) bind via `useStore(store, selector)` from the React entry of zustand.
+`import { create } from "zustand"` resolves to the React build (`useSyncExternalStore`). Importing it in a "zero React" package would silently take a React dependency and defeat the cross-runtime goal. Every store in this package uses `import { createStore } from "zustand/vanilla"`. React consumers (in `@lykomi/web-ui` / `apps/web/`) bind via `useStore(store, selector)` from the React entry of zustand.
 
 # What goes here
 
@@ -72,14 +72,14 @@ survived. The adapter's switch is exhaustive for the same reason.
 
 # What does NOT go here
 
-- Anything implementing `@assistant-ui/*` interfaces (`ChatModelAdapter`, `AttachmentAdapter`, etc.) — those are React UI surface and live in `@iloveagents/foundry-web-ui`.
+- Anything implementing `@assistant-ui/*` interfaces (`ChatModelAdapter`, `AttachmentAdapter`, etc.) — those are React UI surface and live in `@lykomi/web-ui`.
 - React components, hooks, contexts, providers.
 - UI-layout state (panel widths, modal modes, theme).
-- The `MsalProvider` React component — that lives in `@iloveagents/foundry-web-ui`.
+- The `MsalProvider` React component — that lives in `@lykomi/web-ui`.
 
 # Public surface
 
-Root `@iloveagents/foundry-agent`:
+Root `@lykomi/agent`:
 
 ```ts
 import {
@@ -102,10 +102,10 @@ import {
   resolveLinkHandler,
   type LinkHandler,
   type ResolvedLinkHandler,
-} from "@iloveagents/foundry-agent";
+} from "@lykomi/agent";
 ```
 
-Subpath `@iloveagents/foundry-agent/msal`:
+Subpath `@lykomi/agent/msal`:
 
 ```ts
 import {
@@ -119,9 +119,9 @@ import {
   getMsalInstance,
   getMsalConfig,
   tokenFetch,
-} from "@iloveagents/foundry-agent/msal";
+} from "@lykomi/agent/msal";
 ```
 
 # Bundle-size budget
 
-Target ≤25 KB gz on the root entry (`@iloveagents/foundry-agent`, excluding the `/msal` subpath). Measured manually pre-1.0 via `gzip -c dist/index.js | wc -c`; `size-limit` enforcement is planned but not yet scaffolded.
+Target ≤25 KB gz on the root entry (`@lykomi/agent`, excluding the `/msal` subpath). Measured manually pre-1.0 via `gzip -c dist/index.js | wc -c`; `size-limit` enforcement is planned but not yet scaffolded.
