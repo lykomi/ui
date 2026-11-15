@@ -11,16 +11,26 @@ type Item = { id: string };
 let root: Root;
 let container: HTMLDivElement;
 let current: ReturnType<typeof useDataTableActions<Item>>;
-function mount(actions: DataTableAction<Item>[], rows = [{ id: "one" }, { id: "two" }]) {
-  function Harness() {
-    const table = useDataTable({ data: rows, columns: [], getRowId: (row) => row.id });
+function mount(
+  actions: DataTableAction<Item>[],
+  rows = [{ id: "one" }, { id: "two" }],
+  indexIds = false,
+) {
+  function Harness({ data }: { data: Item[] }) {
+    const table = useDataTable({
+      data,
+      columns: [],
+      getRowId: indexIds ? undefined : (row) => row.id,
+    });
     current = useDataTableActions({ table, actions });
     return null;
   }
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  act(() => root.render(<Harness />));
+  const render = (data: Item[]) => act(() => root.render(<Harness data={data} />));
+  render(rows);
+  return render;
 }
 afterEach(() => {
   act(() => root?.unmount());
@@ -93,6 +103,25 @@ it("cancels on dialog dismissal or unmount without executing", async () => {
   await act(async () => {
     root.unmount();
     expect(await result).toEqual({ status: "cancelled" });
+  });
+  expect(execute).not.toHaveBeenCalled();
+});
+
+it("does not delete replacement rows after a refresh while confirmation is open", async () => {
+  const execute = vi.fn();
+  const render = mount(
+    [{ id: "delete", label: "Delete", destructive: true, execute }],
+    [{ id: "one" }],
+    true,
+  );
+  let result!: ReturnType<typeof current.run>;
+  act(() => {
+    result = current.run("delete", ["0"]);
+  });
+  render([{ id: "replacement" }]);
+  await act(async () => {
+    current.confirmation.onConfirm();
+    expect(await result).toMatchObject({ status: "error" });
   });
   expect(execute).not.toHaveBeenCalled();
 });

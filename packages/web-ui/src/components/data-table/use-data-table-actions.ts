@@ -93,6 +93,7 @@ export function useDataTableActions<T>({
         if (
           !current ||
           currentRows.length !== ids.length ||
+          (action.destructive && currentRows.some((row, index) => row !== rows[index])) ||
           current.isAvailable?.(currentRows) === false ||
           (current.destructive && !action.destructive)
         )
