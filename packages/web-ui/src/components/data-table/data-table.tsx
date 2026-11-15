@@ -727,7 +727,7 @@ export function DataTable<T>({
                         }
                         data-virtual-row-id={row.id}
                         data-group-row=""
-                        className="border-t border-border/45 bg-muted/35 text-sm font-medium"
+                        className="border-y border-border/60 text-sm"
                       >
                         <td colSpan={columnCount} className="p-0">
                           {/* The group's cell spans the whole (scrollable) width,
@@ -743,7 +743,7 @@ export function DataTable<T>({
                               onClick={row.getToggleExpandedHandler()}
                               aria-expanded={row.getIsExpanded()}
                               aria-label={row.getIsExpanded() ? "Collapse group" : "Expand group"}
-                              className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                              className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                             >
                               {row.getIsExpanded() ? (
                                 <ChevronDown className="size-4" />

@@ -255,6 +255,13 @@
 
 /* A group header spans the scrollable width; its content sticks to the
  * viewport so the label and total stay readable while columns scroll. */
+[data-group-row] {
+  /* Opaque neutral hierarchy in both themes; do not dilute this with an alpha
+     utility, which makes groups indistinguishable from ordinary light rows. */
+  background-color: var(--muted);
+  color: var(--foreground);
+  font-weight: 600;
+}
 [data-group-content] {
   position: sticky;
   left: 0;
