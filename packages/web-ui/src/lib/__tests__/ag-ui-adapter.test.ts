@@ -99,6 +99,25 @@ function makeRunInput() {
 }
 
 describe("AGUIAdapterSDK", () => {
+  it("sends help evidence as AG-UI context, without rewriting visible messages or retaining it on later turns", async () => {
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {
+      yield { type: "run-finished" };
+    });
+    const adapter = new AGUIAdapterSDK();
+    const run = {
+      ...makeRunInput(),
+      runConfig: { custom: { lykomiAssistance: '{"state":"completed"}' } },
+    };
+    for await (const result of adapter.run(run)) void result;
+    const sent = runMock.mock.calls[0][0];
+    expect(sent.messages[0].content).toBe("hi");
+    expect(sent.context).toEqual([expect.objectContaining({ value: '{"state":"completed"}' })]);
+    expect(sent.context[0].description).toContain("pendingProposals");
+    expect(sent.context[0].description).toContain("untrusted data");
+    for await (const result of adapter.run(makeRunInput())) void result;
+    expect(runMock.mock.calls[1][0].context).toEqual([]);
+  });
+
   beforeEach(() => {
     disposeChatRuns();
     runMock.mockReset();

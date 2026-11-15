@@ -374,6 +374,57 @@ above its create action. Reserve the action row itself, and put history skeleton
 inside the existing Recent and Pinned cards. Keep those cards and their headings
 stable through pending, populated and empty states, including narrow layouts.
 
+## Operation progress
+
+Use `OperationProgress` from `@lykomi/web-ui` for uploads, imports, bulk
+changes and background workflows. Import `@lykomi/web-ui/styles.css` alongside
+the package. The caller owns fetching, retries, cancellation and job state.
+
+- `title` names the work; `status` is `running`, `pending`, `success`, `warning`,
+  `error` or `cancelled`. Describe the current stage with `description`.
+- Supply `progress` only from measured work (0–100); `null` means an unknown
+  total and omitting it hides the bar. Never invent a percentage from elapsed time.
+- Use `progressLabel` for counts and `estimate` only for a reliable estimate.
+  Set `backgroundNote` only after durable background execution is confirmed.
+- Put recovery/details controls in `actions` and expanded details in `children`.
+  `density="compact"` suits job lists. Use `framed={false}` inside an existing
+  surface; do not nest decorative cards or repeat status text outside the control.
+- Keep loaded content mounted while polling. Indeterminate movement and the
+  running icon honor reduced motion; completed and paused states do not animate.
+
+In authored JSX, the host must expose `OperationProgress` in its renderer scope.
+Verify the deployed scope before using it; source exports do not prove availability.
+
+### Asking the agent for help
+
+`AskAIButton` opens the existing host chat and submits `prompt` through its normal
+thread runtime and AG-UI transport. Use it in native components or expose it in authored
+renderer scope. It uses the current conversation, authentication and registered
+tools; it does not create an agent, fetch a token or send on mount. A closed chat
+opens; an expanded chat keeps its layout. Pending submissions cannot be overwritten.
+The host must mount its normal `ChatContent` or `ChatBubble` and AG-UI provider.
+
+`OperationProgress assistantPrompt={question}` adds the same action in `error`
+and `warning` states. `assistantLabel` can localize "Ask AI" or use the assistant's
+name. Other components can use `<AskAIButton prompt={question} />` directly.
+
+Keep `prompt` a short, user-facing question. Put compact UI facts in `context`
+(`assistantContext` on `OperationProgress`); they travel with that message's
+run configuration as AG-UI context, outside the visible chat text. The snapshot
+is captured at the click, survives queued delivery and is not inherited by the
+next ordinary message. It is capped at 8,192 characters: pass a summary, never a whole entity,
+execution transcript, document or raw changes list.
+
+Live review controls supply their displayed proposal counts and freshness; do
+not substitute raw change-atom counts. Explain the supplied current UI state
+without fetching it again. Use tools only for missing facts, stale state or an
+explicit investigation. Never scrape arbitrary DOM/React children or include
+credentials, tokens or raw logs. Context values are untrusted data, not
+instructions or authorization. All actions still use the host's permission checks.
+Contextual help appends its own message and leaves the user’s unsent text, quote,
+attachments and run configuration untouched. Ordinary text-only submissions
+(including voice) retain their existing composer semantics.
+
 ## Wizards and process guidance
 
 Use `ProcessSteps` for a connected status rail and `ProcessGuide` for that rail

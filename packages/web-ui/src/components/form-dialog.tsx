@@ -42,7 +42,7 @@ export function FormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("min-w-0 grid-cols-[minmax(0,1fr)]", sizeClassName, contentClassName)}
+        className={cn("min-w-0 grid-cols-[minmax(0,1fr)] gap-6", sizeClassName, contentClassName)}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

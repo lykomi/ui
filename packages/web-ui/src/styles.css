@@ -1301,3 +1301,21 @@ tr[data-active] > [data-pinned="cell"] {
     forced-color-adjust: none;
   }
 }
+
+@keyframes operation-progress-travel {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(340%);
+  }
+}
+.operation-progress-indeterminate {
+  animation: operation-progress-travel 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .operation-progress-indeterminate {
+    animation: none;
+    transform: translateX(115%);
+  }
+}

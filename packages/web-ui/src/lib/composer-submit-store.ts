@@ -1,13 +1,16 @@
 import { create } from "zustand";
+import { serializeAssistantContext, type AssistantContext } from "./assistant-context.ts";
 
 interface PendingComposerSubmit {
   id: number;
   text: string;
+  /** Serialized at submission: later renders cannot change this turn’s context. */
+  context?: string;
 }
 
 interface ComposerSubmitState {
   pending: PendingComposerSubmit | null;
-  submit: (text: string) => void;
+  submit: (text: string, context?: AssistantContext) => void;
   /**
    * Take ownership of a pending submission. True for exactly one caller.
    *
@@ -24,10 +27,16 @@ let nextSubmitId = 1;
 
 export const useComposerSubmitStore = create<ComposerSubmitState>((set, get) => ({
   pending: null,
-  submit: (text) => {
+  submit: (text, context) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    set({ pending: { id: nextSubmitId++, text: trimmed } });
+    set({
+      pending: {
+        id: nextSubmitId++,
+        text: trimmed,
+        ...(context ? { context: serializeAssistantContext(context) } : {}),
+      },
+    });
   },
   claim: (id) => {
     if (get().pending?.id !== id) return false;
@@ -36,6 +45,6 @@ export const useComposerSubmitStore = create<ComposerSubmitState>((set, get) => 
   },
 }));
 
-export function submitComposerText(text: string): void {
-  useComposerSubmitStore.getState().submit(text);
+export function submitComposerText(text: string, context?: AssistantContext): void {
+  useComposerSubmitStore.getState().submit(text, context);
 }

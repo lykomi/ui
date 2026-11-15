@@ -70,7 +70,7 @@ export function Field({
       )}
     </>
   );
-  const labelClass = "text-xs font-medium text-muted-foreground";
+  const labelClass = "text-sm font-medium text-muted-foreground";
   const descriptions =
     [child?.props["aria-describedby"], hint && `${id}-hint`, error && `${id}-error`]
       .filter(Boolean)
@@ -87,7 +87,7 @@ export function Field({
     <div
       data-agent-field={id}
       data-agent-context={agentContext ? undefined : "off"}
-      className={cn("grid gap-1.5", className)}
+      className={cn("grid gap-2", className)}
     >
       {singleControl || htmlFor ? (
         <>
@@ -108,7 +108,7 @@ export function Field({
       ) : (
         <>
           {action && <div className="flex justify-end">{action}</div>}
-          <label className="grid gap-1.5">
+          <label className="grid gap-2">
             {label && (
               <span data-agent-field-label className={labelClass}>
                 {labelContent}

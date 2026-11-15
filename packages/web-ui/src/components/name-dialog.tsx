@@ -58,7 +58,13 @@ export function NameDialog({
           >
             Cancel
           </Button>
-          <Button type="submit" form={`${inputId}-form`} disabled={!value.trim() || pending}>
+          <Button
+            type="submit"
+            form={`${inputId}-form`}
+            disabled={!value.trim() || pending}
+            aria-live="polite"
+            aria-busy={pending}
+          >
             {pending ? (pendingLabel ?? `${submitLabel}...`) : submitLabel}
           </Button>
         </>

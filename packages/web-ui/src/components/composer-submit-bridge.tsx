@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { ASSISTANT_CONTEXT_KEY } from "../lib/assistant-context.ts";
 import { useAui } from "@assistant-ui/react";
 import { useComposerSubmitStore } from "../lib/composer-submit-store.ts";
 
@@ -38,16 +39,28 @@ export function ComposerSubmitBridge() {
     // text before either had cleared it.
     if (!useComposerSubmitStore.getState().claim(pending.id)) return;
 
-    const draft = aui.composer.getState().text;
+    const draft = aui.composer.getState();
+    if (pending.context) {
+      // Programmatic help is its own message. composer.send() awaits attachment
+      // resolution BEFORE capturing runConfig, so temporarily setting/restoring
+      // composer config loses this context even when no attachments exist.
+      // Append message + config atomically to the same runtime instead. The
+      // user's draft, quote and attachments are untouched.
+      aui.thread.append({
+        role: "user",
+        content: [{ type: "text", text: pending.text }],
+        runConfig: {
+          ...draft.runConfig,
+          custom: { ...draft.runConfig?.custom, [ASSISTANT_CONTEXT_KEY]: pending.context },
+        },
+      });
+      return;
+    }
 
-    // send() starts the run for the queued text; steering/queueing semantics
-    // are handled by the composer client (assistant-ui >= 0.15).
+    // Ordinary text submissions (including voice) retain composer semantics.
     aui.composer.setText(pending.text);
     aui.composer.send();
-
-    // send() clears the composer, so this restores the user's own text into an
-    // empty box rather than appending it to the turn just sent.
-    if (draft) aui.composer.setText(draft);
+    if (draft.text) aui.composer.setText(draft.text);
   }, [aui, pending]);
 
   return null;
