@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.53.1
+
+### Patch Changes
+
+- 7348898: Use compact matching send, stop and voice controls across composer layouts. Align starter Agent Framework minimum versions with the endpoint's explicit single-user setting and test actual application startup.
+  - @lykomi/agent@0.53.1
+  - @lykomi/web-primitives@0.53.1
+
 ## 0.53.0
 
 ### Minor Changes
