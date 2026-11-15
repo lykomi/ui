@@ -240,7 +240,7 @@ export const ComposerActionButton: FC<{ onAction?: () => void }> = ({ onAction }
           <Button
             variant="secondary"
             size="icon"
-            className="rounded-full size-[var(--composer-action-size,2.5rem)] flex-shrink-0"
+            className="rounded-full size-[var(--composer-action-size,1.75rem)] flex-shrink-0"
             aria-label="Stop generating"
           >
             <Square className="size-4" />
@@ -253,11 +253,11 @@ export const ComposerActionButton: FC<{ onAction?: () => void }> = ({ onAction }
           <ComposerPrimitive.Send asChild>
             <Button
               size="icon"
-              className="rounded-full size-[var(--composer-action-size,2.5rem)] flex-shrink-0"
+              className="rounded-full size-[var(--composer-action-size,1.75rem)] flex-shrink-0"
               aria-label="Send message"
               onClick={onAction}
             >
-              <ArrowUp className="size-5" />
+              <ArrowUp className="size-4" />
             </Button>
           </ComposerPrimitive.Send>
         </ThreadPrimitive.If>
@@ -626,7 +626,7 @@ export function ChatContent(props: ChatContentProps = {}) {
                 // Query container for the controls inside, so they size
                 // against the composer rather than the viewport. This one
                 // is wide, so the effort picker keeps its full label.
-                "@container [--composer-action-size:2.5rem]",
+                "@container [--composer-action-size:1.75rem]",
                 "flex flex-col gap-2",
                 "rounded-3xl border border-input",
                 "bg-background shadow-sm",
@@ -662,7 +662,7 @@ export function ChatContent(props: ChatContentProps = {}) {
                     compactComposer ? "order-2" : "order-2 @md:order-1",
                   )}
                 >
-                  <ComposerAddMenu />
+                  <ComposerAddMenu compact />
                 </div>
 
                 <ComposerInput

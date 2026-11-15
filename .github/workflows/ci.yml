@@ -74,7 +74,7 @@ jobs:
       - name: Test runtime skill activation against the supported minimum
         env:
           PYTHONPATH: packages/create-lykomi-app/template/agent
-        run: uv run --no-project --with agent-framework-core==1.14.0 python -m unittest discover -s packages/create-lykomi-app/template/agent/tests -v
+        run: uv run --no-project --with agent-framework-core==1.26.0 --with agent-framework-ag-ui==1.8.1 --with agent-framework-foundry==1.16.2 --with python-dotenv python -m unittest discover -s packages/create-lykomi-app/template/agent/tests -v
 
   neo4j-preset:
     name: Neo4j preset

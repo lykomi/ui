@@ -370,7 +370,7 @@ export function ChatBubble() {
                       // Query container for the controls inside: the bubble is
                       // a narrow panel in a wide window, so they have to size
                       // against THIS box, not the viewport.
-                      "@container [--composer-action-size:2rem]",
+                      "@container [--composer-action-size:1.75rem]",
                       "flex flex-col gap-1",
                       "rounded-2xl border border-input",
                       "bg-background shadow-sm",
@@ -411,7 +411,7 @@ export function ChatBubble() {
                           <Button
                             variant="secondary"
                             size="icon"
-                            className="rounded-full size-[var(--composer-action-size,2rem)] shrink-0"
+                            className="rounded-full size-[var(--composer-action-size,1.75rem)] shrink-0"
                             aria-label="Stop"
                           >
                             <Square className="size-3" />
@@ -423,7 +423,7 @@ export function ChatBubble() {
                           <ComposerPrimitive.Send asChild>
                             <Button
                               size="icon"
-                              className="rounded-full size-[var(--composer-action-size,2rem)] shrink-0"
+                              className="rounded-full size-[var(--composer-action-size,1.75rem)] shrink-0"
                               aria-label="Send"
                             >
                               <ArrowUp className="size-4" />

@@ -27,10 +27,9 @@ const RING_FLOOR = 0.05;
 
 /**
  * Exactly Send's footprint, because it stands in that position: the composer
- * sets the action size explicitly: 2rem in the bubble and 2.5rem
- * expanded, independent of its current width.
+ * uses the same compact action size across bubble and expanded layouts.
  */
-const CIRCLE = "size-[var(--composer-action-size,2.5rem)] rounded-full shrink-0";
+const CIRCLE = "size-[var(--composer-action-size,1.75rem)] rounded-full shrink-0";
 
 export function VoiceMicButton() {
   const canVoice = useAuiState((s) => s.optional.thread?.capabilities.voice ?? false);
@@ -56,7 +55,7 @@ export function VoiceMicButton() {
         className={CIRCLE}
         onClick={() => controls.connect()}
       >
-        <AudioLines className="size-5" />
+        <AudioLines className="size-4" />
       </TooltipIconButton>
     );
   }
@@ -69,7 +68,7 @@ export function VoiceMicButton() {
         className={CIRCLE}
         onClick={() => controls.disconnect()}
       >
-        <Loader2 className="size-5 animate-spin" />
+        <Loader2 className="size-4 animate-spin" />
       </TooltipIconButton>
     );
   }
@@ -81,13 +80,13 @@ export function VoiceMicButton() {
       <TooltipIconButton
         tooltip={voice.isMuted ? "Unmute microphone" : "Mute microphone"}
         variant="ghost"
-        className="size-8 @md:size-9 shrink-0 rounded-full"
+        className="size-7 shrink-0 rounded-full"
         onClick={() => (voice.isMuted ? controls.unmute() : controls.mute())}
       >
         {voice.isMuted ? (
-          <MicOff className="size-5 text-muted-foreground" />
+          <MicOff className="size-4 text-muted-foreground" />
         ) : (
-          <Mic className="size-5" />
+          <Mic className="size-4" />
         )}
       </TooltipIconButton>
 
@@ -97,7 +96,7 @@ export function VoiceMicButton() {
             button and non-interactive, so it never eats the click. */}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute size-[var(--composer-action-size,2.5rem)] rounded-full bg-primary/25 transition-transform duration-75"
+          className="pointer-events-none absolute size-[var(--composer-action-size,1.75rem)] rounded-full bg-primary/25 transition-transform duration-75"
           style={{ transform: `scale(${volume > RING_FLOOR ? 1 + volume * 0.4 : 0})` }}
         />
         <TooltipIconButton
@@ -108,7 +107,7 @@ export function VoiceMicButton() {
           className={`${CIRCLE} relative ${reconnecting ? "animate-pulse" : ""}`}
           onClick={() => controls.disconnect()}
         >
-          <X className="size-5" />
+          <X className="size-4" />
         </TooltipIconButton>
       </span>
     </span>
