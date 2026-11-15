@@ -36,6 +36,8 @@ export interface DataTableFacet {
   columnId: string;
   title?: string;
   options?: DataTableFacetOption[];
+  /** Full-query counts for a server-filtered/incrementally loaded list. */
+  counts?: ReadonlyMap<string, number>;
   /** Always show this facet; unset → the first `pinnedFacets` are pinned. */
   pinned?: boolean;
 }
@@ -183,6 +185,7 @@ export function DataTableToolbar<T>({
         column={column}
         title={facet.title}
         options={facet.options}
+        counts={facet.counts}
         onEmptyClose={
           revealed.has(facet.columnId)
             ? () =>

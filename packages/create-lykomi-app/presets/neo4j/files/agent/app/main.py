@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .agent import get_agent
+from .skills import get_skills_source
+from agent_framework import SkillsSourceContext
 from .graph_db import close_driver
 
 
@@ -60,6 +62,23 @@ STATE_SCHEMA = {
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/chat/config")
+async def chat_config() -> dict[str, object]:
+    skills = await get_skills_source().get_skills(
+        SkillsSourceContext(agent=get_agent())
+    )
+    return {
+        "skills": [
+            {
+                "name": skill.frontmatter.name,
+                "description": skill.frontmatter.description,
+                "scope": "app",
+            }
+            for skill in skills
+        ]
+    }
 
 
 try:

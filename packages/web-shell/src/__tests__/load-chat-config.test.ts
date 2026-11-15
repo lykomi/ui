@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const setResolved = vi.fn();
 const setWindow = vi.fn();
+const setSkills = vi.fn();
 
 vi.mock("@lykomi/agent", () => ({
+  chatSkillsStore: { getState: () => ({ setSkills }) },
   reasoningDefaultStore: { getState: () => ({ setResolved }) },
   contextUsageStore: { getState: () => ({ setWindow }) },
 }));
@@ -20,6 +22,7 @@ function fetchReturning(body: unknown, ok = true): typeof fetch {
 beforeEach(() => {
   setResolved.mockClear();
   setWindow.mockClear();
+  setSkills.mockClear();
   // reset the module-level boot fetch between tests
   _setChatConfigFetch(undefined as unknown as typeof fetch);
 });
@@ -139,4 +142,14 @@ describe("refreshChatConfig", () => {
 
     expect(setWindow).not.toHaveBeenCalled();
   });
+});
+
+it("loads the backend skill catalogue and clears it during scope changes", async () => {
+  const skills = [{ name: "plan-work", description: "Plan work" }];
+  await loadChatConfig(fetchReturning({ skills }));
+  expect(setSkills).toHaveBeenLastCalledWith(skills);
+  const calls = setSkills.mock.calls.length;
+  await loadChatConfig(fetchReturning({}, false), { entityId: "other" });
+  expect(setSkills.mock.calls[calls]).toEqual([null]);
+  expect(setSkills).toHaveBeenLastCalledWith(null);
 });

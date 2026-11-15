@@ -1,5 +1,7 @@
 from functools import lru_cache
 
+from .skills import ChatSkillsProvider, get_skills_source
+
 from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
@@ -13,6 +15,7 @@ def get_agent() -> Agent:
     client = FoundryChatClient(credential=DefaultAzureCredential())
 
     return Agent(
+        context_providers=[ChatSkillsProvider(get_skills_source())],
         client=client,
         name="FoundryIQAgent",
         instructions=(

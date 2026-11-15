@@ -1862,3 +1862,23 @@ it("contains the terminal resize target only when no trailing spacer exists", ()
     container!.querySelector("[data-column-resize-terminal]")!.getAttribute("aria-label"),
   ).toBe("Resize Status column");
 });
+
+it("uses authoritative full-query facet counts for an incremental list", () => {
+  const column = {
+    columnDef: { meta: {} },
+    getFacetedRowModel: () => {
+      throw new Error("Must not count only the loaded batch");
+    },
+  } as unknown as import("@tanstack/react-table").Column<Task, unknown>;
+  expect(
+    facetOptions(column, undefined, {
+      counts: new Map([
+        ["ready", 120],
+        ["blocked", 40],
+      ]),
+    }),
+  ).toEqual([
+    { value: "blocked", label: "blocked", count: 40 },
+    { value: "ready", label: "ready", count: 120 },
+  ]);
+});

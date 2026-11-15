@@ -168,6 +168,8 @@ export function facetCounts<T>(column: Column<T, unknown>): Map<string, number> 
 }
 
 export interface FacetOptionsOptions {
+  /** Authoritative counts from a remote query, excluding this facet's own filter. */
+  counts?: ReadonlyMap<string, number>;
   /** Label for keys that are neither declared nor in `meta.facetLabels`. */
   labelFor?: (key: string) => string;
   /** Label for the empty-cell option (default "None"). */
@@ -184,7 +186,7 @@ export function facetOptions<T>(
   declared?: DataTableFacetOption[],
   options?: FacetOptionsOptions,
 ): DataTableFacetCount[] {
-  const counts = facetCounts(column);
+  const counts = options?.counts ?? facetCounts(column);
   const labels = column.columnDef.meta?.facetLabels ?? {};
   const labelFor = (key: string) => labels[key] ?? options?.labelFor?.(key) ?? key;
   const seen = new Set<string>();

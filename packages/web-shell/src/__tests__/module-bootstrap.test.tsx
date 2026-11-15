@@ -83,6 +83,7 @@ vi.mock("@lykomi/web-primitives", () => ({
 }));
 
 vi.mock("@lykomi/agent", () => ({
+  chatSkillsStore: { getState: () => ({ setSkills: () => {} }) },
   createServiceFetch: () => fetch,
   // load-chat-config imports this on shell boot; a set-only stub keeps the
   // mock honest without pulling zustand into the test graph.

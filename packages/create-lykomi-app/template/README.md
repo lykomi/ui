@@ -225,3 +225,25 @@ Five repository-local skills ship in both `.agents/skills/` (Codex and compatibl
 - `lykomi-verify-ui`: verify real browser behavior, context and package boundaries.
 
 These guide your coding assistant; they are not runtime tools for the chat agent. They install only in this project and do not change global configuration. The optional Claude Code plugin adds documentation MCP servers; it is not required for these bundled skills. Keep project-specific adaptations in your generated app.
+
+## Skills in the running chat
+
+Type `/` in the composer or use **+ → Use a skill**. The included `/plan-work`
+skill turns your request and current page context into a practical work plan.
+Add runtime skills as `agent/skills/<name>/SKILL.md` with `name` and `description`
+in YAML frontmatter. Restart the agent after adding or editing skills.
+
+`agent/app/skills.py` connects Agent Framework discovery with explicit slash
+selection. A selected skill is resolved and loaded before the model runs; normal
+chat can also discover skills automatically. The backend owns the catalogue and
+permissions. No script runner is configured by this starter.
+
+These runtime skills serve the app's users. The `.agents/skills/` and
+`.claude/skills/` directories instead help coding agents develop the application.
+
+Run the runtime checks without Azure credentials from `agent/`:
+`uv run python -m unittest discover -s tests -v`.
+
+The Collections showcase loads 120 local example tasks in batches and registers
+row/bulk actions once with `useDataTableActions`. The agent uses those same actions;
+Delete waits for your confirmation. All example changes stay in the browser.

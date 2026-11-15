@@ -363,3 +363,44 @@ Use `WindowTabStrip`, `WindowPanelActions` and `PaneResizeHandle` with the same
 controller. The host retains its routes, permissions, content loading and
 specialized detail relationships; the framework owns the common interactions.
 See the generated starter's Guide for a working editable example.
+
+### Incremental lists and registered actions
+
+Use `DataTable` with an unpaginated `useDataTable` instance and
+`loadMore={{ hasMore, loading, onLoadMore, resetKey }}` to append batches as the
+person scrolls. `onLoadMore` returns a promise after adding the batch; errors show
+a keyboard-accessible retry button. `resetKey` identifies the current remote
+query. The host owns fetching, cursor reset and cancellation of stale responses.
+For remote filtering/sorting, pass `manualFiltering` and `manualSorting` to
+`useDataTable` and query the full dataset before returning each batch. Long bounded
+lists continue to use the existing virtualization.
+
+Register `DataTableAction<T>` definitions once with
+`useDataTableActions({ table, actions, itemLabel })`. Each definition has an `id`,
+`label`, `execute(rows)` and optional `icon`, `isAvailable(rows)` and `destructive`.
+Feed `actions.forRows(ids)` into `DataTableRowActions` or selection-bar controls.
+An agent's page tool calls the same `actions.run(id, ids)`; it receives a
+`complete`, `cancelled` or `error` result. Only loaded row IDs can be acted on.
+Mount `<ConfirmDialog {...actions.confirmation} />` once beside the table:
+destructive actions wait for that human confirmation, then recheck availability.
+The application's callback still owns authorization, persistence and data changes.
+
+The starter's Collections showcase demonstrates incremental loading, search over
+the full sample dataset, row and bulk actions, confirmation and shared AG-UI context.
+
+### Skills in chat
+
+The shared composer offers `/skill-name` autocomplete and a **Use a skill** section
+in its plus menu when the backend advertises skills. `/` selects a procedure;
+references to people, documents and other context remain separate. The ordinary
+message text carries the selected command, so conversation history records it.
+
+`@lykomi/web-shell` reads the catalogue from `/api/chat/config`:
+`{ "skills": [{ "name": "plan-work", "description": "Make a practical plan", "scope": "app" }] }`.
+Refresh it through `refreshChatConfig` when the host context changes. The shell
+clears obsolete entries immediately and ignores out-of-order responses.
+
+The backend must resolve an explicit leading command against its current,
+authorized catalogue and load the body before model invocation. A UI selection
+never grants access to a skill. The starter includes a working Agent Framework
+provider and a `plan-work` skill; it does not depend on any application module.

@@ -59,6 +59,7 @@ vi.mock("@lykomi/web-primitives", () => ({
 }));
 
 vi.mock("@lykomi/agent", () => ({
+  chatSkillsStore: { getState: () => ({ setSkills: () => {} }) },
   createServiceFetch: () => fetch,
   reasoningDefaultStore: { getState: () => ({ setResolved: () => {} }) },
   contextUsageStore: { getState: () => ({ setWindow: () => {} }) },

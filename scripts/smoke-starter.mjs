@@ -299,7 +299,15 @@ async function runBrowserStarterSmoke() {
       await route.fulfill({
         status: 200,
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ reasoning: { defaultEffort: "medium" } }),
+        body: JSON.stringify({
+          reasoning: { defaultEffort: "medium" },
+          skills: [
+            {
+              name: "plan-work",
+              description: "Turn the current context into a practical work plan.",
+            },
+          ],
+        }),
       });
     });
 

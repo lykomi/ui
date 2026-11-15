@@ -3,6 +3,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .agent import get_agent
+from .skills import get_skills_source
+from agent_framework import SkillsSourceContext
 from .foundry_iq import reset_query_source_authorization, set_query_source_authorization
 
 load_dotenv()
@@ -22,10 +24,9 @@ app.add_middleware(
 async def foundry_iq_security_trimming_context(request: Request, call_next):
     # x-ms-query-source-authorization is preferred; authorization is a local-dev
     # fallback for passing the signed-in user's bearer token to security trimming.
-    query_source_authorization = (
-        request.headers.get("x-ms-query-source-authorization")
-        or request.headers.get("authorization")
-    )
+    query_source_authorization = request.headers.get(
+        "x-ms-query-source-authorization"
+    ) or request.headers.get("authorization")
     token = set_query_source_authorization(query_source_authorization)
     try:
         return await call_next(request)
@@ -64,6 +65,23 @@ STATE_SCHEMA = {
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/chat/config")
+async def chat_config() -> dict[str, object]:
+    skills = await get_skills_source().get_skills(
+        SkillsSourceContext(agent=get_agent())
+    )
+    return {
+        "skills": [
+            {
+                "name": skill.frontmatter.name,
+                "description": skill.frontmatter.description,
+                "scope": "app",
+            }
+            for skill in skills
+        ]
+    }
 
 
 try:
