@@ -94,4 +94,7 @@ add_agent_framework_fastapi_endpoint(
     get_agent(),
     path="/api/agent",
     state_schema=STATE_SCHEMA,
+    # This local preset has no sign-in. Use an authorization scope resolver
+    # when deploying it with authenticated users.
+    single_user=True,
 )

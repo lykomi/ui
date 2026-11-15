@@ -205,3 +205,8 @@ Five repository-local skills ship in both `.agents/skills/` (Codex and compatibl
 - `lykomi-verify-ui`: verify real browser behavior, context and package boundaries.
 
 These guide your coding assistant; they are not runtime tools for the chat agent. They install only in this project and do not change global configuration. The optional Claude Code plugin adds documentation MCP servers; it is not required for these bundled skills. Keep project-specific adaptations in your generated app.
+
+
+## Authentication
+
+This local preset declares `single_user=True` on the AG-UI endpoint and has no user sign-in. Before serving multiple users, validate bearer tokens on the backend and replace that setting with an `authorization_scope_resolver` derived from the authenticated tenant and user. Browser authentication alone does not protect the endpoint or isolate thread state.
