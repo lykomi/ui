@@ -3,6 +3,22 @@ import { describe, expect, it } from "vitest";
 import { OperationProgress } from "./operation-progress.tsx";
 
 describe("OperationProgress", () => {
+  it.each([
+    ["running", "In progress"],
+    ["pending", "Pending"],
+    ["success", "Completed"],
+    ["warning", "Needs attention"],
+    ["error", "Failed"],
+    ["cancelled", "Cancelled"],
+  ] as const)(
+    "announces %s even when the title and description stay unchanged",
+    (status, label) => {
+      const html = renderToStaticMarkup(
+        <OperationProgress title="Upload" description="Project documents" status={status} />,
+      );
+      expect(html).toMatch(new RegExp(`role="status"[^]*?<span class="sr-only">${label}</span>`));
+    },
+  );
   it("does not announce a fictional percentage for unknown work", () => {
     const html = renderToStaticMarkup(
       <OperationProgress title="Preparing documents" status="running" progress={null} />,

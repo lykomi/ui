@@ -33,12 +33,27 @@ export interface OperationProgressProps {
 }
 
 const appearance = {
-  running: { Icon: Loader2, tone: "text-primary", bar: "bg-primary" },
-  pending: { Icon: Clock3, tone: "text-muted-foreground", bar: "bg-muted-foreground" },
-  success: { Icon: CheckCircle2, tone: "text-success", bar: "bg-success" },
-  warning: { Icon: TriangleAlert, tone: "text-warning", bar: "bg-warning" },
-  error: { Icon: AlertCircle, tone: "text-destructive", bar: "bg-destructive" },
-  cancelled: { Icon: Ban, tone: "text-muted-foreground", bar: "bg-muted-foreground" },
+  running: { label: "In progress", Icon: Loader2, tone: "text-primary", bar: "bg-primary" },
+  pending: {
+    label: "Pending",
+    Icon: Clock3,
+    tone: "text-muted-foreground",
+    bar: "bg-muted-foreground",
+  },
+  success: { label: "Completed", Icon: CheckCircle2, tone: "text-success", bar: "bg-success" },
+  warning: {
+    label: "Needs attention",
+    Icon: TriangleAlert,
+    tone: "text-warning",
+    bar: "bg-warning",
+  },
+  error: { label: "Failed", Icon: AlertCircle, tone: "text-destructive", bar: "bg-destructive" },
+  cancelled: {
+    label: "Cancelled",
+    Icon: Ban,
+    tone: "text-muted-foreground",
+    bar: "bg-muted-foreground",
+  },
 };
 
 /** Shared presentation for native jobs and authored renderers. It owns no
@@ -61,7 +76,7 @@ export function OperationProgress({
   density = "comfortable",
   className,
 }: OperationProgressProps) {
-  const { Icon, tone, bar } = appearance[status];
+  const { Icon, tone, bar, label } = appearance[status];
   const measured =
     typeof progress === "number" && Number.isFinite(progress)
       ? Math.max(0, Math.min(100, progress))
@@ -99,6 +114,7 @@ export function OperationProgress({
               aria-atomic="true"
             >
               <p className="m-0 font-medium leading-5 text-foreground">{title}</p>
+              <span className="sr-only">{label}</span>
               {description && (
                 <div className="mt-1 text-sm leading-5 text-muted-foreground">{description}</div>
               )}

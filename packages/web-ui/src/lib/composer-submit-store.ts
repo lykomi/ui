@@ -4,13 +4,14 @@ import { serializeAssistantContext, type AssistantContext } from "./assistant-co
 interface PendingComposerSubmit {
   id: number;
   text: string;
+  kind: "text" | "help";
   /** Serialized at submission: later renders cannot change this turn’s context. */
   context?: string;
 }
 
 interface ComposerSubmitState {
   pending: PendingComposerSubmit | null;
-  submit: (text: string, context?: AssistantContext) => void;
+  submit: (text: string, context?: AssistantContext, kind?: "text" | "help") => void;
   /**
    * Take ownership of a pending submission. True for exactly one caller.
    *
@@ -27,13 +28,14 @@ let nextSubmitId = 1;
 
 export const useComposerSubmitStore = create<ComposerSubmitState>((set, get) => ({
   pending: null,
-  submit: (text, context) => {
+  submit: (text, context, kind = context ? "help" : "text") => {
     const trimmed = text.trim();
     if (!trimmed) return;
     set({
       pending: {
         id: nextSubmitId++,
         text: trimmed,
+        kind,
         ...(context ? { context: serializeAssistantContext(context) } : {}),
       },
     });
@@ -47,4 +49,9 @@ export const useComposerSubmitStore = create<ComposerSubmitState>((set, get) => 
 
 export function submitComposerText(text: string, context?: AssistantContext): void {
   useComposerSubmitStore.getState().submit(text, context);
+}
+
+/** Help is a separate turn even when the caller has no UI snapshot. */
+export function submitAssistantHelp(text: string, context?: AssistantContext): void {
+  useComposerSubmitStore.getState().submit(text, context, "help");
 }

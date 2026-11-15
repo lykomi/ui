@@ -11,13 +11,15 @@ import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
 const composer = vi.hoisted(() => {
   const state = {
     text: "",
+    attachments: [] as string[],
+    quote: "",
     sent: [] as string[],
     runConfig: {} as { custom?: Record<string, unknown> },
     sentConfigs: [] as { custom?: Record<string, unknown> }[],
   };
   return {
     state,
-    getState: () => ({ text: state.text, runConfig: state.runConfig }),
+    getState: () => ({ ...state }),
     setRunConfig: (config: typeof state.runConfig) => {
       state.runConfig = config;
     },
@@ -28,6 +30,8 @@ const composer = vi.hoisted(() => {
       state.sent.push(state.text);
       state.sentConfigs.push(state.runConfig);
       state.text = "";
+      state.attachments = [];
+      state.quote = "";
     },
   };
 });
@@ -59,6 +63,8 @@ afterEach(async () => {
   useComposerSubmitStore.setState({ pending: null });
   useChatBubbleStore.getState().close();
   composer.state.text = "";
+  composer.state.attachments = [];
+  composer.state.quote = "";
   composer.state.sent.length = 0;
   composer.state.sentConfigs.length = 0;
   composer.state.runConfig = {};
@@ -103,6 +109,8 @@ describe("AI help through the host composer", () => {
     "sends %s help once on click, preserving the draft",
     async (status) => {
       composer.state.text = "My unfinished question";
+      composer.state.attachments = ["draft.pdf"];
+      composer.state.quote = "A selected passage";
       await mount(
         <StrictMode>
           <ComposerSubmitBridge />
@@ -122,6 +130,8 @@ describe("AI help through the host composer", () => {
         "Explain the failure for job-42. Check its current status.",
       ]);
       expect(composer.state.text).toBe("My unfinished question");
+      expect(composer.state.attachments).toEqual(["draft.pdf"]);
+      expect(composer.state.quote).toBe("A selected passage");
     },
   );
   it("keeps expanded chat in place and rejects a second click while delivery is pending", async () => {

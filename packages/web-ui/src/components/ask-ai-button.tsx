@@ -2,7 +2,7 @@ import { Sparkles } from "lucide-react";
 import type { AssistantContext } from "../lib/assistant-context.ts";
 import { Button, type ButtonProps } from "@lykomi/web-primitives";
 import { useChatBubbleStore } from "../lib/chat-bubble-store.ts";
-import { submitComposerText, useComposerSubmitStore } from "../lib/composer-submit-store.ts";
+import { submitAssistantHelp, useComposerSubmitStore } from "../lib/composer-submit-store.ts";
 
 export interface AskAIButtonProps extends Omit<
   ButtonProps,
@@ -40,7 +40,7 @@ export function AskAIButton({
         if (useComposerSubmitStore.getState().pending || !prompt.trim()) return;
         const chat = useChatBubbleStore.getState();
         if (!chat.isOpen && !chat.isExpanded) chat.open();
-        submitComposerText(prompt, context);
+        submitAssistantHelp(prompt, context);
       }}
     >
       <Sparkles aria-hidden="true" />

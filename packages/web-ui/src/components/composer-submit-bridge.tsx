@@ -40,7 +40,7 @@ export function ComposerSubmitBridge() {
     if (!useComposerSubmitStore.getState().claim(pending.id)) return;
 
     const draft = aui.composer.getState();
-    if (pending.context) {
+    if (pending.kind === "help") {
       // Programmatic help is its own message. composer.send() awaits attachment
       // resolution BEFORE capturing runConfig, so temporarily setting/restoring
       // composer config loses this context even when no attachments exist.
@@ -51,7 +51,9 @@ export function ComposerSubmitBridge() {
         content: [{ type: "text", text: pending.text }],
         runConfig: {
           ...draft.runConfig,
-          custom: { ...draft.runConfig?.custom, [ASSISTANT_CONTEXT_KEY]: pending.context },
+          ...(pending.context
+            ? { custom: { ...draft.runConfig?.custom, [ASSISTANT_CONTEXT_KEY]: pending.context } }
+            : {}),
         },
       });
       return;
