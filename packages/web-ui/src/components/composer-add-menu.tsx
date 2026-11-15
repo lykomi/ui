@@ -3,6 +3,7 @@ import { ComposerPrimitive } from "@assistant-ui/react";
 import { Camera, Paperclip, Plus } from "lucide-react";
 import { Button, cn } from "@lykomi/web-primitives";
 import { CaptureViewAction } from "./capture-view-menu-item.tsx";
+import { ComposerSkillOptions } from "./composer-skill-options.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,7 @@ export const ComposerAddMenu: FC<ComposerAddMenuProps> = ({
                 {pending ? "Capturing…" : "Capture view"}
               </DropdownMenuItem>
             )}
+            <ComposerSkillOptions />
           </DropdownMenuContent>
         </DropdownMenu>
       )}

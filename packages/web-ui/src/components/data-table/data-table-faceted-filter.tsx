@@ -19,6 +19,7 @@ export interface DataTableFacetedFilterProps<T> {
   column: Column<T, unknown>;
   title?: string;
   options?: DataTableFacetOption[];
+  counts?: ReadonlyMap<string, number>;
   /** Show a search box inside the list once there are more options than this (default 7). */
   searchableFrom?: number;
   /** Called when the popover closes with nothing selected (a revealed facet goes back into the menu). */
@@ -30,6 +31,7 @@ export function DataTableFacetedFilter<T>({
   column,
   title,
   options: declared,
+  counts,
   searchableFrom = 7,
   onEmptyClose,
   className,
@@ -38,7 +40,7 @@ export function DataTableFacetedFilter<T>({
   const label = title ?? columnLabel(column);
   const selected = normalizeFacetValue(column.getFilterValue());
   const selectedSet = new Set(selected);
-  const options = facetOptions(column, declared);
+  const options = facetOptions(column, declared, { counts });
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return needle ? options.filter((o) => o.label.toLowerCase().includes(needle)) : options;

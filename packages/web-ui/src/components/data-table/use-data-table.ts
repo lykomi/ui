@@ -48,6 +48,9 @@ export interface UseDataTableOptions<T> {
   globalFilterFn?: FilterFn<T>;
   /** Defaults for content columns; individual definitions override them. */
   defaultColumn?: TableOptions<T>["defaultColumn"];
+  /** The data source applies filters/sorting before returning a batch. */
+  manualFiltering?: boolean;
+  manualSorting?: boolean;
 }
 
 const PAGE_RESET_KEYS = new Set<keyof DataTableState>(["globalFilter", "columnFilters", "sorting"]);
@@ -110,6 +113,8 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
     enableMultiRowSelection = true,
     globalFilterFn,
     defaultColumn,
+    manualFiltering,
+    manualSorting,
   } = options;
   const controlled = controlledState !== undefined && onStateChange !== undefined;
 
@@ -164,6 +169,8 @@ export function useDataTable<T>(options: UseDataTableOptions<T>): Table<T> {
 
   const grouped = Boolean(groupBy);
   const tableOptions: TableOptions<T> = {
+    manualFiltering,
+    manualSorting,
     data,
     columns,
     defaultColumn: {

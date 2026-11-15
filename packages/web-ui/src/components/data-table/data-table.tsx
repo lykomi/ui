@@ -29,9 +29,12 @@ import { useElementWidth } from "./use-element-width.ts";
 import { cn } from "@lykomi/web-primitives";
 
 import { useVirtualTableRows } from "./use-virtual-table-rows.js";
+import { DataTableLoadMore, type DataTableLoadMoreOptions } from "./data-table-load-more.tsx";
 
 export interface DataTableProps<T> {
   table: Table<T>;
+  /** Append batches as the list reaches its end. Use an unpaginated table. */
+  loadMore?: DataTableLoadMoreOptions;
   /** Single click on a row — selecting it, in the desktop sense. */
   onRowClick?: (row: Row<T>, event: MouseEvent | KeyboardEvent) => void;
   /**
@@ -163,6 +166,7 @@ function orderedRows<T>(table: Table<T>, groupOrder?: string[]): Row<T>[] {
 
 export function DataTable<T>({
   table,
+  loadMore,
   onRowClick,
   onRowOpen,
   activeRowId: controlledActiveRowId,
@@ -228,11 +232,14 @@ export function DataTable<T>({
   const availableHeight = viewport.height;
   const keepHeight = stableHeight ?? (viewport.paginated && table.getPageCount() > 1);
   const { pageIndex, pageSize } = table.getState().pagination;
-  const previousPage = useRef({ pageIndex, pageSize });
+  const resetKey = loadMore?.resetKey;
+  const previousPage = useRef({ pageIndex, pageSize, resetKey });
   useEffect(() => {
     const changed =
-      previousPage.current.pageIndex !== pageIndex || previousPage.current.pageSize !== pageSize;
-    previousPage.current = { pageIndex, pageSize };
+      previousPage.current.pageIndex !== pageIndex ||
+      previousPage.current.pageSize !== pageSize ||
+      previousPage.current.resetKey !== resetKey;
+    previousPage.current = { pageIndex, pageSize, resetKey };
     if (!changed) return;
     if (!pageScrolling) {
       if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
@@ -252,7 +259,7 @@ export function DataTable<T>({
     });
     if (window.scrollX !== windowLeft)
       window.scrollTo({ left: windowLeft, top: window.scrollY, behavior: "instant" });
-  }, [pageIndex, pageSize, pageScrolling]);
+  }, [pageIndex, pageSize, pageScrolling, resetKey]);
   const viewportMaxHeight =
     availableHeight === undefined
       ? effectiveMaxHeight
@@ -865,6 +872,14 @@ export function DataTable<T>({
             ) : null}
           </tbody>
         </table>
+        {loadMore ? (
+          <DataTableLoadMore
+            options={loadMore}
+            rowCount={table.options.data.length}
+            scroller={scrollerRef}
+            pageScrolling={pageScrolling}
+          />
+        ) : null}
         {virtual.enabled && virtual.hasTabTargets ? (
           <span
             tabIndex={0}

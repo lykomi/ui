@@ -1,5 +1,6 @@
 import {
   contextUsageStore,
+  chatSkillsStore,
   reasoningDefaultStore,
   type ResolvedReasoningEffort,
 } from "@lykomi/agent";
@@ -34,6 +35,8 @@ export async function loadChatConfig(
   // arrive out of order. Only the latest request may write: an older one
   // describes a context the user has already left.
   const request = ++latestRequest;
+  // A catalogue from the previous scope must never remain selectable while loading.
+  chatSkillsStore.getState().setSkills(null);
   const isCurrent = () => request === latestRequest;
   const reset = () => {
     if (!isCurrent()) return;
@@ -50,8 +53,10 @@ export async function loadChatConfig(
     const body = (await response.json()) as {
       reasoning?: { defaultEffort?: unknown; scope?: unknown };
       context?: { windowTokens?: unknown };
+      skills?: unknown;
     };
     if (!isCurrent()) return;
+    chatSkillsStore.getState().setSkills(body?.skills);
     // How much a chat can hold, if the backend says. Anything else leaves
     // the context indicator hidden rather than drawn against a guess.
     const windowTokens = body?.context?.windowTokens;

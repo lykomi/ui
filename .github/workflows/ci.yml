@@ -65,6 +65,17 @@ jobs:
       - name: Smoke generated starter in browser
         run: pnpm smoke:starter:browser
 
+  runtime-skills:
+    name: Runtime skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v5
+      - name: Test runtime skill activation against the supported minimum
+        env:
+          PYTHONPATH: packages/create-lykomi-app/template/agent
+        run: uv run --no-project --with agent-framework-core==1.14.0 python -m unittest discover -s packages/create-lykomi-app/template/agent/tests -v
+
   neo4j-preset:
     name: Neo4j preset
     runs-on: ubuntu-latest

@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .agent import get_agent
+from .skills import get_skills_source
+from agent_framework import SkillsSourceContext
 
 load_dotenv()
 
@@ -53,7 +55,19 @@ async def health() -> dict[str, str]:
 async def chat_config() -> dict[str, object]:
     # The scaffold does not set a reasoning level or context-window limit.
     # Leave those values unknown until the app's backend can report them.
-    return {}
+    skills = await get_skills_source().get_skills(
+        SkillsSourceContext(agent=get_agent())
+    )
+    return {
+        "skills": [
+            {
+                "name": skill.frontmatter.name,
+                "description": skill.frontmatter.description,
+                "scope": "app",
+            }
+            for skill in skills
+        ]
+    }
 
 
 try:

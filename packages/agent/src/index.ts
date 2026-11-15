@@ -28,6 +28,7 @@ export {
 } from "./store/reasoning-effort-store.ts";
 export { streamingStatusStore, type StreamingStatus } from "./store/streaming-status-store.ts";
 export { contextUsageStore, type ContextUsage } from "./store/context-usage-store.ts";
+export { chatSkillsStore, type ChatSkill } from "./store/chat-skills-store.ts";
 export {
   citationStore,
   type CitationResult,

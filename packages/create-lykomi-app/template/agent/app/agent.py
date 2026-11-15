@@ -1,12 +1,13 @@
 from functools import lru_cache
 
 from agent_framework import Agent
+
 # from agent_framework import MCPStreamableHTTPTool
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 
 from .tools import AGENT_TOOLS
-
+from .skills import ChatSkillsProvider, get_skills_source
 
 # To add a remote MCP server, uncomment the dependency in agent/pyproject.toml,
 # then uncomment and configure this block. Agent Framework connects the MCP
@@ -31,6 +32,7 @@ def get_agent() -> Agent:
     return Agent(
         client=client,
         name="HelloAgent",
+        context_providers=[ChatSkillsProvider(get_skills_source())],
         instructions=(
             "You are a concise starter assistant for a LYKOMI UI app. "
             "Use hello_world when the user asks for hello world or a hello demo. "

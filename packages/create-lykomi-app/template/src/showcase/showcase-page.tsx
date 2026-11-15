@@ -23,6 +23,8 @@ import { SourcePanel } from "./source-panel.tsx";
 import formSource from "./form-example.tsx?raw";
 import modelSource from "./form-model.ts?raw";
 import tableSource from "./table-example.tsx?raw";
+import tableModelSource from "./table-model.ts?raw";
+import taskContextSource from "./use-task-context.ts?raw";
 import processSource from "./process-example.tsx?raw";
 import windowsSource from "./windows-example.tsx?raw";
 import feedbackSource from "./feedback-example.tsx?raw";
@@ -52,8 +54,12 @@ const examples = [
       "A table, its filters and its selection form one coherent view. The context includes rendered columns, visible rows and selection IDs.",
     component: TableExample,
     prompt: "Show me the tasks about watering, then summarize the visible results.",
-    tags: ["DataTable", "useDataTable", "setContextItem"],
-    sources: [{ name: "table-example.tsx", code: tableSource }],
+    tags: ["DataTable", "loadMore", "useDataTableActions"],
+    sources: [
+      { name: "table-example.tsx", code: tableSource },
+      { name: "table-model.ts", code: tableModelSource },
+      { name: "use-task-context.ts", code: taskContextSource },
+    ],
   },
   {
     id: "dashboard",

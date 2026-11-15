@@ -191,15 +191,24 @@ export async function smokeShowcase(page, url, workDir) {
   await page.setViewportSize({ width: 1512, height: 982 });
   await page.emulateMedia({ colorScheme: "light" });
 
+  // The shared composer discovers and selects runtime skills without sending.
+  await main.getByRole("button", { name: "Open chat", exact: true }).click();
+  const composer = page.getByRole("textbox", { name: "Chat message", exact: true });
+  await composer.fill("/");
+  await page.getByRole("listbox", { name: "Available skills" }).waitFor();
+  await composer.press("Enter");
+  assert.equal(await composer.inputValue(), "/plan-work ");
+  await composer.fill("");
+
   // Reload hides the chat so screenshots show the complete example canvas.
   await page.goto(`${url}showcase/collections`);
   await page.getByPlaceholder("Search garden tasks…").fill("watering");
-  await waitContext('"matchingCount": 1');
+  await waitContext('"matchingCount": 20');
   snapshot = await context();
   const table = snapshot.state.contextItems.find((item) => item.refType === "table");
-  assert.equal(table.meta.rows.length, 1);
+  assert.equal(table.meta.rows.length, 20);
   assert.equal(table.meta.rows[0].name, "Plan shared watering");
-  await page.getByRole("row").filter({ hasText: "Plan shared watering" }).click();
+  await page.getByRole("row").filter({ hasText: "Plan shared watering" }).first().click();
   await page.waitForFunction(() =>
     JSON.parse(document.querySelector('[aria-label="AG-UI context JSON"]').textContent)
       .state.contextItems.find((item) => item.refType === "table")
@@ -209,10 +218,40 @@ export async function smokeShowcase(page, url, workDir) {
     (await context()).state.contextItems.find((item) => item.refType === "table").meta.selectedIds,
     ["t3"],
   );
+  await main.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+  await main.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
+  await waitContext('"matchingCount": 19');
+  assert.ok(
+    !(await context()).state.contextItems
+      .find((item) => item.refType === "table")
+      .meta.rows.some((row) => row.id === "t3"),
+  );
+  await page.getByPlaceholder("Search garden tasks…").fill("");
+  await waitContext('"loadedCount": 20');
+  await main.locator("[data-table-load-more]").evaluate((element) => {
+    const scroll = element.parentElement;
+    scroll.scrollTop = scroll.scrollHeight;
+  });
+  await waitContext('"loadedCount": 40');
   await page.screenshot({
     animations: "disabled",
     path: join(workDir, "showcase-collections.png"),
   });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${url}showcase/collections`);
+  const listScroll = main.getByRole("region", { name: "Garden tasks scroll area" });
+  await listScroll.scrollIntoViewIfNeeded();
+  assert.ok((await listScroll.boundingBox()).height > 200, "Narrow lists keep a visible viewport");
+  await page.getByRole("checkbox", { name: "Select row", exact: true }).first().click();
+  await main.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.screenshot({
+    animations: "disabled",
+    path: join(workDir, "showcase-collections-narrow.png"),
+  });
+  await page.setViewportSize({ width: 1440, height: 960 });
   await example("Processes").click();
   assert.equal(
     await main.evaluate((element) => {

@@ -24,6 +24,13 @@ function render(element: ReactNode) {
 }
 const state = vi.hoisted(() => ({ text: "" }));
 vi.mock("@assistant-ui/react", () => ({
+  useAui: () => ({
+    composer: {
+      setText: (text: string) => {
+        state.text = text;
+      },
+    },
+  }),
   useAuiState: (select: (value: unknown) => unknown) => select({ composer: state }),
   ComposerPrimitive: {
     Input: ({ minRows, maxRows, ...props }: any) => (
@@ -32,10 +39,12 @@ vi.mock("@assistant-ui/react", () => ({
   },
 }));
 import { ComposerInput } from "./composer-input.tsx";
+import { chatSkillsStore } from "@lykomi/agent";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   state.text = "";
+  chatSkillsStore.getState().setSkills(null);
 });
 it("keeps empty input to one row and restores the caller's limit while typing", () => {
   const { container, rerender } = render(<ComposerInput maxRows={8} />);
@@ -72,4 +81,32 @@ it("remeasures on pane width changes without replacing the input", () => {
   expect(input.dataset.composerWidth).toBe("500");
   unmount();
   expect(disconnect).toHaveBeenCalled();
+});
+
+it("selects a slash skill with the keyboard without sending the message", () => {
+  chatSkillsStore.getState().setSkills([{ name: "plan-work", description: "Plan the task" }]);
+  state.text = "/";
+  const { container } = render(<ComposerInput />);
+  act(() => container.querySelector("textarea")!.focus());
+  expect(document.querySelector('[role="listbox"]')?.textContent).toContain("/plan-work");
+  const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+  act(() => container.querySelector("textarea")!.dispatchEvent(enter));
+  expect(enter.defaultPrevented).toBe(true);
+  expect(state.text).toBe("/plan-work ");
+});
+it("dismisses suggestions with Escape and hides revoked catalogue entries", () => {
+  chatSkillsStore.getState().setSkills([{ name: "plan-work", description: "Plan the task" }]);
+  state.text = "/";
+  const { container } = render(<ComposerInput />);
+  act(() => container.querySelector("textarea")!.focus());
+  act(() =>
+    container
+      .querySelector("textarea")!
+      .dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      ),
+  );
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  act(() => chatSkillsStore.getState().setSkills(null));
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
 });
