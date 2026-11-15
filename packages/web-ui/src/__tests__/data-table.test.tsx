@@ -1224,6 +1224,17 @@ describe("useDataTable + DataTable", () => {
     );
     expect(groups).toEqual(["low (1)", "medium (1)", "high (2)"]);
     expect(renderedIds()).toEqual(["t2", "t4", "t1", "t3"]);
+    const toggle = container!.querySelector<HTMLButtonElement>("[data-group-row] button")!;
+    toggle.focus();
+    expect(document.activeElement).toBe(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    act(() => toggle.click());
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("aria-label")).toBe("Expand group");
+    expect(renderedIds()).toEqual(["t4", "t1", "t3"]);
+    expect(container!.querySelector("[data-group-row]")!.textContent).toContain("(1)");
+    act(() => toggle.click());
+    expect(renderedIds()).toEqual(["t2", "t4", "t1", "t3"]);
   });
 
   it("emits the whole state when controlled and resets the page on a filter change", () => {
