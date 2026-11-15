@@ -354,8 +354,9 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Chat draft").parentElement?.style.display).toBe("flex");
   });
 
-  it("shows compact recent and pinned chats in the empty conversation", () => {
+  it("keeps recent and pinned chats in the history library", () => {
     state.empty = true;
+    state.navContext.meta = { spacesEntityId: "item" };
     state.groups = [
       {
         label: "Chats",
@@ -378,7 +379,7 @@ describe("layout preview", () => {
         },
       },
     ];
-    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     const recent = screen.getByRole("region", { name: "Recent" });
     const pinned = screen.getByRole("region", { name: "Pinned" });
     expect(within(recent).getByRole("link", { name: /Newest/ })).toBeTruthy();
@@ -392,6 +393,51 @@ describe("layout preview", () => {
     expect(within(pinned).getByText("Last in Finance")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "View all" }));
     expect(screen.getByRole("region", { name: "Chat history" })).toBeTruthy();
+  });
+
+  it("puts authorized module quick actions below the Home composer without history", () => {
+    state.empty = true;
+    const create = vi.fn();
+    state.groups = [
+      {
+        label: "Spaces",
+        items: [],
+        createActions: [{ id: "project", label: "New project", handler: create }],
+        meta: {
+          type: "spaces-workspaces",
+          homeQuickActions: [
+            { id: "project", label: "Create project", description: "Start a project" },
+            { id: "unavailable", label: "Unavailable action", description: "Not authorized" },
+          ],
+        },
+      },
+      {
+        label: "Chats",
+        items: [],
+        meta: {
+          type: "recent-chats",
+          allConversations: [
+            {
+              label: "Existing chat",
+              to: "/chat/existing",
+              icon: MessageSquare,
+              meta: { pinned: true },
+            },
+          ],
+        },
+      },
+    ];
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
+    const action = screen.getByRole("button", { name: /Create project/ });
+    expect(
+      screen.getByLabelText("Chat draft").compareDocumentPosition(action) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Recent" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Pinned" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Unavailable action/ })).toBeNull();
+    fireEvent.click(action);
+    expect(create).toHaveBeenCalledOnce();
   });
 
   it("opens the Home conversation in the main area without a second landing pane", () => {
@@ -415,11 +461,12 @@ describe("layout preview", () => {
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByText("Contextual loading rows")).toBeNull();
     expect(starters).not.toHaveBeenCalled();
-    expect(screen.getByRole("status", { name: "Loading recent chats" })).toBeTruthy();
+    expect(screen.queryByRole("status", { name: "Loading recent chats" })).toBeNull();
   });
 
-  it("keeps the recent and pinned groups available when only pinned chats exist", () => {
+  it("keeps contextual pinned chats available when only pinned chats exist", () => {
     state.empty = true;
+    state.navContext.meta = { spacesEntityId: "item" };
     state.groups = [
       {
         label: "Pinned",
@@ -437,7 +484,7 @@ describe("layout preview", () => {
         },
       },
     ];
-    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />);
     expect(screen.queryByRole("region", { name: "Recent" })).toBeNull();
     expect(
       within(screen.getByRole("region", { name: "Pinned" })).getByRole("link", {

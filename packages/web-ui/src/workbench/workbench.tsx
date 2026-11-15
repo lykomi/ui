@@ -16,6 +16,7 @@ import { ActionListSkeleton } from "../components/action-list-skeleton.tsx";
 import { ConversationHistory } from "./conversation-history.tsx";
 import { HistoryContent } from "./history-content.tsx";
 import { HomeContent } from "./home-content.tsx";
+import { HomeDestinations } from "./home-destinations.tsx";
 export function WorkbenchPreview({
   page,
   chatPage,
@@ -93,12 +94,12 @@ export function WorkbenchPreview({
       compact
     />
   );
-  const emptyChatFooter = pageContextPending ? (
+  const globalHome = home && !workspaceId && !entityId;
+  const emptyChatFooter = globalHome ? null : pageContextPending ? (
     <ActionListSkeleton label="Loading recent chats" secondaryText />
   ) : (
     conversationHome
   );
-  const globalHome = home && !workspaceId && !entityId;
   const homeConversation = globalHome && chatOpen;
   const spaciousChat = expandedChat || homeConversation;
   const buttonClass =
@@ -114,6 +115,8 @@ export function WorkbenchPreview({
         />
       ) : undefined,
 
+    composerFooter:
+      globalHome && emptyChat && !historyOpen ? <HomeDestinations groups={navGroups} /> : undefined,
     compactComposer: !spaciousChat && chatWidth.width < 512,
     starterSuggestions: [],
     emptyState: (

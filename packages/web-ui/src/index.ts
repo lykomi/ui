@@ -1,3 +1,8 @@
+export { AskAIButton, type AskAIButtonProps } from "./components/ask-ai-button.tsx";
+export {
+  OperationProgress,
+  type OperationProgressProps,
+} from "./components/operation-progress.tsx";
 export { PinToggle } from "./components/pin-toggle.tsx";
 // --- Components ---
 export { Sidebar } from "./components/sidebar.tsx";
@@ -249,6 +254,7 @@ export type {
 export { useSidebarStore, SIDEBAR_WIDTH, RAIL_WIDTH } from "./lib/sidebar-store.ts";
 export { useChatBubbleStore } from "./lib/chat-bubble-store.ts";
 export { useChatLifecycleStore } from "./lib/chat-lifecycle-store.ts";
+export type { AssistantContext } from "./lib/assistant-context.ts";
 export { submitComposerText } from "./lib/composer-submit-store.ts";
 export {
   registerSelectionContextResolver,
