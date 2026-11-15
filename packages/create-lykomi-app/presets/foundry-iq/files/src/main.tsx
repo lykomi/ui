@@ -1,4 +1,5 @@
 import "./index.css";
+import { showcaseModule } from "./showcase/module.tsx";
 import { bootstrapShell } from "@lykomi/web-shell";
 import type { AuthAdapter } from "@lykomi/web-shell";
 import { customerPages } from "@/pages/index.tsx";
@@ -9,7 +10,7 @@ const localDemoAuth: AuthAdapter = {
 };
 
 bootstrapShell({
-  modules: [foundryIqModule],
+  modules: [showcaseModule, foundryIqModule],
   pages: customerPages,
   authProvider: localDemoAuth,
   agentFetch: fetch,

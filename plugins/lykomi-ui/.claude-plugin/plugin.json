@@ -1,7 +1,7 @@
 {
   "name": "lykomi-ui",
-  "description": "Agent toolkit for apps built on LYKOMI UI — grounding skill for the assistant-ui/AG-UI/Agent Framework stack, ChatModule authoring skill, and doc MCP servers.",
-  "version": "0.1.0",
+  "description": "Agent toolkit for apps built on LYKOMI UI — grounding skill for the assistant-ui/AG-UI/Agent Framework stack, ChatModules, agent-aware forms, workbenches, browser verification, and doc MCP servers.",
+  "version": "0.2.0",
   "author": {
     "name": "LYKOMI",
     "url": "https://github.com/lykomi"

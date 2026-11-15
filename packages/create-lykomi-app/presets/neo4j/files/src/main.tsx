@@ -1,4 +1,5 @@
 import "./index.css";
+import { showcaseModule } from "./showcase/module.tsx";
 import { bootstrapShell } from "@lykomi/web-shell";
 import type { AuthAdapter } from "@lykomi/web-shell";
 import { createVoiceModule } from "@lykomi/web-voice";
@@ -25,7 +26,7 @@ const voiceModules = voiceProxyUrl
   : [];
 
 bootstrapShell({
-  modules: [...voiceModules, graphModule],
+  modules: [showcaseModule, ...voiceModules, graphModule],
   pages: customerPages,
   authProvider: localDemoAuth,
   agentFetch: fetch,

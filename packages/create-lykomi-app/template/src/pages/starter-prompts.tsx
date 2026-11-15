@@ -11,7 +11,10 @@ const prompts = [
 /** One click demonstrates a real AG-UI turn with the bundled tools. */
 export function StarterPrompts() {
   return (
-    <div className="flex flex-wrap justify-center gap-2" aria-label="Try a prompt">
+    <div
+      className="flex flex-col items-center gap-2 in-[[data-chat-empty-state]]:items-start"
+      aria-label="Try a prompt"
+    >
       {prompts.map((prompt) => (
         <ThreadPrimitive.Suggestion
           key={prompt}
@@ -20,7 +23,11 @@ export function StarterPrompts() {
           asChild
           onClick={() => useChatBubbleStore.getState().open()}
         >
-          <Button variant="outline" size="sm" className="h-auto min-h-9 text-wrap py-2 text-sm">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-auto max-w-full min-h-9 justify-start text-wrap py-2 text-left text-sm"
+          >
             {prompt}
           </Button>
         </ThreadPrimitive.Suggestion>

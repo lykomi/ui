@@ -12,6 +12,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { smokeShowcase } from "./smoke-showcase.mjs";
+
 import { checkStarterChunks } from "./lib/check-starter-chunks.mjs";
 
 import {
@@ -618,6 +620,8 @@ async function runBrowserStarterSmoke() {
       await page.getByText("Hello from the", { exact: false }).first().waitFor();
     }
 
+    if (!screenshotPath) await smokeShowcase(page, url, workDir);
+
     if (pageErrors.length > 0 || consoleErrors.length > 0) {
       throw new Error(
         [
@@ -655,6 +659,14 @@ const tarballs = packWorkspace({ root, packDir, packages, pnpm: pnpmCommand });
 
 run("node", ["packages/create-lykomi-app/dist/index.mjs", appDir, "--no-install"]);
 
+for (const client of [".agents", ".claude"]) {
+  const skills = join(appDir, client, "skills");
+  if (readdirSync(skills).length !== 5) throw new Error(`Missing bundled skills: ${client}`);
+  for (const skill of readdirSync(skills)) {
+    if (!readFileSync(join(skills, skill, "SKILL.md"), "utf8").startsWith("---\n"))
+      throw new Error(`Invalid skill: ${skill}`);
+  }
+}
 assertNoAssistantUiPins(join(appDir, "pnpm-workspace.yaml"), { existsSync });
 applyLocalPacks(appDir, tarballs);
 

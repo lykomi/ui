@@ -137,7 +137,7 @@ LYKOMI UI was extracted from a commercial product on 2026-04-26. The four packag
 - **Codex**: reads this file natively. Layering: nearest `AGENTS.md` wins for a given path.
 - **Claude Code**: reads `CLAUDE.md` which `@`-imports this file, plus per-package `CLAUDE.md` files. Repo-local config: `.claude/settings.json` (permissions) + `.mcp.json` (grounding MCPs).
 - **GitHub Copilot / Cursor**: both read root + nested `AGENTS.md` natively; Copilot coding agent preinstalls deps via `.github/workflows/copilot-setup-steps.yml`.
-- **Downstream apps** (generated starters, products built on these packages): install the Claude Code plugin — `/plugin marketplace add lykomi/ui` → `/plugin install lykomi-ui@lykomi-ui`. Source: [`plugins/lykomi-ui/`](plugins/lykomi-ui/) (grounding skill, ChatModule authoring skill, doc MCPs). Keep the plugin's skills in sync with this file's Grounding + conventions sections when they change.
+- **Downstream apps** (generated starters, products built on these packages): generated starters already include five repository-local skills in `.agents/skills/` and `.claude/skills/`. Optionally install the Claude Code plugin — `/plugin marketplace add lykomi/ui` → `/plugin install lykomi-ui@lykomi-ui`. Source: [`plugins/lykomi-ui/`](plugins/lykomi-ui/) (grounding skill, ChatModule authoring skill, doc MCPs). Keep the plugin's skills in sync with this file's Grounding + conventions sections when they change.
 
 # What ships is the published package, not the workspace
 
@@ -182,3 +182,5 @@ same labels, sections and value slots remain mounted in both modes. Verify actua
 browser behavior at desktop and narrow widths and in light and dark themes.
 
 Maintain form UX rules only in `docs/FORM_UX.md`; run `pnpm sync:form-ux` after changes. Plugin skills consume generated references and `pnpm check:form-ux` rejects drift.
+
+Canonical skill sources live in `plugins/lykomi-ui/skills/`. Run `pnpm sync:form-ux` to refresh references and bundled starter copies; `pnpm check:starter-skills` rejects drift. Do not edit generated copies directly.

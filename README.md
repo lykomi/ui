@@ -172,3 +172,7 @@ MIT — see [LICENSE](LICENSE).
 [`@lykomi/web-3d`](packages/web-3d/) adds a lazy GLB viewer,
 an assembly tree and AG-UI part tools. It is a preview feature, released
 independently, with no AR or backend indexing dependency.
+
+## Learn by building
+
+Every generated starter includes five local coding skills for Codex and Claude Code, plus an interactive **Showcase** at `/showcase`. Explore forms, filtered tables, dashboards, process guidance, persistent workbench windows and feedback states beside a live AG-UI context inspector. Copy the actual example source and adapt it to your app. UI interactions and context inspection work without credentials; connect your agent for real conversations and guarded edits. The entire showcase is a removable, lazy ChatModule. See the [starter guide](packages/create-lykomi-app/template/README.md#component-showcase).

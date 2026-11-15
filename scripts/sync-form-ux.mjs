@@ -17,7 +17,12 @@ if (!existsSync(guidePath) || readFileSync(guidePath, "utf8") !== processGuide) 
   stale.push("docs/PROCESS_GUIDE.md");
   if (!check) writeFileSync(guidePath, processGuide);
 }
-for (const name of ["lykomi-author-chat-module", "lykomi-verify-agent-apis"]) {
+for (const name of [
+  "lykomi-author-chat-module",
+  "lykomi-verify-agent-apis",
+  "lykomi-build-agent-forms",
+  "lykomi-build-workbench",
+]) {
   for (const [file, body] of [
     ["form-ux.md", content],
     ["PROCESS_GUIDE.md", processGuide],

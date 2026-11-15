@@ -51,7 +51,7 @@ export function WorkbenchPreview({
     emptyChat,
     canResumeChat,
     showHistory,
-    spaciousChat,
+    spaciousChat: expandedChat,
     returnToChat,
     openHistory,
 
@@ -99,6 +99,8 @@ export function WorkbenchPreview({
     conversationHome
   );
   const globalHome = home && !workspaceId && !entityId;
+  const homeConversation = globalHome && chatOpen;
+  const spaciousChat = expandedChat || homeConversation;
   const buttonClass =
     "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary";
   const chatDefaults: ChatContentProps = {
@@ -112,11 +114,11 @@ export function WorkbenchPreview({
         />
       ) : undefined,
 
-    compactComposer: !spaciousChat,
+    compactComposer: !spaciousChat && chatWidth.width < 512,
     starterSuggestions: [],
     emptyState: (
       <ChatEmptyState
-        pageLabel={pageLabel}
+        pageLabel={globalHome ? undefined : pageLabel}
         contextLoading={pageContextPending}
         showHomeStarters={!spaciousChat && !globalHome}
       >
@@ -200,7 +202,7 @@ export function WorkbenchPreview({
             style={{
               display: chatWidth.compact && !chatOnly && compactPane !== "chat" ? "none" : "flex",
               width:
-                chatWidth.compact || chatOnly
+                chatWidth.compact || chatOnly || homeConversation
                   ? "100%"
                   : collapsed
                     ? 44
@@ -236,7 +238,7 @@ export function WorkbenchPreview({
                 onNewChat={startChat}
               />
             )}
-            {!chatWidth.compact && !collapsed && !contentCollapsed && (
+            {!chatWidth.compact && !collapsed && !contentCollapsed && !homeConversation && (
               <ChatResizeHandle chatWidth={chatWidth} />
             )}
             {/* Keep the same runtime/composer mounted when the rail collapses. */}
@@ -254,7 +256,7 @@ export function WorkbenchPreview({
             </div>
           </section>
           <WorkbenchContentPane
-            contentHidden={contentHidden}
+            contentHidden={contentHidden || homeConversation}
             panelOpen={panelOpen}
             chatWidth={chatWidth}
             contentCollapsed={contentCollapsed}
@@ -281,7 +283,7 @@ export function WorkbenchPreview({
               )
             }
           />
-          {contentCollapsed && !chatOnly && !chatWidth.compact && (
+          {contentCollapsed && !chatOnly && !chatWidth.compact && !homeConversation && (
             <aside
               aria-label="Collapsed content"
               className="flex w-11 shrink-0 flex-col items-center"

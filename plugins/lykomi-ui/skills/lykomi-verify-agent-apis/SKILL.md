@@ -14,6 +14,8 @@ Training-data knowledge of this stack is unreliable. Before writing code, verify
 | `@ag-ui/*` (AG-UI protocol)             | [docs.ag-ui.com](https://docs.ag-ui.com/) + [ag-ui-protocol/ag-ui](https://github.com/ag-ui-protocol/ag-ui) | WebFetch / context7                                                                  |
 | Azure Foundry / Azure services          | learn.microsoft.com                                                                                         | `microsoft_docs_mcp` (search + fetch)                                                |
 
+Use the documentation tools available in this environment, or fetch the linked official sources directly. The local skills do not require a global plugin or a particular MCP server. Check the installed `@lykomi/*` declarations and package versions before relying on an export.
+
 ## Non-negotiables for this stack (verify they still hold, then follow)
 
 - `@assistant-ui/react` is pinned to **0.15.x**. Tool UIs use `makeAssistantToolUI(...)`. The per-scope runtime hooks (`useComposerRuntime`, `useThreadRuntime`, `useMessageRuntime`, …) were removed in 0.15 — use `useAui()` / `useAuiState()`.

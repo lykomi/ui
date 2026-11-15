@@ -1,4 +1,5 @@
 import "./index.css";
+import { showcaseModule } from "./showcase/module.tsx";
 import { bootstrapShell } from "@lykomi/web-shell";
 import type { AuthAdapter } from "@lykomi/web-shell";
 import { createVoiceModule } from "@lykomi/web-voice";
@@ -33,7 +34,7 @@ const voiceModules = voiceProxyUrl
 registerChatSlots({ homeStarters: StarterPrompts });
 
 bootstrapShell({
-  modules: [starterModule, ...voiceModules], // Add your own ChatModules here.
+  modules: [showcaseModule, starterModule, ...voiceModules], // Add your own ChatModules here.
   pages: customerPages,
   authProvider: localDemoAuth,
   agentFetch: fetch,

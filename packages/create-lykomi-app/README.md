@@ -34,6 +34,14 @@ Home opens with a chat composer and clickable prompts. Guide demonstrates a page
 
 The lower interface menu links to the Guide in local demo mode. Connecting a real auth provider makes it the signed-in user menu.
 
+## Explore Before Connecting Azure
+
+Run `pnpm dev:web`, then open **Showcase** at `/showcase`. Six working examples cover forms, collections, dashboards, guided processes, tabs/panels and feedback. A live inspector shows actual AG-UI context and client tools; source panels expose the example code. UI interactions work without credentials. Agent replies require your configured backend.
+
+Every preset also includes five coding skills in `.agents/skills/` and `.claude/skills/`: API grounding, ChatModules, agent-aware forms, workbenches and browser verification. No global installation is required. These teach your coding assistant how to build the app; runtime tools belong to your agent and page modules.
+
+The showcase is a lazy, removable `showcaseModule` in `src/main.tsx`. Example data is local and disposable. Use the examples as a starting point, then connect your own persistence and application tools.
+
 ## Theme The App
 
 Generated apps use LYKOMI's neutral and deep-petrol palette, light and dark V2 favicons, a locally bundled Manrope font, and `LYKOMI UI` for the shell and browser title. Edit `src/theme.ts` to change branding, colors, radius, and typography.
