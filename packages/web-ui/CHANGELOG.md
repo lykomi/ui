@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.54.1
+
+### Patch Changes
+
+- 8e3aa0e: Make grouped list headers clearly distinguishable in light and dark themes with an opaque neutral surface, stronger labels, and consistent keyboard focus for their expansion controls.
+  - @lykomi/agent@0.54.1
+  - @lykomi/web-primitives@0.54.1
+
 ## 0.54.0
 
 ### Minor Changes

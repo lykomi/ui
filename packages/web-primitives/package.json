@@ -1,6 +1,6 @@
 {
   "name": "@lykomi/web-primitives",
-  "version": "0.54.0",
+  "version": "0.54.1",
   "license": "MIT",
   "description": "Leaf React UI primitives for LYKOMI UI — Button, Checkbox, Input, Textarea, Field, FieldSet, cn().",
   "keywords": [
