@@ -5,7 +5,7 @@
   "extends": "default",
   "filesDir": "files",
   "extraDependencies": {
-    "@lykomi/web-graph": "0.3.21"
+    "@lykomi/web-graph": "0.3.22"
   },
   "extraScripts": {
     "graph:up": "docker compose up -d",

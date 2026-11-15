@@ -1,5 +1,11 @@
 # @iloveagents/foundry-web-primitives
 
+## 0.54.0
+
+### Patch Changes
+
+- d1e5ad3: Use readable 14px field labels with consistent label/control spacing, align form dialog sections with the shared spacing scale, and announce pending name-dialog submission through its existing action.
+
 ## 0.53.1
 
 ## 0.53.0

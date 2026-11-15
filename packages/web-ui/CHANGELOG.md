@@ -1,5 +1,21 @@
 # @iloveagents/foundry-web-ui
 
+## 0.54.0
+
+### Minor Changes
+
+- d1e5ad3: Add OperationProgress for consistent operation status, measured or indeterminate progress, recovery actions and background-work messaging. Support compact and unframed presentation, semantic theme colors and reduced motion.
+
+  Add AskAIButton for explicit contextual help through the host chat and AG-UI runtime, with opt-in error/warning help in OperationProgress.
+
+### Patch Changes
+
+- d1e5ad3: Restore the global Home quick actions below the composer using module-provided creation actions. Keep recent and pinned conversations in the history view instead of the Home welcome.
+- d1e5ad3: Use readable 14px field labels with consistent label/control spacing, align form dialog sections with the shared spacing scale, and announce pending name-dialog submission through its existing action.
+- Updated dependencies [d1e5ad3]
+  - @lykomi/web-primitives@0.54.0
+  - @lykomi/agent@0.54.0
+
 ## 0.53.1
 
 ### Patch Changes
