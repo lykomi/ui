@@ -1,6 +1,6 @@
 {
   "name": "@lykomi/web-shell",
-  "version": "0.53.0",
+  "version": "0.53.1",
   "license": "MIT",
   "description": "Browser bootstrap and layout shell for LYKOMI UI — bootstrapShell({ modules, pages, theme, authProvider }) mounts the SPA around web-ui. Module-agnostic.",
   "keywords": [
