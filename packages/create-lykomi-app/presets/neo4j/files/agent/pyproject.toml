@@ -4,11 +4,11 @@ version = "0.0.0"
 description = "FastAPI + Microsoft Agent Framework graph service for __PROJECT_NAME__."
 requires-python = ">=3.12,<3.14"
 dependencies = [
-  "agent-framework-ag-ui>=1.1.0",
-  "agent-framework-core>=1.14.0,<2",
+  "agent-framework-ag-ui>=1.8.1,<2",
+  "agent-framework-core>=1.26.0,<2",
   # Also provides FoundryEmbeddingClient, used by graph_vector_search — no
   # second SDK and no second credential story for embeddings.
-  "agent-framework-foundry>=1.11.0,<2",
+  "agent-framework-foundry>=1.16.2,<2",
   "azure-identity>=1.25.1",
   "fastapi[standard]>=0.115.0",
   # Vector indexes need a 5.13+ server; any recent driver talks to one.

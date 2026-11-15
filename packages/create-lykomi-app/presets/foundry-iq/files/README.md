@@ -134,6 +134,8 @@ src/index.css               Tailwind v4 + LYKOMI UI theme resource and package d
 
 This starter uses local pass-through auth so the demo runs without an Entra app registration.
 
+The local AG-UI endpoint declares `single_user=True`. Before serving multiple users, validate bearer tokens on the backend and replace that setting with an `authorization_scope_resolver` derived from the authenticated tenant and user. Frontend MSAL and bearer forwarding alone do not protect the endpoint or isolate thread state.
+
 For production MSAL auth, remove `authProvider` and `agentFetch` from `src/main.tsx`, then set:
 
 ```bash
