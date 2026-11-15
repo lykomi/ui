@@ -10,7 +10,7 @@
   },
   "packageManager": "pnpm@10.23.0",
   "scripts": {
-    "test": "pnpm check:form-ux && pnpm check:sensitive && pnpm build && pnpm lint && pnpm typecheck && pnpm test:unit",
+    "test": "pnpm check:starter-skills && pnpm check:form-ux && pnpm check:sensitive && pnpm build && pnpm lint && pnpm typecheck && pnpm test:unit",
     "test:unit": "pnpm -r --if-present test:unit",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "prettier --check package.json README.md packages/*/package.json packages/*/README.md packages/create-lykomi-app/template/README.md",
@@ -29,8 +29,10 @@
     "changeset:publish": "changeset publish",
     "sync:template-versions": "node scripts/sync-template-versions.mjs",
     "screenshot:starter": "node scripts/smoke-starter.mjs --screenshot docs/assets/starter.png",
-    "sync:form-ux": "node scripts/sync-form-ux.mjs",
-    "check:form-ux": "node scripts/sync-form-ux.mjs --check"
+    "sync:form-ux": "node scripts/sync-form-ux.mjs && pnpm sync:starter-skills",
+    "check:form-ux": "node scripts/sync-form-ux.mjs --check",
+    "sync:starter-skills": "node scripts/sync-starter-skills.mjs",
+    "check:starter-skills": "node scripts/sync-starter-skills.mjs --check"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.10",

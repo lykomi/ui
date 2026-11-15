@@ -139,3 +139,45 @@ it("coalesces pointer and focus activation while awaiting one leave decision", a
     vi.unstubAllGlobals();
   }
 });
+
+it("reveals the active panel within its workbench without scrolling the host page", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const store = createWindowStore({
+    tabs: ["a", "b"].map((id) => ({ id, title: id, close: vi.fn() })),
+  });
+  store.setLayout("panels");
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <WindowWorkbench controller={store} renderWindow={(tab) => <p>{tab.title}</p>} />,
+      ),
+    );
+    const viewport = host.querySelector<HTMLElement>('[data-window-layout="panels"]')!;
+    const panes = host.querySelectorAll<HTMLElement>('[role="tabpanel"]');
+    Object.defineProperty(viewport, "clientHeight", { value: 300 });
+    panes.forEach((pane, index) => {
+      Object.defineProperties(pane, {
+        offsetTop: { value: index * 320 },
+        offsetHeight: { value: 300 },
+      });
+    });
+    host.scrollTop = 120;
+    await act(async () => {
+      store.select("b");
+    });
+    expect(viewport.scrollTop).toBe(320);
+    expect(host.scrollTop).toBe(120);
+    await act(async () => {
+      store.select("a");
+    });
+    expect(viewport.scrollTop).toBe(0);
+    expect(host.scrollTop).toBe(120);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

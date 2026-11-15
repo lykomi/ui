@@ -185,3 +185,23 @@ docker-compose.yml          local Neo4j (development only)
 The visualization itself is `@lykomi/web-graph`, which knows
 nothing about Neo4j — it takes a source-neutral payload. You can point it at
 any graph data you have.
+
+## Component showcase
+
+Run `pnpm dev:web` and open `/showcase` to explore six interactive examples without Azure credentials: forms, collections, dashboards, processes, workbench windows and feedback. The live inspector reads the framework’s actual AG-UI state and available client tools. Select text in a field, filter a table, or change the active window to see the context change. Source panels contain the exact example code, ready to copy.
+
+Connect the agent service with `pnpm dev` to ask about that context or request a guarded draft edit. The inspector works offline; agent replies require your configured backend. Examples use local, disposable data. Saving a form accepts it only in this example; leaving the example resets it. The feedback example explicitly simulates outcomes.
+
+The showcase is a lazy `ChatModule` in `src/showcase/module.tsx`. Remove `showcaseModule` from the imports and `modules` list in `src/main.tsx` to remove its route and navigation; you can then delete `src/showcase/`. Your own app keeps using the same framework components.
+
+## Bundled coding skills
+
+Five repository-local skills ship in both `.agents/skills/` (Codex and compatible tools) and `.claude/skills/` (Claude Code):
+
+- `lykomi-verify-agent-apis`: verify current framework and library APIs.
+- `lykomi-author-chat-module`: compose pages, navigation and agent tools.
+- `lykomi-build-agent-forms`: build consistent read/edit forms with automatic field context and guarded edits.
+- `lykomi-build-workbench`: connect windows, tables and processes to visible context.
+- `lykomi-verify-ui`: verify real browser behavior, context and package boundaries.
+
+These guide your coding assistant; they are not runtime tools for the chat agent. They install only in this project and do not change global configuration. The optional Claude Code plugin adds documentation MCP servers; it is not required for these bundled skills. Keep project-specific adaptations in your generated app.

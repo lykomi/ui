@@ -394,6 +394,17 @@ describe("layout preview", () => {
     expect(screen.getByRole("region", { name: "Chat history" })).toBeTruthy();
   });
 
+  it("opens the Home conversation in the main area without a second landing pane", () => {
+    state.empty = true;
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
+    expect(screen.getByRole("region", { name: "Assistant conversation" }).style.width).toBe("100%");
+    expect(screen.queryByRole("region", { name: "Working content" })).toBeNull();
+    expect(screen.queryByRole("separator", { name: "Resize chat" })).toBeNull();
+    expect(
+      screen.getAllByRole("heading", { name: "What would you like to get done?" }),
+    ).toHaveLength(1);
+  });
+
   it("does not show contextual starter skeletons on cold global chat home", () => {
     state.empty = true;
     state.navLoading = true;

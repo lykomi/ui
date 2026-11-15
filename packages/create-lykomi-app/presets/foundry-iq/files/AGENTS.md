@@ -70,3 +70,9 @@ pnpm build
 ```
 
 Use browser verification for layout or chat-flow changes.
+
+## Local skills and examples
+
+Use the repository-local skills in `.agents/skills/` or `.claude/skills/` for grounding, ChatModules, agent-aware forms, workbenches and browser verification. Their bundled form UX references describe the shared component contract. These are coding-assistant instructions, not runtime chat skills.
+
+`src/showcase/` is a removable, lazy example module. Its inspector reads actual framework state. Keep privacy opt-outs, expected-value checks and read/edit boundaries when adapting an example. Run `pnpm dev:web` to explore without an agent; real replies need the configured service.

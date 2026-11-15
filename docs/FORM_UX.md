@@ -91,6 +91,10 @@ Preset layout components do not submit, fetch or store data.
 
 ## Automatic field context
 
+The selected field context uses a short leading marker beside its label. This marker
+stays visible when moving into chat and is separate from input and keyboard focus.
+Do not replace focus indicators with the context marker.
+
 `Field` and `ReadOnlyField` participate in agent context automatically when used
 with `@lykomi/web-ui`. Focus or click a field, then enter chat: the request carries
 its label, current value, target path and text selection. Values are read from the

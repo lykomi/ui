@@ -102,7 +102,15 @@ function WindowPane<T extends WorkbenchWindow>({
     return () => element.removeEventListener("focus:collect-context", collect);
   }, [active, context]);
   useLayoutEffect(() => {
-    if (panels && active) frame.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    const pane = frame.current;
+    const viewport = pane?.parentElement;
+    if (!panels || !active || !pane || !viewport) return;
+    // Reveal inside this workbench only. scrollIntoView also moves the host page.
+    const top = pane.offsetTop;
+    const bottom = top + pane.offsetHeight;
+    if (top < viewport.scrollTop) viewport.scrollTop = top;
+    else if (bottom > viewport.scrollTop + viewport.clientHeight)
+      viewport.scrollTop = Math.min(top, bottom - viewport.clientHeight);
   }, [panels, active]);
   const visible = panels || active;
   const scroll = useWindowScroll(visible, panels);
