@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.57.0
+
+### Minor Changes
+
+- f11c6b5: Group adjacent citations into compact bracketed superscripts while preserving an independent source link and preview for each marker. Export InlineCitationGroup so authored content and chat share the same typography.
+
+### Patch Changes
+
+- @lykomi/agent@0.57.0
+- @lykomi/web-primitives@0.57.0
+
 ## 0.56.0
 
 ### Minor Changes
