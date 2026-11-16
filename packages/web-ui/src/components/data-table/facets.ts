@@ -16,6 +16,8 @@ declare module "@tanstack/react-table" {
     className?: string;
     /** Class for the header cell of this column. */
     headerClassName?: string;
+    /** Positive weight for sharing spare viewport width, bounded by min/maxSize. Explicit user widths win. */
+    grow?: number;
     /** Horizontal alignment of header and cells. */
     align?: "left" | "center" | "right";
     /** Text the global search sees for this column instead of the cell value. */

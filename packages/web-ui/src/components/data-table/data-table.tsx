@@ -23,7 +23,7 @@ import { usePinnedOffsets } from "./use-pinned-offsets.ts";
 import { DataTableOverflow, DATA_TABLE_PAGE_OVERFLOW_WIDTH } from "./data-table-overflow.tsx";
 import { DataTablePageHeader } from "./data-table-page-header.tsx";
 import { useTableViewport } from "./use-table-viewport.ts";
-import { boundedColumnWidth } from "./column-sizing.ts";
+import { renderedColumnWidths } from "./column-sizing.ts";
 import { DataTableColumnResize } from "./data-table-column-resize.tsx";
 import { useElementWidth } from "./use-element-width.ts";
 import { cn } from "@lykomi/web-primitives";
@@ -64,7 +64,8 @@ export interface DataTableProps<T> {
    * Keep the columns at their natural width and let the leftover room sit at
    * the end, the way a spreadsheet looks, instead of stretching a text column
    * across the gap. Set `false` to let the first content column use remaining
-   * room, up to its maxSize. An explicitly resized column keeps its width.
+   * room, up to its maxSize. Columns with meta.grow take precedence over this
+   * fallback. An explicitly resized column keeps its width.
    */
   spacer?: boolean;
   /** Keep the header in place while the rows scroll (always on in focus mode). */
@@ -285,22 +286,13 @@ export function DataTable<T>({
   const renderedColumns = table
     .getVisibleLeafColumns()
     .filter((column) => fits(column.columnDef.meta));
-  // Fixed column tracks keep a long title from choosing the entire table width.
-  const sizes = new Map(
-    renderedColumns.map((column) => [column.id, boundedColumnWidth(column, column.getSize())]),
-  );
   const availableWidth = viewportWidth ?? width ?? 0;
-  const first =
-    renderedColumns.find((column) => column.accessorFn && column.getCanResize()) ??
-    renderedColumns.find((column) => column.id !== "__select" && column.getCanResize());
-  const declaredWidth = [...sizes.values()].reduce((sum, size) => sum + size, 0);
-  const firstResized =
-    first && Object.prototype.hasOwnProperty.call(table.getState().columnSizing, first.id);
-  if (!spacer && first && !firstResized && availableWidth > declaredWidth)
-    sizes.set(
-      first.id,
-      boundedColumnWidth(first, first.getSize() + availableWidth - declaredWidth),
-    );
+  const sizes = renderedColumnWidths(
+    renderedColumns,
+    table.getState().columnSizing,
+    availableWidth,
+    spacer,
+  );
   const tableWidth = [...sizes.values()].reduce((sum, size) => sum + size, 0);
   // A page-sticky header needs every ancestor to allow visible vertical
   // overflow. Fall back to the horizontal table scroller if a host shows more

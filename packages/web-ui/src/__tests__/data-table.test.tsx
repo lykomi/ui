@@ -10,6 +10,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ColumnDef, Row, Table } from "@tanstack/react-table";
+import { renderedColumnWidths } from "../components/data-table/column-sizing.ts";
 import { DataTable } from "../components/data-table/data-table.tsx";
 import {
   DropdownMenu,
@@ -1892,4 +1893,109 @@ it("uses authoritative full-query facet counts for an incremental list", () => {
     { value: "blocked", label: "blocked", count: 40 },
     { value: "ready", label: "ready", count: 120 },
   ]);
+});
+
+it("shares spare width by weight, redistributes capped space, and preserves user sizes", () => {
+  const h = mount({
+    columns: [
+      { accessorKey: "title", size: 200 },
+      { accessorKey: "status", size: 100, maxSize: 150, meta: { grow: 1 } },
+      { accessorKey: "priority", size: 100, meta: { grow: 3 } },
+    ],
+  });
+  const columns = h.table.getVisibleLeafColumns();
+  expect(Object.fromEntries(renderedColumnWidths(columns, {}, 600, true))).toEqual({
+    title: 200,
+    status: 150,
+    priority: 250,
+  });
+  expect(Object.fromEntries(renderedColumnWidths(columns, {}, 800, true))).toEqual({
+    title: 200,
+    status: 150,
+    priority: 450,
+  });
+  act(() => h.table.setColumnSizing({ priority: 180 }));
+  expect(Object.fromEntries(renderedColumnWidths(columns, { priority: 180 }, 800, false))).toEqual({
+    title: 200,
+    status: 150,
+    priority: 180,
+  });
+  expect(Object.fromEntries(renderedColumnWidths(columns, { priority: 180 }, 300, true))).toEqual({
+    title: 200,
+    status: 100,
+    priority: 180,
+  });
+});
+
+it("keeps existing spacer behavior without valid opt-in growth", () => {
+  const h = mount({
+    columns: [
+      { accessorKey: "title", size: 200, maxSize: 350 },
+      { accessorKey: "status", size: 100, meta: { grow: 0 } },
+      { accessorKey: "priority", size: 100, meta: { grow: Infinity } },
+      { accessorKey: "tags", size: 100, meta: { grow: -1 } },
+    ],
+  });
+  const columns = h.table.getVisibleLeafColumns();
+  expect([...renderedColumnWidths(columns, {}, 900, true).values()]).toEqual([200, 100, 100, 100]);
+  expect([...renderedColumnWidths(columns, {}, 900, false).values()]).toEqual([350, 100, 100, 100]);
+});
+
+it("grows only rendered columns and resets user sizing back to responsive growth", () => {
+  const callbacks: Array<() => void> = [];
+  const previousRO = window.ResizeObserver;
+  const previousRect = Element.prototype.getBoundingClientRect;
+  let width = 1000;
+  Object.defineProperty(window, "ResizeObserver", {
+    writable: true,
+    value: class {
+      constructor(callback: () => void) {
+        callbacks.push(callback);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  });
+  Element.prototype.getBoundingClientRect = function () {
+    return { ...previousRect.call(this), width } as DOMRect;
+  };
+  try {
+    const visible = vi.fn();
+    const h = mount({
+      columns: [
+        { accessorKey: "title", header: "Title", size: 200 },
+        { accessorKey: "status", header: "Status", size: 100, meta: { grow: 1 } },
+        {
+          accessorKey: "priority",
+          header: "Priority",
+          size: 100,
+          meta: { grow: 1, breakpoint: "lg" },
+        },
+      ],
+      tableProps: { onRenderedColumnsChange: visible },
+    });
+    const scroller = container!.querySelector("[data-list-scroller]")!;
+    Object.defineProperty(scroller, "clientWidth", { get: () => width });
+    const resize = () => act(() => callbacks.forEach((callback) => callback()));
+    const sizes = () =>
+      Array.from(container!.querySelectorAll("colgroup col"))
+        .slice(0, 3)
+        .map((col) => (col as HTMLElement).style.width);
+    resize();
+    expect(sizes().slice(0, 3)).toEqual(["200px", "400px", "400px"]);
+    width = 700;
+    resize();
+    expect(sizes().slice(0, 2)).toEqual(["200px", "500px"]);
+    expect(visible).toHaveBeenLastCalledWith(["title", "status"]);
+    act(() => h.table.setColumnSizing({ status: 250 }));
+    expect(sizes().slice(0, 2)).toEqual(["200px", "250px"]);
+    const handle = container!.querySelector('[aria-label="Resize Status column"]')!;
+    act(() => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    expect(sizes().slice(0, 2)).toEqual(["200px", "500px"]);
+    expect(h.table.getState().columnSizing).toEqual({});
+  } finally {
+    Element.prototype.getBoundingClientRect = previousRect;
+    Object.defineProperty(window, "ResizeObserver", { writable: true, value: previousRO });
+  }
 });
