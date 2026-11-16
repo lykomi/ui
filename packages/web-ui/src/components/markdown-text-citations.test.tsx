@@ -71,8 +71,25 @@ describe("injectCitations", () => {
       );
     });
 
-    expect(container.querySelectorAll('[role="button"]')).toHaveLength(2);
-    expect(container.querySelector("strong sup")?.textContent).toBe("[2]");
+    expect(container.querySelectorAll("button[data-inline-citation]")).toHaveLength(2);
+    expect(container.querySelector("strong button")?.textContent).toBe("2");
+  });
+
+  it("opens each adjacent citation independently and previews its source text on focus", async () => {
+    await act(async () => root.render(<p>{injectCitations("Claim [1][2]")}</p>));
+    const buttons = container.querySelectorAll<HTMLButtonElement>("button[data-inline-citation]");
+    const handler = citationStore.getState().handler!;
+    await act(async () => buttons[0]!.focus());
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("Document One");
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("Source excerptOne");
+    await act(async () => buttons[0]!.click());
+    expect(handler.openCitation).toHaveBeenLastCalledWith(
+      expect.objectContaining({ chunk_id: "chunk-1" }),
+    );
+    await act(async () => buttons[1]!.click());
+    expect(handler.openCitation).toHaveBeenLastCalledWith(
+      expect.objectContaining({ chunk_id: "chunk-2" }),
+    );
   });
 
   it("turns handled raw deep links into clickable anchors", async () => {
