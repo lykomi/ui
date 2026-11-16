@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.56.0
+
+### Minor Changes
+
+- 864fd42: Add a shared inline citation renderer with individual source targets and accessible hover/focus previews of source metadata and excerpts. Use it for chat citations.
+
+### Patch Changes
+
+- @lykomi/agent@0.56.0
+- @lykomi/web-primitives@0.56.0
+
 ## 0.55.0
 
 ### Minor Changes
