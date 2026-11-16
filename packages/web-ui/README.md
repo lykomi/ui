@@ -114,6 +114,16 @@ its values, `meta.label` names the column in the View menu, and
 (with `parseDataTableState` / `mergeDataTableUrlState`) to keep the whole list
 state in the URL.
 
+### Let descriptive columns use spare width
+
+Set `meta: { grow: 1 }` on a column to share unused viewport width. Positive
+weights divide the extra space proportionally, within each column's `minSize`
+and `maxSize`. Only rendered columns participate; narrow and focus-only column
+gates still determine what the user and agent see. An explicit user resize wins,
+and resetting that width restores automatic growth. Columns without `grow` keep
+their existing sizing behavior. Opt-in growth takes precedence over the legacy
+`spacer={false}` first-column fill; unused capped space remains at the end.
+
 ### A column says where it earns its place
 
 ```tsx
