@@ -1,6 +1,6 @@
 {
   "name": "@lykomi/agent",
-  "version": "0.56.0",
+  "version": "0.57.0",
   "license": "MIT",
   "description": "Cross-runtime AG-UI transport for LYKOMI UI — AGUIRunner protocol engine, vanilla zustand stores, optional MSAL auth subpath, service-fetch factory. Zero React, zero DOM.",
   "keywords": [

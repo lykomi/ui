@@ -1,6 +1,6 @@
 {
   "name": "@lykomi/web-ui",
-  "version": "0.56.0",
+  "version": "0.57.0",
   "license": "MIT",
   "description": "React agent UI core for LYKOMI UI — chat, composer, AG-UI adapter for assistant-ui, tool cards, panels, sidebar, theme runtime, and UI stores.",
   "keywords": [
