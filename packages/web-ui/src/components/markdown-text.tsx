@@ -1,3 +1,4 @@
+import { InlineCitation } from "./inline-citation.tsx";
 import { cloneElement, isValidElement, useCallback, useState, type FC } from "react";
 import { useMessagePartText } from "@assistant-ui/react";
 import remarkGfm from "remark-gfm";
@@ -348,26 +349,19 @@ function openCitation(result: CitationResult) {
   if (handler) handler.openCitation(result);
 }
 
-/** Clickable superscript citation: [1] → opens via registered handler. */
+/** Each marker opens its own source and previews the retrieved passage. */
 const CitationRef: FC<{ index: number }> = ({ index }) => {
   const result = useStore(citationStore, (s) => s.results[index - 1]);
   const hasHandler = useStore(citationStore, (s) => !!s.handler);
-  if (!result) return <span className="text-muted-foreground">[{index}]</span>;
-  if (!hasHandler) return <span className="text-muted-foreground">[{index}]</span>;
-
+  if (!result || !hasHandler) return <span className="text-muted-foreground">[{index}]</span>;
   return (
-    <span
-      role="button"
-      tabIndex={0}
-      onClick={() => openCitation(result)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") openCitation(result);
-      }}
-      title={`${result.entity_name}, p. ${result.page_number}`}
-      className="inline-flex items-center text-primary font-semibold cursor-pointer hover:underline"
-    >
-      <sup className="text-[0.7em] ml-0.5">[{index}]</sup>
-    </span>
+    <InlineCitation
+      marker={String(index)}
+      title={result.entity_name}
+      location={result.page_number > 0 ? `p. ${result.page_number}` : undefined}
+      excerpt={result.content}
+      onOpen={() => openCitation(result)}
+    />
   );
 };
 

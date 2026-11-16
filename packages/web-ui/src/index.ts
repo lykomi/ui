@@ -1,3 +1,4 @@
+export { InlineCitation, type InlineCitationProps } from "./components/inline-citation.tsx";
 export { AskAIButton, type AskAIButtonProps } from "./components/ask-ai-button.tsx";
 export {
   OperationProgress,
