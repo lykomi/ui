@@ -75,6 +75,15 @@ describe("injectCitations", () => {
     expect(container.querySelector("strong button")?.textContent).toBe("2");
   });
 
+  it("groups neighbouring references without changing the surrounding prose", async () => {
+    await act(async () => root.render(<p>{injectCitations("First. [1] [2] Next. [2]")}</p>));
+    const groups = container.querySelectorAll("[data-inline-citation-group]");
+    expect(groups).toHaveLength(2);
+    expect(groups[0].textContent).toBe("[1,2]");
+    expect(groups[0].querySelectorAll("button[data-inline-citation]")).toHaveLength(2);
+    expect(container.querySelector("p")?.textContent).toBe("First.[1,2] Next.[2]");
+  });
+
   it("opens each adjacent citation independently and previews its source text on focus", async () => {
     await act(async () => root.render(<p>{injectCitations("Claim [1][2]")}</p>));
     const buttons = container.querySelectorAll<HTMLButtonElement>("button[data-inline-citation]");

@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from "react";
+import { Children, Fragment, useState, type MouseEvent, type ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.tsx";
 
 export interface InlineCitationProps {
@@ -27,7 +27,7 @@ export function InlineCitation({
   const [open, setOpen] = useState(false);
   const description = [title, section, location].filter(Boolean).join(" — ");
   const className =
-    "ms-0.5 inline-flex min-w-6 items-center justify-center rounded-sm bg-muted/70 px-1 text-[0.8125rem] font-medium leading-5 text-muted-foreground no-underline align-baseline hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring print:min-w-0 print:bg-transparent print:px-0";
+    "inline-flex items-center justify-center rounded-sm bg-transparent px-0.5 text-inherit font-medium leading-none text-muted-foreground no-underline align-baseline hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring print:min-w-0 print:bg-transparent print:px-0";
   const activate = (event: MouseEvent) => {
     if (href && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
     if (!onOpen) return;
@@ -38,7 +38,7 @@ export function InlineCitation({
     onOpen();
   };
   const label = `Source ${marker}: ${description}`;
-  if (!href && !onOpen) return <span className="text-muted-foreground">[{marker}]</span>;
+  if (!href && !onOpen) return <span className="text-muted-foreground">{marker}</span>;
   return (
     <TooltipProvider delayDuration={300}>
       <Tooltip
@@ -93,5 +93,24 @@ export function InlineCitation({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+}
+
+/** Adjacent references form one typographic run, with independent source targets. */
+export function InlineCitationGroup({ children }: { children: ReactNode }) {
+  return (
+    <sup
+      data-inline-citation-group=""
+      className="relative -top-[0.35em] ms-[0.125em] inline-flex whitespace-nowrap align-baseline text-[0.8125rem] leading-none text-muted-foreground"
+    >
+      <span aria-hidden="true">[</span>
+      {Children.toArray(children).map((child, index) => (
+        <Fragment key={index}>
+          {index > 0 && <span aria-hidden="true">,</span>}
+          {child}
+        </Fragment>
+      ))}
+      <span aria-hidden="true">]</span>
+    </sup>
   );
 }
