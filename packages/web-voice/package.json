@@ -1,6 +1,6 @@
 {
   "name": "@lykomi/web-voice",
-  "version": "0.1.40",
+  "version": "0.1.41",
   "description": "Optional spoken-conversation tier for LYKOMI UI — Azure Voice Live wired into assistant-ui's realtime voice contract",
   "keywords": [
     "foundry",
