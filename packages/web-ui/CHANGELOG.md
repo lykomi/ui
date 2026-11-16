@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-ui
 
+## 0.55.0
+
+### Minor Changes
+
+- 2bb769b: Allow columns to opt into spare-width distribution with `meta.grow`, preserving explicit user widths, responsive visibility, and existing size bounds.
+
+### Patch Changes
+
+- @lykomi/agent@0.55.0
+- @lykomi/web-primitives@0.55.0
+
 ## 0.54.1
 
 ### Patch Changes
