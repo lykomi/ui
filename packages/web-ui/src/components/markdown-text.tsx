@@ -1,4 +1,4 @@
-import { InlineCitation } from "./inline-citation.tsx";
+import { InlineCitation, InlineCitationGroup } from "./inline-citation.tsx";
 import { cloneElement, isValidElement, useCallback, useState, type FC } from "react";
 import { useMessagePartText } from "@assistant-ui/react";
 import remarkGfm from "remark-gfm";
@@ -341,7 +341,7 @@ export const markdownComponents: Components = {
 
 /* ---------- Inline [n] citations (React-level, no remark plugin) ---------- */
 
-const CITE_RE = /(\[\d+\])/;
+const CITE_RE = /((?:\[\d+\])(?:[ \t]*\[\d+\])*)/;
 
 /** Open a citation via the registered handler (provided by feature modules). */
 function openCitation(result: CitationResult) {
@@ -353,7 +353,7 @@ function openCitation(result: CitationResult) {
 const CitationRef: FC<{ index: number }> = ({ index }) => {
   const result = useStore(citationStore, (s) => s.results[index - 1]);
   const hasHandler = useStore(citationStore, (s) => !!s.handler);
-  if (!result || !hasHandler) return <span className="text-muted-foreground">[{index}]</span>;
+  if (!result || !hasHandler) return <span className="text-muted-foreground">{index}</span>;
   return (
     <InlineCitation
       marker={String(index)}
@@ -376,9 +376,21 @@ export function injectCitations(children: ReactNode): ReactNode {
 
       const parts = child.split(CITE_RE);
       return parts.map((part, i) => {
-        const m = /^\[(\d+)\]$/.exec(part);
-        if (m) return <CitationRef key={i} index={parseInt(m[1], 10)} />;
-        return <AutoLinkedText key={i} text={part} />;
+        if (/^\[\d+\]/.test(part)) {
+          return (
+            <InlineCitationGroup key={i}>
+              {[...part.matchAll(/\[(\d+)\]/g)].map((match, j) => (
+                <CitationRef key={j} index={parseInt(match[1], 10)} />
+              ))}
+            </InlineCitationGroup>
+          );
+        }
+        return (
+          <AutoLinkedText
+            key={i}
+            text={i < parts.length - 1 ? part.replace(/[ \t]+$/, "") : part}
+          />
+        );
       });
     }
 
