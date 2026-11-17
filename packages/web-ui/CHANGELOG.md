@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.57.1
+
+### Patch Changes
+
+- 78b4c48: Keep the Home composer mounted while drafting so typing does not change its width, action size or context layout. Open the conversation when the message is sent, including keyboard submission, while retaining immediate voice entry.
+  - @lykomi/agent@0.57.1
+  - @lykomi/web-primitives@0.57.1
+
 ## 0.57.0
 
 ### Minor Changes
