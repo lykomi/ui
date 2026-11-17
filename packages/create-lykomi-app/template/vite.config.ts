@@ -66,17 +66,17 @@ export default defineConfig({
           // Voice is optional at runtime and heavy at build; its own chunk
           // keeps the main path light and the size gate honest.
           if (pkg.startsWith("@lykomi/web-voice/")) return "vendor-lykomi-voice";
-          // Before the react rule: recharts drags react-smooth + the d3
-          // sub-packages along, and "react-smooth" would land in
-          // vendor-react and push it past the chunk-size gate.
+          // Keep chart rendering separate from its math dependencies: grouping
+          // both into one chunk exceeds the starter's per-chunk budget.
+          if (pkg.startsWith("recharts/") || pkg.startsWith("react-smooth/")) {
+            return "vendor-charts";
+          }
           if (
-            pkg.startsWith("recharts/") ||
             pkg.startsWith("victory-vendor/") ||
             pkg.startsWith("d3-") ||
-            pkg.startsWith("react-smooth/") ||
             pkg.startsWith("decimal.js-light/")
           ) {
-            return "vendor-charts";
+            return "vendor-chart-math";
           }
           if (
             pkg.startsWith("react/") ||
