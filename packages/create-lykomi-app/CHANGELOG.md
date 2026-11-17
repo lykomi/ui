@@ -1,11 +1,16 @@
 # create-lykomi-app
 
+## 0.13.7
+
+### Patch Changes
+
+- 2d8877b: Keep chart rendering and math dependencies in separate starter chunks so fresh installs stay within the existing bundle budget.
+
 ## 0.13.6
 
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @lykomi/agent: 0.56.0 → 0.57.0
   - @lykomi/web-primitives: 0.56.0 → 0.57.0
   - @lykomi/web-shell: 0.56.0 → 0.57.0
@@ -18,7 +23,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @lykomi/agent: 0.55.0 → 0.56.0
   - @lykomi/web-primitives: 0.55.0 → 0.56.0
   - @lykomi/web-shell: 0.55.0 → 0.56.0
@@ -31,7 +35,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @lykomi/agent: 0.54.1 → 0.55.0
   - @lykomi/web-primitives: 0.54.1 → 0.55.0
   - @lykomi/web-shell: 0.54.1 → 0.55.0
@@ -44,7 +47,6 @@
 ### Patch Changes
 
 - Release the starter with the updated Foundry package pins:
-
   - @lykomi/agent: 0.54.0 → 0.54.1
   - @lykomi/web-primitives: 0.54.0 → 0.54.1
   - @lykomi/web-shell: 0.54.0 → 0.54.1
