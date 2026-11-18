@@ -78,7 +78,11 @@ export const captureAppViewTool: ClientToolEntry = {
           excluded: "private fields, embedded frames and video",
         }),
         inputContent: [
-          { type: "binary", mimeType: "image/jpeg", data, filename: "current-app-view.jpg" },
+          {
+            type: "image",
+            source: { type: "data", mimeType: "image/jpeg", value: data },
+            metadata: { filename: "current-app-view.jpg" },
+          },
         ],
       };
     } catch (error) {

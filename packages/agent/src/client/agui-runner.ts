@@ -15,7 +15,7 @@
  */
 
 import { HttpAgent, type AgentSubscriber } from "@ag-ui/client";
-import type { Context, Message, Tool, InputContent } from "@ag-ui/core";
+import type { Context, Message, Tool, ContentPart } from "@ag-ui/core";
 import type { ToolRegistry } from "../tools/registry.ts";
 import type { RunnerEvent } from "./runner-events.ts";
 import type { StreamingStatus } from "../store/streaming-status-store.ts";
@@ -28,7 +28,7 @@ interface ToolCallState {
   result?: unknown;
   isError?: boolean;
   followedUp?: boolean;
-  inputContent?: InputContent[];
+  inputContent?: ContentPart[];
 }
 
 export interface AGUIRunnerOptions {
@@ -36,6 +36,8 @@ export interface AGUIRunnerOptions {
   threadId?: string;
   /** Optional override for the underlying fetch — useful for auth-attached fetch. */
   fetchFn?: typeof fetch;
+  /** Explicit server cancellation; transport disconnect alone may detach a run. */
+  cancelRun?: (threadId: string, runId: string) => Promise<void>;
   /**
    * Emit a `streaming-status: stalled` event when no AG-UI event (including
    * server heartbeats) has arrived for this many ms during an active run.
@@ -189,6 +191,7 @@ class EventQueue<T> {
  */
 export class AGUIRunner {
   private readonly httpAgent: HttpAgent;
+  private readonly cancelRun?: AGUIRunnerOptions["cancelRun"];
   private readonly toolInputOwners = new Map<string, string>();
   private readonly stallAfterMs: number;
   private readonly autoCancelPendingToolCalls: boolean;
@@ -199,6 +202,7 @@ export class AGUIRunner {
       threadId: options.threadId ?? crypto.randomUUID(),
       ...(options.fetchFn ? { fetch: options.fetchFn } : {}),
     });
+    this.cancelRun = options.cancelRun;
     this.stallAfterMs = options.stallAfterMs ?? 45_000;
     this.autoCancelPendingToolCalls = options.autoCancelPendingToolCalls ?? true;
   }
@@ -482,7 +486,7 @@ export class AGUIRunner {
 
             // Intercept client-side tools — execute locally and stash the
             // result so the multi-turn loop can replay it on the next turn.
-            if (registry.isRegistered(tc.name)) {
+            if (registry.isRegistered(tc.name) && !abortSignal?.aborted) {
               try {
                 const output = await registry.executeTool(tc.name, tc.args);
                 tc.result = JSON.parse(typeof output === "string" ? output : output.result);
@@ -511,7 +515,7 @@ export class AGUIRunner {
             let parsedResult: unknown = content;
             let isError = false;
             try {
-              const parsed = JSON.parse(content);
+              const parsed = typeof content === "string" ? JSON.parse(content) : content;
               parsedResult = parsed;
               if (parsed && typeof parsed === "object" && "error" in parsed) {
                 isError = true;
@@ -552,7 +556,24 @@ export class AGUIRunner {
         };
 
         // Wire abort: AG-UI exposes abortRun(); call it when the caller's signal fires.
-        const onAbort = () => this.httpAgent.abortRun();
+        let cancellation: Promise<void> | undefined;
+        const onAbort = () => {
+          cancellation ??= (async () => {
+            try {
+              await this.cancelRun?.(this.threadId, runId);
+            } catch (error) {
+              push({
+                type: "run-error",
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "The server task could not be stopped and may still be working.",
+              });
+            } finally {
+              this.httpAgent.abortRun();
+            }
+          })();
+        };
         abortSignal?.addEventListener("abort", onAbort, { once: true });
 
         // Kick off the run — completion ends the queue. Errors during the
@@ -566,7 +587,8 @@ export class AGUIRunner {
         //   2. Transport-level rejection (fetch failure, TLS reset).
         const runPromise = this.httpAgent
           .runAgent({ runId, tools, context: context ?? [], forwardedProps }, subscriber)
-          .then(() => {
+          .then(async () => {
+            await cancellation;
             if (!sawTerminal && !abortSignal?.aborted) {
               push({ type: "streaming-status", status: { status: "idle" } });
               push({
@@ -578,7 +600,8 @@ export class AGUIRunner {
             }
             queue.end();
           })
-          .catch((err: unknown) => {
+          .catch(async (err: unknown) => {
+            await cancellation;
             if (!sawTerminal && !abortSignal?.aborted) {
               push({ type: "streaming-status", status: { status: "idle" } });
               push({
@@ -593,13 +616,13 @@ export class AGUIRunner {
           for await (const evt of queue.drain()) {
             yield evt;
             if (abortSignal?.aborted) {
-              this.httpAgent.abortRun();
-              return;
+              onAbort();
             }
           }
         } finally {
           if (stallTimer !== null) clearInterval(stallTimer);
           abortSignal?.removeEventListener("abort", onAbort);
+          await cancellation;
           await runPromise; // ensure the run task is settled
         }
 
@@ -683,8 +706,8 @@ export class AGUIRunner {
           });
         }
 
-        // AG-UI tool messages accept text only. Supply visual tool output as
-        // binary input after all matching tool results, never base64 in JSON.
+        // Keep captured browser media as a separate user input after matching
+        // tool results so the model sees it without a base64 JSON payload.
         for (const tc of pendingClientTools) {
           if (!tc.inputContent?.length) continue;
           const messageId = crypto.randomUUID();

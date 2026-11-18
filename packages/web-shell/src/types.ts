@@ -46,6 +46,8 @@ export interface ChatConversationConfig {
   pathPattern: RegExp;
   /** Build the host conversation URL for running-chat navigation. Defaults to /chat/:id. */
   conversationUrl?: (threadId: string) => string;
+  /** Stop an exact server run before disconnecting its browser reader. */
+  cancelRun?: (threadId: string, runId: string) => Promise<void>;
   /**
    * Optional hook giving the module's view of "what conversation is
    * the user currently engaged with" — separate from the URL.

@@ -317,6 +317,43 @@ describe("AGUIAdapterSDK", () => {
     expect(request.context[0].description).toContain("Selection does not execute or advance work");
   });
 
+  it("sends document bytes and filenames as native AG-UI media parts", async () => {
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
+    const adapter = new AGUIAdapterSDK();
+    for await (const _ of adapter.run({
+      messages: [
+        {
+          id: "document",
+          role: "user",
+          content: [{ type: "text", text: "Read this" }],
+          attachments: [
+            {
+              id: "pdf",
+              type: "document",
+              name: "report.pdf",
+              contentType: "application/pdf",
+              status: { type: "complete" },
+              content: [
+                { type: "file", mimeType: "application/pdf", filename: "report.pdf", data: "cGRm" },
+              ],
+            },
+          ],
+        },
+      ],
+      abortSignal: new AbortController().signal,
+    } as Parameters<AGUIAdapterSDK["run"]>[0])) {
+      /* drain */
+    }
+    expect(runMock.mock.calls[0][0].messages[0].content).toEqual([
+      { type: "text", text: "Read this" },
+      {
+        type: "document",
+        source: { type: "data", mimeType: "application/pdf", value: "cGRm" },
+        metadata: { filename: "report.pdf" },
+      },
+    ]);
+  });
+
   it("includes completed text attachment content in outbound AG-UI messages", async () => {
     runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
 

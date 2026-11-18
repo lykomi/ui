@@ -1,8 +1,8 @@
 import { createStore } from "zustand/vanilla";
-import type { Tool as AGUITool, InputContent } from "@ag-ui/core";
+import type { Tool as AGUITool, ContentPart } from "@ag-ui/core";
 
 /** Text metadata stays in the tool result; visual content travels as AG-UI input. */
-export type ClientToolResult = string | { result: string; inputContent: InputContent[] };
+export type ClientToolResult = string | { result: string; inputContent: ContentPart[] };
 
 /**
  * Dynamic Client Tool Registry — vanilla zustand store for client-side AG-UI
