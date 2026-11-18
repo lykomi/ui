@@ -32,6 +32,7 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 import type { ContentPart, Context, Message as AGUIMessage } from "@ag-ui/core";
+import { ContentPartSchema } from "@ag-ui/core/schemas";
 import { AGUIRunner, clientToolRegistry, contextUsageStore } from "@lykomi/agent";
 import { tokenFetch } from "@lykomi/agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
@@ -505,6 +506,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+const toolContentParts = ContentPartSchema.array();
+
+function toolResultContent(result: unknown): string | ContentPart[] {
+  if (typeof result === "string") return result;
+  if (Array.isArray(result) && result.length > 0) {
+    const native = toolContentParts.safeParse(result);
+    if (native.success) return native.data;
+  }
+  return JSON.stringify(result);
+}
+
 /**
  * Convert assistant-ui's `Message[]` into AG-UI's wire format.
  *
@@ -552,7 +564,7 @@ function convertMessagesToAGUI(messages: ChatModelRunOptions["messages"]): AGUIM
               id: `tool-result-${tc.toolCallId}`,
               role: "tool",
               toolCallId: tc.toolCallId,
-              content: typeof tc.result === "string" ? tc.result : JSON.stringify(tc.result),
+              content: toolResultContent(tc.result),
             });
           }
         }
