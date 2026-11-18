@@ -292,7 +292,9 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
             break;
 
           case "streaming-status":
-            touchChatRun(this.threadId, event.status);
+            // A quiet tool/model step is not evidence of a failed connection.
+            // Keep its last known phase; actual transport errors still surface.
+            if (event.status.status !== "stalled") touchChatRun(this.threadId, event.status);
             break;
 
           case "text-delta":

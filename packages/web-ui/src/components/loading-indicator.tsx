@@ -1,4 +1,5 @@
 import { useStore } from "zustand";
+import { useEffect, useState } from "react";
 import { streamingStatusStore } from "@lykomi/agent";
 
 function formatToolName(name: string): string {
@@ -18,20 +19,22 @@ export function LoadingBar() {
  * Inline status shown in the message area while the agent is running.
  *
  * Visible for the whole run (assistant-ui `running` gate) with the current
- * phase, plus a distinct amber "stalled" treatment when no event or server
- * heartbeat has arrived for a while — so a user can always tell "still
- * working" from "connection is dead". A dead stream is additionally
- * surfaced as an explicit run error by the runner; this indicator covers
- * the in-flight phases.
+ * phase and elapsed time. Silence alone is not a connection failure;
+ * confirmed transport errors are surfaced by the runner separately.
  */
 export function LoadingIndicator() {
   const streaming = useStore(streamingStatusStore, (s) => s.streamingStatus);
+  const startedAt = useStore(streamingStatusStore, (s) => s.runStartedAt);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (startedAt === null) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [startedAt]);
+  const seconds = startedAt === null ? null : Math.max(0, Math.floor((now - startedAt) / 1000));
 
-  const stalled = streaming.status === "stalled";
   let label = "Thinking";
-  if (stalled) {
-    label = "Still working — no signal from the agent";
-  } else if (streaming.status === "calling" && streaming.toolName) {
+  if (streaming.status === "calling" && streaming.toolName) {
     label = `Running ${formatToolName(streaming.toolName)}`;
   } else if (streaming.status === "streaming") {
     label = "Generating response";
@@ -46,14 +49,17 @@ export function LoadingIndicator() {
     // parts' own gap-4 left a visible hole under the last tool row.
     <div role="status" aria-live="polite" className="min-h-6 px-4">
       <div className="flex items-center gap-2 py-0.5 text-foreground leading-relaxed animate-in fade-in duration-300">
-        <span className={stalled ? "text-xs text-warning" : "text-xs text-muted-foreground"}>
-          {label}
-        </span>
+        <span className="text-xs text-muted-foreground">{label}</span>
+        {seconds !== null && (
+          <span aria-hidden="true" className="text-xs tabular-nums text-muted-foreground">
+            {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}
+          </span>
+        )}
         {/* One pulsing dot. Three read as a typing indicator borrowed from a
             messaging app; a single beat says "working" without the mimicry. */}
         <span
           aria-hidden="true"
-          className={`size-1.5 rounded-full ${stalled ? "bg-warning/70" : "bg-primary/60"} animate-[pulse_1.4s_ease-in-out_infinite]`}
+          className="size-1.5 rounded-full bg-primary/60 animate-[pulse_1.4s_ease-in-out_infinite]"
         />
       </div>
     </div>
