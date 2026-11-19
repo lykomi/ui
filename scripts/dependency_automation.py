@@ -254,11 +254,6 @@ def review_marker(repo, number, head):
 
 def review_inflight(repo, number, head, comments):
     marker = review_marker(repo, number, head)
-    codex = [item for item in comments if item["user"]["id"] == CODEX]
-    latest_response = max(
-        (item.get("updated_at", item.get("created_at", "")) for item in codex),
-        default="",
-    )
     for item in comments:
         body = item.get("body", "")
         if item["user"]["id"] == GITHUB_ACTIONS_USER and marker in body:
@@ -267,9 +262,14 @@ def review_inflight(repo, number, head, comments):
             # A summary suppresses duplicates; it never grants merge clearance.
             if "<!-- codex-review-state:v1 " in body:
                 return True
-        if body.lstrip().startswith("@codex review") and (
-            not latest_response or item.get("created_at", "") >= latest_response
+        if item["user"]["id"] == GITHUB_ACTIONS_USER and re.search(
+            re.escape(f"<!-- lykomi-codex-request:v1 {repo}#{number} ")
+            + r"[a-f0-9]{40} -->",
+            body,
         ):
+            continue  # Our own explicit request for an older head.
+        # An unbound manual request cannot be cleared by unrelated bot chatter.
+        if body.lstrip().startswith("@codex review"):
             return True
     return False
 

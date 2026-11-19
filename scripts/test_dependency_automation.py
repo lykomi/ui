@@ -194,6 +194,22 @@ class AutomationTests(unittest.TestCase):
             "created_at": "2026-11-19T10:00:00Z",
         }
         self.assertTrue(automation.review_inflight("lykomi/ui", 1, HEAD, [manual]))
+        chatter = {
+            "user": {"id": automation.CODEX},
+            "body": "Review acknowledged",
+            "updated_at": "2026-11-19T10:01:00Z",
+        }
+        self.assertTrue(
+            automation.review_inflight("lykomi/ui", 1, HEAD, [manual, chatter])
+        )
+        old_request = {
+            **own,
+            "body": "@codex review\n"
+            + automation.review_marker("lykomi/ui", 1, "b" * 40),
+        }
+        self.assertFalse(
+            automation.review_inflight("lykomi/ui", 1, HEAD, [old_request])
+        )
         summary = {
             "user": {"id": automation.CODEX},
             "body": "<!-- codex-review-state:v1 " + HEAD + " -->",
