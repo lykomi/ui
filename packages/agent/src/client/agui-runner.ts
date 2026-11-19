@@ -200,7 +200,9 @@ export class AGUIRunner {
     this.httpAgent = new HttpAgent({
       url: options.url ?? "/api/agent",
       threadId: options.threadId ?? crypto.randomUUID(),
-      ...(options.fetchFn ? { fetch: options.fetchFn } : {}),
+      // HttpAgent invokes its fetch option as a method. Native browser fetch
+      // rejects that foreign receiver when supplied directly by a shell.
+      fetch: (input, init) => (options.fetchFn ?? globalThis.fetch).call(globalThis, input, init),
     });
     this.cancelRun = options.cancelRun;
     this.stallAfterMs = options.stallAfterMs ?? 45_000;

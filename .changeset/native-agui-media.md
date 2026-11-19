@@ -10,3 +10,5 @@ Upgrade AG-UI client and protocol peers to 1.0.5. Send attachments and captured 
 Add an optional `cancelRun(threadId, runId)` callback for explicit server cancellation of detached runs. Wait for the callback before ending local cancellation, report failures, and prevent new browser tool dispatch once Stop is requested.
 
 Keep the last known progress phase during quiet model/tool steps and show elapsed time instead of a silence-based warning. Confirmed transport errors remain visible.
+
+Preserve the native fetch receiver when passing a transport override to AG-UI, so unauthenticated browser starters can stream responses as well as authenticated consumers.
