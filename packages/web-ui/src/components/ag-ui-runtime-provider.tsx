@@ -63,6 +63,7 @@ interface AGUIRuntimeProviderProps {
   headlessChildren?: React.ReactNode;
   active?: boolean;
   conversationUrl?: string;
+  cancelRun?: (threadId: string, runId: string) => Promise<void>;
   /** Custom fetch for agent requests. Handles URL rewriting + auth in production. */
   fetchFn?: typeof fetch;
   /**
@@ -235,6 +236,7 @@ function AGUIRuntimeInner({
   resetThread,
   selectRetainedThread,
   conversationUrl,
+  cancelRun,
 }: AGUIRuntimeProviderProps & {
   publishForeground: (binding: ForegroundBinding) => void;
   adapterCache: Map<string, AGUIAdapterSDK>;
@@ -247,10 +249,15 @@ function AGUIRuntimeInner({
     // server messages and compaction state must survive a later revisit.
     const retained = threadId ? adapterCache.get(threadId) : undefined;
     if (retained) return retained;
-    const created = new AGUIAdapterSDK("/api/agent", { fetchFn, threadId, conversationUrl });
+    const created = new AGUIAdapterSDK("/api/agent", {
+      fetchFn,
+      threadId,
+      conversationUrl,
+      cancelRun,
+    });
     if (!deleted) adapterCache.set(created.threadId, created);
     return created;
-  }, [adapterCache, fetchFn, threadId, conversationUrl, deleted]);
+  }, [adapterCache, fetchFn, threadId, conversationUrl, cancelRun, deleted]);
 
   // Hosts may register a custom adapter (see ``registerAttachmentAdapter``);
   // the shell's inline-base64 adapter is the default.

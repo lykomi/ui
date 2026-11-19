@@ -23,7 +23,10 @@ it("captures the app viewport as binary input and excludes private surfaces", as
   });
   expect(result.result).not.toContain("aW1hZ2U=");
   expect(result.inputContent).toEqual([
-    expect.objectContaining({ type: "binary", mimeType: "image/jpeg", data: "aW1hZ2U=" }),
+    expect.objectContaining({
+      type: "image",
+      source: { type: "data", mimeType: "image/jpeg", value: "aW1hZ2U=" },
+    }),
   ]);
   const [root, options] = vi.mocked(domToJpeg).mock.calls[0];
   expect(root).toBe(document.documentElement);

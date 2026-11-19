@@ -361,6 +361,7 @@ function RuntimeBody({
       active={active}
       headlessChildren={toolUIs}
       conversationUrl={config.conversationUrl?.(effectiveThreadId)}
+      cancelRun={config.cancelRun}
       // ``urlMatch`` carries the URL-derived resume signal verbatim.
       // ``effectiveThreadId`` is always defined (sticky / urlMatch /
       // freshly minted UUID) so passing it in place of ``urlMatch``

@@ -15,6 +15,7 @@
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { RunnerEvent } from "@lykomi/agent";
+import type { ChatModelRunResult } from "@assistant-ui/react";
 
 const appStoreMock = vi.hoisted(() => ({
   agentState: {
@@ -316,6 +317,89 @@ describe("AGUIAdapterSDK", () => {
     expect(JSON.parse(request.context[0].value)).toEqual(appStoreMock.agentState.contextItems[0]);
     expect(request.context[0].description).toContain("Selection does not execute or advance work");
   });
+
+  it("sends document bytes and filenames as native AG-UI media parts", async () => {
+    runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
+    const adapter = new AGUIAdapterSDK();
+    for await (const _ of adapter.run({
+      messages: [
+        {
+          id: "document",
+          role: "user",
+          content: [{ type: "text", text: "Read this" }],
+          attachments: [
+            {
+              id: "pdf",
+              type: "document",
+              name: "report.pdf",
+              contentType: "application/pdf",
+              status: { type: "complete" },
+              content: [
+                { type: "file", mimeType: "application/pdf", filename: "report.pdf", data: "cGRm" },
+              ],
+            },
+          ],
+        },
+      ],
+      abortSignal: new AbortController().signal,
+    } as Parameters<AGUIAdapterSDK["run"]>[0])) {
+      /* drain */
+    }
+    expect(runMock.mock.calls[0][0].messages[0].content).toEqual([
+      { type: "text", text: "Read this" },
+      {
+        type: "document",
+        source: { type: "data", mimeType: "application/pdf", value: "cGRm" },
+        metadata: { filename: "report.pdf" },
+      },
+    ]);
+  });
+
+  it.each([
+    [
+      { type: "text", text: "Tool media" },
+      { type: "image", source: { type: "data", mimeType: "image/png", value: "aW1hZ2U=" } },
+      { type: "audio", source: { type: "url", value: "https://example.test/audio.wav" } },
+      { type: "video", source: { type: "file", value: "video-handle", provider: "openai" } },
+      {
+        type: "document",
+        source: { type: "data", mimeType: "application/pdf", value: "cGRm" },
+        metadata: { filename: "report.pdf" },
+      },
+    ],
+    [{ row: 1 }, { row: 2 }],
+  ])(
+    "replays tool results on the next user turn without flattening native media: %j",
+    async (...parts) => {
+      const result = parts;
+      runMock.mockImplementationOnce(async function* (): AsyncGenerator<RunnerEvent> {
+        yield { type: "tool-call-start", id: "media-call", name: "inspect", isClientSide: false };
+        yield { type: "tool-call-result", id: "media-call", result };
+        yield { type: "run-finished" };
+      });
+      runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});
+      const adapter = new AGUIAdapterSDK();
+      let final: ChatModelRunResult | undefined;
+      for await (const response of adapter.run(makeRunInput())) final = response;
+      for await (const response of adapter.run({
+        ...makeRunInput(),
+        messages: [
+          ...makeRunInput().messages,
+          { id: "answer", role: "assistant", content: final!.content },
+          {
+            id: "follow-up",
+            role: "user",
+            content: [{ type: "text", text: "Explain that result" }],
+          },
+        ],
+      } as Parameters<AGUIAdapterSDK["run"]>[0]))
+        void response;
+      const outbound = runMock.mock.calls[1][0].messages.find(
+        (message: { role: string }) => message.role === "tool",
+      );
+      expect(outbound.content).toEqual("type" in result[0] ? result : JSON.stringify(result));
+    },
+  );
 
   it("includes completed text attachment content in outbound AG-UI messages", async () => {
     runMock.mockImplementation(async function* (): AsyncGenerator<RunnerEvent> {});

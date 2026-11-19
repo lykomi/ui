@@ -130,6 +130,29 @@ describe("AGUIRunner", () => {
     expect(deltas.map((d) => d.delta).join("")).toBe("Hello world");
   });
 
+  it("preserves native media content in server tool results", async () => {
+    const content = [
+      { type: "text", text: "Rendered page" },
+      { type: "image", source: { type: "data", mimeType: "image/png", value: "cGFnZQ==" } },
+    ];
+    nextScript = [
+      async (s) => {
+        await s.onToolCallStartEvent?.({
+          event: { type: "TOOL_CALL_START", toolCallId: "media", toolCallName: "render" },
+        } as never);
+        await s.onToolCallResultEvent?.({
+          event: { type: "TOOL_CALL_RESULT", toolCallId: "media", content },
+        } as never);
+        await s.onRunFinishedEvent?.({ event: { type: "RUN_FINISHED" } } as never);
+      },
+    ];
+    const events = await collect(new AGUIRunner(), makeRegistry({ isRegistered: () => false }));
+    expect(events.find((event) => event.type === "tool-call-result")).toMatchObject({
+      result: content,
+      isError: false,
+    });
+  });
+
   it("emits tool-call events with isClientSide flag", async () => {
     nextScript = [
       async (s) => {
@@ -1042,7 +1065,9 @@ it("sends a visual client-tool result as binary input once, keeping bytes out of
       isRegistered: (name) => name === "ui_capture_view",
       executeTool: async () => ({
         result: '{"status":"captured"}',
-        inputContent: [{ type: "binary", mimeType: "image/jpeg", data: "aW1hZ2U=" }],
+        inputContent: [
+          { type: "image", source: { type: "data", mimeType: "image/jpeg", value: "aW1hZ2U=" } },
+        ],
       }),
     }),
   );
@@ -1055,9 +1080,8 @@ it("sends a visual client-tool result as binary input once, keeping bytes out of
   );
   expect(images).toHaveLength(1);
   expect(images[0].content).toContainEqual({
-    type: "binary",
-    mimeType: "image/jpeg",
-    data: "aW1hZ2U=",
+    type: "image",
+    source: { type: "data", mimeType: "image/jpeg", value: "aW1hZ2U=" },
   });
   expect(JSON.stringify(events.filter((event) => event.type === "tool-call-end"))).not.toContain(
     "aW1hZ2U=",
@@ -1090,4 +1114,67 @@ it("sends a visual client-tool result as binary input once, keeping bytes out of
   // Editing/truncating away the owning tool result drops its image too.
   await collectWithMessages(runner, [followUp], makeRegistry({ isRegistered: () => false }));
   expect(JSON.stringify(lastMessages)).not.toContain("aW1hZ2U=");
+});
+
+it.each([false, true])("requests server cancellation and surfaces failure=%s", async (fail) => {
+  const controller = new AbortController();
+  const cancelRun = vi.fn().mockImplementation(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    if (fail) throw new Error("The server task may still be working");
+  });
+  runCount = 0;
+  nextScript = [
+    async () => {
+      controller.abort();
+    },
+  ];
+  const events: RunnerEvent[] = [];
+  const runner = new AGUIRunner({ cancelRun, threadId: "stop-thread" });
+  for await (const event of runner.run({
+    messages: [],
+    registry: makeRegistry({ isRegistered: () => false }),
+    abortSignal: controller.signal,
+  }))
+    events.push(event);
+  expect(cancelRun).toHaveBeenCalledOnce();
+  expect(cancelRun).toHaveBeenCalledWith("stop-thread", expect.any(String));
+  expect(
+    events.some(
+      (event) => event.type === "run-error" && event.message.includes("may still be working"),
+    ),
+  ).toBe(fail);
+});
+
+it("blocks browser tool dispatch immediately while server Stop is pending", async () => {
+  const controller = new AbortController();
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const executeTool = vi.fn().mockResolvedValue("done");
+  runCount = 0;
+  nextScript = [
+    async (s) => {
+      controller.abort();
+      await s.onToolCallStartEvent?.({
+        event: { type: "TOOL_CALL_START", toolCallId: "late", toolCallName: "write" },
+      } as never);
+      await s.onToolCallArgsEvent?.({
+        event: { type: "TOOL_CALL_ARGS", toolCallId: "late", delta: "{}" },
+      } as never);
+      await s.onToolCallEndEvent?.({
+        event: { type: "TOOL_CALL_END", toolCallId: "late" },
+      } as never);
+      release();
+    },
+  ];
+  const runner = new AGUIRunner({ cancelRun: () => pending });
+  for await (const _ of runner.run({
+    messages: [],
+    registry: makeRegistry({ isRegistered: () => true, executeTool }),
+    abortSignal: controller.signal,
+  })) {
+    /* drain */
+  }
+  expect(executeTool).not.toHaveBeenCalled();
 });

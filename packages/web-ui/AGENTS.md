@@ -92,6 +92,6 @@ The answer is a **headless watcher over the thread's own parts**, mounted once a
 
 # Attachments
 
-`FileAttachmentAdapter` (`src/lib/attachment-adapter.ts`) base64-encodes **both images and documents** (PDF/DOCX) and emits file parts, which the AG-UI adapter converts to `binary` message parts (`mimeType` + `data` + `filename`). Documents used to degrade to a `[Attached file: …]` text stub; that silently discarded the bytes, so the model received a filename it could not read. Pass `{ documentMode: "metadata" }` to restore the stub for models that genuinely cannot accept file input.
+`FileAttachmentAdapter` (`src/lib/attachment-adapter.ts`) base64-encodes **both images and documents** (PDF/DOCX) and emits file parts, which the AG-UI adapter converts to AG-UI 1.0 media parts (`source` with base64 bytes and MIME type, plus `metadata.filename`). Documents used to degrade to a `[Attached file: …]` text stub; that silently discarded the bytes, so the model received a filename it could not read. Pass `{ documentMode: "metadata" }` to restore the stub for models that genuinely cannot accept file input.
 
 Hosts must bound persistence: the bytes ride along on every turn of the live conversation and reach whatever stores chat history. Elide them server-side (lastspace does this in `chat_message_store.py::_elide_inline_media`) or a single attached PDF can breach a document-size ceiling and wedge the thread.

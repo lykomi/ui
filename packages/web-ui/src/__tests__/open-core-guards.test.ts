@@ -87,8 +87,8 @@ const FILE_COUNT_CEILINGS = [{ path: "packages/web-shell/src", ceiling: 15, hard
 const SHARED_DEPS_REQUIRED_MAJOR = [
   { name: "react-router", expectedMajor: "7" },
   { name: "@assistant-ui/react", expectedMajor: "0" },
-  { name: "@ag-ui/client", expectedMajor: "0" },
-  { name: "@ag-ui/core", expectedMajor: "0" },
+  { name: "@ag-ui/client", expectedMajor: "1" },
+  { name: "@ag-ui/core", expectedMajor: "1" },
 ];
 
 // ----------------------------------------------------------------------------

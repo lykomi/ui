@@ -31,7 +31,8 @@ import type {
   TextMessagePart,
   ToolCallMessagePart,
 } from "@assistant-ui/react";
-import type { Context, Message as AGUIMessage } from "@ag-ui/core";
+import type { ContentPart, Context, Message as AGUIMessage } from "@ag-ui/core";
+import { ContentPartSchema } from "@ag-ui/core/schemas";
 import { AGUIRunner, clientToolRegistry, contextUsageStore } from "@lykomi/agent";
 import { tokenFetch } from "@lykomi/agent/msal";
 import { useAppStore, type AgentStateProjection } from "./app-store.ts";
@@ -64,12 +65,18 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
 
   constructor(
     url: string = "/api/agent",
-    options?: { threadId?: string; fetchFn?: typeof fetch; conversationUrl?: string },
+    options?: {
+      threadId?: string;
+      fetchFn?: typeof fetch;
+      conversationUrl?: string;
+      cancelRun?: (threadId: string, runId: string) => Promise<void>;
+    },
   ) {
     this.conversationUrl = options?.conversationUrl;
     this.runner = new AGUIRunner({
       url,
       threadId: options?.threadId,
+      cancelRun: options?.cancelRun,
       fetchFn: options?.fetchFn ?? tokenFetch,
     });
   }
@@ -286,7 +293,9 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
             break;
 
           case "streaming-status":
-            touchChatRun(this.threadId, event.status);
+            // A quiet tool/model step is not evidence of a failed connection.
+            // Keep its last known phase; actual transport errors still surface.
+            if (event.status.status !== "stalled") touchChatRun(this.threadId, event.status);
             break;
 
           case "text-delta":
@@ -407,14 +416,14 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
       // not a silent empty bubble. We yield the terminal status rather
       // than throwing; an unhandled throw re-introduces the stuck-running
       // bug (the runner generator has already returned here).
-      if (runSignal.aborted) {
-        yield buildResult({ type: "incomplete", reason: "cancelled" });
-      } else if (runError !== null) {
+      if (runError !== null) {
         yield buildResult({
           type: "incomplete",
           reason: "error",
           error: runError || "The run failed.",
         });
+      } else if (runSignal.aborted) {
+        yield buildResult({ type: "incomplete", reason: "cancelled" });
       } else {
         yield buildResult({ type: "complete", reason: "stop" });
       }
@@ -497,6 +506,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+const toolContentParts = ContentPartSchema.array();
+
+function toolResultContent(result: unknown): string | ContentPart[] {
+  if (typeof result === "string") return result;
+  if (Array.isArray(result) && result.length > 0) {
+    const native = toolContentParts.safeParse(result);
+    if (native.success) return native.data;
+  }
+  return JSON.stringify(result);
+}
+
 /**
  * Convert assistant-ui's `Message[]` into AG-UI's wire format.
  *
@@ -544,7 +564,7 @@ function convertMessagesToAGUI(messages: ChatModelRunOptions["messages"]): AGUIM
               id: `tool-result-${tc.toolCallId}`,
               role: "tool",
               toolCallId: tc.toolCallId,
-              content: typeof tc.result === "string" ? tc.result : JSON.stringify(tc.result),
+              content: toolResultContent(tc.result),
             });
           }
         }
@@ -554,11 +574,8 @@ function convertMessagesToAGUI(messages: ChatModelRunOptions["messages"]): AGUIM
       continue;
     }
 
-    // User role: extract binary attachments if present
-    const parts: (
-      | { type: "text"; text: string }
-      | { type: "binary"; mimeType: string; data?: string; filename?: string }
-    )[] = [];
+    // User role: preserve attachments as native AG-UI media parts.
+    const parts: ContentPart[] = [];
     for (const c of msg.content) {
       if (c.type === "text") {
         parts.push({ type: "text", text: c.text });
@@ -572,28 +589,32 @@ function convertMessagesToAGUI(messages: ChatModelRunOptions["messages"]): AGUIM
             parts.push({ type: "text", text: part.text });
           } else if (part.type === "file" && "data" in part) {
             parts.push({
-              type: "binary",
-              mimeType: part.mimeType,
-              data: part.data as string,
-              filename: part.filename,
+              type: part.mimeType.startsWith("image/")
+                ? "image"
+                : part.mimeType.startsWith("audio/")
+                  ? "audio"
+                  : part.mimeType.startsWith("video/")
+                    ? "video"
+                    : "document",
+              source: { type: "data", mimeType: part.mimeType, value: part.data as string },
+              metadata: { filename: part.filename },
             });
           } else if (part.type === "image" && "image" in part) {
             parts.push({
-              type: "binary",
-              mimeType: "image/*",
-              data: part.image as string,
+              type: "image",
+              source: { type: "url", value: part.image as string },
             });
           }
         }
       }
     }
 
-    const hasBinary = parts.some((p) => p.type === "binary");
+    const hasMedia = parts.some((p) => p.type !== "text");
     const textWithAttachments = parts
       .filter((p): p is { type: "text"; text: string } => p.type === "text")
       .map((p) => p.text)
       .join("\n");
-    out.push({ id, role: "user", content: hasBinary ? parts : textWithAttachments });
+    out.push({ id, role: "user", content: hasMedia ? parts : textWithAttachments });
   }
 
   return out;
