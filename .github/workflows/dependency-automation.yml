@@ -1,0 +1,54 @@
+name: Reviewed dependency updates
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Inspect decisions without merging
+        type: boolean
+        default: true
+
+concurrency:
+  group: reviewed-dependency-updates
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  maintain:
+    if: >-
+      (github.repository == 'lykomi/lykomi' || github.repository == 'lykomi/ui') &&
+      (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main') &&
+      (github.event_name != 'issue_comment' ||
+       (github.event.issue.pull_request && github.event.comment.user.id == 199175422))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+      checks: read
+      actions: read
+    steps:
+      # Never check out the PR or workflow_run head; no dependency installation.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Apply trusted-main maintenance policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          APPLY: ${{ vars.DEPENDENCY_AUTOMERGE_ENABLED == 'true' && (github.event_name != 'workflow_dispatch' || !inputs.dry_run) }}
+        run: |
+          args=(--repo "$REPOSITORY")
+          if [ "$APPLY" = true ]; then args+=(--apply); fi
+          python3 scripts/dependency_automation.py "${args[@]}"

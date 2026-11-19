@@ -9,12 +9,8 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
-    ignore:
-      # Transport changes require protocol and downstream compatibility tests.
-      - dependency-name: "@ag-ui/*"
-      # Keep the exact coordinated assistant-ui version and store patch.
-      - dependency-name: "@assistant-ui/*"
-        update-types: [version-update:semver-major, version-update:semver-minor]
+        exclude-patterns: ["@ag-ui/*", "@assistant-ui/*", "@azure/msal*", "@lykomi/*"]
+    open-pull-requests-limit: 15
 
   - package-ecosystem: github-actions
     directory: /
@@ -24,7 +20,7 @@ updates:
       default-days: 7
     groups:
       actions:
-        patterns: ["*"]
+        update-types: [minor, patch]
 
   - package-ecosystem: pip
     directories:
@@ -37,5 +33,19 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
-    ignore:
-      - dependency-name: "agent-framework-*"
+        exclude-patterns:
+          [
+            "agent-framework*",
+            "mcp",
+            "fastmcp",
+            "azure-identity",
+            "msal*",
+            "authlib",
+            "pyjwt",
+            "cryptography",
+            "oauthlib",
+            "requests-oauthlib",
+            "python-jose",
+            "pyopenssl",
+          ]
+    open-pull-requests-limit: 15
