@@ -19,6 +19,17 @@ reproduction, the affected package(s) (`@lykomi/*` or
 
 Dependabot checks the npm workspace, GitHub Actions and Python starter/preset manifests weekly. Normal version updates wait at least seven days after release; security updates are independent of this cooldown. AG-UI, coordinated assistant-ui/Agent Framework and authentication updates appear as separate proposals requiring compatibility review. Major proposals stay visible and require human approval.
 
+Security-update commits sometimes omit `update-type`. For a single dependency,
+the maintenance policy can derive patch/minor from the exact stable versions in
+the verified commit's canonical bump sentence, matching its name and target to
+the signed metadata. Editable PR titles, bodies and labels are not evidence.
+Ambiguous, grouped, downgrade and major cases remain blocked.
+
+An enabled maintenance run can request a missing Codex review once per verified
+head, only after trusted CI and the current-main checks pass. It uses existing
+PR-write permission and requests at most one review per run. Pending requests
+are respected; dry runs never comment, and a request is never merge clearance.
+
 Review update diffs and advisories, run the repository checks and starter package smoke tests when affected, and obtain final-head review before merging. Preserve coordinated framework versions, the assistant-ui store patch, and single React/router instances. A merge does not publish packages: use the existing Changesets and Release npm workflow, then update and verify downstream consumers against the published artifacts. Never publish manually or automatically merge solely because an update is a patch/minor release.
 
 ## Reviewed automatic updates

@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 import dependency_automation as automation
 
-
 HEAD = "a" * 40
 MESSAGE = """Bump example
 
@@ -60,9 +59,53 @@ class AutomationTests(unittest.TestCase):
         changed = copy.deepcopy(COMMIT)
         changed["commit"]["message"] = MESSAGE.replace(
             "\n...\n",
-            "\n- dependency-name: other\n  dependency-version: 2.0.0\n  update-type: version-update:semver-major\n...\n",
+            "\n- dependency-name: other\n  dependency-version: 2.0.0\n"
+            "  update-type: version-update:semver-major\n...\n",
         )
         self.assertFalse(automation.routine_updates([changed])[0])
+
+    def test_security_update_classification_uses_only_exact_signed_single_bump(self):
+        message = MESSAGE.replace("  update-type: version-update:semver-minor\n", "")
+        message = message.replace(
+            "Bump example",
+            "chore(deps): bump example from 1.2.0 to 1.3.0\n\n"
+            "Bumps [example](https://github.com/vendor/example) from 1.2.0 to 1.3.0.",
+        )
+
+        def routine(text):
+            commit = copy.deepcopy(COMMIT)
+            commit["commit"]["message"] = text
+            return automation.routine_updates([commit])[0]
+
+        self.assertTrue(routine(message))
+        self.assertTrue(
+            routine(
+                message.replace("1.2.0", "1.3.0")
+                .replace("to 1.3.0", "to 1.3.1")
+                .replace("dependency-version: 1.3.0", "dependency-version: 1.3.1")
+            )
+        )
+        for changed in [
+            message.replace("from 1.2.0", "from 0.9.0"),
+            message.replace("from 1.2.0", "from 1.3.0"),
+            message.replace("from 1.2.0", "from 1.4.0"),
+            message.replace("from 1.2.0", "from 1.2.0-beta.1"),
+            message.replace("[example]", "[different]"),
+            message.replace("to 1.3.0", "to 1.3.1"),
+            message.replace("Bumps [example]", "> Bumps [example]"),
+            message.replace("Bumps [example]", "Summary: Bumps [example]"),
+            message.replace("from 1.2.0 to", "from 0.9.0-beta.1 to").replace(
+                "\n---\n", "\n```\n" + message.splitlines()[2] + "\n```\n---\n"
+            ),
+            message.replace(
+                "\n...\n",
+                "\n- dependency-name: other\n  dependency-version: 2.0.0\n...\n",
+            ),
+            message.replace("example", "@ag-ui/client"),
+            message.replace("1.2.0", "0.2.0").replace("1.3.0", "0.3.0"),
+        ]:
+            with self.subTest(message=changed):
+                self.assertFalse(routine(changed))
 
     def test_missing_duplicate_and_complex_metadata_fail_closed(self):
         for text in [
@@ -79,7 +122,8 @@ class AutomationTests(unittest.TestCase):
     def test_review_requires_numeric_identity_signature_and_final_head(self):
         receipt = {
             "user": {"id": automation.CODEX},
-            "body": "Codex Review: Didn't find any major issues.\n**Reviewed commit:** `aaaaaaaaaa`",
+            "body": "Codex Review: Didn't find any major issues.\n"
+            "**Reviewed commit:** `aaaaaaaaaa`",
         }
         self.assertTrue(automation.reviewed(HEAD, [], [receipt]))
         self.assertTrue(
@@ -119,10 +163,97 @@ class AutomationTests(unittest.TestCase):
             "body": "### 💡 Codex Review\nFinding",
         }
         self.assertTrue(automation.reviewed(HEAD, [review], []))
+        self.assertTrue(
+            automation.reviewed(
+                HEAD,
+                [
+                    {
+                        **review,
+                        "body": "<!-- codex-review-receipt:v1 -->\n\n" + review["body"],
+                    }
+                ],
+                [],
+            )
+        )
         for state in ["PENDING", "DISMISSED"]:
             self.assertFalse(
                 automation.reviewed(HEAD, [{**review, "state": state}], [])
             )
+
+    def test_review_requests_deduplicate_only_current_head_and_trusted_marker(self):
+        marker = automation.review_marker("lykomi/ui", 1, HEAD)
+        own = {"user": {"id": automation.GITHUB_ACTIONS_USER}, "body": marker}
+        self.assertTrue(automation.review_inflight("lykomi/ui", 1, HEAD, [own]))
+        self.assertFalse(automation.review_inflight("lykomi/ui", 1, "b" * 40, [own]))
+        self.assertFalse(automation.review_inflight("lykomi/ui", 2, HEAD, [own]))
+        spoofed = {**own, "user": {"id": 1}}
+        self.assertFalse(automation.review_inflight("lykomi/ui", 1, HEAD, [spoofed]))
+        manual = {
+            "user": {"id": 1},
+            "body": "@codex review",
+            "created_at": "2026-11-19T10:00:00Z",
+        }
+        self.assertTrue(automation.review_inflight("lykomi/ui", 1, HEAD, [manual]))
+        chatter = {
+            "user": {"id": automation.CODEX},
+            "body": "Review acknowledged",
+            "updated_at": "2026-11-19T10:01:00Z",
+        }
+        self.assertTrue(
+            automation.review_inflight("lykomi/ui", 1, HEAD, [manual, chatter])
+        )
+        old_request = {
+            **own,
+            "body": "@codex review\n"
+            + automation.review_marker("lykomi/ui", 1, "b" * 40),
+        }
+        self.assertFalse(
+            automation.review_inflight("lykomi/ui", 1, HEAD, [old_request])
+        )
+        summary = {
+            "user": {"id": automation.CODEX},
+            "body": "<!-- codex-review-state:v1 " + HEAD + " -->",
+        }
+        self.assertTrue(automation.review_inflight("lykomi/ui", 1, HEAD, [summary]))
+        self.assertFalse(automation.reviewed(HEAD, [], [summary]))
+
+    def test_review_request_is_one_per_run_dry_run_free_and_head_bound(self):
+        prs = [{"number": n, "user": {"id": automation.DEPENDABOT}} for n in [1, 2]]
+        decision = {
+            "number": 1,
+            "head": HEAD,
+            "eligible": False,
+            "reason": "review",
+            "review_requestable": True,
+        }
+        current = {
+            "head": {"sha": HEAD},
+            "draft": False,
+            "state": "open",
+            "base": {"ref": "main"},
+        }
+        for apply, actual, expected in [
+            (False, HEAD, 0),
+            (True, HEAD, 1),
+            (True, "b" * 40, 0),
+        ]:
+            with (
+                patch.object(automation, "pages", return_value=prs),
+                patch.object(automation, "decision", return_value=decision),
+                patch.object(
+                    automation, "api", return_value={**current, "head": {"sha": actual}}
+                ),
+                patch.object(automation, "gh", return_value={"id": 123}) as post,
+            ):
+                result = automation.run("lykomi/ui", apply)
+                self.assertEqual(post.call_count, expected)
+                self.assertEqual(result["reviews_requested"], expected)
+                self.assertEqual(result["merged"], 0)
+                if expected:
+                    self.assertIn(
+                        automation.review_marker("lykomi/ui", 1, HEAD),
+                        post.call_args.args[-1],
+                    )
 
     def test_strict_protection_requires_all_expected_trusted_checks(self):
         rule = {
@@ -235,6 +366,15 @@ class AutomationTests(unittest.TestCase):
                 return automation.decision(repo, 1)
 
         self.assertTrue(evaluate(values)["eligible"])
+        waiting = evaluate({**values, "reviews": []})
+        self.assertFalse(waiting["eligible"])
+        self.assertTrue(waiting["review_requestable"])
+        for change in [{"behind": 1}, {"strict": False}, {"checks": []}]:
+            self.assertFalse(
+                evaluate({**values, "reviews": [], **change}).get(
+                    "review_requestable", False
+                )
+            )
         changes = [
             {"behind": 1},
             {"unresolved": True},
