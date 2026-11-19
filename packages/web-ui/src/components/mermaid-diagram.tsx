@@ -3,6 +3,7 @@ import { Check, Copy } from "lucide-react";
 import { Button, cn } from "@lykomi/web-primitives";
 import { useThemeRuntime } from "./theme-runtime-provider.tsx";
 import { mermaidDocument, mermaidTheme, renderMermaid } from "../lib/mermaid-render.ts";
+import { MermaidFullscreen } from "./mermaid-fullscreen.tsx";
 
 export const MermaidStreamingContext = createContext(false);
 
@@ -83,6 +84,8 @@ export function MermaidDiagram({
   const fittedWidth = validSize ? Math.min(width, viewBox[2]) : width;
   const height = Math.min(1200, Math.max(120, fittedWidth * ratio));
   const sourceVisible = showSource || error || streaming;
+  const srcDoc = svg && !sourceVisible && source.trim() ? mermaidDocument(svg) : undefined;
+  const preview = { title, sandbox: "", referrerPolicy: "no-referrer", srcDoc } as const;
 
   return (
     <div ref={host} className={cn("my-4 min-w-0 max-w-full", className)}>
@@ -108,6 +111,21 @@ export function MermaidDiagram({
           </Button>
         </div>
         <div className="flex items-center gap-1">
+          <MermaidFullscreen title={title} disabled={!srcDoc}>
+            {srcDoc ? (
+              // The scrollable dialog owns pointer and keyboard input, including Escape.
+              <iframe
+                {...preview}
+                tabIndex={-1}
+                className="pointer-events-none mx-auto block h-auto w-full border-0"
+                style={{ width: validSize ? viewBox[2] : undefined, aspectRatio: 1 / ratio }}
+              />
+            ) : (
+              <p role="status" className="text-sm text-muted-foreground">
+                {error || !source.trim() ? "Diagram preview is unavailable." : "Drawing diagram…"}
+              </p>
+            )}
+          </MermaidFullscreen>
           <Button
             type="button"
             variant="ghost"
@@ -142,15 +160,8 @@ export function MermaidDiagram({
             <code>{source}</code>
           </pre>
         </>
-      ) : svg ? (
-        <iframe
-          title={title}
-          sandbox=""
-          referrerPolicy="no-referrer"
-          srcDoc={mermaidDocument(svg)}
-          className="w-full border-0"
-          style={{ height }}
-        />
+      ) : srcDoc ? (
+        <iframe {...preview} className="w-full border-0" style={{ height }} />
       ) : (
         <p role="status" className="text-sm text-muted-foreground">
           Drawing diagram…
