@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, type PropsWithChildren } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import ReactMarkdown from "react-markdown";
@@ -13,6 +13,7 @@ vi.mock("../lib/mermaid-render.ts", () => ({
 }));
 vi.mock("./theme-runtime-provider.tsx", () => ({
   useThemeRuntime: () => ({ mode: "light", variables: {} }),
+  ThemeScope: ({ children }: PropsWithChildren) => children,
 }));
 let container: HTMLDivElement;
 let root: Root;
@@ -51,11 +52,46 @@ it("renders Mermaid Markdown fences in an isolated preview and preserves ordinar
   expect(container.querySelector("iframe")?.title).toBe("Mermaid diagram");
   expect(container.querySelector("pre")?.textContent).toBe("const x=1");
 });
+
+it("opens the rendered diagram fullscreen and returns focus on Escape", async () => {
+  await act(async () =>
+    root.render(<MermaidDiagram title="Process map" source="flowchart TD\nA-->B" />),
+  );
+  const trigger = container.querySelector<HTMLButtonElement>(
+    '[aria-label="Open diagram fullscreen"]',
+  )!;
+  expect(trigger.disabled).toBe(true);
+  await draw();
+  expect(trigger.disabled).toBe(false);
+  trigger.focus();
+  act(() => trigger.click());
+
+  const dialog = document.querySelector('[role="dialog"]')!;
+  const frame = dialog.querySelector("iframe")!;
+  expect(dialog.querySelector("h2")?.textContent).toBe("Process map");
+  expect(frame.srcdoc).toBe(container.querySelector("iframe")?.srcdoc);
+  expect(frame.getAttribute("sandbox")).toBe("");
+  expect(frame.getAttribute("referrerpolicy")).toBe("no-referrer");
+  expect(frame.tabIndex).toBe(-1);
+  expect(render).toHaveBeenCalledOnce();
+
+  await act(async () => {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  });
+  await act(async () => vi.advanceTimersByTimeAsync(0));
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+  expect(container.querySelector("iframe")).not.toBeNull();
+});
+
 it("keeps incomplete streamed source readable and renders when streaming ends", async () => {
   await act(async () => root.render(<MermaidDiagram source="flowchart TD\nA-->B" isStreaming />));
   await draw();
   expect(render).not.toHaveBeenCalled();
   expect(container.querySelector("pre")?.textContent).toContain("A-->B");
+  expect(
+    container.querySelector<HTMLButtonElement>('[aria-label="Open diagram fullscreen"]')?.disabled,
+  ).toBe(true);
   await act(async () =>
     root.render(<MermaidDiagram source="flowchart TD\nA-->B" isStreaming={false} />),
   );
@@ -96,7 +132,7 @@ it("uses Source as the single editor action and keeps read-only source viewing",
   await draw();
   const sourceButton = () =>
     Array.from(container.querySelectorAll("button")).find((item) => item.textContent === "Source");
-  expect(container.querySelectorAll("button")).toHaveLength(3);
+  expect(container.querySelectorAll("button")).toHaveLength(4);
   expect(container.textContent).not.toContain("Edit source");
   act(() => sourceButton()?.click());
   expect(edit).toHaveBeenCalledOnce();
@@ -104,6 +140,9 @@ it("uses Source as the single editor action and keeps read-only source viewing",
   await act(async () => root.render(<MermaidDiagram source="flowchart TD\nA-->B" />));
   act(() => sourceButton()?.click());
   expect(container.querySelector("pre")?.textContent).toContain("A-->B");
+  expect(
+    container.querySelector<HTMLButtonElement>('[aria-label="Open diagram fullscreen"]')?.disabled,
+  ).toBe(true);
   expect(edit).toHaveBeenCalledOnce();
 });
 
