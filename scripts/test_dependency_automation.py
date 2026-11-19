@@ -130,7 +130,8 @@ class AutomationTests(unittest.TestCase):
             "parameters": {
                 "strict_required_status_checks_policy": True,
                 "required_status_checks": [
-                    {"context": "CI", "integration_id": automation.GITHUB_ACTIONS}
+                    {"context": name, "integration_id": automation.GITHUB_ACTIONS}
+                    for name in ["CI", "Dependency review"]
                 ],
             },
         }
@@ -199,11 +200,12 @@ class AutomationTests(unittest.TestCase):
             "strict": True,
             "checks": [
                 {
-                    "name": "CI",
+                    "name": name,
                     "app": {"id": automation.GITHUB_ACTIONS},
                     "status": "completed",
                     "conclusion": "success",
                 }
+                for name in ["CI", "Dependency review"]
             ],
         }
 

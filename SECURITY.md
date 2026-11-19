@@ -27,8 +27,10 @@ The `Reviewed dependency updates` workflow evaluates same-repository Dependabot
 PRs without checking out or executing their code. Automatic writes require the
 repository variable `DEPENDENCY_AUTOMERGE_ENABLED=true`. Normal stable patch/minor
 updates may merge only after final-head Codex review, resolved findings, successful
-trusted CI, and strict protection requiring Quality, Runtime skills and Neo4j
-preset on current main. Signed Dependabot metadata must classify every dependency;
+trusted CI, and strict protection requiring Quality, Runtime skills, Neo4j
+preset and Dependency review on current main. Dependency review rejects newly
+introduced known high/critical vulnerabilities across runtime, development and
+unknown scopes; it does not establish that a package is free of malware. Signed Dependabot metadata must classify every dependency;
 unknown, mixed-major, pre-1.0 minor, controlled-framework and authentication
 updates remain for review. Only manifest/lockfile changes qualify; Docker and
 GitHub Actions proposals still require explicit review. At most one PR merges per

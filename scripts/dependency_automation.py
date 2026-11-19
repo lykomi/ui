@@ -14,8 +14,8 @@ DEPENDABOT = 49699333
 CODEX = 199175422
 GITHUB_ACTIONS = 15368
 REPOSITORIES = {
-    "lykomi/lykomi": {"CI"},
-    "lykomi/ui": {"Quality", "Runtime skills", "Neo4j preset"},
+    "lykomi/lykomi": {"CI", "Dependency review"},
+    "lykomi/ui": {"Quality", "Runtime skills", "Neo4j preset", "Dependency review"},
 }
 CONTROLLED = (
     "@lykomi/*",
