@@ -1,5 +1,14 @@
 # @iloveagents/foundry-web-graph
 
+## 0.3.26
+
+### Patch Changes
+
+- Updated dependencies [276d3d9]
+  - @lykomi/agent@0.58.0
+  - @lykomi/web-ui@0.58.0
+  - @lykomi/web-primitives@0.58.0
+
 ## 0.3.25
 
 ### Patch Changes
