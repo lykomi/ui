@@ -1,0 +1,41 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Transport changes require protocol and downstream compatibility tests.
+      - dependency-name: "@ag-ui/*"
+      # Keep the exact coordinated assistant-ui version and store patch.
+      - dependency-name: "@assistant-ui/*"
+        update-types: [version-update:semver-major, version-update:semver-minor]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directories:
+      - /packages/create-lykomi-app/template/agent
+      - /packages/create-lykomi-app/presets/*/files/agent
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "agent-framework-*"
