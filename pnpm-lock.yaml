@@ -39,10 +39,10 @@ importers:
     devDependencies:
       "@ag-ui/client":
         specifier: ^1.0.5
-        version: 1.0.5(zod@4.4.3)
+        version: 1.0.5(zod@4.6.7)
       "@ag-ui/core":
         specifier: ^1.0.5
-        version: 1.0.5(zod@4.4.3)
+        version: 1.0.5(zod@4.6.7)
       "@azure/msal-browser":
         specifier: ^5.0.0
         version: 5.8.0
@@ -56,8 +56,8 @@ importers:
         specifier: ^4.1.4
         version: 4.1.5(@types/node@24.12.2)(jsdom@28.1.0)(vite@8.0.10(@types/node@24.12.2)(esbuild@0.27.7))
       zod:
-        specifier: ^4.0.0
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.7
       zustand:
         specifier: ^5.0.0
         version: 5.0.12(@types/react@19.2.14)(immer@11.1.18)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
@@ -324,10 +324,10 @@ importers:
     devDependencies:
       "@ag-ui/client":
         specifier: ^1.0.5
-        version: 1.0.5(zod@4.4.3)
+        version: 1.0.5(zod@4.6.7)
       "@ag-ui/core":
         specifier: ^1.0.5
-        version: 1.0.5(zod@4.4.3)
+        version: 1.0.5(zod@4.6.7)
       "@assistant-ui/react":
         specifier: ^0.15.1
         version: 0.15.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(immer@11.1.18)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
@@ -365,8 +365,8 @@ importers:
         specifier: ^4.1.4
         version: 4.1.5(@types/node@24.12.2)(jsdom@28.1.0)(vite@8.0.10(@types/node@24.12.2)(esbuild@0.27.7))
       zod:
-        specifier: ^4.0.0
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.7
       zustand:
         specifier: ^5.0.0
         version: 5.0.12(@types/react@19.2.14)(immer@11.1.18)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
@@ -6414,10 +6414,10 @@ packages:
         integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==,
       }
 
-  zod@4.4.3:
+  zod@4.6.7:
     resolution:
       {
-        integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==,
+        integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==,
       }
 
   zustand@5.0.12:
@@ -6471,35 +6471,35 @@ packages:
 snapshots:
   "@acemir/cssom@0.9.31": {}
 
-  "@ag-ui/client@1.0.5(zod@4.4.3)":
+  "@ag-ui/client@1.0.5(zod@4.6.7)":
     dependencies:
-      "@ag-ui/core": 1.0.5(zod@4.4.3)
-      "@ag-ui/encoder": 1.0.5(zod@4.4.3)
-      "@ag-ui/proto": 1.0.5(zod@4.4.3)
+      "@ag-ui/core": 1.0.5(zod@4.6.7)
+      "@ag-ui/encoder": 1.0.5(zod@4.6.7)
+      "@ag-ui/proto": 1.0.5(zod@4.6.7)
       "@types/uuid": 10.0.0
       compare-versions: 6.1.1
       fast-json-patch: 3.1.1
       rxjs: 7.8.1
       untruncate-json: 0.0.1
       uuid: 11.1.0
-      zod: 4.4.3
+      zod: 4.6.7
 
-  "@ag-ui/core@1.0.5(zod@4.4.3)":
+  "@ag-ui/core@1.0.5(zod@4.6.7)":
     optionalDependencies:
-      zod: 4.4.3
+      zod: 4.6.7
 
-  "@ag-ui/encoder@1.0.5(zod@4.4.3)":
+  "@ag-ui/encoder@1.0.5(zod@4.6.7)":
     dependencies:
-      "@ag-ui/core": 1.0.5(zod@4.4.3)
-      "@ag-ui/proto": 1.0.5(zod@4.4.3)
-      zod: 4.4.3
+      "@ag-ui/core": 1.0.5(zod@4.6.7)
+      "@ag-ui/proto": 1.0.5(zod@4.6.7)
+      zod: 4.6.7
 
-  "@ag-ui/proto@1.0.5(zod@4.4.3)":
+  "@ag-ui/proto@1.0.5(zod@4.6.7)":
     dependencies:
-      "@ag-ui/core": 1.0.5(zod@4.4.3)
+      "@ag-ui/core": 1.0.5(zod@4.6.7)
       "@bufbuild/protobuf": 2.12.0
       "@protobuf-ts/protoc": 2.11.1
-      zod: 4.4.3
+      zod: 4.6.7
 
   "@antfu/install-pkg@2.1.0":
     dependencies:
@@ -6562,7 +6562,7 @@ snapshots:
       react-dom: 19.2.5(react@19.2.5)
       react-textarea-autosize: 8.5.9(@types/react@19.2.14)(react@19.2.5)
       safe-content-frame: 0.0.25
-      zod: 4.4.3
+      zod: 4.6.7
       zustand: 5.0.14(@types/react@19.2.14)(immer@11.1.18)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5))
     optionalDependencies:
       "@types/react": 19.2.14
@@ -10549,7 +10549,7 @@ snapshots:
 
   xmlchars@2.2.0: {}
 
-  zod@4.4.3: {}
+  zod@4.6.7: {}
 
   zustand@5.0.12(@types/react@19.2.14)(immer@11.1.18)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)):
     optionalDependencies:

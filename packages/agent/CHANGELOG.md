@@ -1,5 +1,7 @@
 # @iloveagents/foundry-agent
 
+## 0.58.1
+
 ## 0.58.0
 
 ### Minor Changes
