@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.58.1
+
+### Patch Changes
+
+- 8a3d23c: Add an accessible fullscreen preview for rendered Mermaid diagrams in chat and documents.
+  - @lykomi/agent@0.58.1
+  - @lykomi/web-primitives@0.58.1
+
 ## 0.58.0
 
 ### Minor Changes
