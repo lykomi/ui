@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.58.3
+
+### Patch Changes
+
+- c1a48d3: Keep the chat panel hint in English to match the workbench interface.
+  - @lykomi/agent@0.58.3
+  - @lykomi/web-primitives@0.58.3
+
 ## 0.58.2
 
 ### Patch Changes
