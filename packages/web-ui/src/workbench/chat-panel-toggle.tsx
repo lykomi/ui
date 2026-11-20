@@ -8,19 +8,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip.tsx";
 
 const DISCOVERY_KEY = "chat-panel-v1";
 
-const copy = {
-  de: {
-    title: "Chat ein- und ausblenden",
-    body: "Hier öffnest du den Chat. In der Chat-Leiste klappst du ihn wieder ein. Beim Navigieren folgt der Chat deiner aktuellen Ansicht.",
-    confirm: "Verstanden",
-  },
-  en: {
-    title: "Show and hide chat",
-    body: "Select this icon to open chat. Collapse it from the chat header. As you navigate, chat uses what you’re currently viewing as context.",
-    confirm: "Got it",
-  },
-};
-
 /** The original narrow rail, with discovery that never changes content width. */
 export function ChatPanelToggle({
   running,
@@ -48,8 +35,6 @@ export function ChatPanelToggle({
   );
   const dismiss = () => state?.acknowledgeHint?.(DISCOVERY_KEY);
   const description = running ? "Open chat — AI is working" : "Open chat";
-  const language = /^de\b/i.test(navigator.language) ? "de" : "en";
-  const hint = copy[language];
   return (
     <Popover open={showHint} onOpenChange={(open) => !open && dismiss()}>
       <Tooltip delayDuration={0}>
@@ -75,7 +60,7 @@ export function ChatPanelToggle({
       {showHint && (
         <PopoverContent
           data-chat-discovery
-          lang={language}
+          lang="en"
           aria-labelledby={titleId}
           aria-describedby={bodyId}
           side="right"
@@ -90,14 +75,15 @@ export function ChatPanelToggle({
         >
           <Arrow className="fill-popover" />
           <h2 id={titleId} className="text-sm font-semibold">
-            {hint.title}
+            Show and hide chat
           </h2>
           <p
             id={bodyId}
             className="mt-1 text-sm leading-5 text-muted-foreground"
             aria-live="polite"
           >
-            {hint.body}
+            Select this icon to open chat. Collapse it from the chat header. As you navigate, chat
+            uses what you’re currently viewing as context.
           </p>
           <div className="mt-3 flex justify-end">
             <Button
@@ -108,7 +94,7 @@ export function ChatPanelToggle({
                 toggle.current?.focus();
               }}
             >
-              {hint.confirm}
+              Got it
             </Button>
           </div>
         </PopoverContent>
