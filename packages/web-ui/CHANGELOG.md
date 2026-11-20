@@ -1,5 +1,14 @@
 # @iloveagents/foundry-web-ui
 
+## 0.58.2
+
+### Patch Changes
+
+- 217d4df: Explain how to open and collapse chat, and how navigation changes the chat context, in the one-time workbench hint.
+- 117340c: Require DOMPurify 3.4.17 so published UI consumers receive the hardened sanitizer minimum.
+  - @lykomi/agent@0.58.2
+  - @lykomi/web-primitives@0.58.2
+
 ## 0.58.1
 
 ### Patch Changes
