@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.58.4
+
+### Patch Changes
+
+- 68d975b: Keep one chat composer when switching between full-width Home and the side panel. Let content modules share their existing window tabs with the workbench and bring a selected source forward on compact screens.
+  - @lykomi/agent@0.58.4
+  - @lykomi/web-primitives@0.58.4
+
 ## 0.58.3
 
 ### Patch Changes
