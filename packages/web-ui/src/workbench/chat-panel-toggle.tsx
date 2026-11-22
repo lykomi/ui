@@ -11,10 +11,12 @@ const DISCOVERY_KEY = "chat-panel-v1";
 /** The original narrow rail, with discovery that never changes content width. */
 export function ChatPanelToggle({
   running,
+  expanded = false,
   home,
   onOpen,
 }: {
   running: boolean;
+  expanded?: boolean;
   home: boolean;
   onOpen: () => void;
 }) {
@@ -31,10 +33,18 @@ export function ChatPanelToggle({
       }
     | undefined;
   const showHint = Boolean(
-    !home && state?.ready && state.acknowledgeHint && !state.acknowledgedHints?.[DISCOVERY_KEY],
+    !home &&
+    !expanded &&
+    state?.ready &&
+    state.acknowledgeHint &&
+    !state.acknowledgedHints?.[DISCOVERY_KEY],
   );
   const dismiss = () => state?.acknowledgeHint?.(DISCOVERY_KEY);
-  const description = running ? "Open chat — AI is working" : "Open chat";
+  const description = expanded
+    ? "Collapse chat"
+    : running
+      ? "Open chat — AI is working"
+      : "Open chat";
   return (
     <Popover open={showHint} onOpenChange={(open) => !open && dismiss()}>
       <Tooltip delayDuration={0}>
@@ -45,7 +55,7 @@ export function ChatPanelToggle({
               ref={toggle}
               data-chat-expand
               aria-label={description}
-              aria-expanded={false}
+              aria-expanded={expanded}
               aria-controls="preview-assistant"
               aria-describedby={showHint ? bodyId : undefined}
               className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary"

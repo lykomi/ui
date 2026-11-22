@@ -48,6 +48,13 @@ import { create } from "zustand";
 import { useAuiState } from "@assistant-ui/react";
 
 interface ChatSlotsState {
+  /** Selection in a module-owned document tab strip. */
+  workingDocument: {
+    subscribe: (listener: () => void) => () => void;
+    getActiveId: () => string | null;
+    hasTabs: () => boolean;
+    EmptyTabBar: ComponentType;
+  } | null;
   /** Contextual conversation starters. Only mounted on the empty chat home. */
   homeStarters: ComponentType | null;
   composerBanner: ComponentType | null;
@@ -65,6 +72,7 @@ interface ChatSlotsState {
 }
 
 export const useChatSlotsStore = create<ChatSlotsState>(() => ({
+  workingDocument: null,
   homeStarters: null,
   composerBanner: null,
   contextDetails: null,
@@ -104,6 +112,7 @@ function refreshActiveHomeStarterHost() {
  */
 export function registerChatSlots(slots: Partial<ChatSlotsState>): void {
   const next: Partial<ChatSlotsState> = {};
+  if (slots.workingDocument !== undefined) next.workingDocument = slots.workingDocument;
   if (slots.homeStarters !== undefined) next.homeStarters = slots.homeStarters;
   if (slots.composerBanner !== undefined) next.composerBanner = slots.composerBanner;
   if (slots.contextDetails !== undefined) next.contextDetails = slots.contextDetails;

@@ -6,7 +6,7 @@ import { ChatEmptyState } from "../components/chat-empty-state.tsx";
 import { WelcomeIntro } from "./welcome-intro.tsx";
 import { useWorkbenchState } from "./use-workbench-state.tsx";
 import { WorkbenchStyles } from "./workbench-styles.tsx";
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useLayoutEffect, useSyncExternalStore } from "react";
 import { Button } from "@lykomi/web-primitives";
 import { ChatContent, TooltipIconButton } from "../index.ts";
 import type { ChatContentProps } from "../components/assistant-chat.tsx";
@@ -15,8 +15,13 @@ import { FileText, MessageSquare, Menu, LoaderCircle } from "lucide-react";
 import { ActionListSkeleton } from "../components/action-list-skeleton.tsx";
 import { ConversationHistory } from "./conversation-history.tsx";
 import { HistoryContent } from "./history-content.tsx";
-import { HomeContent } from "./home-content.tsx";
+import { ChatPanelToggle } from "./chat-panel-toggle.tsx";
+import { useChatSlotsStore } from "../components/chat-slots.tsx";
 import { HomeDestinations } from "./home-destinations.tsx";
+const noDocument = () => null;
+const noDocumentTabs = () => false;
+const noDocumentSubscription = () => () => {};
+
 export function WorkbenchPreview({
   page,
   chatPage,
@@ -31,7 +36,6 @@ export function WorkbenchPreview({
 }) {
   const {
     panelOpen,
-    currentPage,
     globalHistory,
     home,
     chatOnly,
@@ -63,25 +67,38 @@ export function WorkbenchPreview({
     closePanel,
     startChat,
   } = useWorkbenchState(chatRoute, defaultSideChatCollapsed);
-  const assistantRef = useRef<HTMLElement>(null);
-  const [focusRequest, setFocusRequest] = useState(0);
-  const chatOpen = chatWidth.compact ? compactPane === "chat" : !collapsed;
-  const revealChat = (focus = false) => {
-    returnToChat();
-    setCollapsed(false);
-    setContentCollapsed(false);
-    setCompactPane("chat");
-    if (focus) setFocusRequest((value) => value + 1);
+  const workspaceId = workspaceGroups?.[0]?.meta?.exclusiveRootId;
+  const globalHome = home && !workspaceId && !entityId;
+  const workingDocument = useChatSlotsStore((s) => s.workingDocument);
+  const activeDocument = useSyncExternalStore(
+    workingDocument?.subscribe ?? noDocumentSubscription,
+    workingDocument?.getActiveId ?? noDocument,
+    noDocument,
+  );
+  const hasDocumentTabs = useSyncExternalStore(
+    workingDocument?.subscribe ?? noDocumentSubscription,
+    workingDocument?.hasTabs ?? noDocumentTabs,
+    noDocumentTabs,
+  );
+  const sidePanelOpen = chatWidth.compact ? compactPane === "chat" : !collapsed;
+  const homeFullChat = globalHome && !sidePanelOpen && !activeDocument && !panelOpen;
+  const EmptyTabBar =
+    !workspaceGroups && !entityId && !hasDocumentTabs && !homeFullChat
+      ? workingDocument?.EmptyTabBar
+      : undefined;
+  const chatOpen = homeFullChat || sidePanelOpen;
+  const setSidePanelOpen = (open: boolean) => {
+    if (chatWidth.compact) setCompactPane(open ? "chat" : "content");
+    else {
+      setContentCollapsed(false);
+      setCollapsed(!open);
+    }
   };
   useLayoutEffect(() => {
-    if (!focusRequest || !chatOpen || showHistory) return;
-    const input = assistantRef.current?.querySelector<HTMLTextAreaElement>("textarea");
-    if (input) {
-      input.focus();
-      input.setSelectionRange(input.value.length, input.value.length);
-    }
-  }, [focusRequest, chatOpen, showHistory]);
-  const workspaceId = workspaceGroups?.[0]?.meta?.exclusiveRootId;
+    if (!globalHome || !activeDocument) return;
+    setContentCollapsed(false);
+    if (chatWidth.compact) setCompactPane("content");
+  }, [activeDocument, chatWidth.compact, globalHome, setCompactPane, setContentCollapsed]);
   const conversationHome = (
     <ConversationHistory
       groups={navGroups}
@@ -94,14 +111,12 @@ export function WorkbenchPreview({
       compact
     />
   );
-  const globalHome = home && !workspaceId && !entityId;
   const emptyChatFooter = globalHome ? null : pageContextPending ? (
     <ActionListSkeleton label="Loading recent chats" secondaryText />
   ) : (
     conversationHome
   );
-  const homeConversation = globalHome && chatOpen;
-  const spaciousChat = expandedChat || homeConversation;
+  const spaciousChat = expandedChat || homeFullChat;
   const buttonClass =
     "inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary";
   const chatDefaults: ChatContentProps = {
@@ -116,7 +131,9 @@ export function WorkbenchPreview({
       ) : undefined,
 
     composerFooter:
-      globalHome && emptyChat && !historyOpen ? <HomeDestinations groups={navGroups} /> : undefined,
+      homeFullChat && emptyChat && !historyOpen ? (
+        <HomeDestinations groups={navGroups} />
+      ) : undefined,
     compactComposer: !spaciousChat && chatWidth.width < 512,
     starterSuggestions: [],
     emptyState: (
@@ -129,6 +146,67 @@ export function WorkbenchPreview({
       </ChatEmptyState>
     ),
   };
+  const assistant = (
+    <section
+      id="preview-assistant"
+      data-panel-motion
+      data-global-chat={spaciousChat || undefined}
+      data-home-chat={homeFullChat || undefined}
+      inert={!chatOpen}
+      aria-label="Assistant conversation"
+      className="relative flex min-h-0 min-w-0 shrink-0 flex-col"
+      style={{
+        display: chatOpen ? "flex" : "none",
+        width: homeFullChat
+          ? "auto"
+          : chatWidth.compact || chatOnly
+            ? globalHome
+              ? "calc(100% - 44px)"
+              : "100%"
+            : contentCollapsed
+              ? "calc(100% - 88px)"
+              : chatWidth.width,
+        background: "var(--background)",
+      }}
+    >
+      <WorkbenchChatHeader
+        chatWidth={chatWidth}
+        buttonClass={buttonClass}
+        toggleNavigation={toggleNavigation}
+        showHistory={showHistory}
+        startChat={startChat}
+        returnToChat={returnToChat}
+        openHistory={openHistory}
+        canResumeChat={canResumeChat}
+      />
+      {chatOpen && showHistory && (
+        <ConversationHistory
+          groups={navGroups}
+          workspaceId={workspaceId}
+          onClose={returnToChat}
+          showBack={false}
+          standalone={homeFullChat}
+          onNewChat={startChat}
+        />
+      )}
+      {!chatWidth.compact && !collapsed && !contentCollapsed && !homeFullChat && (
+        <ChatResizeHandle chatWidth={chatWidth} />
+      )}
+      {/* Keep the same runtime/composer mounted when the rail collapses. */}
+      <div
+        className="min-h-0 flex-1 flex-col"
+        style={{
+          display: !chatOpen || showHistory ? "none" : "flex",
+          paddingBottom:
+            spaciousChat && emptyChat && !historyOpen ? "clamp(32px, 10vh, 96px)" : undefined,
+        }}
+      >
+        <ChatContentDefaultsContext.Provider value={chatDefaults}>
+          {chatPage ?? <ChatContent />}
+        </ChatContentDefaultsContext.Provider>
+      </div>
+    </section>
+  );
   return (
     <div
       className="workbench-preview flex min-h-0 flex-1 overflow-hidden"
@@ -163,103 +241,60 @@ export function WorkbenchPreview({
             >
               <Menu className="size-4" />
             </Button>
-            {(["content", "chat"] as const)
-              .filter((pane) => !chatOnly || pane === "chat")
-              .map((pane) => (
-                <Button
-                  key={pane}
-                  variant="ghost"
-                  className="h-11 gap-1.5 px-3 aria-pressed:bg-muted"
-                  aria-pressed={chatOnly || compactPane === pane}
-                  aria-controls={pane === "chat" ? "preview-assistant" : "preview-content"}
-                  aria-label={pane === "chat" && running ? "Chat — AI is working" : undefined}
-                  onClick={() => setCompactPane(pane)}
-                >
-                  {pane === "chat" ? (
-                    running ? (
-                      <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none text-primary" />
+            {!globalHome &&
+              (["content", "chat"] as const)
+                .filter((pane) => !chatOnly || pane === "chat")
+                .map((pane) => (
+                  <Button
+                    key={pane}
+                    variant="ghost"
+                    className="h-11 gap-1.5 px-3 aria-pressed:bg-muted"
+                    aria-pressed={chatOnly || compactPane === pane}
+                    aria-controls={pane === "chat" ? "preview-assistant" : "preview-content"}
+                    aria-label={pane === "chat" && running ? "Chat — AI is working" : undefined}
+                    onClick={() => setCompactPane(pane)}
+                  >
+                    {pane === "chat" ? (
+                      running ? (
+                        <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none text-primary" />
+                      ) : (
+                        <MessageSquare className="size-4" />
+                      )
                     ) : (
-                      <MessageSquare className="size-4" />
-                    )
-                  ) : (
-                    <FileText className="size-4" />
-                  )}
-                  {pane === "chat" ? "Chat" : "Content"}
-                </Button>
-              ))}
+                      <FileText className="size-4" />
+                    )}
+                    {pane === "chat" ? "Chat" : "Content"}
+                  </Button>
+                ))}
           </div>
         )}
         <div
           ref={chatWidth.containerRef}
+          data-home-full-chat={homeFullChat || undefined}
           className="relative flex min-h-0 min-w-0 flex-1 overflow-x-auto"
         >
-          <section
-            id="preview-assistant"
-            ref={assistantRef}
-            data-panel-motion
-            data-global-chat={spaciousChat || undefined}
-            data-chat-collapsed={collapsed ? "true" : undefined}
-            inert={chatWidth.compact && !chatOnly && compactPane !== "chat"}
-            aria-label="Assistant conversation"
-            className="relative flex min-h-0 shrink-0 flex-col"
-            style={{
-              display: chatWidth.compact && !chatOnly && compactPane !== "chat" ? "none" : "flex",
-              width:
-                chatWidth.compact || chatOnly || homeConversation
-                  ? "100%"
-                  : collapsed
-                    ? 44
-                    : contentCollapsed
-                      ? "calc(100% - 44px)"
-                      : chatWidth.width,
-              background: "var(--background)",
-            }}
-          >
-            <WorkbenchChatHeader
-              collapsed={collapsed}
-              running={running}
-              chatWidth={chatWidth}
-              buttonClass={buttonClass}
-              toggleNavigation={toggleNavigation}
-              setCollapsed={setCollapsed}
-              showHistory={showHistory}
-              startChat={startChat}
-              returnToChat={returnToChat}
-              openHistory={openHistory}
-              chatOnly={chatOnly}
-              setContentCollapsed={setContentCollapsed}
-              home={globalHome}
-              canResumeChat={canResumeChat}
-            />
-            {!collapsed && showHistory && (
-              <ConversationHistory
-                groups={navGroups}
-                workspaceId={workspaceId}
-                onClose={returnToChat}
-                showBack={false}
-                standalone={globalHome}
-                onNewChat={startChat}
-              />
-            )}
-            {!chatWidth.compact && !collapsed && !contentCollapsed && !homeConversation && (
-              <ChatResizeHandle chatWidth={chatWidth} />
-            )}
-            {/* Keep the same runtime/composer mounted when the rail collapses. */}
-            <div
-              className="min-h-0 flex-1 flex-col"
-              style={{
-                display: collapsed || showHistory ? "none" : "flex",
-                paddingBottom:
-                  spaciousChat && emptyChat && !historyOpen ? "clamp(32px, 10vh, 96px)" : undefined,
-              }}
+          {(!chatWidth.compact || globalHome) && (
+            <aside
+              data-chat-rail
+              aria-label="Chat panel bar"
+              className="flex w-11 shrink-0 flex-col items-center border-r border-border bg-background"
             >
-              <ChatContentDefaultsContext.Provider value={chatDefaults}>
-                {chatPage ?? <ChatContent />}
-              </ChatContentDefaultsContext.Provider>
-            </div>
-          </section>
+              <div data-chat-header className="flex w-full items-center justify-center">
+                <ChatPanelToggle
+                  home={globalHome}
+                  running={running}
+                  expanded={sidePanelOpen}
+                  onOpen={() => setSidePanelOpen(!sidePanelOpen)}
+                />
+              </div>
+            </aside>
+          )}
+          {assistant}
           <WorkbenchContentPane
-            contentHidden={contentHidden || homeConversation}
+            contentHidden={contentHidden && !homeFullChat}
+            toolbarOnly={homeFullChat}
+            tabBar={EmptyTabBar && <EmptyTabBar />}
+            canCollapse={!homeFullChat}
             panelOpen={panelOpen}
             chatWidth={chatWidth}
             contentCollapsed={contentCollapsed}
@@ -279,14 +314,22 @@ export function WorkbenchPreview({
                   }}
                   onNewChat={startChat}
                 />
-              ) : globalHome ? (
-                <HomeContent groups={navGroups} chatOpen={chatOpen} onOpenChat={revealChat} />
+              ) : globalHome && !activeDocument && !panelOpen ? (
+                <section
+                  data-home-content
+                  aria-label="Home"
+                  className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-10"
+                >
+                  <div className="mx-auto w-full max-w-3xl text-center">
+                    <HomeDestinations groups={navGroups} />
+                  </div>
+                </section>
               ) : (
                 page
               )
             }
           />
-          {contentCollapsed && !chatOnly && !chatWidth.compact && !homeConversation && (
+          {contentCollapsed && !chatOnly && !chatWidth.compact && !homeFullChat && (
             <aside
               aria-label="Collapsed content"
               className="flex w-11 shrink-0 flex-col items-center"

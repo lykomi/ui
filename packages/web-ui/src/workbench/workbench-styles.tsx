@@ -163,7 +163,34 @@ export function WorkbenchStyles() {
           border-radius: inherit;
           z-index: 30;
         }
-        .workbench-preview #preview-assistant::after {
+        .workbench-preview [data-home-full-chat="true"] {
+          display: grid;
+          grid-template-columns: 44px minmax(0, 1fr);
+          grid-template-rows: auto minmax(0, 1fr);
+        }
+        .workbench-preview [data-home-full-chat="true"] > [data-chat-rail] {
+          grid-area: 1 / 1 / 3 / 2;
+        }
+        .workbench-preview [data-home-full-chat="true"] > [data-home-chat] {
+          grid-area: 2 / 2;
+        }
+        .workbench-preview [data-home-full-chat="true"] > [data-toolbar-only] {
+          grid-area: 1 / 2;
+          min-width: 0 !important;
+          height: 0;
+          padding-top: 0;
+        }
+        .workbench-preview [data-home-full-chat="true"] > [data-toolbar-only]:has(> [data-item-tabbar]) {
+          height: var(--item-toolbar-height, 44px);
+        }
+        .workbench-preview [data-home-chat] [data-chat-header] {
+          padding-inline: var(--workbench-inline-padding, 16px);
+          border-bottom: 1px solid var(--border);
+        }
+        .workbench-preview [data-home-chat] [data-chat-header] > :first-child:not(button) {
+          padding-inline: 0;
+        }
+        .workbench-preview #preview-assistant:not([data-home-chat])::after {
           content: "";
           position: absolute;
           right: 0;
@@ -220,6 +247,7 @@ export function WorkbenchStyles() {
         }
         .workbench-preview [data-navigation-header] button:hover,
         .workbench-preview [data-chat-header] button:hover,
+        .workbench-preview [data-chat-rail] button[aria-expanded="true"],
         .workbench-preview [data-chat-rail] button:hover {
           color: var(--foreground);
           background-color: var(--muted);
@@ -267,7 +295,7 @@ export function WorkbenchStyles() {
         .workbench-preview [data-working-content]:has(> [data-content-collapse]) [data-preview-entity-header] > [data-entity-header-row] {
           padding-right: var(--workbench-header-actions-inset, calc(var(--workbench-inline-padding, 16px) + 44px));
         }
-        .workbench-preview [data-working-content]:not(:has([data-entity-header-row], [data-history-content], [data-home-content])):not([data-item-panel-open]) {
+        .workbench-preview [data-working-content]:not(:has(> [data-item-tabbar])):not(:has([data-entity-header-row], [data-history-content], [data-home-content], [data-home-chat])):not([data-item-panel-open]):not([data-toolbar-only]) {
           padding-top: var(--workbench-header-height);
         }
         @media print {

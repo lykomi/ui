@@ -4,6 +4,9 @@ import { PanelRight } from "lucide-react";
 import { useChatWidth } from "./use-chat-width.ts";
 export function WorkbenchContentPane({
   contentHidden,
+  canCollapse = true,
+  toolbarOnly = false,
+  tabBar,
   panelOpen,
   chatWidth,
   contentCollapsed,
@@ -15,6 +18,9 @@ export function WorkbenchContentPane({
   page,
 }: {
   contentHidden: boolean;
+  canCollapse?: boolean;
+  toolbarOnly?: boolean;
+  tabBar?: ReactNode;
   panelOpen: boolean;
   chatWidth: ReturnType<typeof useChatWidth>;
   contentCollapsed: boolean;
@@ -30,6 +36,7 @@ export function WorkbenchContentPane({
       id="preview-content"
       aria-label="Working content"
       data-working-content
+      data-toolbar-only={toolbarOnly || undefined}
       data-panel-motion
       data-content-collapsed={contentHidden || undefined}
       inert={contentHidden}
@@ -42,7 +49,8 @@ export function WorkbenchContentPane({
         isolation: "isolate",
       }}
     >
-      {!chatWidth.compact && (
+      {tabBar}
+      {canCollapse && !chatWidth.compact && (
         <TooltipIconButton
           data-content-collapse
           tooltip="Collapse content"
@@ -56,7 +64,10 @@ export function WorkbenchContentPane({
           <PanelRight size={18} />
         </TooltipIconButton>
       )}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div
+        hidden={toolbarOnly}
+        className={toolbarOnly ? "hidden" : "flex min-h-0 flex-1 flex-col overflow-hidden"}
+      >
         {panelOpen && (
           <div
             className="flex shrink-0 items-center border-b border-border pl-3 pr-14"
