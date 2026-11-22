@@ -209,6 +209,14 @@ describe("layout preview", () => {
 
   it("opens a saved conversation in the compact chat pane", () => {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(600);
+    registerChatSlots({
+      workingDocument: {
+        subscribe: () => () => {},
+        getActiveId: () => "retained-document",
+        hasTabs: () => true,
+        EmptyTabBar: () => null,
+      },
+    });
     function Routes() {
       const { pathname } = useLocation();
       return (
@@ -232,10 +240,34 @@ describe("layout preview", () => {
     expect(screen.getByLabelText("Assistant conversation").style.display).toBe("none");
     fireEvent.click(screen.getByRole("link", { name: "Saved conversation" }));
     expect(screen.getByLabelText("Assistant conversation").style.display).toBe("flex");
-    expect(screen.getByLabelText("Working content").hasAttribute("data-toolbar-only")).toBe(true);
+    expect(screen.getByLabelText("Working content").style.display).toBe("none");
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
     expect(screen.getByLabelText("Current route").textContent).toBe("/");
     expect(screen.getByLabelText("Assistant conversation").style.display).toBe("flex");
+  });
+
+  it("reveals a selected source when desktop Home content is collapsed", () => {
+    let activeSource: string | null = null;
+    const listeners = new Set<() => void>();
+    registerChatSlots({
+      workingDocument: {
+        subscribe(listener) {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        getActiveId: () => activeSource,
+        hasTabs: () => Boolean(activeSource),
+        EmptyTabBar: () => null,
+      },
+    });
+    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse content" }));
+    expect(screen.getByLabelText("Working content").style.display).toBe("none");
+    act(() => {
+      activeSource = "source";
+      listeners.forEach((listener) => listener());
+    });
+    expect(screen.getByRole("textbox", { name: "Unsaved field" })).toBeTruthy();
   });
 
   it("requests children when focusing an unloaded space root", () => {

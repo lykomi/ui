@@ -150,12 +150,16 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
   const [contentCollapsed, setContentCollapsed] = useState(false);
   const contentHidden =
     chatOnly || (chatWidth.compact ? compactPane !== "content" : contentCollapsed);
+  const openingNewChat = useRef(false);
   useEffect(() => {
     setContentCollapsed(chatOnly);
-    setCompactPane(chatOnly ? "chat" : "content");
+    const resumedChat = (chatRoute && location.pathname !== "/") || openingNewChat.current;
+    openingNewChat.current = false;
+    setCompactPane(chatOnly || resumedChat ? "chat" : "content");
+    if (resumedChat) setCollapsed(false);
     // Navigation is an explicit request to see content, including selecting
     // the same address again. Collapsing remains local until the next entry.
-  }, [chatOnly, location.key, location.pathname]);
+  }, [chatOnly, chatRoute, location.key, location.pathname, setCollapsed]);
   const setHistoryOpen = (open: boolean) => setHistoryPath(open ? location.pathname : null);
   const running = useAuiState((s) => s.thread.isRunning);
   const emptyChat = useAuiState(
@@ -216,6 +220,7 @@ export function useWorkbenchState(chatRoute: boolean, defaultSideChatCollapsed =
     // A conversation URL pins the runtime to that saved thread. Only leave
     // that route; content routes retain their page and unsaved edits.
     if (chatRoute && location.pathname !== "/") {
+      openingNewChat.current = true;
       navigate("/");
     }
   };

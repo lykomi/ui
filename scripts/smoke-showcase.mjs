@@ -139,9 +139,10 @@ export async function smokeShowcase(page, url, workDir) {
     await page.getByRole("heading", { name: "Explore your app", exact: true }).count(),
     0,
   );
-  await page
-    .getByRole("region", { name: "Working content", exact: true })
-    .waitFor({ state: "hidden" });
+  const chatRail = page.getByRole("complementary", { name: "Chat panel bar" });
+  await chatRail.getByRole("button", { name: "Collapse chat", exact: true }).click();
+  await page.locator("[data-home-chat]").waitFor();
+  await page.getByRole("region", { name: "Home", exact: true }).waitFor({ state: "hidden" });
   assert.equal(await page.getByText("Continue in Chat", { exact: true }).count(), 0);
   await page.getByRole("button", { name: "New chat", exact: true }).last().click();
   await page

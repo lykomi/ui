@@ -6,7 +6,7 @@ import { ChatEmptyState } from "../components/chat-empty-state.tsx";
 import { WelcomeIntro } from "./welcome-intro.tsx";
 import { useWorkbenchState } from "./use-workbench-state.tsx";
 import { WorkbenchStyles } from "./workbench-styles.tsx";
-import { type ReactNode, useEffect, useSyncExternalStore } from "react";
+import { type ReactNode, useLayoutEffect, useSyncExternalStore } from "react";
 import { Button } from "@lykomi/web-primitives";
 import { ChatContent, TooltipIconButton } from "../index.ts";
 import type { ChatContentProps } from "../components/assistant-chat.tsx";
@@ -94,9 +94,11 @@ export function WorkbenchPreview({
       setCollapsed(!open);
     }
   };
-  useEffect(() => {
-    if (globalHome && activeDocument && chatWidth.compact) setCompactPane("content");
-  }, [activeDocument, chatWidth.compact, globalHome, setCompactPane]);
+  useLayoutEffect(() => {
+    if (!globalHome || !activeDocument) return;
+    setContentCollapsed(false);
+    if (chatWidth.compact) setCompactPane("content");
+  }, [activeDocument, chatWidth.compact, globalHome, setCompactPane, setContentCollapsed]);
   const conversationHome = (
     <ConversationHistory
       groups={navGroups}

@@ -471,14 +471,13 @@ async function runBrowserStarterSmoke() {
       throw new Error("Home is not selected after returning from Guide.");
     }
     const quickStart = page
-      .getByRole("region", { name: "Working content" })
+      .getByRole("region", { name: "Assistant conversation" })
       .getByRole("button", { name: prompt });
     await quickStart.waitFor();
     if (parserRequests !== 0)
       throw new Error("Mermaid parser loaded before a diagram was requested.");
-    // A one-click Home suggestion must reveal the conversation it starts.
+    // A one-click Home suggestion keeps the conversation visible.
     await quickStart.click();
-    await page.getByRole("button", { name: "Collapse chat", exact: true }).waitFor();
     await page.getByText("Hello from the", { exact: false }).first().waitFor({ timeout: 10_000 });
 
     if (!screenshotPath) {
@@ -505,7 +504,7 @@ async function runBrowserStarterSmoke() {
       throw new Error("The generated starter did not call /api/agent.");
     }
     if (!sentMessages.some((message) => message.role === "user" && message.content === prompt)) {
-      throw new Error("The Home-to-chat handoff did not preserve the submitted prompt.");
+      throw new Error("The Home chat did not preserve the submitted prompt.");
     }
 
     if (!screenshotPath) {
@@ -624,7 +623,7 @@ async function runBrowserStarterSmoke() {
       );
       await page.getByRole("button", { name: prompt }).click();
       await mobileRequest;
-      await page.getByRole("button", { name: "Chat", pressed: true }).waitFor();
+      await page.getByRole("region", { name: "Assistant conversation" }).waitFor();
       await page.getByText("Hello from the", { exact: false }).first().waitFor();
     }
 
