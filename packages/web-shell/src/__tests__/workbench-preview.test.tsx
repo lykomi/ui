@@ -32,11 +32,6 @@ const state = vi.hoisted(() => ({
 vi.mock("../../../web-ui/dist/components/ag-ui-runtime-provider.js", () => ({
   useAGUIAdapter: () => ({ selectRetainedThread: () => false }),
 }));
-vi.mock("../../../web-ui/dist/workbench/home-content.js", () => ({
-  HomeContent: ({ onOpenChat }: { onOpenChat: () => void }) => (
-    <button onClick={onOpenChat}>Start from Home</button>
-  ),
-}));
 vi.mock("@assistant-ui/react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@assistant-ui/react")>()),
   useAuiState: (select: (s: unknown) => unknown) =>
@@ -99,7 +94,7 @@ beforeEach(() => {
   state.groups = [];
   state.navLoading = false;
   actualNavStore.setState({ navLoading: false, config: [] });
-  registerChatSlots({ homeStarters: null });
+  registerChatSlots({ homeStarters: null, workingDocument: null });
   state.empty = false;
   state.running = false;
   state.panelOpen = false;
@@ -147,24 +142,69 @@ describe("layout preview", () => {
     render(<WorkbenchPreview page={<Editor />} />);
     const assistant = screen.getByLabelText("Assistant conversation");
     const draft = screen.getByLabelText("Chat draft") as HTMLTextAreaElement;
-    expect(assistant.style.width).toBe("44px");
+    expect(assistant.style.display).toBe("none");
     fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
-    expect(assistant.style.width).not.toBe("44px");
+    expect(assistant.style.display).toBe("flex");
     expect(screen.getByLabelText("Chat draft")).toBe(draft);
   });
 
-  it("uses the same collapsible chat panel on Home and other destinations", () => {
-    const view = render(<WorkbenchPreview defaultSideChatCollapsed chatOnly page={null} />);
+  it("uses one composer when switching Home between full width and the side panel", () => {
+    const HomeTabBar = () => <div data-item-tabbar>Home tab</div>;
+    registerChatSlots({
+      workingDocument: {
+        subscribe: () => () => {},
+        getActiveId: () => null,
+        hasTabs: () => false,
+        EmptyTabBar: HomeTabBar,
+      },
+    });
+    render(<WorkbenchPreview defaultSideChatCollapsed chatOnly page={null} />);
     const assistant = screen.getByLabelText("Assistant conversation");
-    expect(assistant.style.width).toBe("44px");
-    fireEvent.click(screen.getByRole("button", { name: "Start from Home" }));
-    expect(assistant.style.width).not.toBe("44px");
-    fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
-    view.rerender(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
-    expect(assistant.style.width).toBe("44px");
+    const draft = screen.getByRole("textbox", { name: "Chat draft" }) as HTMLTextAreaElement;
+    fireEvent.change(draft, { target: { value: "Question in progress" } });
+    expect(assistant.hasAttribute("data-home-chat")).toBe(true);
+    expect(screen.queryByText("Home tab")).toBeNull();
+
     fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
-    view.rerender(<WorkbenchPreview defaultSideChatCollapsed page={<Editor />} />);
-    expect(assistant.style.width).not.toBe("44px");
+    expect(assistant.hasAttribute("data-home-chat")).toBe(false);
+    expect(screen.getByText("Home tab")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Chat draft" })).toBe(draft);
+    expect(draft.value).toBe("Question in progress");
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
+    expect(assistant.hasAttribute("data-home-chat")).toBe(true);
+    expect(screen.queryByText("Home tab")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Chat draft" })).toBe(draft);
+  });
+
+  it("reveals an opened source on compact Home and retains the current draft", () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(600);
+    let activeSource: string | null = null;
+    const listeners = new Set<() => void>();
+    registerChatSlots({
+      workingDocument: {
+        subscribe(listener) {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        getActiveId: () => activeSource,
+        hasTabs: () => Boolean(activeSource),
+        EmptyTabBar: () => null,
+      },
+    });
+    render(<WorkbenchPreview chatOnly page={<Editor />} />);
+    const draft = screen.getByRole("textbox", { name: "Chat draft" }) as HTMLTextAreaElement;
+    fireEvent.change(draft, { target: { value: "Follow-up" } });
+    act(() => {
+      activeSource = "source";
+      listeners.forEach((listener) => listener());
+    });
+    expect(screen.queryByRole("textbox", { name: "Chat draft" })).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Unsaved field" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
+    expect(screen.getByRole("textbox", { name: "Chat draft" })).toBe(draft);
+    expect(draft.value).toBe("Follow-up");
   });
 
   it("opens a saved conversation in the compact chat pane", () => {
@@ -175,15 +215,24 @@ describe("layout preview", () => {
         <>
           <Link to="/chat/saved">Saved conversation</Link>
           <output aria-label="Current route">{pathname}</output>
-          <WorkbenchPreview chatOnly={pathname.startsWith("/chat/")} page={<Editor />} />
+          <WorkbenchPreview
+            chatOnly={pathname === "/" || pathname.startsWith("/chat/")}
+            page={<Editor />}
+          />
         </>
       );
     }
-    render(<Routes />);
+    renderUI(<Routes />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={["/document"]}>
+          <TooltipProvider>{children}</TooltipProvider>
+        </MemoryRouter>
+      ),
+    });
     expect(screen.getByLabelText("Assistant conversation").style.display).toBe("none");
     fireEvent.click(screen.getByRole("link", { name: "Saved conversation" }));
     expect(screen.getByLabelText("Assistant conversation").style.display).toBe("flex");
-    expect(screen.getByLabelText("Working content").style.display).toBe("none");
+    expect(screen.getByLabelText("Working content").hasAttribute("data-toolbar-only")).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
     expect(screen.getByLabelText("Current route").textContent).toBe("/");
     expect(screen.getByLabelText("Assistant conversation").style.display).toBe("flex");
@@ -427,7 +476,7 @@ describe("layout preview", () => {
         },
       },
     ];
-    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed chatOnly page={<Editor />} />);
     const action = screen.getByRole("button", { name: /Create project/ });
     expect(
       screen.getByLabelText("Chat draft").compareDocumentPosition(action) &
@@ -442,9 +491,13 @@ describe("layout preview", () => {
 
   it("opens the Home conversation in the main area without a second landing pane", () => {
     state.empty = true;
-    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
-    expect(screen.getByRole("region", { name: "Assistant conversation" }).style.width).toBe("100%");
-    expect(screen.queryByRole("region", { name: "Working content" })).toBeNull();
+    render(<WorkbenchPreview defaultSideChatCollapsed chatOnly page={<Editor />} />);
+    expect(
+      screen.getByRole("region", { name: "Assistant conversation" }).hasAttribute("data-home-chat"),
+    ).toBe(true);
+    expect(
+      screen.getByRole("region", { name: "Working content" }).hasAttribute("data-toolbar-only"),
+    ).toBe(true);
     expect(screen.queryByRole("separator", { name: "Resize chat" })).toBeNull();
     expect(
       screen.getAllByRole("heading", { name: "What would you like to get done?" }),
@@ -457,7 +510,7 @@ describe("layout preview", () => {
     actualNavStore.setState({ navLoading: true });
     const starters = vi.fn(() => <div>Contextual loading rows</div>);
     registerChatSlots({ homeStarters: starters });
-    render(<WorkbenchPreview defaultSideChatCollapsed={false} chatOnly page={<Editor />} />);
+    render(<WorkbenchPreview defaultSideChatCollapsed chatOnly page={<Editor />} />);
     expect(screen.getByRole("heading", { name: "What would you like to get done?" })).toBeTruthy();
     expect(screen.queryByText("Contextual loading rows")).toBeNull();
     expect(starters).not.toHaveBeenCalled();
@@ -632,7 +685,9 @@ describe("layout preview", () => {
     ];
     renderUI(<WorkbenchPreview defaultSideChatCollapsed={false} page={<Editor />} />, {
       wrapper: ({ children }) => (
-        <MemoryRouter initialEntries={["/workspace/task"]}>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={["/workspace/task"]}>
+          <TooltipProvider>{children}</TooltipProvider>
+        </MemoryRouter>
       ),
     });
     expect(screen.getByRole("link", { name: /Task review/ })).toBeTruthy();
@@ -742,7 +797,7 @@ describe("layout preview", () => {
     fireEvent.change(editor, { target: { value: "Unsaved edit" } });
     fireEvent.change(draft, { target: { value: "Question in progress" } });
     fireEvent.click(screen.getByRole("button", { name: "Collapse chat" }));
-    expect(screen.getByLabelText("Assistant conversation").style.width).toBe("44px");
+    expect(screen.getByLabelText("Assistant conversation").style.display).toBe("none");
     expect(draft.parentElement?.style.display).toBe("none");
     fireEvent.click(screen.getByRole("button", { name: "Open chat" }));
     expect(screen.getByLabelText("Chat draft")).toBe(draft);

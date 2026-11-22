@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 const WIDTH_KEY = "foundry.workbench-preview.chat-width";
 const MIN_WIDTH = 360;
 const CONTENT_MIN = 440;
+const RAIL_WIDTH = 44;
 export function chatWidthLimits(available: number) {
   const max = Math.max(MIN_WIDTH, Math.min(640, available - CONTENT_MIN));
   return {
@@ -34,7 +35,7 @@ export function useChatWidth() {
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
-  const limits = chatWidthLimits(available);
+  const limits = chatWidthLimits(available - RAIL_WIDTH);
   const width = Math.min(limits.max, Math.max(limits.min, preferred ?? limits.defaultWidth));
   const setWidth = (value: number | null) => {
     const next = value === null ? null : Math.max(limits.min, Math.min(limits.max, value));
@@ -46,5 +47,11 @@ export function useChatWidth() {
       /* Storage may be disabled. */
     }
   };
-  return { containerRef, width, setWidth, compact: available < MIN_WIDTH + CONTENT_MIN, ...limits };
+  return {
+    containerRef,
+    width,
+    setWidth,
+    compact: available < MIN_WIDTH + CONTENT_MIN + RAIL_WIDTH,
+    ...limits,
+  };
 }
