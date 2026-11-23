@@ -517,10 +517,11 @@ string `label`, and explicit `status`: `pending`, `ready`, `running`, `complete`
 an `onStepSelect` callback navigate; callbacks never advance actual progress.
 A non-selectable blocked step with a message exposes a focusable tooltip.
 
-`showChevrons` adds decorative separators only to horizontal `compact` navigation.
-Their size and reserved gap follow `density`; the progress track stays above the
-steps. Responsive narrow or explicitly vertical layouts retain their connected vertical
-track, and `overview` is unchanged. Chevrons convey sequence, never status.
+Compact steps use short neutral connections between neighbours. The connections
+follow the layout direction and indicate sequence. Markers show status and the
+active step uses a highlighted surface. `showChevrons` swaps the horizontal
+connections for decorative chevrons. In vertical layouts, compact steps keep
+their short vertical connections.
 
 Horizontal rails retain readable minimum step widths and scroll inside their own viewport when needed. Overflow alone reveals previous/next buttons and subtle edge fades; swiping, trackpad scrolling and keyboard navigation also work. Scrolling never selects a step or advances progress. Selecting or focusing a step brings it into the rail viewport without scrolling the host page. Manual scrolling is not snapped back to the selected step. Buttons respect reduced motion and RTL. Localize their names with `scrollLabels={{ previous: "Previous steps", next: "Next steps" }}`.
 
