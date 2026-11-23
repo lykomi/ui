@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.58.5
+
+### Patch Changes
+
+- 64b3d6b: Use short neutral connections between compact process steps. Keep execution status in the step markers and selection in the active surface.
+  - @lykomi/agent@0.58.5
+  - @lykomi/web-primitives@0.58.5
+
 ## 0.58.4
 
 ### Patch Changes
