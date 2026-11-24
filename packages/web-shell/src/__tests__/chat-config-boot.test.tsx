@@ -31,6 +31,7 @@ vi.mock("@lykomi/web-ui", () => ({
   ThemeRuntimeProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   ThemeScope: ({ children }: { children: ReactNode }) => <>{children}</>,
   ThemeDocumentMetadata: () => null,
+  ChatLeaveGuard: () => null,
   GlobalSelectionPopover: () => null,
   TeachingBubbleHost: () => null,
   TooltipIconButton: ({ children }: { children: ReactNode }) => <>{children}</>,

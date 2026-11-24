@@ -2,6 +2,7 @@ import { type ReactNode, lazy, Suspense, useEffect, useRef } from "react";
 import { matchPath, Outlet, useLocation } from "react-router";
 import {
   ThemeDocumentMetadata,
+  ChatLeaveGuard,
   TeachingBubbleHost,
   ThemeRuntimeProvider,
   ThemeScope,
@@ -119,6 +120,7 @@ export function ShellLayout({
   return (
     <ThemeRuntimeProvider layers={themeLayers} mode={themeMode}>
       <ThemeScope className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+        <ChatLeaveGuard />
         <ThemeDocumentMetadata />
         {layoutExtras}
         <Suspense fallback={null}>
