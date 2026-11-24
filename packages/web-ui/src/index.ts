@@ -1,3 +1,4 @@
+export { ChatLeaveGuard } from "./components/chat-leave-guard.tsx";
 export {
   InlineCitation,
   InlineCitationGroup,

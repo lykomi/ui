@@ -188,10 +188,25 @@ export async function waitForForegroundChat(threadId: string, signal: AbortSigna
   updateChatRun(threadId, "running");
 }
 
+// Only the chat warning is consumed. Other unsaved-work listeners still run.
+let confirmedLeave = false;
+let expiry: ReturnType<typeof setTimeout> | undefined;
+export function allowConfirmedChatUnload() {
+  confirmedLeave = true;
+  clearTimeout(expiry);
+  expiry = setTimeout(() => {
+    confirmedLeave = false;
+  }, 1000);
+}
+
 export function warnBeforeChatUnload(event: BeforeUnloadEvent) {
+  if (confirmedLeave) {
+    confirmedLeave = false;
+    return;
+  }
   if (!Object.values(useChatRuns.getState().runs).some(isChatRunActive)) return;
   event.preventDefault();
-  event.returnValue = "";
+  event.returnValue = " ";
 }
 
 /** Dispose browser-owned runs when the authenticated runtime is torn down. */
