@@ -32,7 +32,15 @@ export function ChatLeaveGuard() {
       const target =
         link.getAttribute("target") ??
         document.querySelector("base[target]")?.getAttribute("target");
-      if (target && target.toLowerCase() !== "_self") return;
+      const reserved = target?.toLowerCase();
+      if (
+        target &&
+        reserved !== "_self" &&
+        !(reserved === "_parent" && window.parent === window) &&
+        !(reserved === "_top" && window.top === window) &&
+        !(target === window.name && !target.startsWith("_"))
+      )
+        return;
       const url = new URL(link.href);
       if (!["https:", "http:"].includes(url.protocol) || url.origin === location.origin) return;
       event.preventDefault();

@@ -47,6 +47,10 @@ it("names the background chat on same-tab external links and lets the user stay"
     expect(await follow({ ctrlKey: true })).toBe(false);
     link.target = "_blank";
     expect(await follow()).toBe(false);
+    link.target = "_parent";
+    expect(await follow()).toBe(true);
+    link.target = "_top";
+    expect(await follow()).toBe(true);
     link.target = "_self";
     expect(await follow()).toBe(true);
     const dialog = document.querySelector('[role="dialog"]')!;
