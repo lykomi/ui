@@ -1,6 +1,6 @@
 import { ReorderTabButton } from "./window-reorder.tsx";
 import { PinToggle } from "../components/pin-toggle.tsx";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import { Check, ChevronDown, Pin, X } from "lucide-react";
 import { Button } from "@lykomi/web-primitives";
 import {
@@ -9,7 +9,48 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "../ui/dropdown-menu.tsx";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.tsx";
 import type { WindowController, WorkbenchWindow } from "./window-controller.ts";
+
+function revealTab(viewport: HTMLElement, tab: HTMLElement) {
+  const previousScroll = viewport.scrollLeft;
+  const bounds = viewport.getBoundingClientRect();
+  const tabBounds = tab.getBoundingClientRect();
+  const inset = 12;
+  if (tabBounds.left < bounds.left + inset)
+    viewport.scrollLeft -= bounds.left + inset - tabBounds.left;
+  else if (tabBounds.right > bounds.right - inset)
+    viewport.scrollLeft += tabBounds.right - bounds.right + inset;
+  return viewport.scrollLeft !== previousScroll;
+}
+
+function WindowTabTooltip({
+  title,
+  description,
+  children,
+}: {
+  title?: string;
+  description?: string;
+  children: ReactElement;
+}) {
+  if (!title) return children;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        sideOffset={8}
+        collisionPadding={12}
+        className="z-[80] max-w-[min(28rem,var(--radix-tooltip-content-available-width))] wrap-anywhere rounded-lg border border-border bg-popover px-3 py-2 text-popover-foreground shadow-md"
+        aria-label={description || title}
+      >
+        <div className="text-sm font-medium">{title}</div>
+        {description && <div className="mt-1 text-muted-foreground">{description}</div>}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function WindowTabStrip<T extends WorkbenchWindow>({
   controller,
@@ -24,6 +65,7 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
   active: string;
   contentTab?: { id: string; title: string };
   idPrefix?: string;
+  /** Additional context shown with the full title on hover and keyboard focus. */
   description?: (tab: T) => string | undefined;
 }) {
   const moveVisibleTab = (id: string, direction: -1 | 1) => {
@@ -49,15 +91,7 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
     const revealActive = () => {
       const selected = element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
       const wrapper = selected?.closest<HTMLElement>("[data-reorder-tab]") ?? selected;
-      if (wrapper) {
-        const bounds = element.getBoundingClientRect();
-        const tabBounds = wrapper.getBoundingClientRect();
-        const inset = 12;
-        if (tabBounds.left < bounds.left + inset)
-          element.scrollLeft -= bounds.left + inset - tabBounds.left;
-        else if (tabBounds.right > bounds.right - inset)
-          element.scrollLeft += tabBounds.right - bounds.right + inset;
-      }
+      if (wrapper) revealTab(element, wrapper);
       measure();
     };
     revealActive();
@@ -101,8 +135,25 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
                     : -1;
           if (next < 0) return;
           event.preventDefault();
-          buttons[next]?.focus();
-          buttons[next]?.click();
+          const button = buttons[next];
+          if (!button) return;
+          const element = event.currentTarget;
+          const previousFocus = document.activeElement;
+          controller.select(button.id.slice(`${idPrefix}tab-`.length));
+          const focus = () => {
+            if (document.activeElement === previousFocus) button.focus({ preventScroll: true });
+          };
+          if (element.scrollWidth <= element.clientWidth) {
+            focus();
+          } else {
+            // Selection can wait on a leave guard. Reveal the focus target
+            // independently and let scrolling settle before opening its tooltip.
+            requestAnimationFrame(() => {
+              if (document.activeElement !== previousFocus) return;
+              if (revealTab(element, button)) requestAnimationFrame(focus);
+              else focus();
+            });
+          }
         }}
       >
         {contentTab && (
@@ -117,107 +168,125 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
             {contentTab.title}
           </button>
         )}
-        {tabs.map((tab) => (
-          <DropdownMenu
-            key={tab.id}
-            open={menuTab === tab.id}
-            onOpenChange={(open) => setMenuTab(open ? tab.id : null)}
-          >
-            <div
-              onContextMenu={(event) => {
-                event.preventDefault();
-                setMenuTab(tab.id);
-              }}
-              data-reorder-tab={tab.id}
-              data-preview={
-                (!tab.kept && !controller.hasDraft(tab) && !tab.independent) || undefined
-              }
-              className="relative flex max-w-full shrink-0 items-center pr-1"
-            >
-              <ReorderTabButton
-                windowId={tab.id}
-                controller={controller}
-                title={[
-                  description?.(tab),
-                  !tab.kept && !controller.hasDraft(tab) && !tab.independent
-                    ? "Drag to reorder. Replaced when you open another item; pin to keep open."
-                    : "Drag to reorder",
-                ]
-                  .filter(Boolean)
-                  .join("\n")}
-                role="tab"
-                id={`${idPrefix}tab-${tab.id}`}
-                aria-controls={`${idPrefix}panel-${tab.id}`}
-                aria-label={
-                  typeof tab.title === "string"
-                    ? `${tab.title}${tab.kept ? " (pinned)" : tab.independent ? "" : " (temporary)"}${controller.hasDraft(tab) ? " — unsaved changes" : ""}`
-                    : undefined
-                }
-                aria-selected={active === tab.id}
-                tabIndex={active === tab.id ? 0 : -1}
-                onClick={() => controller.select(tab.id)}
-                onDoubleClick={() => controller.keep(tab.id)}
-                onKeyDown={(event) => {
-                  if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+        <TooltipProvider delayDuration={350}>
+          {tabs.map((tab) => {
+            const details = description?.(tab);
+            const tooltipTitle =
+              description && typeof tab.title === "string" ? tab.title : undefined;
+            return (
+              <DropdownMenu
+                key={tab.id}
+                open={menuTab === tab.id}
+                onOpenChange={(open) => setMenuTab(open ? tab.id : null)}
+              >
+                <div
+                  onContextMenu={(event) => {
                     event.preventDefault();
                     setMenuTab(tab.id);
+                  }}
+                  data-reorder-tab={tab.id}
+                  data-preview={
+                    (!tab.kept && !controller.hasDraft(tab) && !tab.independent) || undefined
                   }
-                }}
-                className={`inline-flex min-w-0 self-stretch items-center gap-2 py-1 pl-3 pr-2 text-sm ${active === tab.id ? "font-medium" : ""}`}
-              >
-                <span className="max-w-48 truncate">{tab.title}</span>
-                {controller.hasDraft(tab) && (
-                  <span className="shrink-0" aria-label="Unsaved changes">
-                    •
-                  </span>
-                )}
-              </ReorderTabButton>
-              <PinToggle
-                pinned={Boolean(tab.kept)}
-                label="tab"
-                title={tab.kept ? "Pinned — click to unpin" : "Pin tab to keep it open"}
-                onClick={() => (tab.kept ? controller.unkeep(tab.id) : controller.keep(tab.id))}
-                className="size-7 [&_svg]:size-3.5 [@media(pointer:coarse)]:size-11"
-              />
-              <button
-                aria-label="Close tab"
-                title="Close tab"
-                onClick={tab.close}
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring [@media(pointer:coarse)]:size-11"
-              >
-                <X size={14} />
-              </button>
-              <DropdownMenuTrigger asChild>
-                <span aria-hidden="true" className="pointer-events-none absolute inset-0" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                onCloseAutoFocus={(event) => {
-                  event.preventDefault();
-                  document.getElementById(`${idPrefix}tab-${tab.id}`)?.focus();
-                }}
-              >
-                <DropdownMenuItem
-                  onSelect={() => (tab.kept ? controller.unkeep(tab.id) : controller.keep(tab.id))}
+                  className="relative flex max-w-full shrink-0 items-center pr-1"
                 >
-                  {tab.kept ? "Unpin tab" : "Pin tab"}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={tabs[0]?.id === tab.id}
-                  onSelect={() => moveVisibleTab(tab.id, -1)}
-                >
-                  Move left
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={tabs[tabs.length - 1]?.id === tab.id}
-                  onSelect={() => moveVisibleTab(tab.id, 1)}
-                >
-                  Move right
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={tab.close}>Close tab</DropdownMenuItem>
-              </DropdownMenuContent>
-            </div>
-          </DropdownMenu>
-        ))}
+                  <WindowTabTooltip title={tooltipTitle} description={details}>
+                    <ReorderTabButton
+                      windowId={tab.id}
+                      controller={controller}
+                      title={
+                        tooltipTitle
+                          ? undefined
+                          : [
+                              details,
+                              !tab.kept && !controller.hasDraft(tab) && !tab.independent
+                                ? "Drag to reorder. Replaced when you open another item; pin to keep open."
+                                : "Drag to reorder",
+                            ]
+                              .filter(Boolean)
+                              .join("\n")
+                      }
+                      role="tab"
+                      id={`${idPrefix}tab-${tab.id}`}
+                      aria-controls={`${idPrefix}panel-${tab.id}`}
+                      aria-label={
+                        typeof tab.title === "string"
+                          ? `${tab.title}${tab.kept ? " (pinned)" : tab.independent ? "" : " (temporary)"}${controller.hasDraft(tab) ? " — unsaved changes" : ""}`
+                          : undefined
+                      }
+                      aria-selected={active === tab.id}
+                      tabIndex={active === tab.id ? 0 : -1}
+                      onClick={() => controller.select(tab.id)}
+                      onDoubleClick={() => controller.keep(tab.id)}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "ContextMenu" ||
+                          (event.shiftKey && event.key === "F10")
+                        ) {
+                          event.preventDefault();
+                          setMenuTab(tab.id);
+                        }
+                      }}
+                      className={`inline-flex min-w-0 self-stretch items-center gap-2 py-1 pl-3 pr-2 text-sm ${active === tab.id ? "font-medium" : ""}`}
+                    >
+                      <span className="max-w-48 truncate">{tab.title}</span>
+                      {controller.hasDraft(tab) && (
+                        <span className="shrink-0" aria-label="Unsaved changes">
+                          •
+                        </span>
+                      )}
+                    </ReorderTabButton>
+                  </WindowTabTooltip>
+                  <PinToggle
+                    pinned={Boolean(tab.kept)}
+                    label="tab"
+                    title={tab.kept ? "Pinned — click to unpin" : "Pin tab to keep it open"}
+                    onClick={() => (tab.kept ? controller.unkeep(tab.id) : controller.keep(tab.id))}
+                    className="size-7 [&_svg]:size-3.5 [@media(pointer:coarse)]:size-11"
+                  />
+                  <button
+                    aria-label="Close tab"
+                    title="Close tab"
+                    onClick={tab.close}
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring [@media(pointer:coarse)]:size-11"
+                  >
+                    <X size={14} />
+                  </button>
+                  <DropdownMenuTrigger asChild>
+                    <span aria-hidden="true" className="pointer-events-none absolute inset-0" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    onCloseAutoFocus={(event) => {
+                      event.preventDefault();
+                      document.getElementById(`${idPrefix}tab-${tab.id}`)?.focus();
+                    }}
+                  >
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        tab.kept ? controller.unkeep(tab.id) : controller.keep(tab.id)
+                      }
+                    >
+                      {tab.kept ? "Unpin tab" : "Pin tab"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={tabs[0]?.id === tab.id}
+                      onSelect={() => moveVisibleTab(tab.id, -1)}
+                    >
+                      Move left
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={tabs[tabs.length - 1]?.id === tab.id}
+                      onSelect={() => moveVisibleTab(tab.id, 1)}
+                    >
+                      Move right
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={tab.close}>Close tab</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </div>
+              </DropdownMenu>
+            );
+          })}
+        </TooltipProvider>
       </div>
       {overflowed && (
         <div className="flex shrink-0 items-center" data-tab-overflow>

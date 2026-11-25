@@ -86,11 +86,27 @@ export function useWindowReorder(id: string, controller: Pick<WindowController, 
 export function ReorderTabButton({
   windowId,
   controller,
+  onPointerDown,
+  onPointerMove,
   ...props
 }: import("react").ComponentProps<"button"> & {
   windowId: string;
   controller: Pick<WindowController, "move" | "get">;
 }) {
   const drag = useWindowReorder(windowId, controller);
-  return <button {...props} {...drag} style={{ ...props.style, touchAction: "none" }} />;
+  return (
+    <button
+      {...props}
+      {...drag}
+      onPointerDown={(event) => {
+        onPointerDown?.(event);
+        if (!event.defaultPrevented) drag.onPointerDown(event);
+      }}
+      onPointerMove={(event) => {
+        onPointerMove?.(event);
+        if (!event.defaultPrevented) drag.onPointerMove(event);
+      }}
+      style={{ ...props.style, touchAction: "none" }}
+    />
+  );
 }
