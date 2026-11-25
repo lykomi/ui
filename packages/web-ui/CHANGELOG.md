@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.58.7
+
+### Patch Changes
+
+- f57cac5: Show the full window title and its description in a themed tooltip on hover or keyboard focus when a tab strip supplies descriptions.
+  - @lykomi/agent@0.58.7
+  - @lykomi/web-primitives@0.58.7
+
 ## 0.58.6
 
 ### Patch Changes
