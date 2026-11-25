@@ -12,6 +12,18 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.tsx";
 import type { WindowController, WorkbenchWindow } from "./window-controller.ts";
 
+function revealTab(viewport: HTMLElement, tab: HTMLElement) {
+  const previousScroll = viewport.scrollLeft;
+  const bounds = viewport.getBoundingClientRect();
+  const tabBounds = tab.getBoundingClientRect();
+  const inset = 12;
+  if (tabBounds.left < bounds.left + inset)
+    viewport.scrollLeft -= bounds.left + inset - tabBounds.left;
+  else if (tabBounds.right > bounds.right - inset)
+    viewport.scrollLeft += tabBounds.right - bounds.right + inset;
+  return viewport.scrollLeft !== previousScroll;
+}
+
 function WindowTabTooltip({
   title,
   description,
@@ -79,15 +91,7 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
     const revealActive = () => {
       const selected = element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
       const wrapper = selected?.closest<HTMLElement>("[data-reorder-tab]") ?? selected;
-      if (wrapper) {
-        const bounds = element.getBoundingClientRect();
-        const tabBounds = wrapper.getBoundingClientRect();
-        const inset = 12;
-        if (tabBounds.left < bounds.left + inset)
-          element.scrollLeft -= bounds.left + inset - tabBounds.left;
-        else if (tabBounds.right > bounds.right - inset)
-          element.scrollLeft += tabBounds.right - bounds.right + inset;
-      }
+      if (wrapper) revealTab(element, wrapper);
       measure();
     };
     revealActive();
@@ -133,12 +137,23 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
           event.preventDefault();
           const button = buttons[next];
           if (!button) return;
+          const element = event.currentTarget;
+          const previousFocus = document.activeElement;
           controller.select(button.id.slice(`${idPrefix}tab-`.length));
-          const focus = () => button.focus({ preventScroll: true });
-          // Let the strip reveal the selected tab before focus opens its tooltip.
-          if (event.currentTarget.scrollWidth > event.currentTarget.clientWidth)
-            requestAnimationFrame(focus);
-          else focus();
+          const focus = () => {
+            if (document.activeElement === previousFocus) button.focus({ preventScroll: true });
+          };
+          if (element.scrollWidth <= element.clientWidth) {
+            focus();
+          } else {
+            // Selection can wait on a leave guard. Reveal the focus target
+            // independently and let scrolling settle before opening its tooltip.
+            requestAnimationFrame(() => {
+              if (document.activeElement !== previousFocus) return;
+              if (revealTab(element, button)) requestAnimationFrame(focus);
+              else focus();
+            });
+          }
         }}
       >
         {contentTab && (
