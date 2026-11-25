@@ -14,6 +14,7 @@ import { makeAssistantToolUI } from "@assistant-ui/react";
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
 import { setNavigateFunction } from "../lib/client-tools.ts";
+import { getOpenPanelOutput, OPEN_PANEL_TOOL_NAME } from "../lib/open-panel-output.ts";
 import { useToolPanelStore } from "../lib/tool-panel-store.ts";
 import { ConfirmationCard } from "./confirmation-card.tsx";
 import { ToolCallCard } from "./tool-call-card.tsx";
@@ -79,23 +80,9 @@ const OpenPanelUI = makeAssistantToolUI<
   { title: string; path?: string; content?: string; type?: string },
   { status: string }
 >({
-  toolName: "ui_open_panel",
+  toolName: OPEN_PANEL_TOOL_NAME,
   render: ({ args, result, status }) => {
-    const handleReopen = () => {
-      if (args?.path) {
-        useToolPanelStore.getState().openPanel({
-          title: args.title,
-          content: args.path,
-          type: "page",
-        });
-      } else if (args?.content) {
-        useToolPanelStore.getState().openPanel({
-          title: args.title,
-          content: args.content,
-          type: (args.type as "markdown" | "text" | "page" | "pdf") || "markdown",
-        });
-      }
-    };
+    const panel = getOpenPanelOutput(args, result);
 
     return (
       <ToolCallCard
@@ -104,14 +91,14 @@ const OpenPanelUI = makeAssistantToolUI<
         description={
           status.type === "running"
             ? "Opening panel..."
-            : result?.status === "success"
-              ? `Panel: ${args?.title}`
+            : panel
+              ? `Panel: ${panel.title}`
               : "Panel failed"
         }
         status={status}
         action={
-          status.type === "complete" && result?.status === "success"
-            ? { label: "View", onClick: handleReopen }
+          status.type === "complete" && panel?.content
+            ? { label: "View", onClick: () => useToolPanelStore.getState().openPanel(panel) }
             : undefined
         }
         className="w-full"
