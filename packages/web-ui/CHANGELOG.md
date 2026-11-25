@@ -1,5 +1,14 @@
 # @iloveagents/foundry-web-ui
 
+## 0.58.6
+
+### Patch Changes
+
+- 1f292bb: Show panel outputs directly in chat so users can reopen them without expanding tool activity.
+- e4bc468: Show the active chat name before following a same-tab external link and preserve the browser warning for reloads and tab closure.
+  - @lykomi/agent@0.58.6
+  - @lykomi/web-primitives@0.58.6
+
 ## 0.58.5
 
 ### Patch Changes

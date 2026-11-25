@@ -1,5 +1,16 @@
 # @iloveagents/foundry-web-shell
 
+## 0.58.6
+
+### Patch Changes
+
+- e4bc468: Show the active chat name before following a same-tab external link and preserve the browser warning for reloads and tab closure.
+- Updated dependencies [1f292bb]
+- Updated dependencies [e4bc468]
+  - @lykomi/web-ui@0.58.6
+  - @lykomi/agent@0.58.6
+  - @lykomi/web-primitives@0.58.6
+
 ## 0.58.5
 
 ### Patch Changes
