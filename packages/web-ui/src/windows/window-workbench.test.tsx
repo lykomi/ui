@@ -3,6 +3,47 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { createWindowStore } from "./window-controller.ts";
 import { WindowWorkbench } from "./window-workbench.tsx";
+import { WindowTabStrip } from "./window-tab-strip.tsx";
+
+it("discloses the full label and context when arrow navigation focuses a tab", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const tabs = [
+    { id: "overview", title: "Overview", close: vi.fn() },
+    { id: "brief", title: "A long project brief title", close: vi.fn() },
+  ];
+  const store = createWindowStore({ tabs, active: "overview" });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <WindowTabStrip
+          controller={store}
+          tabs={tabs}
+          active="overview"
+          description={(tab) => (tab.id === "brief" ? "Project › Planning" : undefined)}
+        />,
+      ),
+    );
+    const overview = host.querySelector<HTMLButtonElement>("#tab-overview")!;
+    const brief = host.querySelector<HTMLButtonElement>("#tab-brief")!;
+    await act(async () =>
+      overview.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })),
+    );
+    expect(document.activeElement).toBe(brief);
+    expect(store.get().active).toBe("brief");
+    const tooltip = document.getElementById(brief.getAttribute("aria-describedby")!)!;
+    expect(tooltip.textContent).toBe("Project › Planning");
+    expect(tooltip.parentElement?.textContent).toContain("A long project brief title");
+    await act(async () => brief.blur());
+    expect(brief.hasAttribute("aria-describedby")).toBe(false);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
 
 it("keeps the same editor node and scroll while switching layouts, selection and order", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
