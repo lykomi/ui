@@ -10,6 +10,7 @@
 
 import { useThemeStore, type ThemeMode } from "./theme-store.ts";
 import { useToolPanelStore } from "./tool-panel-store.ts";
+import { OPEN_PANEL_TOOL_NAME } from "./open-panel-output.ts";
 import { useAppStore } from "./app-store.ts";
 import { clientToolRegistry, type ClientToolEntry } from "@lykomi/agent";
 import { guidanceTools } from "./guidance-tools.ts";
@@ -72,7 +73,7 @@ const GLOBAL_TOOLS: ClientToolEntry[] = [
     },
   },
   {
-    name: "ui_open_panel",
+    name: OPEN_PANEL_TOOL_NAME,
     description:
       "Show content in the side panel. Prefer this over ui_navigate to keep " +
       "chat visible. Use path for a page component (e.g. '/workspace'), " +

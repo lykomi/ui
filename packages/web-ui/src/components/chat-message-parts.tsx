@@ -1,5 +1,6 @@
 import { MessagePrimitive, groupPartByType } from "@assistant-ui/react";
 import { MarkdownText } from "./markdown-text.tsx";
+import { OpenPanelOutputs } from "./open-panel-outputs.tsx";
 import { ReasoningMessagePartComponent } from "./reasoning-part.tsx";
 import { ToolFallback } from "./tool-fallback.tsx";
 import { TurnActivity } from "./turn-activity.tsx";
@@ -52,9 +53,12 @@ export function ChatMessageParts() {
         switch (part.type) {
           case "group-activity":
             return (
-              <TurnActivity indices={part.indices} isRunning={part.status?.type === "running"}>
-                {children}
-              </TurnActivity>
+              <>
+                <TurnActivity indices={part.indices} isRunning={part.status?.type === "running"}>
+                  {children}
+                </TurnActivity>
+                <OpenPanelOutputs indices={part.indices} />
+              </>
             );
           case "group-tool":
             // Inside the activity fold, so NOT another collapsed row —
