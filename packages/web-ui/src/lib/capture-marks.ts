@@ -26,6 +26,8 @@ export interface Box {
 export interface PlannedBoxes {
   redact: Box[][];
   mark: (Box | null)[];
+  /** Private surfaces: painted black like a redaction, never counted. */
+  hidden?: Box[];
 }
 
 const MAX_REDACT = 20;
@@ -80,7 +82,7 @@ function onScreen(rect: DOMRect | Box): Box | null {
   return { x, y, width: right - x, height: bottom - y };
 }
 
-function boxesOf(rects: Iterable<DOMRect>): Box[] {
+export function boxesOf(rects: Iterable<DOMRect>): Box[] {
   const boxes: Box[] = [];
   for (const rect of rects) {
     const box = onScreen(rect);
@@ -303,7 +305,7 @@ export function paintCapture(
     ctx.fillText(String(index + 1), cx, cy);
   });
   ctx.fillStyle = "#000000";
-  for (const box of boxes.redact.flat())
+  for (const box of [...boxes.redact.flat(), ...(boxes.hidden ?? [])])
     ctx.fillRect(
       (box.x - REDACT_PAD) * ratio,
       (box.y - REDACT_PAD) * ratio,

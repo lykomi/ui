@@ -74,14 +74,35 @@ it("captures the app viewport as binary input and excludes private surfaces", as
   expect(options?.width).toBe(window.innerWidth);
   expect(options?.height).toBe(window.innerHeight);
   expect(options?.features).toEqual({ restoreScrollPosition: true });
+  // Private surfaces stay in the copy, invisible, so nothing after them moves.
+  expect(options?.filter).toBeUndefined();
   const privateField = document.createElement("div");
   privateField.dataset.agentContext = "off";
-  expect(options?.filter?.(privateField)).toBe(false);
+  options?.onCloneEachNode?.(privateField);
+  expect(privateField.style.visibility).toBe("hidden");
   const password = document.createElement("input");
   password.type = "password";
-  expect(options?.filter?.(password)).toBe(false);
-  // Nothing asked for, nothing painted.
+  options?.onCloneEachNode?.(password);
+  expect(password.style.visibility).toBe("hidden");
+  const plain = document.createElement("p");
+  options?.onCloneEachNode?.(plain);
+  expect(plain.style.visibility).toBe("");
+  // Nothing asked for and nothing private: nothing painted.
   expect(calls).toEqual([]);
+});
+
+it("paints a private surface black where it stands, keeping the layout", async () => {
+  document.body.innerHTML = `<p><span data-capture="off">Private prefix</span>Northwind</p>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));
+  if (typeof result === "string") throw new Error(result);
+  // The private text is not counted as a redaction, but its box is painted.
+  expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
+  const black = calls.findIndex(([key, value]) => key === "set:fillStyle" && value === "#000000");
+  const boxes = calls.slice(black).filter(([key]) => key === "fillRect");
+  expect(boxes).toEqual([
+    ["fillRect", 98, 48, 64, 20],
+    ["fillRect", 8, 8, 84, 28],
+  ]);
 });
 
 it("blacks out a text everywhere the page shows it, and says how often", async () => {

@@ -3,8 +3,10 @@ import { domToCanvas } from "modern-screenshot";
 import { useChatRuns } from "./chat-runs-store.ts";
 import { guidanceViewKey } from "./guidance-targets.ts";
 import {
+  type Box,
   type CapturePlan,
   type PlannedBoxes,
+  boxesOf,
   paintCapture,
   planBoxes,
   readCapturePlan,
@@ -16,6 +18,21 @@ const excluded =
 const skip = (el: Element) => el.matches(excluded);
 const NO_PLAN: CapturePlan = { redact: [], mark: [] };
 
+/** Where a private surface stands on screen. It stays in the copy, invisible,
+ * so everything after it keeps its place (removing it would shift the text the
+ * boxes were measured on); it is also painted black, which covers what the
+ * copy turns into another element (a video frame, an iframe's document). */
+function privateBoxes(): Box[] {
+  return boxesOf(
+    Array.from(document.querySelectorAll(excluded), (el) => el.getBoundingClientRect()),
+  );
+}
+
+function hidePrivate(cloned: Node): void {
+  if (cloned instanceof Element && cloned.matches(excluded))
+    (cloned as HTMLElement).style?.setProperty("visibility", "hidden", "important");
+}
+
 /** A raster of this app's visible viewport, never another tab or the desktop.
  * What `plan` names is blacked out or marked on it before it leaves the page. */
 export async function captureAppView(plan: CapturePlan = NO_PLAN) {
@@ -26,7 +43,7 @@ export async function captureAppView(plan: CapturePlan = NO_PLAN) {
   const scale = Math.min(1, 1600 / Math.max(width, height));
   if (document.documentElement.matches(excluded) || document.body.matches(excluded))
     throw new Error("This app view is marked private.");
-  const before = planBoxes(plan, skip);
+  const before: PlannedBoxes = { ...planBoxes(plan, skip), hidden: privateBoxes() };
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let canvas: HTMLCanvasElement;
@@ -40,7 +57,7 @@ export async function captureAppView(plan: CapturePlan = NO_PLAN) {
         timeout: 10_000,
         backgroundColor: getComputedStyle(document.body).backgroundColor,
         style: { width: `${width}px`, height: `${height}px`, overflow: "hidden" },
-        filter: (node) => !(node instanceof Element) || !node.matches(excluded),
+        onCloneEachNode: hidePrivate,
         fetch: { requestInit: { signal: controller.signal } },
       }),
       new Promise<never>((_, reject) => {
@@ -61,12 +78,12 @@ export async function captureAppView(plan: CapturePlan = NO_PLAN) {
     thread !== useChatRuns.getState().foregroundId ||
     width !== window.innerWidth ||
     height !== window.innerHeight ||
-    !sameBoxes(before, planBoxes(plan, skip))
+    !sameBoxes(before, { ...planBoxes(plan, skip), hidden: privateBoxes() })
   )
     throw new Error(
       "The view or conversation changed during capture. Capture the current view again.",
     );
-  if (plan.redact.length || plan.mark.length) paintCapture(canvas, before);
+  if (plan.redact.length || plan.mark.length || before.hidden?.length) paintCapture(canvas, before);
   const data = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
   if (!data || data.length * 0.75 > 2 * 1024 * 1024) throw new Error("The app image exceeds 2 MB.");
   return {
