@@ -12,6 +12,7 @@ export {
 // --- Tool registry ---
 export {
   clientToolRegistry,
+  type ClientToolCallContext,
   type ClientToolEntry,
   type ClientToolResult,
   type ToolRegistry,

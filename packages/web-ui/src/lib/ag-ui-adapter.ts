@@ -222,7 +222,7 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
           ...registry,
           getActiveSchemas: () => schemas,
           isRegistered: (name) => advertised.has(name),
-          executeTool: async (name, args) => {
+          executeTool: async (name, args, call) => {
             await waitForForegroundChat(this.threadId, runSignal);
             runSignal.throwIfAborted();
             const owner = pageOwners.get(name);
@@ -241,7 +241,9 @@ export class AGUIAdapterSDK implements ChatModelAdapter {
                 });
               }
             }
-            return clientToolRegistry.getState().executeTool(name, args);
+            return clientToolRegistry
+              .getState()
+              .executeTool(name, args, { threadId: this.threadId, ...call });
           },
         },
         abortSignal: runSignal,

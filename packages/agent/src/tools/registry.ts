@@ -17,6 +17,17 @@ export type ClientToolResult = string | { result: string; inputContent: ContentP
  * schemas and executors. Pages declare their capabilities by calling
  * `registerPageTools()` — no need to edit core files.
  */
+/**
+ * The conversation a client tool call belongs to. The runner passes it on
+ * every call, so a tool can name the chat it answers (support reports quote
+ * it) without reading any global "current chat" that a background chat
+ * would get wrong.
+ */
+export interface ClientToolCallContext {
+  /** The AG-UI thread id of the run that asked for this call. */
+  threadId?: string;
+}
+
 export interface ClientToolEntry {
   /** Tool name (must be unique across global + page tools) */
   name: string;
@@ -25,7 +36,7 @@ export interface ClientToolEntry {
   /** JSON Schema for tool parameters */
   parameters: Record<string, unknown>;
   /** Execution function — called by the runner at TOOL_CALL_END */
-  execute: (argsJson: string) => Promise<ClientToolResult>;
+  execute: (argsJson: string, call?: ClientToolCallContext) => Promise<ClientToolResult>;
 }
 
 interface ClientToolRegistryState {
@@ -59,7 +70,11 @@ interface ClientToolRegistryState {
 
   getActiveSchemas: () => AGUITool[];
   isRegistered: (name: string) => boolean;
-  executeTool: (name: string, argsJson: string) => Promise<ClientToolResult>;
+  executeTool: (
+    name: string,
+    argsJson: string,
+    call?: ClientToolCallContext,
+  ) => Promise<ClientToolResult>;
 }
 
 export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get) => ({
@@ -133,18 +148,22 @@ export const clientToolRegistry = createStore<ClientToolRegistryState>((set, get
     return contributedTools.has(name) || pageTools.has(name) || globalTools.has(name);
   },
 
-  executeTool: async (name, argsJson) => {
+  executeTool: async (name, argsJson, call) => {
     const { globalTools, pageTools, contributedTools } = get();
     const tool = contributedTools.get(name) ?? pageTools.get(name) ?? globalTools.get(name);
     if (!tool) {
       return JSON.stringify({ error: `Unknown client tool: ${name}` });
     }
-    return tool.execute(argsJson);
+    return tool.execute(argsJson, call);
   },
 }));
 
 export interface ToolRegistry {
   isRegistered: (name: string) => boolean;
-  executeTool: (name: string, argsJson: string) => Promise<ClientToolResult>;
+  executeTool: (
+    name: string,
+    argsJson: string,
+    call?: ClientToolCallContext,
+  ) => Promise<ClientToolResult>;
   getActiveSchemas: () => AGUITool[];
 }

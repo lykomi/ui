@@ -81,6 +81,19 @@ describe("executeTool", () => {
     expect(parsed.fields).toEqual({ title: "Test", priority: "High" });
   });
 
+  it("ui_get_context names the calling chat and the page address", async () => {
+    const result = await registry().executeTool("ui_get_context", "{}", {
+      threadId: "thread-42",
+    });
+    const parsed = JSON.parse(typeof result === "string" ? result : result.result);
+    expect(parsed.status).toBe("success");
+    expect(parsed.chatId).toBe("thread-42");
+    expect(parsed.pageUrl).toBe(window.location.href);
+
+    const unnamed = await registry().executeTool("ui_get_context", "{}");
+    expect(JSON.parse(typeof unnamed === "string" ? unnamed : unnamed.result).chatId).toBeNull();
+  });
+
   it("unknown tool returns error", async () => {
     const result = await registry().executeTool("unknown", "{}");
     expect(JSON.parse(typeof result === "string" ? result : result.result).error).toContain(

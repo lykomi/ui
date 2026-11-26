@@ -84,3 +84,19 @@ describe("clientToolRegistry", () => {
     });
   });
 });
+
+describe("executeTool call context", () => {
+  it("hands the calling conversation to the tool", async () => {
+    clientToolRegistry.setState({ globalTools: new Map(), pageTools: new Map() });
+    let seen: unknown;
+    clientToolRegistry.getState().registerGlobal({
+      ...makeTool("ui_probe"),
+      execute: async (_args, call) => {
+        seen = call;
+        return "{}";
+      },
+    });
+    await clientToolRegistry.getState().executeTool("ui_probe", "{}", { threadId: "t-1" });
+    expect(seen).toEqual({ threadId: "t-1" });
+  });
+});
