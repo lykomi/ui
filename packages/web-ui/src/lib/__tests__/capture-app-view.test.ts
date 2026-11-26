@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { domToCanvas } from "modern-screenshot";
-import { captureAppView, captureAppViewTool } from "../capture-app-view.ts";
+import { captureAppView, captureAppViewTool, describeCaptureResult } from "../capture-app-view.ts";
 import { readCapturePlan } from "../capture-marks.ts";
 import { useChatRuns } from "../chat-runs-store.ts";
 
@@ -158,4 +158,31 @@ it("returns an actionable error rather than claiming the agent saw an image", as
   expect(await captureAppViewTool.execute("{}")).toBe(
     JSON.stringify({ status: "capture_failed", message: "Canvas unavailable" }),
   );
+});
+
+describe("describeCaptureResult", () => {
+  it("reads the JSON string a client tool returns", () => {
+    expect(describeCaptureResult(JSON.stringify({ status: "captured" }))).toBe(
+      "Current app view captured",
+    );
+  });
+
+  it("says how many texts were blacked out and which were not found", () => {
+    const result = JSON.stringify({
+      status: "captured",
+      redacted: [
+        { text: "Acme", places: 2 },
+        { text: "Paris", places: 0 },
+      ],
+    });
+    expect(describeCaptureResult(result)).toBe(
+      "Current app view captured · 1 text blacked out, 1 not found",
+    );
+  });
+
+  it("shows the failure message", () => {
+    const result = JSON.stringify({ status: "capture_failed", message: "No view to capture." });
+    expect(describeCaptureResult(result)).toBe("No view to capture.");
+    expect(describeCaptureResult("not json")).toBe("View unavailable");
+  });
 });

@@ -152,3 +152,33 @@ export const captureAppViewTool: ClientToolEntry = {
     }
   },
 };
+
+/** The capture card's line. A client tool's result reaches the card as the
+ *  JSON string `execute` returned, so it is read here, not assumed an object:
+ *  read as one, every capture said "View unavailable". */
+export function describeCaptureResult(result: unknown): string {
+  let value: unknown = result;
+  if (typeof result === "string") {
+    try {
+      value = JSON.parse(result);
+    } catch {
+      return "View unavailable";
+    }
+  }
+  const answer = (value && typeof value === "object" ? value : {}) as {
+    status?: unknown;
+    message?: unknown;
+    redacted?: { places?: unknown }[];
+  };
+  if (answer.status !== "captured")
+    return typeof answer.message === "string" && answer.message
+      ? answer.message
+      : "View unavailable";
+  const redacted = Array.isArray(answer.redacted) ? answer.redacted : [];
+  if (!redacted.length) return "Current app view captured";
+  const hidden = redacted.filter((entry) => Number(entry?.places) > 0).length;
+  const missed = redacted.length - hidden;
+  const parts = [`${hidden} ${hidden === 1 ? "text" : "texts"} blacked out`];
+  if (missed) parts.push(`${missed} not found`);
+  return `Current app view captured · ${parts.join(", ")}`;
+}
