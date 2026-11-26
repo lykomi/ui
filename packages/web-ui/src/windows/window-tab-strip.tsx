@@ -1,6 +1,13 @@
 import { ReorderTabButton } from "./window-reorder.tsx";
 import { PinToggle } from "../components/pin-toggle.tsx";
-import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { Check, ChevronDown, Pin, X } from "lucide-react";
 import { Button } from "@lykomi/web-primitives";
 import {
@@ -10,6 +17,7 @@ import {
   DropdownMenuItem,
 } from "../ui/dropdown-menu.tsx";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.tsx";
+import { WindowTabPreview } from "./window-tab-preview.tsx";
 import type { WindowController, WorkbenchWindow } from "./window-controller.ts";
 
 function revealTab(viewport: HTMLElement, tab: HTMLElement) {
@@ -24,16 +32,36 @@ function revealTab(viewport: HTMLElement, tab: HTMLElement) {
   return viewport.scrollLeft !== previousScroll;
 }
 
-function WindowTabTooltip({
+function WindowTabOverlay({
   title,
   description,
+  previewEnabled,
+  preview,
+  open,
+  onOpenChange,
   children,
 }: {
   title?: string;
   description?: string;
-  children: ReactElement;
+  previewEnabled: boolean;
+  preview?: ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactElement<ComponentProps<"button">>;
 }) {
   if (!title) return children;
+  if (previewEnabled)
+    return (
+      <WindowTabPreview
+        title={title}
+        description={description}
+        preview={preview}
+        open={open}
+        onOpenChange={onOpenChange}
+      >
+        {children}
+      </WindowTabPreview>
+    );
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
@@ -58,6 +86,7 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
   active,
   contentTab,
   description,
+  renderPreview,
   idPrefix = "",
 }: {
   controller: WindowController<T>;
@@ -67,6 +96,8 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
   idPrefix?: string;
   /** Additional context shown with the full title on hover and keyboard focus. */
   description?: (tab: T) => string | undefined;
+  /** Supply interactive context as it becomes available. Tabs can still show a plain preview. */
+  renderPreview?: (tab: T, close: () => void) => ReactNode;
 }) {
   const moveVisibleTab = (id: string, direction: -1 | 1) => {
     const neighbor = tabs[tabs.findIndex((tab) => tab.id === id) + direction];
@@ -77,6 +108,7 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
       );
   };
   const [menuTab, setMenuTab] = useState<string | null>(null);
+  const [previewTab, setPreviewTab] = useState<string | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState({ before: false, after: false });
   const overflowed = overflow.before || overflow.after;
@@ -171,18 +203,32 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
         <TooltipProvider delayDuration={350}>
           {tabs.map((tab) => {
             const details = description?.(tab);
+            const changePreview = (open: boolean) =>
+              setPreviewTab((current) => (open ? tab.id : current === tab.id ? null : current));
+            const preview = renderPreview?.(tab, () => changePreview(false));
             const tooltipTitle =
-              description && typeof tab.title === "string" ? tab.title : undefined;
+              (description || renderPreview) && typeof tab.title === "string"
+                ? tab.title
+                : undefined;
+            const openMenu = () => {
+              changePreview(false);
+              setMenuTab(tab.id);
+            };
             return (
               <DropdownMenu
                 key={tab.id}
                 open={menuTab === tab.id}
-                onOpenChange={(open) => setMenuTab(open ? tab.id : null)}
+                onOpenChange={(open) => (open ? openMenu() : setMenuTab(null))}
               >
                 <div
                   onContextMenu={(event) => {
+                    if (
+                      !(event.target instanceof Node) ||
+                      !event.currentTarget.contains(event.target)
+                    )
+                      return;
                     event.preventDefault();
-                    setMenuTab(tab.id);
+                    openMenu();
                   }}
                   data-reorder-tab={tab.id}
                   data-preview={
@@ -190,7 +236,14 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
                   }
                   className="relative flex max-w-full shrink-0 items-center pr-1"
                 >
-                  <WindowTabTooltip title={tooltipTitle} description={details}>
+                  <WindowTabOverlay
+                    title={tooltipTitle}
+                    description={details}
+                    previewEnabled={renderPreview != null}
+                    preview={preview}
+                    open={menuTab === null && previewTab === tab.id}
+                    onOpenChange={changePreview}
+                  >
                     <ReorderTabButton
                       windowId={tab.id}
                       controller={controller}
@@ -224,7 +277,7 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
                           (event.shiftKey && event.key === "F10")
                         ) {
                           event.preventDefault();
-                          setMenuTab(tab.id);
+                          openMenu();
                         }
                       }}
                       className={`inline-flex min-w-0 self-stretch items-center gap-2 py-1 pl-3 pr-2 text-sm ${active === tab.id ? "font-medium" : ""}`}
@@ -236,7 +289,7 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
                         </span>
                       )}
                     </ReorderTabButton>
-                  </WindowTabTooltip>
+                  </WindowTabOverlay>
                   <PinToggle
                     pinned={Boolean(tab.kept)}
                     label="tab"

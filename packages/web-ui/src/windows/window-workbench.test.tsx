@@ -1,9 +1,119 @@
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { createWindowStore } from "./window-controller.ts";
 import { WindowWorkbench } from "./window-workbench.tsx";
 import { WindowTabStrip } from "./window-tab-strip.tsx";
+
+it("lets the keyboard enter tab preview links and dismiss the preview back to the tab", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const tabs = [{ id: "brief", title: "Project brief", close: vi.fn() }];
+  const store = createWindowStore({ tabs });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    const renderTabs = (preview: ReactNode) =>
+      root.render(
+        <WindowTabStrip
+          controller={store}
+          tabs={tabs}
+          active="brief"
+          renderPreview={() => preview}
+        />,
+      );
+    await act(async () => renderTabs(null));
+    const tab = host.querySelector<HTMLButtonElement>("#tab-brief")!;
+    await act(async () => tab.focus());
+    await act(async () => renderTabs(<a href="/projects">Projects</a>));
+    expect(host.querySelector("#tab-brief")).toBe(tab);
+    expect(document.activeElement).toBe(tab);
+    await act(async () =>
+      tab.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
+    );
+    const link = document.querySelector('[role="dialog"] a[href="/projects"]')!;
+    expect(document.activeElement).toBe(link);
+    const contextMenu = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    await act(async () => link.dispatchEvent(contextMenu));
+    expect(contextMenu.defaultPrevented).toBe(false);
+    expect(tab.getAttribute("aria-expanded")).toBe("true");
+    await act(async () =>
+      link.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      ),
+    );
+    expect(tab.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(tab);
+
+    const arrowDown = () =>
+      tab.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    await act(async () => renderTabs(<span>Loading the preview</span>));
+    await act(async () => arrowDown());
+    const tabForward = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    await act(async () => tab.dispatchEvent(tabForward));
+    expect(tabForward.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(tab);
+
+    await act(async () => renderTabs(<input aria-label="Preview filter" />));
+    await act(async () => arrowDown());
+    expect(document.activeElement).toBe(
+      document.querySelector('input[aria-label="Preview filter"]'),
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("dismisses a pointer preview without taking focus from the current editor", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.useFakeTimers();
+  const tabs = [{ id: "brief", title: "Project brief", close: vi.fn() }];
+  const store = createWindowStore({ tabs });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <>
+          <input aria-label="Editor" />
+          <WindowTabStrip
+            controller={store}
+            tabs={tabs}
+            active="brief"
+            renderPreview={() => <a href="/projects">Projects</a>}
+          />
+        </>,
+      ),
+    );
+    const editor = host.querySelector("input")!;
+    const tab = host.querySelector<HTMLButtonElement>("#tab-brief")!;
+    await act(async () => {
+      editor.focus();
+      tab.dispatchEvent(new PointerEvent("pointerover", { bubbles: true, pointerType: "mouse" }));
+      await vi.advanceTimersByTimeAsync(350);
+    });
+    expect(tab.getAttribute("aria-expanded")).toBe("true");
+    await act(async () =>
+      editor.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      ),
+    );
+    expect(tab.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(editor);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
+});
 
 it("discloses the full label and context when arrow navigation focuses a tab", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
