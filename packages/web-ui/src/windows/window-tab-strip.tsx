@@ -222,6 +222,11 @@ export function WindowTabStrip<T extends WorkbenchWindow>({
               >
                 <div
                   onContextMenu={(event) => {
+                    if (
+                      !(event.target instanceof Node) ||
+                      !event.currentTarget.contains(event.target)
+                    )
+                      return;
                     event.preventDefault();
                     openMenu();
                   }}

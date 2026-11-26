@@ -9,6 +9,9 @@ import {
 } from "react";
 import { Popover, PopoverAnchor, PopoverContent } from "../ui/popover.tsx";
 
+const focusableElements =
+  "a[href], button, input, select, textarea, iframe, summary, [contenteditable], [tabindex]";
+
 export function WindowTabPreview({
   title,
   description,
@@ -48,8 +51,20 @@ export function WindowTabPreview({
       changeOpen(false);
     }, 220);
   };
-  const enterPreview = () =>
-    content.current?.querySelector<HTMLElement>("a[href], button:not([disabled])")?.focus();
+  const enterPreview = () => {
+    if (!content.current) return false;
+    const candidates = content.current.querySelectorAll<HTMLElement>(focusableElements);
+    for (const candidate of candidates) {
+      if (
+        candidate.tabIndex < 0 &&
+        (candidate.hasAttribute("tabindex") || !candidate.isContentEditable)
+      )
+        continue;
+      candidate.focus({ preventScroll: true });
+      if (document.activeElement === candidate) return true;
+    }
+    return false;
+  };
 
   return (
     <Popover open={open} onOpenChange={changeOpen}>
@@ -72,16 +87,14 @@ export function WindowTabPreview({
           onKeyDown: (event) => {
             children.props.onKeyDown?.(event);
             if (event.defaultPrevented) return;
-            if (
-              interactive &&
-              (event.key === "ArrowDown" || (open && event.key === "Tab" && !event.shiftKey))
-            ) {
+            const forwardTab = event.key === "Tab" && !event.shiftKey;
+            if (!interactive || (event.key !== "ArrowDown" && !forwardTab)) return;
+            if (open) {
+              if (enterPreview()) event.preventDefault();
+            } else if (event.key === "ArrowDown") {
               event.preventDefault();
-              if (open) enterPreview();
-              else {
-                enterOnOpen.current = true;
-                changeOpen(true);
-              }
+              enterOnOpen.current = true;
+              changeOpen(true);
             }
           },
         })}
@@ -107,7 +120,8 @@ export function WindowTabPreview({
         onCloseAutoFocus={(event) => event.preventDefault()}
         onEscapeKeyDown={(event) => {
           event.preventDefault();
-          trigger.current?.focus({ preventScroll: true });
+          if (content.current?.contains(document.activeElement))
+            trigger.current?.focus({ preventScroll: true });
           changeOpen(false);
         }}
         onInteractOutside={(event) => {
