@@ -111,6 +111,18 @@ it("blacks out a text split over inline elements as it reads on screen", async (
   expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
 });
 
+it("reads a line break or a new block as a space between words", async () => {
+  document.body.innerHTML = `<p>Northwind<br>Traders</p><div><span>Acme</span><p>Corp</p></div>`;
+  const result = await captureAppViewTool.execute(
+    JSON.stringify({ redact: ["Northwind Traders", "Acme Corp"] }),
+  );
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).redacted).toEqual([
+    { text: "Northwind Traders", places: 1 },
+    { text: "Acme Corp", places: 1 },
+  ]);
+});
+
 it("blacks out the label a select shows, not only its value", async () => {
   document.body.innerHTML = `<select><option value="42" label="Northwind" selected>Customer</option></select>`;
   const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));
@@ -137,7 +149,8 @@ it("frames a button by its label, numbered, and paints black boxes last", async 
   const frame = calls.findIndex(([key]) => key === "strokeRect");
   const black = calls.findIndex(([key, value]) => key === "set:fillStyle" && value === "#000000");
   expect(calls[frame]).toEqual(["strokeRect", 6, 6, 88, 32]);
-  expect(calls.find(([key]) => key === "fillText")).toEqual(["fillText", "1", 6, 6]);
+  // The frame's corner is at (6, 6); its number is kept inside the picture.
+  expect(calls.find(([key]) => key === "fillText")).toEqual(["fillText", "1", 9, 9]);
   expect(black).toBeGreaterThan(frame);
 });
 

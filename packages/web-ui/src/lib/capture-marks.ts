@@ -102,6 +102,21 @@ function shownText(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectE
   return control.value || ("placeholder" in control ? control.placeholder : "") || "";
 }
 
+/** The box a node's text flows in: its nearest ancestor that is not inline. */
+function blockFinder(): (el: Element) => Element | null {
+  const seen = new Map<Element, Element | null>();
+  const find = (el: Element | null): Element | null => {
+    if (!el) return null;
+    const known = seen.get(el);
+    if (known !== undefined) return known;
+    const display = getComputedStyle(el).display;
+    const block = display === "inline" || display === "contents" ? find(el.parentElement) : el;
+    seen.set(el, block);
+    return block;
+  };
+  return find;
+}
+
 /** Every place on screen the text appears: in the page's text — matched over
  * the text as rendered, so `North<strong>wind</strong>` is one occurrence —
  * and in what a form control shows. */
@@ -110,9 +125,25 @@ export function textBoxes(text: string, skip: (el: Element) => boolean): Box[] {
   const boxes: Box[] = [];
   const nodes: { node: Text; start: number }[] = [];
   let rendered = "";
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  // The text as read: inline pieces join (North<strong>wind</strong> is one
+  // word), a line break or a block boundary reads as a space.
+  const blockOf = blockFinder();
+  let lastBlock: Element | null = null;
+  let broken = false;
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+  );
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if ((node as Element).tagName === "BR") broken = true;
+      continue;
+    }
     if (!node.parentElement || !shown(node.parentElement, skip)) continue;
+    const block = blockOf(node.parentElement);
+    if (rendered && (broken || block !== lastBlock)) rendered += "\n";
+    broken = false;
+    lastBlock = block;
     nodes.push({ node: node as Text, start: rendered.length });
     rendered += node.nodeValue ?? "";
   }
@@ -220,14 +251,18 @@ export function paintCapture(
     ctx.strokeStyle = MARK_COLOR;
     ctx.lineWidth = line;
     ctx.strokeRect(x, y, (box.width + 2 * MARK_PAD) * ratio, (box.height + 2 * MARK_PAD) * ratio);
+    // The number sits on the frame's corner, kept inside the picture so a
+    // place at the edge of the view still shows which number it is.
     const size = 18 * ratio;
+    const cx = Math.min(Math.max(x, size / 2), canvas.width - size / 2);
+    const cy = Math.min(Math.max(y, size / 2), canvas.height - size / 2);
     ctx.fillStyle = MARK_COLOR;
-    ctx.fillRect(x - size / 2, y - size / 2, size, size);
+    ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
     ctx.fillStyle = "#ffffff";
     ctx.font = `bold ${Math.round(12 * ratio)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(String(index + 1), x, y);
+    ctx.fillText(String(index + 1), cx, cy);
   });
   ctx.fillStyle = "#000000";
   for (const box of boxes.redact.flat())
