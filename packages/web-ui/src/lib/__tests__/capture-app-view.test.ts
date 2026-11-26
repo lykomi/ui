@@ -170,6 +170,13 @@ it("frames a select only by the option it shows", async () => {
   expect(JSON.parse(result.result).marks).toEqual([{ number: 1, text: "Delete", found: false }]);
 });
 
+it("ignores a line break that is not drawn", async () => {
+  document.body.innerHTML = `<p>North<br style="display:none">wind</p>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
+});
+
 it("reads inline-block pieces as one word", async () => {
   document.body.innerHTML = `<p>North<span style="display:inline-block">wind</span></p>`;
   const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));

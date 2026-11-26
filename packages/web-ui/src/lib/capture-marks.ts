@@ -176,7 +176,9 @@ export function textBoxes(text: string, skip: (el: Element) => boolean): Box[] {
   );
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (node.nodeType === Node.ELEMENT_NODE) {
-      if ((node as Element).tagName === "BR") broken = true;
+      // Only a line break that is drawn separates words.
+      const el = node as Element;
+      if (el.tagName === "BR" && isDrawn(el) && shown(el, skip)) broken = true;
       continue;
     }
     if (!node.parentElement || !isDrawn(node.parentElement)) continue;
