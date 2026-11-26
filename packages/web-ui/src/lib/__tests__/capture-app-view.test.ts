@@ -104,6 +104,27 @@ it("blacks out what a form field shows", async () => {
   expect(calls.filter(([key]) => key === "fillRect").at(-1)).toEqual(["fillRect", 8, 8, 84, 28]);
 });
 
+it("blacks out a text split over inline elements as it reads on screen", async () => {
+  document.body.innerHTML = `<p>Contract with North<strong>wind</strong></p>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
+});
+
+it("blacks out the label a select shows, not only its value", async () => {
+  document.body.innerHTML = `<select><option value="42" label="Northwind" selected>Customer</option></select>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
+});
+
+it("never frames a hidden element, even one matching more tightly", async () => {
+  document.body.innerHTML = `<div style="opacity: 0"><button>Save</button></div>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ mark: [{ text: "Save" }] }));
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).marks).toEqual([{ number: 1, text: "Save", found: false }]);
+});
+
 it("frames a button by its label, numbered, and paints black boxes last", async () => {
   document.body.innerHTML = `<button>Save</button><p>Northwind</p>`;
   const result = await captureAppViewTool.execute(

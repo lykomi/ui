@@ -94,34 +94,69 @@ function shown(el: Element, skip: (el: Element) => boolean): boolean {
   return true;
 }
 
-/** Every place on screen the text appears: in the page's text, and in what a
- * form control shows (its value, or its placeholder while it is empty). */
+/** What a form control shows: a select's chosen labels (its value may be an
+ * id), else its value, or its placeholder while it is empty. */
+function shownText(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): string {
+  if (control instanceof HTMLSelectElement)
+    return Array.from(control.selectedOptions, (option) => option.label || option.text).join(" ");
+  return control.value || ("placeholder" in control ? control.placeholder : "") || "";
+}
+
+/** Every place on screen the text appears: in the page's text — matched over
+ * the text as rendered, so `North<strong>wind</strong>` is one occurrence —
+ * and in what a form control shows. */
 export function textBoxes(text: string, skip: (el: Element) => boolean): Box[] {
   const found = pattern(text);
   const boxes: Box[] = [];
+  const nodes: { node: Text; start: number }[] = [];
+  let rendered = "";
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const value = node.nodeValue ?? "";
     if (!node.parentElement || !shown(node.parentElement, skip)) continue;
-    for (const match of value.matchAll(found)) {
+    nodes.push({ node: node as Text, start: rendered.length });
+    rendered += node.nodeValue ?? "";
+  }
+  /** The node holding character `at` of the joined text, and the offset in it. */
+  const locate = (at: number, end: boolean): [Text, number] => {
+    let low = 0;
+    let high = nodes.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
+      if (nodes[mid].start < at || (!end && nodes[mid].start === at)) low = mid;
+      else high = mid - 1;
+    }
+    return [nodes[low].node, at - nodes[low].start];
+  };
+  if (nodes.length)
+    for (const match of rendered.matchAll(found)) {
+      const from = match.index ?? 0;
       const range = document.createRange();
-      range.setStart(node, match.index ?? 0);
-      range.setEnd(node, (match.index ?? 0) + match[0].length);
+      range.setStart(...locate(from, false));
+      range.setEnd(...locate(from + match[0].length, true));
       boxes.push(...boxesOf(range.getClientRects()));
     }
-  }
-  for (const control of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-    "input, textarea, select",
-  )) {
+  for (const control of document.querySelectorAll<
+    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+  >("input, textarea, select")) {
     if (!shown(control, skip)) continue;
-    const showsText =
-      ("value" in control && control.value) ||
-      ("placeholder" in control && control.placeholder) ||
-      "";
     found.lastIndex = 0;
-    if (found.test(showsText)) boxes.push(...boxesOf([control.getBoundingClientRect()]));
+    if (found.test(shownText(control))) boxes.push(...boxesOf([control.getBoundingClientRect()]));
   }
   return boxes;
+}
+
+/** Not rendered for the eye: hidden or fully transparent. Asked of every
+ * ancestor (through `shown`), so a hidden or transparent container hides its
+ * content too. Marks must frame what the reader sees; blacking out stays
+ * generous and does not ask. */
+function hiddenSelf(el: Element): boolean {
+  const style = getComputedStyle(el);
+  return (
+    style.display === "none" ||
+    style.visibility === "hidden" ||
+    style.visibility === "collapse" ||
+    (style.opacity !== "" && Number(style.opacity) === 0)
+  );
 }
 
 const MARKABLE =
@@ -150,14 +185,15 @@ function union(boxes: Box[]): Box | null {
  * the first place the text itself appears. */
 export function markBox(text: string, skip: (el: Element) => boolean): Box | null {
   const found = pattern(text);
+  const unseen = (el: Element) => skip(el) || hiddenSelf(el);
   let best: Box | null = null;
   for (const el of document.querySelectorAll(MARKABLE)) {
     found.lastIndex = 0;
-    if (!found.test(nameOf(el)) || !shown(el, skip)) continue;
+    if (!found.test(nameOf(el)) || !shown(el, unseen)) continue;
     const box = onScreen(el.getBoundingClientRect());
     if (box && (!best || box.width * box.height < best.width * best.height)) best = box;
   }
-  return best ?? union(textBoxes(text, skip).slice(0, 1));
+  return best ?? union(textBoxes(text, unseen).slice(0, 1));
 }
 
 export function planBoxes(plan: CapturePlan, skip: (el: Element) => boolean): PlannedBoxes {
