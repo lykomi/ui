@@ -130,6 +130,13 @@ it("ignores hidden text between the visible pieces of a word", async () => {
   expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
 });
 
+it("blacks out any option a list box shows, chosen or not", async () => {
+  document.body.innerHTML = `<select multiple><option selected>Other</option><option>Northwind</option></select>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
+});
+
 it("frames a select only by the option it shows", async () => {
   document.body.innerHTML = `<select><option selected>View</option><option>Delete</option></select>`;
   const result = await captureAppViewTool.execute(JSON.stringify({ mark: [{ text: "Delete" }] }));

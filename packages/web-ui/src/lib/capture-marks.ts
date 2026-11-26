@@ -97,8 +97,12 @@ function shown(el: Element, skip: (el: Element) => boolean): boolean {
 /** What a form control shows: a select's chosen labels (its value may be an
  * id), else its value, or its placeholder while it is empty. */
 function shownText(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): string {
-  if (control instanceof HTMLSelectElement)
-    return Array.from(control.selectedOptions, (option) => option.label || option.text).join(" ");
+  if (control instanceof HTMLSelectElement) {
+    // A list box shows its options; a closed select only what is chosen.
+    const listBox = control.multiple || control.size > 1;
+    const options = listBox ? control.options : control.selectedOptions;
+    return Array.from(options, (option) => option.label || option.text).join("\n");
+  }
   return control.value || ("placeholder" in control ? control.placeholder : "") || "";
 }
 
