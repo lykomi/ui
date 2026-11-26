@@ -490,7 +490,9 @@ export class AGUIRunner {
             // result so the multi-turn loop can replay it on the next turn.
             if (registry.isRegistered(tc.name) && !abortSignal?.aborted) {
               try {
-                const output = await registry.executeTool(tc.name, tc.args);
+                const output = await registry.executeTool(tc.name, tc.args, {
+                  threadId: this.threadId,
+                });
                 tc.result = JSON.parse(typeof output === "string" ? output : output.result);
                 if (typeof output !== "string") tc.inputContent = output.inputContent;
               } catch (err) {

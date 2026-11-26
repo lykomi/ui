@@ -91,6 +91,7 @@ import {
   type ServiceFetch,
   type ServiceFetchOptions,
   clientToolRegistry,
+  type ClientToolCallContext,
   type ClientToolEntry,
   type ToolRegistry,
   streamingStatusStore,

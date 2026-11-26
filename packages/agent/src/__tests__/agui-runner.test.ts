@@ -245,7 +245,10 @@ describe("AGUIRunner", () => {
       }),
     );
 
-    expect(executeTool).toHaveBeenCalledWith("ui_navigate", '{"path":"/foo"}');
+    // The call names the conversation it belongs to.
+    expect(executeTool).toHaveBeenCalledWith("ui_navigate", '{"path":"/foo"}', {
+      threadId: runner.threadId,
+    });
     expect(runCount).toBe(2); // Initial + follow-up
 
     // Second turn was issued with the same toolCallId in the assistant message
@@ -333,7 +336,9 @@ describe("AGUIRunner", () => {
     });
     const events = await collect(runner, registry);
 
-    expect(executeTool).toHaveBeenCalledWith("ui_open_panel", '{"title":"Suppliers"}');
+    expect(executeTool).toHaveBeenCalledWith("ui_open_panel", '{"title":"Suppliers"}', {
+      threadId: runner.threadId,
+    });
     // One request for the turn: the server's answer was not replayed.
     expect(runCount).toBe(1);
     const result = events.find(

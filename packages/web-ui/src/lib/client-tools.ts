@@ -226,9 +226,11 @@ const GLOBAL_TOOLS: ClientToolEntry[] = [
     description:
       "Get the full application context: navigation breadcrumb from root " +
       "to current page (with accumulated metadata), selected items, draft " +
-      "values, highlights, and user-pinned context items.",
+      "values, highlights, user-pinned context items, the page's address " +
+      "(pageUrl) and this conversation's chat id (chatId) — quote both when " +
+      "reporting a problem so support can find the page and the chat.",
     parameters: { type: "object", properties: {}, required: [] },
-    execute: async () => {
+    execute: async (_argsJson, call) => {
       const state = useAppStore.getState().getAgentState();
       const { useNavStore } = await import("./nav-store.ts");
       const navConfig = useNavStore.getState().config;
@@ -285,6 +287,10 @@ const GLOBAL_TOOLS: ClientToolEntry[] = [
         content: state.content,
         highlights: state.highlights,
         contextItems: state.contextItems,
+        // The conversation that asked, from the runner — never a global
+        // "current chat": a background chat would read another one's id.
+        chatId: call?.threadId ?? null,
+        pageUrl: typeof window === "undefined" ? null : window.location.href,
       });
     },
   },
