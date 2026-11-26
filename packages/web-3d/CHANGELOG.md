@@ -1,5 +1,12 @@
 # @iloveagents/foundry-web-3d
 
+## 0.1.27
+
+### Patch Changes
+
+- @lykomi/agent@0.59.0
+- @lykomi/web-primitives@0.59.0
+
 ## 0.1.26
 
 ### Patch Changes
