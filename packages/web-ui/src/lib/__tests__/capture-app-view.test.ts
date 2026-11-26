@@ -123,6 +123,20 @@ it("reads a line break or a new block as a space between words", async () => {
   ]);
 });
 
+it("ignores hidden text between the visible pieces of a word", async () => {
+  document.body.innerHTML = `<p>North<span style="display:none">internal</span>wind</p>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
+});
+
+it("frames a select only by the option it shows", async () => {
+  document.body.innerHTML = `<select><option selected>View</option><option>Delete</option></select>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ mark: [{ text: "Delete" }] }));
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).marks).toEqual([{ number: 1, text: "Delete", found: false }]);
+});
+
 it("blacks out the label a select shows, not only its value", async () => {
   document.body.innerHTML = `<select><option value="42" label="Northwind" selected>Customer</option></select>`;
   const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));

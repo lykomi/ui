@@ -102,6 +102,36 @@ function shownText(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectE
   return control.value || ("placeholder" in control ? control.placeholder : "") || "";
 }
 
+// Options are drawn by their select, which is read as a control (`shownText`).
+const NEVER_RENDERED = new Set([
+  "SCRIPT",
+  "STYLE",
+  "TEMPLATE",
+  "NOSCRIPT",
+  "OPTION",
+  "OPTGROUP",
+  "DATALIST",
+]);
+
+/** Is this element's text drawn at all? `display: none` anywhere up the tree,
+ * or an element that never renders, hides it — and hidden text must not sit
+ * between the visible pieces of a word. */
+function renderedFinder(): (el: Element) => boolean {
+  const seen = new Map<Element, boolean>();
+  const rendered = (el: Element | null): boolean => {
+    if (!el) return true;
+    const known = seen.get(el);
+    if (known !== undefined) return known;
+    const drawn =
+      !NEVER_RENDERED.has(el.tagName) &&
+      getComputedStyle(el).display !== "none" &&
+      rendered(el.parentElement);
+    seen.set(el, drawn);
+    return drawn;
+  };
+  return rendered;
+}
+
 /** The box a node's text flows in: its nearest ancestor that is not inline. */
 function blockFinder(): (el: Element) => Element | null {
   const seen = new Map<Element, Element | null>();
@@ -128,6 +158,7 @@ export function textBoxes(text: string, skip: (el: Element) => boolean): Box[] {
   // The text as read: inline pieces join (North<strong>wind</strong> is one
   // word), a line break or a block boundary reads as a space.
   const blockOf = blockFinder();
+  const isDrawn = renderedFinder();
   let lastBlock: Element | null = null;
   let broken = false;
   const walker = document.createTreeWalker(
@@ -139,7 +170,8 @@ export function textBoxes(text: string, skip: (el: Element) => boolean): Box[] {
       if ((node as Element).tagName === "BR") broken = true;
       continue;
     }
-    if (!node.parentElement || !shown(node.parentElement, skip)) continue;
+    if (!node.parentElement || !isDrawn(node.parentElement)) continue;
+    if (!shown(node.parentElement, skip)) continue;
     const block = blockOf(node.parentElement);
     if (rendered && (broken || block !== lastBlock)) rendered += "\n";
     broken = false;
@@ -194,6 +226,8 @@ const MARKABLE =
   "button, a, [role='button'], [role='tab'], [role='menuitem'], [role='link'], [role='checkbox'], [role='option'], input, textarea, select, label, h1, h2, h3, h4, h5, h6, [aria-label]";
 
 function nameOf(el: Element): string {
+  // A select shows its chosen option, not every option it holds.
+  if (el instanceof HTMLSelectElement) return el.getAttribute("aria-label") || shownText(el);
   return (
     el.getAttribute("aria-label") ||
     (el as HTMLInputElement).placeholder ||
