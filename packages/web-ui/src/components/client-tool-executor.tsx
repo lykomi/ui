@@ -17,6 +17,7 @@ import { setNavigateFunction } from "../lib/client-tools.ts";
 import { getOpenPanelOutput, OPEN_PANEL_TOOL_NAME } from "../lib/open-panel-output.ts";
 import { useToolPanelStore } from "../lib/tool-panel-store.ts";
 import { ConfirmationCard } from "./confirmation-card.tsx";
+import { describeCaptureResult } from "../lib/capture-app-view.ts";
 import { ToolCallCard } from "./tool-call-card.tsx";
 import {
   Navigation,
@@ -192,18 +193,14 @@ const GetContextUI = makeAssistantToolUI<unknown, unknown>({
   ),
 });
 
-const CaptureViewUI = makeAssistantToolUI<unknown, { status?: string; message?: string }>({
+const CaptureViewUI = makeAssistantToolUI<unknown, unknown>({
   toolName: "ui_capture_view",
   render: ({ status, result }) => (
     <ToolCallCard
       icon={<Camera className="size-3.5" />}
       title="View app"
       description={
-        status.type === "running"
-          ? "Looking at your current view…"
-          : result?.status === "captured"
-            ? "Current app view captured"
-            : (result?.message ?? "View unavailable")
+        status.type === "running" ? "Looking at your current view…" : describeCaptureResult(result)
       }
       status={status}
       className="w-full"
