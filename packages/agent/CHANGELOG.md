@@ -1,5 +1,14 @@
 # @iloveagents/foundry-agent
 
+## 0.59.1
+
+### Patch Changes
+
+- c27552e: Client tools now learn which conversation called them: the runner passes
+  `{ threadId }` as a second argument to `execute` (`ClientToolCallContext`).
+  `ui_get_context` uses it to return the calling chat's `chatId` and the page
+  address `pageUrl`, so an agent can quote both in a support report.
+
 ## 0.59.0
 
 ## 0.58.8
