@@ -84,6 +84,11 @@ it("captures the app viewport as binary input and excludes private surfaces", as
   password.type = "password";
   options?.onCloneEachNode?.(password);
   expect(password.style.visibility).toBe("hidden");
+  const panel = document.createElement("section");
+  panel.dataset.capture = "off";
+  panel.innerHTML = `<div style="visibility: visible">Escapes the box</div>`;
+  options?.onCloneEachNode?.(panel);
+  expect((panel.firstElementChild as HTMLElement).style.visibility).toBe("hidden");
   const plain = document.createElement("p");
   options?.onCloneEachNode?.(plain);
   expect(plain.style.visibility).toBe("");
@@ -163,6 +168,13 @@ it("frames a select only by the option it shows", async () => {
   const result = await captureAppViewTool.execute(JSON.stringify({ mark: [{ text: "Delete" }] }));
   if (typeof result === "string") throw new Error(result);
   expect(JSON.parse(result.result).marks).toEqual([{ number: 1, text: "Delete", found: false }]);
+});
+
+it("reads inline-block pieces as one word", async () => {
+  document.body.innerHTML = `<p>North<span style="display:inline-block">wind</span></p>`;
+  const result = await captureAppViewTool.execute(JSON.stringify({ redact: ["Northwind"] }));
+  if (typeof result === "string") throw new Error(result);
+  expect(JSON.parse(result.result).redacted).toEqual([{ text: "Northwind", places: 1 }]);
 });
 
 it("blacks out the label a select shows, not only its value", async () => {

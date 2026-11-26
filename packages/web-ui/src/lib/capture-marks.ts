@@ -145,8 +145,11 @@ function blockFinder(): (el: Element) => Element | null {
     if (!el) return null;
     const known = seen.get(el);
     if (known !== undefined) return known;
+    // inline-block, inline-flex … flow inline: `North<span style="display:
+    // inline-block">wind</span>` still reads as one word.
     const display = getComputedStyle(el).display;
-    const block = display === "inline" || display === "contents" ? find(el.parentElement) : el;
+    const inline = display.startsWith("inline") || display === "contents";
+    const block = inline ? find(el.parentElement) : el;
     seen.set(el, block);
     return block;
   };

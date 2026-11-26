@@ -28,9 +28,14 @@ function privateBoxes(): Box[] {
   );
 }
 
+/** Called for each copied element once its children are copied: a private
+ * one hides itself and every element inside it — a child's own
+ * `visibility: visible` would otherwise show through, even where it stands
+ * outside the box painted black. */
 function hidePrivate(cloned: Node): void {
-  if (cloned instanceof Element && cloned.matches(excluded))
-    (cloned as HTMLElement).style?.setProperty("visibility", "hidden", "important");
+  if (!(cloned instanceof Element) || !cloned.matches(excluded)) return;
+  for (const el of [cloned, ...cloned.querySelectorAll("*")])
+    (el as HTMLElement).style?.setProperty("visibility", "hidden", "important");
 }
 
 /** A raster of this app's visible viewport, never another tab or the desktop.
