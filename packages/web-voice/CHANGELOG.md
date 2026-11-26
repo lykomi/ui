@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-voice
 
+## 0.1.44
+
+### Patch Changes
+
+- Updated dependencies [6d37d79]
+  - @lykomi/web-ui@0.59.0
+  - @lykomi/agent@0.59.0
+
 ## 0.1.43
 
 ### Patch Changes
