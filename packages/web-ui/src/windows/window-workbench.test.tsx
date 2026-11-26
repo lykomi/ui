@@ -5,6 +5,48 @@ import { createWindowStore } from "./window-controller.ts";
 import { WindowWorkbench } from "./window-workbench.tsx";
 import { WindowTabStrip } from "./window-tab-strip.tsx";
 
+it("lets the keyboard enter tab preview links and dismiss the preview back to the tab", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const tabs = [{ id: "brief", title: "Project brief", close: vi.fn() }];
+  const store = createWindowStore({ tabs });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    const renderTabs = (showLinks: boolean) =>
+      root.render(
+        <WindowTabStrip
+          controller={store}
+          tabs={tabs}
+          active="brief"
+          renderPreview={() => (showLinks ? <a href="/projects">Projects</a> : null)}
+        />,
+      );
+    await act(async () => renderTabs(false));
+    const tab = host.querySelector<HTMLButtonElement>("#tab-brief")!;
+    await act(async () => tab.focus());
+    await act(async () => renderTabs(true));
+    expect(host.querySelector("#tab-brief")).toBe(tab);
+    expect(document.activeElement).toBe(tab);
+    await act(async () =>
+      tab.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })),
+    );
+    const link = document.querySelector('[role="dialog"] a[href="/projects"]')!;
+    expect(document.activeElement).toBe(link);
+    await act(async () =>
+      link.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      ),
+    );
+    expect(tab.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(tab);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
 it("discloses the full label and context when arrow navigation focuses a tab", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const tabs = [
