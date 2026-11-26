@@ -1,5 +1,13 @@
 # @iloveagents/foundry-web-ui
 
+## 0.58.8
+
+### Patch Changes
+
+- 7d27855: Allow tab strips to render interactive previews for links and other tab context, with pointer and keyboard access.
+  - @lykomi/agent@0.58.8
+  - @lykomi/web-primitives@0.58.8
+
 ## 0.58.7
 
 ### Patch Changes
